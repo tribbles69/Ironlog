@@ -50,3 +50,57 @@ is no account. Two consequences:
 
 Settings (⚙) → **Export** writes a `.json` backup you can keep in Drive; Import
 restores it. Worth doing after a meet, or any time you'd be annoyed to lose it.
+
+---
+
+# Food tab — setup
+
+The nutrition tab works offline for manual entry with no setup. Parsing
+needs the serverless function, which needs a host that can run one, so
+this is the part that moves Ironlog from GitHub Pages to Netlify.
+
+## 1. Get an API key
+
+console.anthropic.com → API Keys → Create Key. It starts with `sk-ant-`
+and is shown once. Add a payment method and set a spend cap while you're
+there — Settings → Limits.
+
+Haiku costs $1 per million input tokens and $5 per million output. A meal
+parse is roughly a third of a penny, so five a day is well under 50p a
+month.
+
+## 2. Deploy
+
+Drag this whole folder onto app.netlify.com/drop, or connect the repo.
+`netlify.toml` already points at the function.
+
+Then: Site configuration → Environment variables → add
+
+    ANTHROPIC_API_KEY = sk-ant-...
+
+Redeploy after adding it. The key stays on Netlify and is never sent to
+the phone.
+
+## 3. Install
+
+Open the Netlify URL in Chrome → ⋮ → Install app.
+
+Your existing log does not come with you — IndexedDB is per-origin, so
+the netlify.app address starts empty. Before you switch: open the old
+install, Settings ⚙ → Export, then Import on the new one.
+
+## Files
+
+    netlify.toml                     publish + functions config
+    netlify/functions/parse-food.js  the only server-side code
+
+## If parsing fails
+
+The app falls back to manual entry and says why. Common causes:
+
+- `ANTHROPIC_API_KEY is not set` — added but not redeployed
+- `upstream 401` — key wrong or revoked
+- `upstream 400` — usually no credit on the account
+- offline — expected; use *Enter manually*
+
+Netlify → Logs → Functions shows the real error.

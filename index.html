@@ -78,7 +78,7 @@ a{color:var(--accent)}
   position:fixed;left:0;right:0;bottom:0;z-index:50;
   height:calc(var(--nav-h) + env(safe-area-inset-bottom));
   padding-bottom:env(safe-area-inset-bottom);
-  display:grid;grid-template-columns:repeat(5,1fr);
+  display:grid;grid-template-columns:repeat(6,1fr);
   background:rgba(17,20,27,.96);backdrop-filter:blur(14px);
   border-top:1px solid var(--line);
 }
@@ -444,7 +444,8 @@ svg.chart{display:block;width:100%;height:auto;overflow:visible}
   <button data-page="home"><span class="ico">◧</span><span>Home</span></button>
   <button data-page="calendar"><span class="ico">▦</span><span>Calendar</span></button>
   <button data-page="workout"><span class="ico">⬤</span><span>Workout</span></button>
-  <button data-page="analytics"><span class="ico">◫</span><span>Analytics</span></button>
+  <button data-page="food"><span class="ico">◍</span><span>Food</span></button>
+  <button data-page="analytics"><span class="ico">◫</span><span>Stats</span></button>
   <button data-page="meets"><span class="ico">★</span><span>Meets</span></button>
 </nav>
 
@@ -474,6 +475,8 @@ const DEFAULT_STATE = {
     platformPct: 96,        // gym max -> platform estimate
     bars: [{ name: 'Barbell', kg: 20 }],
     plates: null,           // null = DEFAULT_PLATES
+    // nutrition targets. kcal null = derive nothing, just log.
+    kcalTarget: null, proteinTarget: null, carbTarget: null, fatTarget: null,
   },
   checkins: [],   // {date,'YYYY-MM-DD', weight(kg), sleepH, sleepQ, energy, soreness, stress, kcal, notes}
   workouts: [],   // {id,date,name,status,exercises:[{name,notes,sets:[{w,r,rpe,done,warm}]}],start,end,summary}
@@ -482,6 +485,7 @@ const DEFAULT_STATE = {
   customEx: [],   // extra exercise names
   active: null,   // active workout object
   programs: [],   // ids of installed training programs
+  foods: [],      // {id,date,meal,name,serving,kcal,p,c,f,fib,src:'ai'|'manual'}
 };
 
 /* Persistence runs through IndexedDB — it's async (so the call sites below don't
@@ -1195,6 +1199,7 @@ function render() {
   if (page === 'home') v.innerHTML = viewHome();
   else if (page === 'calendar') v.innerHTML = viewCalendar();
   else if (page === 'workout') v.innerHTML = viewWorkout();
+  else if (page === 'food') v.innerHTML = viewFood();
   else if (page === 'analytics') v.innerHTML = viewAnalytics();
   else if (page === 'meets') v.innerHTML = viewMeets();
   wire();
@@ -3271,6 +3276,260 @@ function openSettings() {
   });
 }
 
+
+/* ============================================================
+   FOOD  —  nutrition log
+   Parsing runs through a serverless function so the API key
+   never reaches the phone. No network = manual entry, which is
+   the only mode that has to work in a basement gym.
+   ============================================================ */
+const MEALS = ['Breakfast', 'Lunch', 'Dinner', 'Snacks'];
+let foodDate = null;                 // null = today
+const fDate = () => foodDate || today();
+
+function foodsOn(date) { return S.foods.filter(f => f.date === date); }
+
+function macroTotals(list) {
+  return list.reduce((t, f) => ({
+    kcal: t.kcal + (+f.kcal || 0), p: t.p + (+f.p || 0),
+    c: t.c + (+f.c || 0), f: t.f + (+f.f || 0), fib: t.fib + (+f.fib || 0),
+  }), { kcal: 0, p: 0, c: 0, f: 0, fib: 0 });
+}
+
+/* Keep the check-in in step: the daily kcal box on Home is the same
+   number, so logging food fills it in rather than asking twice. */
+function syncCheckinKcal(date) {
+  const t = macroTotals(foodsOn(date));
+  let ci = S.checkins.find(c => c.date === date);
+  if (!ci) {
+    if (!t.kcal) return;
+    ci = { date, weight: null, sleepH: null, sleepQ: null, energy: null,
+           soreness: null, stress: null, kcal: null, notes: '' };
+    S.checkins.push(ci);
+  }
+  ci.kcal = t.kcal ? Math.round(t.kcal) : null;
+}
+
+function bar(label, val, target, unit) {
+  const pct = target ? clamp(Math.round(val / target * 100), 0, 100) : 0;
+  const over = target && val > target * 1.05;
+  return `<div style="margin-bottom:9px">
+    <div class="row between" style="font-size:12px;margin-bottom:3px">
+      <span class="muted">${label}</span>
+      <span class="mono">${Math.round(val)}${target ? ` / ${target}` : ''}${unit}</span>
+    </div>
+    <div style="height:6px;border-radius:99px;background:var(--line);overflow:hidden">
+      <div style="height:100%;width:${target ? pct : 0}%;border-radius:99px;
+        background:${over ? 'var(--gold)' : 'var(--accent)'}"></div>
+    </div></div>`;
+}
+
+function viewFood() {
+  const d = fDate();
+  const list = foodsOn(d);
+  const t = macroTotals(list);
+  const st = S.settings;
+  const isToday = d === today();
+
+  // training that day, so food and work sit on one screen
+  const wo = S.workouts.filter(w => w.date === d && w.status === 'completed');
+  const trained = wo.length
+    ? `${wo.length} session${wo.length === 1 ? '' : 's'} · ${wt(wo.reduce((a, w) => a + totalVolume(w), 0), 0)} volume`
+    : 'No training logged';
+
+  const byMeal = MEALS.map(m => {
+    const items = list.filter(f => (f.meal || 'Snacks') === m);
+    if (!items.length) return '';
+    const mt = macroTotals(items);
+    return `<div class="hr"></div>
+      <div class="row between" style="margin-bottom:6px">
+        <span style="font-weight:700">${m}</span>
+        <span class="muted mono" style="font-size:12px">${Math.round(mt.kcal)} kcal</span>
+      </div>
+      ${items.map(f => `<div class="exline">
+        <span class="grow">${esc(f.name)}${f.serving ? ` <span class="muted">· ${esc(f.serving)}</span>` : ''}
+          ${f.src === 'ai' ? '<span class="chip">EST</span>' : ''}</span>
+        <span class="muted mono" style="white-space:nowrap">${Math.round(f.kcal)} · ${Math.round(f.p)}p</span>
+        <button class="btn ghost xs" data-del-food="${f.id}">×</button>
+      </div>`).join('')}`;
+  }).join('');
+
+  return `
+  <div class="card">
+    <div class="row between">
+      <div>
+        <div style="font-weight:700">${isToday ? 'Today' : fmtDate(d)}</div>
+        <div class="sub">${trained}</div>
+      </div>
+      <div class="row" style="gap:4px">
+        <button class="btn ghost sm" data-food-day="-1">‹</button>
+        ${isToday ? '' : '<button class="btn ghost sm" data-food-day="0">Today</button>'}
+        <button class="btn ghost sm" data-food-day="1" ${isToday ? 'disabled' : ''}>›</button>
+      </div>
+    </div>
+    <div class="hr"></div>
+    ${bar('Calories', t.kcal, st.kcalTarget, ' kcal')}
+    ${bar('Protein', t.p, st.proteinTarget, ' g')}
+    ${bar('Carbs', t.c, st.carbTarget, ' g')}
+    ${bar('Fat', t.f, st.fatTarget, ' g')}
+    ${t.fib ? `<div class="sub" style="margin-top:2px">Fibre ${Math.round(t.fib)} g</div>` : ''}
+    ${st.kcalTarget ? '' : '<div class="sub" style="margin-top:6px">No targets set — <b data-food-targets style="color:var(--accent)">add them</b> to see progress bars.</div>'}
+  </div>
+
+  <div class="card">
+    <div style="font-weight:700;margin-bottom:8px">Add food</div>
+    <textarea id="foodInput" rows="2" placeholder="200g chicken breast, 150g rice, an apple"
+      style="width:100%;resize:vertical"></textarea>
+    <div class="row" style="gap:8px;margin-top:8px">
+      <button class="btn primary grow" id="foodParse">Parse</button>
+      <button class="btn grow" id="foodManual">Enter manually</button>
+    </div>
+    <div class="sub" style="margin-top:6px">Parsing estimates macros and picks the meal. Everything is editable after.</div>
+    <div id="foodStatus"></div>
+  </div>
+
+  <div class="card">
+    <div class="row between">
+      <div style="font-weight:700">Log</div>
+      <span class="muted mono" style="font-size:12px">${list.length} item${list.length === 1 ? '' : 's'}</span>
+    </div>
+    ${list.length ? byMeal : '<div class="sub" style="margin-top:6px">Nothing logged yet.</div>'}
+  </div>
+
+  ${foodHistoryCard()}`;
+}
+
+function foodHistoryCard() {
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const dt = new Date(); dt.setDate(dt.getDate() - i);
+    const dd = iso(dt);
+    days.push({ d: dd, t: macroTotals(foodsOn(dd)) });
+  }
+  const logged = days.filter(x => x.t.kcal > 0);
+  if (!logged.length) return '';
+  const avgK = Math.round(logged.reduce((a, x) => a + x.t.kcal, 0) / logged.length);
+  const avgP = Math.round(logged.reduce((a, x) => a + x.t.p, 0) / logged.length);
+  const max = Math.max(...days.map(x => x.t.kcal), 1);
+  return `<div class="card">
+    <div class="row between" style="margin-bottom:8px">
+      <div style="font-weight:700">Last 7 days</div>
+      <span class="muted mono" style="font-size:12px">${avgK} kcal · ${avgP}g protein avg</span>
+    </div>
+    <div class="row" style="align-items:flex-end;gap:5px;height:64px">
+      ${days.map(x => `<div class="grow" style="text-align:center">
+        <div style="height:${Math.round(x.t.kcal / max * 52)}px;border-radius:3px;
+          background:${x.t.kcal ? 'var(--accent)' : 'var(--line)'};min-height:2px"></div>
+        <div class="muted" style="font-size:9px;margin-top:3px">${fmtDate(x.d, { weekday: 'narrow' })}</div>
+      </div>`).join('')}
+    </div>
+    <div class="sub" style="margin-top:6px">Averages skip days with nothing logged, so a missed day doesn't drag the number down.</div>
+  </div>`;
+}
+
+/* ---------------- parsing ---------------- */
+async function parseFood() {
+  const box = $('#foodInput');
+  const text = (box.value || '').trim();
+  if (!text) { toast('Type what you ate first'); return; }
+  const st = $('#foodStatus');
+  const btn = $('#foodParse');
+  btn.disabled = true;
+  st.innerHTML = '<div class="sub" style="margin-top:8px">Parsing…</div>';
+
+  try {
+    const r = await fetch('/.netlify/functions/parse-food', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+    });
+    if (!r.ok) throw new Error(await r.text() || ('HTTP ' + r.status));
+    const items = await r.json();
+    if (!Array.isArray(items) || !items.length) throw new Error('nothing recognised');
+
+    const d = fDate();
+    items.forEach(it => S.foods.push({
+      id: uid(), date: d, meal: MEALS.includes(it.meal) ? it.meal : 'Snacks',
+      name: it.name || 'Item', serving: it.serving || '',
+      kcal: +it.kcal || 0, p: +it.protein || 0, c: +it.carbs || 0,
+      f: +it.fats || 0, fib: +it.fiber || 0, src: 'ai',
+    }));
+    syncCheckinKcal(d); save(); box.value = '';
+    toast(`Added ${items.length} item${items.length === 1 ? '' : 's'}`, 'good');
+    render();
+  } catch (e) {
+    console.warn('parse failed', e);
+    btn.disabled = false;
+    st.innerHTML = `<div class="sub" style="margin-top:8px;color:var(--red)">
+      Couldn't parse — ${navigator.onLine ? 'the service didn\'t answer' : 'you\'re offline'}.
+      Log it by hand instead.</div>`;
+  }
+}
+
+function openFoodEntry(existing) {
+  const f = existing || { meal: 'Snacks', name: '', serving: '', kcal: '', p: '', c: '', f: '', fib: '' };
+  const num = (id, label, val) => `<div class="grow"><label>${label}</label>
+    <input type="number" inputmode="decimal" id="${id}" value="${val ?? ''}" placeholder="—"></div>`;
+  modal({
+    title: existing ? 'Edit item' : 'Add food',
+    body: `
+      <label>Name</label><input id="fName" value="${esc(f.name)}" placeholder="Chicken breast">
+      <label>Serving</label><input id="fServ" value="${esc(f.serving)}" placeholder="200 g">
+      <label>Meal</label>
+      <select id="fMeal">${MEALS.map(m => `<option ${f.meal === m ? 'selected' : ''}>${m}</option>`).join('')}</select>
+      <div class="row" style="gap:8px">${num('fKcal', 'Calories', f.kcal)}${num('fProt', 'Protein g', f.p)}</div>
+      <div class="row" style="gap:8px">${num('fCarb', 'Carbs g', f.c)}${num('fFat', 'Fat g', f.f)}</div>
+      ${num('fFib', 'Fibre g', f.fib)}`,
+    foot: '<button class="btn" data-close>Cancel</button><button class="btn primary" id="fSave">Save</button>',
+    onOpen(bg) {
+      $('#fSave', bg).onclick = () => {
+        const name = $('#fName', bg).value.trim();
+        if (!name) { toast('Give it a name'); return; }
+        const rec = {
+          meal: $('#fMeal', bg).value, name, serving: $('#fServ', bg).value.trim(),
+          kcal: +$('#fKcal', bg).value || 0, p: +$('#fProt', bg).value || 0,
+          c: +$('#fCarb', bg).value || 0, f: +$('#fFat', bg).value || 0,
+          fib: +$('#fFib', bg).value || 0, src: 'manual',
+        };
+        if (existing) Object.assign(existing, rec);
+        else S.foods.push(Object.assign({ id: uid(), date: fDate() }, rec));
+        syncCheckinKcal(fDate()); save(); bg.remove(); render();
+      };
+    },
+  });
+}
+
+function openFoodTargets() {
+  const st = S.settings;
+  const num = (id, label, val) => `<div class="grow"><label>${label}</label>
+    <input type="number" inputmode="numeric" id="${id}" value="${val ?? ''}" placeholder="—"></div>`;
+  modal({
+    title: 'Daily targets',
+    body: `<div class="sub" style="margin-bottom:8px">Leave blank to log without a target.</div>
+      <div class="row" style="gap:8px">${num('tK', 'Calories', st.kcalTarget)}${num('tP', 'Protein g', st.proteinTarget)}</div>
+      <div class="row" style="gap:8px">${num('tC', 'Carbs g', st.carbTarget)}${num('tF', 'Fat g', st.fatTarget)}</div>`,
+    foot: '<button class="btn" data-close>Cancel</button><button class="btn primary" id="tSave">Save</button>',
+    onOpen(bg) {
+      $('#tSave', bg).onclick = () => {
+        const g = id => $('#' + id, bg).value ? +$('#' + id, bg).value : null;
+        st.kcalTarget = g('tK'); st.proteinTarget = g('tP');
+        st.carbTarget = g('tC'); st.fatTarget = g('tF');
+        save(); bg.remove(); render();
+      };
+    },
+  });
+}
+
+function shiftFoodDay(n) {
+  if (n === 0) { foodDate = null; render(); return; }
+  const dt = parseISO(fDate());
+  dt.setDate(dt.getDate() + n);
+  const next = iso(dt);
+  if (next > today()) return;
+  foodDate = next === today() ? null : next;
+  render();
+}
+
 /* ============================================================
    EVENT WIRING
    ============================================================ */
@@ -3288,6 +3547,16 @@ function wire() {
   v.querySelectorAll('[data-repeat]').forEach(b => b.onclick = () => repeatWorkout(b.dataset.repeat));
   v.querySelectorAll('[data-edit-meet]').forEach(b => b.onclick = () => openMeet(b.dataset.editMeet));
   v.querySelectorAll('[data-exdetail]').forEach(b => b.onclick = () => openExDetail(b.dataset.exdetail));
+
+  // food
+  v.querySelectorAll('[data-food-day]').forEach(b => b.onclick = () => shiftFoodDay(+b.dataset.foodDay));
+  v.querySelectorAll('[data-del-food]').forEach(b => b.onclick = () => {
+    S.foods = S.foods.filter(f => f.id !== b.dataset.delFood);
+    syncCheckinKcal(fDate()); save(); render();
+  });
+  v.querySelectorAll('[data-food-targets]').forEach(b => b.onclick = openFoodTargets);
+  if ($('#foodParse', v)) $('#foodParse', v).onclick = parseFood;
+  if ($('#foodManual', v)) $('#foodManual', v).onclick = () => openFoodEntry(null);
   v.querySelectorAll('[data-goal]').forEach(b => b.onclick = () => openGoal(b.dataset.goal));
 
   if (page === 'home') {
