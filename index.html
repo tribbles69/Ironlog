@@ -689,6 +689,8 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
+const APP_VERSION = '0.1.1';
+
 /* ---------------- exercise library ---------------- */
 const LIB = {
   'Squat': ['Back Squat', 'Front Squat', 'Pause Squat', 'High Bar Squat', 'Low Bar Squat', 'Box Squat', 'Safety Bar Squat', 'Bulgarian Split Squat', 'Leg Press', 'Hack Squat', 'Leg Extension'],
@@ -3233,7 +3235,8 @@ function openSettings() {
       <button class="btn sm danger wide" id="stWipe" style="margin-top:9px">Erase all data</button>
       <input type="file" id="stFile" accept="application/json" style="display:none">
     `,
-    foot: `<button class="btn primary" id="stSave">Save</button>`,
+    foot: `<span class="muted mono" style="font-size:11px;margin-right:auto">v${APP_VERSION}</span>
+           <button class="btn primary" id="stSave">Save</button>`,
     onOpen: bg => {
       let units = U();
       bg.querySelectorAll('#unitSeg button').forEach(b => b.onclick = () => {
@@ -3359,7 +3362,7 @@ function syncCheckinKcal(date) {
   ci.kcal = t.kcal ? Math.round(t.kcal) : null;
 }
 
-function bar(label, val, target, unit) {
+function macroBar(label, val, target, unit) {
   const pct = target ? clamp(Math.round(val / target * 100), 0, 100) : 0;
   const over = target && val > target * 1.05;
   return `<div style="margin-bottom:9px">
@@ -3417,10 +3420,10 @@ function viewFood() {
       </div>
     </div>
     <div class="hr"></div>
-    ${bar('Calories', t.kcal, st.kcalTarget, ' kcal')}
-    ${bar('Protein', t.p, st.proteinTarget, ' g')}
-    ${bar('Carbs', t.c, st.carbTarget, ' g')}
-    ${bar('Fat', t.f, st.fatTarget, ' g')}
+    ${macroBar('Calories', t.kcal, st.kcalTarget, ' kcal')}
+    ${macroBar('Protein', t.p, st.proteinTarget, ' g')}
+    ${macroBar('Carbs', t.c, st.carbTarget, ' g')}
+    ${macroBar('Fat', t.f, st.fatTarget, ' g')}
     ${t.fib ? `<div class="sub" style="margin-top:2px">Fibre ${Math.round(t.fib)} g</div>` : ''}
     ${st.kcalTarget ? '' : '<div class="sub" style="margin-top:6px">No targets set — <b data-food-targets style="color:var(--accent)">add them</b> to see progress bars.</div>'}
   </div>
