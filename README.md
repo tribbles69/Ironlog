@@ -55,9 +55,14 @@ restores it. Worth doing after a meet, or any time you'd be annoyed to lose it.
 
 # Food tab — setup
 
-The nutrition tab works offline for manual entry with no setup. Parsing
-needs the serverless function, which needs a host that can run one, so
-this is the part that moves Ironlog from GitHub Pages to Netlify.
+The Food tab works with no setup at all. Press Parse and, if no parser
+is reachable, it estimates from a built-in food table — that covers
+GitHub Pages, aeroplane mode and basement gyms. Those items are tagged
+TABLE in the log.
+
+Deploying the serverless function upgrades the estimates: model-parsed
+items are tagged EST and handle anything the table doesn't know. That
+is the only part that needs Netlify and a key.
 
 ## 1. Get an API key
 
@@ -104,3 +109,62 @@ The app falls back to manual entry and says why. Common causes:
 - offline — expected; use *Enter manually*
 
 Netlify → Logs → Functions shows the real error.
+
+## Using a local model instead
+
+The function's contract is: POST `{ "text": "..." }`, get back a JSON
+array of `{name, serving, meal, kcal, protein, carbs, fats, fiber}`.
+Anything that speaks that shape works — Ollama behind a small shim, a
+different provider, your own box.
+
+The catch with Ollama specifically: a page served over https cannot
+call `http://localhost:11434`. Chrome blocks it as mixed content. To
+get round it you need an https address for Ollama, e.g.
+
+    OLLAMA_ORIGINS=* ollama serve
+    cloudflared tunnel --url http://localhost:11434
+
+and your machine has to be awake whenever you log a meal. For a phone
+app the table is usually the better trade until the key is sorted.
+
+## Editing the food table
+
+`LOCAL_FOODS` in index.html, one row per food:
+
+    ['Display name', 'keyword|other keyword', kcal, protein, carbs, fat, fibre, eachGrams]
+
+Values are per 100 g. The last field is optional and only for things
+counted rather than weighed — an egg, a slice of bread, a pint. The
+longest matching keyword wins, so "chicken breast" beats "chicken".
+
+---
+
+# Exercise database
+
+`EX_DB` in index.html holds 736 movements from free-exercise-db (public
+domain), remapped onto Ironlog's 15 muscle keys.
+
+    "Barbell Deadlift": {
+      "eq":   "Barbell",          equipment
+      "m":    {"erectors":0.7,…}, muscle shares, summing to 1
+      "cat":  "strength",
+      "mech": "compound"
+    }
+
+Three layers, in order of trust:
+
+1. `EX_MUSCLE` — 53 lifts, hand-tuned shares. Always wins.
+2. `EX_EQ`     — equipment for those 53, because the source names them
+                 differently ("Barbell Squat" vs "Back Squat").
+3. `EX_DB`     — the other 724. Equipment is reliable; muscle shares are
+                 derived from primary/secondary lists (70/30) and are a
+                 placeholder worth correcting on anything you train often.
+
+`exInfo(name)` merges the three. `tuned: true` means the shares are
+hand-set rather than derived.
+
+The picker still *browses* the curated LIB so the list stays short;
+typing a query searches all 736. Picking one adds it to `customEx` so it
+persists. The body heatmap now scores any of them, not just the 53.
+
+Regenerate with build-exercise-db.py if the upstream source updates.
