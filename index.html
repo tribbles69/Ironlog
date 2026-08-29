@@ -479,10 +479,12 @@ const DEFAULT_STATE = {
     kcalTarget: null, proteinTarget: null, carbTarget: null, fatTarget: null,
   },
   checkins: [],   // {date,'YYYY-MM-DD', weight(kg), sleepH, sleepQ, energy, soreness, stress, kcal, notes}
-  workouts: [],   // {id,date,name,status,exercises:[{name,notes,sets:[{w,r,rpe,done,warm}]}],start,end,summary}
+  workouts: [],   // {id,date,name,status,source,exercises:[{name,notes,sets:[{w,r,rpe,done,warm}]}],start,end,summary}
+                  // source: 'logged' | 'backfill' | 'imported' — only 'backfill' is the plan's prescription
   goals: [],      // {id,name,type,exercise,startVal,target,deadline,current(for custom)}
   meets: [],      // {id,name,date,fed,loc,wclass,bwTarget,lifts:{squat,bench,deadlift},pct:{o,s}}
   customEx: [],   // extra exercise names
+  exAliases: {},  // imported exercise name -> Ironlog name, so a re-import doesn't re-ask
   active: null,   // active workout object
   programs: [],   // ids of installed training programs
   foods: [],      // {id,date,meal,name,serving,kcal,p,c,f,fib,src:'ai'|'manual'}
@@ -560,7 +562,13 @@ async function load() {
   const raw = await storeGet(KEY);
   if (!raw) return structuredClone(DEFAULT_STATE);
   try {
-    return Object.assign(structuredClone(DEFAULT_STATE), JSON.parse(raw));
+    const st = Object.assign(structuredClone(DEFAULT_STATE), JSON.parse(raw));
+    /* 0.3.0: the `backfilled` boolean became `source`. Only 'backfill' is the plan's
+       prescription — imported history is real lifting and always counts toward PRs.
+       `backfilled` is left in place so an older export re-imported through Settings
+       still migrates the same way. */
+    st.workouts.forEach(w => { if (!w.source) w.source = w.backfilled ? 'backfill' : 'logged'; });
+    return st;
   } catch (e) {
     console.warn('load failed', e);
     return structuredClone(DEFAULT_STATE);
@@ -632,11 +640,13 @@ function roundBar(kg) { // round to nearest loadable increment, in display units
 }
 
 // e1RM — Epley, capped at 12 reps for sanity
-function e1rm(kg, reps) {
+function e1rm(kg, reps, rpe) {
   if (!kg || !reps) return 0;
-  if (reps === 1) return kg;
-  const r = Math.min(reps, 12);
-  return kg * (1 + r / 30);
+  // RPE 8 means two left in the tank, so the set is worth reps + 2.
+  const rir = (rpe >= 5 && rpe <= 10) ? (10 - rpe) : 0;
+  const eff = reps + rir;
+  if (eff <= 1) return kg;
+  return kg * (1 + Math.min(eff, 12) / 30);
 }
 
 // DOTS
@@ -689,7 +699,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.1.1';
+const APP_VERSION = '0.3.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -998,7 +1008,7 @@ function historyFor(name) {
   S.workouts.filter(wo => wo.status === 'completed').forEach(wo => {
     wo.exercises.filter(e => e.name === name).forEach(e => {
       e.sets.filter(s => s.done && !s.warm && s.w > 0 && s.r > 0).forEach(s => {
-        out.push({ date: wo.date, w: s.w, r: s.r, rpe: s.rpe, e1: e1rm(s.w, s.r), workoutId: wo.id, est: !!wo.backfilled });
+        out.push({ date: wo.date, w: s.w, r: s.r, rpe: s.rpe, e1: e1rm(s.w, s.r, s.rpe), workoutId: wo.id, est: wo.source === 'backfill' });
       });
     });
   });
@@ -1012,7 +1022,12 @@ function statsFor(name) {
   /* Backfilled sets are the plan's prescription, not what came off the bar.
      They count toward volume and consistency but must not set a PR. */
   const real = h.filter(s => !s.est);
-  const prSrc = real.length ? real : h;      // nothing real logged yet: fall back so the UI still has numbers
+  /* Counting backfilled sets is the default: for anyone who entered their
+     real training history that way, excluding them throws the history out
+     the moment one live set lands. Turn it off in Settings if the backfill
+     really was just the plan's prescription. */
+  const countEst = S.settings.prCountEst !== false;
+  const prSrc = countEst ? h : (real.length ? real : h);
   let best = prSrc[0], bestW = prSrc[0];
   const byRep = {};                    // reps -> heaviest weight
   let volume = 0;
@@ -1039,6 +1054,7 @@ function statsFor(name) {
   return {
     name, sessions: sessions.length, totalSets: h.length, volume,
     best, bestW, byRep, series, first, last, delta, pct,
+    bestIsEst: !!best.est, bestWIsEst: !!bestW.est,
     estOnly: !real.length,
     lastDate: sessions[sessions.length - 1], firstDate: sessions[0],
   };
@@ -1081,7 +1097,7 @@ function logTest(date, entries, notes) {
   if (!clean.length) return 0;
   S.workouts.push({
     id: uid(), date, name: clean.length === 1 ? `${shortLift(clean[0].name)} test` : 'Max test',
-    status: 'completed', tested: true, notes: notes || '',
+    status: 'completed', source: 'logged', tested: true, notes: notes || '',
     exercises: clean.map(e => ({
       name: e.name, notes: '',
       sets: [{ w: e.kg, r: 1, rpe: null, done: true, warm: false }],
@@ -1120,6 +1136,14 @@ function testedOpener(name) {
 }
 
 /* ---------------- UI helpers ---------------- */
+/* Where a completed session's numbers came from. Only a backfill is the plan's
+   prescription rather than real lifting, so only it gets the EST caveat. */
+function srcChip(w) {
+  if (w.source === 'backfill') return ' <span class="chip">EST</span>';
+  if (w.source === 'imported') return ' <span class="chip blue">IMPORT</span>';
+  return '';
+}
+
 function toast(msg, cls = '') {
   const el = document.createElement('div');
   el.className = 'toast ' + cls;
@@ -1273,7 +1297,7 @@ function viewHome() {
       .join('<div class="hr"></div>');
   } else if (done.length) {
     scheduleHtml = done.map(d => `<div class="row between">
-        <div><div style="font-weight:700">${esc(d.name)} <span class="chip green">DONE</span>${d.backfilled ? ' <span class="chip">EST</span>' : ''}</div>
+        <div><div style="font-weight:700">${esc(d.name)} <span class="chip green">DONE</span>${srcChip(d)}</div>
         <div class="sub">${d.exercises.length} exercises · ${wt(totalVolume(d), 0)} volume</div></div>
         <button class="btn ghost sm" data-view-workout="${d.id}">View</button>
       </div>`).join('');
@@ -1578,7 +1602,7 @@ function completedCard(wo) {
   const sets = wo.exercises.reduce((a, e) => a + e.sets.filter(s => s.done && !s.warm).length, 0);
   return `<div class="card">
     <div class="row between" style="margin-bottom:9px">
-      <div class="grow"><div style="font-weight:700">${esc(wo.name)} <span class="chip green">COMPLETED</span></div>
+      <div class="grow"><div style="font-weight:700">${esc(wo.name)} <span class="chip green">COMPLETED</span>${srcChip(wo)}</div>
         <div class="sub">${sets} sets · ${wt(totalVolume(wo), 0)} volume${wo.summary && wo.summary.mins ? ` · ${wo.summary.mins} min` : ''}</div></div>
       <button class="btn xs ghost" data-view-workout="${wo.id}">View</button>
     </div>
@@ -1885,18 +1909,18 @@ function exerciseCard(e, ei) {
   const bestE1 = st ? st.best.e1 : 0;
 
   // did anything today beat the historical PR?
-  const todayBest = Math.max(0, ...e.sets.filter(s => s.done && !s.warm && s.w && s.r).map(s => e1rm(s.w, s.r)));
+  const todayBest = Math.max(0, ...e.sets.filter(s => s.done && !s.warm && s.w && s.r).map(s => e1rm(s.w, s.r, s.rpe)));
   const beatE1 = st && todayBest > bestE1;
 
   const prBanner = st
-    ? `<span class="chip gold">★ PR ${wt(st.bestW.w)} × ${st.bestW.r}</span>
+    ? `<span class="chip gold">★ PR ${wt(st.bestW.w)} × ${st.bestW.r}${st.bestWIsEst ? ' <span class="dimmer">EST</span>' : ''}</span>
        <span class="chip">e1RM ${wt(bestE1)}</span>
        <span class="dimmer">${st.sessions} sessions</span>
        ${beatE1 ? `<span class="chip green">▲ BEAT IT · ${wt(todayBest)}</span>` : ''}`
     : `<span class="chip">First time — everything is a PR</span>`;
 
   const rows = e.sets.map((s, si) => {
-    const isPR = s.done && !s.warm && s.w > 0 && s.r > 0 && st && e1rm(s.w, s.r) > bestE1;
+    const isPR = s.done && !s.warm && s.w > 0 && s.r > 0 && st && e1rm(s.w, s.r, s.rpe) > bestE1;
     const isFirstPR = s.done && !s.warm && s.w > 0 && s.r > 0 && !st;
     const p = prev && prev.sets[si];
     return `<tr class="${s.done ? 'done' : ''} ${isPR || isFirstPR ? 'pr' : ''}">
@@ -2157,7 +2181,7 @@ function finishWorkout() {
 
   const mins = a.start ? Math.max(1, Math.round((Date.now() - a.start) / 60000)) : 0;
   const done = {
-    id: a.id, date: a.date, name: a.name, status: 'completed',
+    id: a.id, date: a.date, name: a.name, status: 'completed', source: 'logged',
     exercises: logged, start: a.start, end: Date.now(),
     summary: { mins, prs, volume: logged.reduce((t, e) => t + e.sets.filter(s => !s.warm).reduce((x, s) => x + s.w * s.r, 0), 0) },
   };
@@ -3112,7 +3136,7 @@ function openProgram() {
    Flips planned sessions in a past window to completed at their prescribed
    loads. Those numbers are the plan's, not what actually came off the bar
    (and AMRAP sets are a guess by definition), so each session is flagged
-   `backfilled`: the PR engine ignores flagged sets when deciding bests, the
+   `source: 'backfill'`: the PR engine can exclude flagged sets from bests, the
    card shows a badge, and everything stays editable so real numbers from
    another app can replace them set by set. */
 /* The window ends yesterday. Today's session is still ahead of you — sweeping it
@@ -3135,7 +3159,7 @@ function backfillPlanned(days) {
       .map(e => ({ ...e, sets: e.sets.filter(s => s.done) }))
       .filter(e => e.sets.length);
     w.status = 'completed';
-    w.backfilled = true;
+    w.source = 'backfill';
     w.end = parseISO(w.date).getTime();
     w.summary = {
       mins: 0, prs: [],
@@ -3150,6 +3174,359 @@ function backfillPlanned(days) {
 function countPlanned(days) {
   const { from, to } = backfillWindow(days);
   return S.workouts.filter(w => w.status === 'planned' && w.date >= from && w.date <= to).length;
+}
+
+/* ---------------- CSV import ----------------
+   Liftoff exports one row per set: Date, Duration, Workout Name, Exercise Name,
+   Set Order, Weight, Reps, Distance, Seconds, RPE, Notes.
+
+   Imported history is real lifting — an actual training log from another app —
+   so it lands as `source: 'imported'` and counts toward PRs unconditionally,
+   never gated by prCountEst and never badged EST. That is the whole reason the
+   backfilled boolean became a three-way source.
+
+   Three things the format forces:
+   - Weight comes out in pounds, as the round-trip of a kg original (176.369809748
+     is 80 kg). Detected rather than assumed, and confirmable in the preview.
+   - `Set Order` repeats within a session when an exercise is done in two blocks,
+     so row order is the only reliable ordering.
+   - A day can carry several timestamps — a session stopped and restarted. Ironlog
+     dates are day-resolution, so a day is one workout. */
+
+const LB_PER_KG = 2.2046226218;
+
+/* Fields can be quoted and contain commas, quotes and newlines. Notes is free
+   text, so parse properly rather than splitting on commas. */
+function parseCSV(text) {
+  const t = text.replace(/^\uFEFF/, '');
+  const rows = [];
+  let row = [], field = '', q = false;
+  for (let i = 0; i < t.length; i++) {
+    const c = t[i];
+    if (q) {
+      if (c === '"') {
+        if (t[i + 1] === '"') { field += '"'; i++; }
+        else q = false;
+      } else field += c;
+    } else if (c === '"') q = true;
+    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
+    else if (c !== '\r') field += c;
+  }
+  if (field !== '' || row.length) { row.push(field); rows.push(row); }
+  if (!rows.length) return [];
+  const hdr = rows[0].map(h => h.trim());
+  return rows.slice(1)
+    .filter(r => r.length && r.some(v => v.trim() !== ''))
+    .map(r => { const o = {}; hdr.forEach((h, i) => o[h] = (r[i] || '').trim()); return o; });
+}
+
+/* "00 hours 30 minutes 19 seconds" -> minutes. */
+function liftoffMins(d) {
+  if (!d) return 0;
+  const h = /(\d+)\s*hour/.exec(d), m = /(\d+)\s*minute/.exec(d);
+  return (h ? +h[1] * 60 : 0) + (m ? +m[1] : 0);
+}
+
+/* Pounds, if converting lands on clean kg. A log kept in kg and exported in lb
+   round-trips to values like 79.99999999; one kept in lb sits on whole numbers
+   and fails this. Only ever the default for the toggle in the preview. */
+function guessUnit(weights) {
+  const w = weights.filter(x => x > 0);
+  if (w.length < 3) return 'kg';
+  let clean = 0;
+  w.forEach(x => {
+    const kg = x / LB_PER_KG;
+    if (Math.abs(kg * 4 - Math.round(kg * 4)) < 0.04) clean++;
+  });
+  return clean / w.length > 0.8 ? 'lb' : 'kg';
+}
+
+function toKgFrom(v, unit) {
+  const kg = unit === 'lb' ? v / LB_PER_KG : v;
+  return Math.round(kg * 100) / 100;
+}
+
+const normEx = n => n.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+
+/* Exact normalised match only — first against what's already in the log, then
+   against EX_DB. Anything else is a suggestion for the review screen and is
+   never applied on its own: token overlap alone maps "Incline Bench Press" onto
+   "Bench Press", which would plant a fake PR on a competition lift. */
+function matchExercise(name) {
+  const alias = S.exAliases && S.exAliases[name];
+  if (alias) return { name: alias, how: 'alias' };
+  const k = normEx(name);
+  const own = allExercises().find(n => normEx(n) === k);
+  if (own) return { name: own, how: 'exact' };
+  const db = Object.keys(EX_DB).find(n => normEx(n) === k);
+  if (db) return { name: db, how: 'db' };
+  return { name: null, how: 'new', suggest: suggestExercise(k) };
+}
+
+function suggestExercise(k) {
+  const w = k.split(' ');
+  let best = null, bs = 0;
+  const consider = n => {
+    const pw = normEx(n).split(' ');
+    const hit = w.filter(x => pw.includes(x)).length;
+    const sc = hit / Math.max(w.length, pw.length);
+    if (sc > bs) { bs = sc; best = n; }
+  };
+  allExercises().forEach(consider);
+  Object.keys(EX_DB).forEach(consider);
+  return bs >= 0.6 ? best : null;
+}
+
+/* Parse to day-grouped sessions. Exercise names stay raw here; mapping is applied
+   at import time, after the review screen. */
+function parseLiftoff(text) {
+  const rows = parseCSV(text);
+  if (!rows.length || !('Exercise Name' in rows[0]) || !('Date' in rows[0])) {
+    throw new Error('not a Liftoff export');
+  }
+  let skipped = 0;
+  const good = rows.filter(r => {
+    const ok = r['Exercise Name'] && r.Date && (+r.Weight > 0 || +r.Reps > 0 || +r.Seconds > 0);
+    if (!ok) skipped++;
+    return ok;
+  });
+  const unit = guessUnit(good.map(r => +r.Weight || 0));
+  const byDay = new Map();
+  good.forEach(r => {
+    const date = r.Date.slice(0, 10);
+    if (!byDay.has(date)) byDay.set(date, { date, mins: new Map(), ex: new Map() });
+    const d = byDay.get(date);
+    d.mins.set(r.Date, liftoffMins(r.Duration));      // one duration per timestamp, not per row
+    const raw = r['Exercise Name'];
+    if (!d.ex.has(raw)) d.ex.set(raw, { raw, sets: [], secs: 0 });
+    const e = d.ex.get(raw);
+    if (+r.Seconds > 0) e.secs = Math.max(e.secs, +r.Seconds);
+    e.sets.push({ lb: +r.Weight || 0, r: +r.Reps || 0, rpe: r.RPE ? +r.RPE : null });
+  });
+  const sessions = [...byDay.values()]
+    .map(d => ({
+      date: d.date,
+      mins: [...d.mins.values()].reduce((a, b) => a + b, 0),
+      exercises: [...d.ex.values()],
+    }))
+    .filter(d => d.exercises.length)
+    .sort((a, b) => a.date < b.date ? -1 : 1);
+  const names = [...new Set(sessions.flatMap(s => s.exercises.map(e => e.raw)))];
+  return { sessions, skipped, unit, names, sets: good.length };
+}
+
+/* Which existing sessions an import would land on. A backfill is the plan's
+   prescription and real data supersedes it; a logged session is real too, so
+   that one is left alone and the import sits alongside it. */
+function importCollisions(sessions) {
+  const out = { replace: [], alongside: [], already: [] };
+  sessions.forEach(s => {
+    const srcId = 'liftoff:' + s.date;
+    if (S.workouts.some(w => w.srcId === srcId)) { out.already.push(s.date); return; }
+    const same = S.workouts.filter(w => w.status === 'completed' && w.date === s.date);
+    if (same.some(w => w.source === 'backfill')) out.replace.push(s.date);
+    else if (same.length) out.alongside.push(s.date);
+  });
+  return out;
+}
+
+/* mapping: raw name -> Ironlog name. Every raw name must be present. */
+function importLiftoff(sessions, mapping, unit) {
+  let added = 0, replaced = 0, skipped = 0;
+  sessions.forEach(s => {
+    const srcId = 'liftoff:' + s.date;
+    if (S.workouts.some(w => w.srcId === srcId)) { skipped++; return; }
+
+    const built = s.exercises.map(e => ({
+      name: mapping[e.raw] || e.raw,
+      notes: e.secs ? `${e.secs} s hold` : '',
+      sets: e.sets.map(x => ({
+        w: toKgFrom(x.lb, unit), r: x.r, rpe: x.rpe, done: true, warm: false,
+      })),
+    }));
+    /* Two raw names can map onto one Ironlog name, and an exercise done in two
+       blocks arrives twice — fold both into one entry, keeping set order. */
+    const merged = [];
+    built.forEach(e => {
+      const prev = merged.find(m => m.name === e.name);
+      if (prev) { prev.sets.push(...e.sets); if (!prev.notes) prev.notes = e.notes; }
+      else merged.push(e);
+    });
+
+    const before = S.workouts.length;
+    S.workouts = S.workouts.filter(w =>
+      !(w.status === 'completed' && w.date === s.date && w.source === 'backfill'));
+    replaced += before - S.workouts.length;
+
+    S.workouts.push({
+      id: uid(), date: s.date, name: 'Liftoff import', status: 'completed',
+      source: 'imported', srcId,
+      exercises: merged,
+      start: null, end: parseISO(s.date).getTime(),
+      summary: {
+        mins: s.mins, prs: [],
+        volume: merged.reduce((t, e) => t + e.sets.reduce((x, v) => x + v.w * v.r, 0), 0),
+      },
+    });
+    added++;
+  });
+
+  // remember names so a second import of the same file doesn't ask again
+  Object.entries(mapping).forEach(([raw, name]) => {
+    if (name && name !== raw) S.exAliases[raw] = name;
+    if (name && !allExercises().includes(name) && !S.customEx.includes(name)) S.customEx.push(name);
+  });
+  S.workouts.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+  save(); bust();
+  return { added, replaced, skipped };
+}
+
+/* ---------------- CSV import UI ----------------
+   Two steps, because an import that guesses silently is worse than one that
+   asks. Preview confirms what was read (and the unit, which is inferred);
+   review confirms every exercise name that didn't match exactly. Doing nothing
+   on the review screen is the safe outcome — unmatched names come in under
+   their own name rather than being folded into an existing lift. */
+
+function openLiftoffImport(text) {
+  let p;
+  try { p = parseLiftoff(text); }
+  catch (e) { return toast('That does not look like a Liftoff CSV export'); }
+  if (!p.sessions.length) return toast('No sessions found in that file');
+
+  let unit = p.unit;
+  const col = importCollisions(p.sessions);
+  const span = p.sessions.length === 1
+    ? p.sessions[0].date
+    : `${p.sessions[0].date} → ${p.sessions[p.sessions.length - 1].date}`;
+
+  const notes = [];
+  if (col.replace.length) notes.push(`${col.replace.length} date${col.replace.length === 1 ? '' : 's'} already hold a backfilled session — the imported data replaces it`);
+  if (col.alongside.length) notes.push(`${col.alongside.length} date${col.alongside.length === 1 ? '' : 's'} already hold a logged session — the import lands alongside it`);
+  if (col.already.length) notes.push(`${col.already.length} session${col.already.length === 1 ? '' : 's'} already imported from this file — skipped`);
+  if (p.skipped) notes.push(`${p.skipped} empty row${p.skipped === 1 ? '' : 's'} ignored`);
+
+  modal({
+    title: 'Import Liftoff CSV',
+    body: `
+      <div class="sub" style="margin-bottom:10px">
+        <b>${p.sessions.length}</b> session${p.sessions.length === 1 ? '' : 's'} ·
+        <b>${p.sets}</b> sets · ${esc(span)}
+      </div>
+      <div class="field"><label>Weights in this file are</label>
+        <div class="seg" id="liUnit">
+          <button data-lu="lb" class="${unit === 'lb' ? 'on' : ''}">Pounds</button>
+          <button data-lu="kg" class="${unit === 'kg' ? 'on' : ''}">Kilograms</button>
+        </div>
+        <div class="sub" id="liUnitEg" style="margin-top:4px"></div>
+      </div>
+      ${notes.length ? `<div class="hr"></div><div class="sub">${notes.map(n => `• ${esc(n)}`).join('<br>')}</div>` : ''}
+    `,
+    foot: `<button class="btn ghost" data-close>Cancel</button>
+           <button class="btn primary" id="liNext">Next</button>`,
+    onOpen: bg => {
+      const eg = $('#liUnitEg', bg);
+      const sample = p.sessions[0].exercises[0].sets[0].lb;
+      const showEg = () => { eg.textContent = `e.g. ${nice(sample)} reads as ${nice(toKgFrom(sample, unit))} kg`; };
+      showEg();
+      bg.querySelectorAll('#liUnit button').forEach(b => b.onclick = () => {
+        unit = b.dataset.lu;
+        bg.querySelectorAll('#liUnit button').forEach(x => x.classList.toggle('on', x === b));
+        showEg();
+      });
+      $('#liNext', bg).onclick = () => { closeModal(); reviewLiftoffNames(p, unit); };
+    },
+  });
+}
+
+function reviewLiftoffNames(p, unit) {
+  // resolve what we can; everything else is the user's call
+  const mapping = {}, review = [];
+  p.names.forEach(n => {
+    const m = matchExercise(n);
+    if (m.name) mapping[n] = m.name;
+    else { mapping[n] = n; review.push({ raw: n, suggest: m.suggest }); }
+  });
+
+  const auto = p.names.length - review.length;
+  if (!review.length) return confirmLiftoffImport(p, mapping, unit, auto, 0);
+
+  const row = (r, i) => `
+    <div class="pickitem" style="display:block;padding:10px 16px">
+      <div class="n">${esc(r.raw)}</div>
+      <div class="seg" data-li="${i}" data-chosen="" style="margin-top:6px;flex-wrap:wrap">
+        <button data-lv="new" class="on">Keep as new</button>
+        ${r.suggest ? `<button data-lv="sug">${esc(r.suggest)}</button>` : ''}
+        <button data-lv="pick">Choose…</button>
+      </div>
+    </div>`;
+
+  modal({
+    wide: true,
+    title: 'Match exercises',
+    body: `
+      <div class="sub" style="margin-bottom:10px">
+        ${auto} name${auto === 1 ? '' : 's'} matched your log exactly.
+        ${review.length} didn't — each comes in as a new exercise unless you merge it.
+        Suggestions are only suggestions: merging the wrong one moves real sets onto
+        the wrong lift's PR.
+      </div>
+      <div class="picklist">${review.map(row).join('')}</div>
+    `,
+    foot: `<button class="btn ghost" data-close>Cancel</button>
+           <button class="btn primary" id="liGo">Import</button>`,
+    onOpen: bg => {
+      const select = (seg, b, chosen) => {
+        seg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+        seg.dataset.chosen = chosen || '';
+      };
+      bg.querySelectorAll('[data-li]').forEach(seg => {
+        const r = review[+seg.dataset.li];
+        seg.querySelectorAll('button').forEach(b => b.onclick = () => {
+          if (b.dataset.lv === 'pick') {
+            // the normal picker, so any of the 736 movements or your own log is reachable
+            pickExercise(name => {
+              b.textContent = name;
+              select(seg, b, name);
+            });
+            return;
+          }
+          select(seg, b, b.dataset.lv === 'sug' ? r.suggest : '');
+        });
+      });
+      $('#liGo', bg).onclick = () => {
+        let merged = 0;
+        bg.querySelectorAll('[data-li]').forEach(seg => {
+          const r = review[+seg.dataset.li];
+          const chosen = seg.dataset.chosen;
+          if (chosen && chosen !== r.raw) { mapping[r.raw] = chosen; merged++; }
+        });
+        closeModal();
+        confirmLiftoffImport(p, mapping, unit, auto, merged);
+      };
+    },
+  });
+}
+
+function confirmLiftoffImport(p, mapping, unit, auto, merged) {
+  const col = importCollisions(p.sessions);
+  const warn = col.replace.length
+    ? ` ${col.replace.length} backfilled session${col.replace.length === 1 ? '' : 's'} will be replaced.`
+    : '';
+  confirmDlg(
+    `Import ${p.sessions.length} session${p.sessions.length === 1 ? '' : 's'} as real training history.` +
+    ` They count toward your PRs.${warn}`,
+    () => {
+      const r = importLiftoff(p.sessions, mapping, unit);
+      closeAllModals(); render();
+      const bits = [`${r.added} session${r.added === 1 ? '' : 's'} imported`];
+      if (r.replaced) bits.push(`${r.replaced} backfill replaced`);
+      if (r.skipped) bits.push(`${r.skipped} already there`);
+      if (merged) bits.push(`${merged} name${merged === 1 ? '' : 's'} merged`);
+      toast(bits.join(' · '), 'green');
+    },
+    'Import');
 }
 
 function openSettings() {
@@ -3197,6 +3574,21 @@ function openSettings() {
         <input type="number" step="1" inputmode="numeric" id="stPlatform" value="${platformPct()}" placeholder="96">
         <div class="sub" style="margin-top:4px">Used for placing predictions. Openers are conservative, thirds get missed, nerves cost kilos — 96% is a reasonable default.</div>
       </div>
+      <div class="hr"></div>
+      <div class="eyebrow" style="margin-bottom:6px">AI parsing</div>
+      <div class="field"><label>Anthropic API key</label>
+        <input id="stKey" type="password" autocomplete="off" spellcheck="false"
+          value="${esc(aiKey())}" placeholder="sk-ant-… — leave blank to use the offline table">
+        <div class="sub" style="margin-top:4px">Held on this device only and sent nowhere but Anthropic. Clearing site data removes it. Food parsing uses Claude Haiku; without a key it falls back to the built-in table.</div>
+      </div>
+      <div class="field"><label>Count backfilled sessions toward PRs</label>
+        <div class="seg" id="prEstSeg">
+          <button data-pe="1" class="${S.settings.prCountEst !== false ? 'on' : ''}">Yes</button>
+          <button data-pe="0" class="${S.settings.prCountEst === false ? 'on' : ''}">No</button>
+        </div>
+        <div class="sub" style="margin-top:4px">Backfilled sets show EST against a best. Say No only if your backfill was the plan's prescription rather than what you actually lifted.</div>
+      </div>
+      <div class="hr"></div>
       <div class="field"><label>Handle on shared images</label>
         <input id="stHandle" value="${esc(S.settings.handle || '')}" placeholder="@yourname — leave blank for none">
       </div>
@@ -3232,8 +3624,11 @@ function openSettings() {
         <button class="btn sm grow" id="stExport">Export JSON</button>
         <button class="btn sm grow" id="stImport">Import JSON</button>
       </div>
+      <button class="btn sm wide" id="stLiftoff" style="margin-top:9px">Import Liftoff CSV</button>
+      <div class="sub" style="margin-top:6px">Real training history — imported sessions count toward your PRs.</div>
       <button class="btn sm danger wide" id="stWipe" style="margin-top:9px">Erase all data</button>
       <input type="file" id="stFile" accept="application/json" style="display:none">
+      <input type="file" id="stCsvFile" accept=".csv,text/csv" style="display:none">
     `,
     foot: `<span class="muted mono" style="font-size:11px;margin-right:auto">v${APP_VERSION}</span>
            <button class="btn primary" id="stSave">Save</button>`,
@@ -3242,6 +3637,12 @@ function openSettings() {
       bg.querySelectorAll('#unitSeg button').forEach(b => b.onclick = () => {
         units = b.dataset.u;
         bg.querySelectorAll('#unitSeg button').forEach(x => x.classList.toggle('on', x === b));
+      });
+      bg.querySelectorAll('#prEstSeg button').forEach(b => b.onclick = () => {
+        bg.querySelectorAll('#prEstSeg button').forEach(x => x.classList.remove('on'));
+        b.classList.add('on');
+        S.settings.prCountEst = b.dataset.pe === '1';
+        bust();
       });
       const pg = $('#stProgram', bg);
       if (pg) pg.onclick = () => { closeModal(); openProgram(); };
@@ -3295,6 +3696,15 @@ function openSettings() {
         };
         rd.readAsText(f);
       };
+      $('#stLiftoff', bg).onclick = () => $('#stCsvFile', bg).click();
+      $('#stCsvFile', bg).onchange = e => {
+        const f = e.target.files[0]; if (!f) return;
+        const rd = new FileReader();
+        rd.onload = () => { closeAllModals(); openLiftoffImport(rd.result); };
+        rd.onerror = () => toast('Could not read that file');
+        rd.readAsText(f);
+        e.target.value = '';   // so picking the same file twice still fires
+      };
       $('#stWipe', bg).onclick = () => confirmDlg('This erases every workout, check-in, goal and meet. It cannot be undone.', () => {
         S = structuredClone(DEFAULT_STATE); save(); closeAllModals(); go('home'); toast('All data erased');
       }, 'Erase everything');
@@ -3307,6 +3717,7 @@ function openSettings() {
         const op = +$('#stOpener', bg).value;
         if (op >= 50 && op <= 100) S.settings.openerPct = op;
         S.settings.handle = $('#stHandle', bg).value.trim().slice(0, 32);
+        setAiKey($('#stKey', bg).value.trim());
         const pp = +$('#stPlatform', bg).value;
         if (pp >= 80 && pp <= 100) S.settings.platformPct = pp;
 
@@ -3433,6 +3844,7 @@ function viewFood() {
     <textarea id="foodInput" rows="2" placeholder="200g chicken breast, 150g rice, an apple"
       style="width:100%;resize:vertical"></textarea>
     <div class="row" style="gap:8px;margin-top:8px">
+      <button class="btn grow" id="foodMic" title="Dictate">🎤 Speak</button>
       <button class="btn primary grow" id="foodParse">Parse</button>
       <button class="btn grow" id="foodManual">Enter manually</button>
     </div>
@@ -3623,7 +4035,8 @@ function parseError(e) {
   if (!navigator.onLine) return "You're offline, so parsing is unavailable.";
   if (e.empty) return "Nothing recognisable as food in that.";
   const b = e.body || '';
-  if (e.status === 404) return 'The parser isn\'t deployed here — this looks like the static host, not the Netlify site.';
+  if (e.nokey) return 'No API key saved. Add one in Settings → AI parsing to use Claude.';
+  if (e.status === 404) return 'No parser at this address. Add your own API key in Settings → AI parsing.';
   if (b.includes('ANTHROPIC_API_KEY is not set')) return 'The site has no API key set. Add ANTHROPIC_API_KEY in Netlify, then redeploy.';
   if (b.includes('upstream 401') || b.includes('upstream 403')) return 'The API key was rejected — check it hasn\'t been revoked.';
   if (b.includes('upstream 400')) return 'The API rejected the request — usually no credit on the Anthropic account.';
@@ -3643,6 +4056,66 @@ function addParsed(items, src) {
   syncCheckinKcal(d); save();
 }
 
+const FOOD_SYSTEM = `You convert a description of food eaten into structured nutrition data.
+Reply with ONLY a JSON array, no prose, no markdown fences.
+Each element: {"name":string,"serving":string,"meal":"Breakfast"|"Lunch"|"Dinner"|"Snacks","kcal":number,"protein":number,"carbs":number,"fats":number,"fiber":number}
+Grams of macros, kcal as a whole number. Assume UK products and portion sizes.
+If a quantity is not given, assume one typical serving and say so in "serving".
+Guess the meal from the food and the wording. Return [] if there is no food in the input.`;
+
+function aiKey() { try { return localStorage.getItem('ironlog.anthropicKey') || ''; } catch (e) { return ''; } }
+function setAiKey(k) {
+  try { k ? localStorage.setItem('ironlog.anthropicKey', k) : localStorage.removeItem('ironlog.anthropicKey'); }
+  catch (e) { /* private mode: parsing falls back to the table */ }
+}
+
+/* Direct browser call. The key sits in this origin's localStorage and goes
+   nowhere but Anthropic — no repo, no bundle, no host. */
+async function claudeParse(text) {
+  const key = aiKey();
+  if (!key) { const e = new Error('nokey'); e.nokey = true; throw e; }
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': key,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 1024,
+      system: FOOD_SYSTEM,
+      messages: [{ role: 'user', content: text }],
+    }),
+  });
+  if (!r.ok) {
+    const body = await r.text().catch(() => '');
+    const err = new Error(body || ('HTTP ' + r.status));
+    err.status = r.status; err.body = 'upstream ' + r.status + ' ' + body;
+    throw err;
+  }
+  const data = await r.json();
+  const out = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+  const clean = out.replace(/```json|```/g, '').trim();
+  return JSON.parse(clean);
+}
+
+async function netlifyParse(text) {
+  const r = await fetch('/.netlify/functions/parse-food', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ text }),
+  });
+  if (!r.ok) {
+    const body = await r.text().catch(() => '');
+    const err = new Error(body || ('HTTP ' + r.status));
+    err.status = r.status; err.body = body;
+    throw err;
+  }
+  return r.json();
+}
+
 async function parseFood() {
   const box = $('#foodInput');
   const text = (box.value || '').trim();
@@ -3653,18 +4126,7 @@ async function parseFood() {
   st.innerHTML = '<div class="sub" style="margin-top:8px">Parsing…</div>';
 
   try {
-    const r = await fetch('/.netlify/functions/parse-food', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text }),
-    });
-    if (!r.ok) {
-      const body = await r.text().catch(() => '');
-      const err = new Error(body || ('HTTP ' + r.status));
-      err.status = r.status; err.body = body;
-      throw err;
-    }
-    const items = await r.json();
+    const items = aiKey() ? await claudeParse(text) : await netlifyParse(text);
     if (!Array.isArray(items)) throw new Error('bad response');
     if (!items.length) { const e = new Error('empty'); e.empty = true; throw e; }
 
@@ -3689,6 +4151,27 @@ async function parseFood() {
       ${esc(parseError(e))} ${guess.length ? '' : "The offline table didn't recognise it either."}
       Log it by hand instead.</div>`;
   }
+}
+
+let _rec = null;
+function dictateFood() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const btn = $('#foodMic'), box = $('#foodInput');
+  if (!SR) return toast('This browser has no speech recognition — type it instead');
+  if (_rec) { _rec.stop(); return; }
+  const rec = _rec = new SR();
+  rec.lang = 'en-GB'; rec.interimResults = true; rec.continuous = false;
+  const before = (box.value || '').trim();
+  btn.textContent = '● Listening';
+  btn.classList.add('primary');
+  rec.onresult = ev => {
+    let t = '';
+    for (let i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript;
+    box.value = before ? before + ', ' + t.trim() : t.trim();
+  };
+  rec.onerror = ev => toast(ev.error === 'not-allowed' ? 'Microphone blocked' : 'Could not hear that');
+  rec.onend = () => { _rec = null; btn.textContent = '🎤 Speak'; btn.classList.remove('primary'); };
+  try { rec.start(); } catch (e) { rec.onend(); }
 }
 
 function openFoodEntry(existing) {
@@ -3780,6 +4263,7 @@ function wire() {
     syncCheckinKcal(fDate()); save(); render();
   });
   v.querySelectorAll('[data-food-targets]').forEach(b => b.onclick = openFoodTargets);
+  if ($('#foodMic', v)) $('#foodMic', v).onclick = dictateFood;
   if ($('#foodParse', v)) $('#foodParse', v).onclick = parseFood;
   if ($('#foodManual', v)) $('#foodManual', v).onclick = () => openFoodEntry(null);
   v.querySelectorAll('[data-goal]').forEach(b => b.onclick = () => openGoal(b.dataset.goal));
@@ -3893,7 +4377,7 @@ function wireActive(v) {
       const st = statsFor(ex.name);
       const before = st ? st.best.e1 : 0;
       s.done = true;
-      if (!s.warm && e1rm(s.w, s.r) > before) {
+      if (!s.warm && e1rm(s.w, s.r, s.rpe) > before) {
         toast(st ? `★ PR — ${ex.name} ${wt(s.w)}×${s.r}` : `★ First ${ex.name} logged`, 'gold');
       }
     } else s.done = false;
