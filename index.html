@@ -699,7 +699,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.4.0';
+const APP_VERSION = '0.4.1';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4048,7 +4048,12 @@ function parseError(e) {
   if (b.includes('upstream 400')) return 'The API rejected the request — usually no credit on the Anthropic account.';
   if (b.includes('upstream 429')) return 'Rate limited. Wait a moment and try again.';
   if (e.status >= 500) return 'The parser errored (' + (e.status || '?') + ').';
-  return "The parser didn't answer.";
+  if (e.badjson) return 'Claude replied, but not as JSON: ' + e.raw;
+  /* fetch() rejects with a TypeError when the request never lands at all —
+     VPN, DNS filter, blocker or CORS. Worth saying which, rather than
+     lumping it in with a parse failure. */
+  if (e.name === 'TypeError') return 'Could not reach the API (' + e.message + '). VPN, DNS filter or content blocker?';
+  return "The parser didn't answer \u2014 " + (e.message || 'no detail given') + '.';
 }
 
 function addParsed(items, src) {
@@ -4103,8 +4108,21 @@ async function claudeParse(text, system = FOOD_SYSTEM) {
   }
   const data = await r.json();
   const out = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
-  const clean = out.replace(/```json|```/g, '').trim();
-  return JSON.parse(clean);
+  let clean = out.replace(/```json|```/g, '').trim();
+  /* Haiku usually returns a bare array, but occasionally tops it with a
+     sentence. Salvage the array rather than throwing the whole reply away. */
+  if (clean[0] !== '[') {
+    const a = clean.indexOf('['), z = clean.lastIndexOf(']');
+    if (a !== -1 && z > a) clean = clean.slice(a, z + 1);
+  }
+  try {
+    return JSON.parse(clean);
+  } catch (pe) {
+    const err = new Error('badjson');
+    err.badjson = true;
+    err.raw = (out || '(empty reply)').slice(0, 160);
+    throw err;
+  }
 }
 
 async function netlifyParse(text) {
