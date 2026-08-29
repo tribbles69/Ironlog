@@ -699,7 +699,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.3.0';
+const APP_VERSION = '0.4.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -1174,12 +1174,15 @@ function closeModal() {
 }
 function closeAllModals() { modalStack.forEach(m => m.remove()); modalStack = []; }
 
-function confirmDlg(msg, onYes, yesLabel = 'Delete') {
+function confirmDlg(msg, onYes, yesLabel = 'Delete', onNo) {
   modal({
     title: 'Are you sure?',
     body: `<p style="margin:0;color:var(--dim)">${esc(msg)}</p>`,
-    foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn danger" id="cfmYes">${esc(yesLabel)}</button>`,
-    onOpen: bg => $('#cfmYes', bg).onclick = () => { closeModal(); onYes(); },
+    foot: `<button class="btn ghost" id="cfmNo" data-close>Cancel</button><button class="btn danger" id="cfmYes">${esc(yesLabel)}</button>`,
+    onOpen: bg => {
+      $('#cfmYes', bg).onclick = () => { closeModal(); onYes(); };
+      if (onNo) $('#cfmNo', bg).onclick = () => { closeModal(); onNo(); };
+    },
   });
 }
 
@@ -1894,6 +1897,9 @@ function activeWorkout() {
     <div class="row" style="margin-top:11px;gap:8px">
       <input id="woName" value="${esc(a.name)}" style="font-weight:650">
       <button class="btn sm danger" id="discardBtn">Discard</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button class="btn sm wide" id="voiceBtn">🎤 Log a set</button>
     </div>
   </div>
 
@@ -4071,7 +4077,7 @@ function setAiKey(k) {
 
 /* Direct browser call. The key sits in this origin's localStorage and goes
    nowhere but Anthropic — no repo, no bundle, no host. */
-async function claudeParse(text) {
+async function claudeParse(text, system = FOOD_SYSTEM) {
   const key = aiKey();
   if (!key) { const e = new Error('nokey'); e.nokey = true; throw e; }
   const r = await fetch('https://api.anthropic.com/v1/messages', {
@@ -4085,7 +4091,7 @@ async function claudeParse(text) {
     body: JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
-      system: FOOD_SYSTEM,
+      system,
       messages: [{ role: 'user', content: text }],
     }),
   });
@@ -4452,10 +4458,452 @@ function wireActive(v) {
     window.scrollTo(0, document.body.scrollHeight);
   });
 
+  if ($('#voiceBtn')) $('#voiceBtn').onclick = dictateSet;
   $('#finishBtn').onclick = finishWorkout;
   $('#discardBtn').onclick = () => confirmDlg('Discard this workout? Nothing will be saved.', () => {
     S.active = null; save(); render(); toast('Workout discarded');
   }, 'Discard');
+}
+
+/* ---------------- voice set logging ----------------
+   "bench two twenty five by eight at two RIR" -> a logged set.
+
+   Recognition is on-device where Chrome offers it (processLocally), so audio
+   from a gym floor never leaves the phone. Parsing is local too: the grammar
+   below plus the 736-movement database covers ordinary gym speech, and Haiku
+   is only called when that fails outright. Nothing commits until you've seen
+   what it understood — a misheard weight is worse than no weight. */
+
+/* Recognisers hand back a mix of words and digits for the same utterance —
+   "two twenty five" can arrive as "225", "2 25" or "two twenty five" depending
+   on the phrase and the engine. All three have to land on 225. */
+const NUM_ONES = {
+  zero: 0, oh: 0, o: 0, nought: 0,
+  one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9,
+  ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15,
+  sixteen: 16, seventeen: 17, eighteen: 18, nineteen: 19,
+};
+const NUM_TENS = { twenty: 20, thirty: 30, forty: 40, fourty: 40, fifty: 50, sixty: 60, seventy: 70, eighty: 80, ninety: 90 };
+
+function numAtom(t) {
+  if (/^\d+(\.\d+)?$/.test(t)) return { v: parseFloat(t), kind: 'digit', digits: t.replace(/\..*$/, '').length };
+  if (t in NUM_ONES) return { v: NUM_ONES[t], kind: 'one' };
+  if (t in NUM_TENS) return { v: NUM_TENS[t], kind: 'ten' };
+  if (t === 'hundred') return { v: 100, kind: 'hundred' };
+  if (t === 'thousand') return { v: 1000, kind: 'thousand' };
+  return null;
+}
+
+/* Consume as many number tokens as possible from tokens[i], returning the value
+   and how many were used.
+
+   The awkward case is the lifting idiom: "two twenty five" is 225, not 2+20+5,
+   and "one forty" is 140. The rule is that a bare single digit followed by a
+   tens word (or by "oh") is a hundreds digit. "Two hundred and twenty five"
+   still parses the ordinary way. */
+function readNumber(tokens, i) {
+  const start = i;
+  let total = 0, cur = 0, seen = false, hundreds = null;
+
+  // "a hundred" / "a hundred and ten"
+  if (tokens[i] === 'a' && tokens[i + 1] === 'hundred') { tokens = tokens.slice(); tokens[i] = 'one'; }
+
+  while (i < tokens.length) {
+    const t = tokens[i];
+    if (t === 'and' && seen) { i++; continue; }
+    if (t === 'point' || t === 'decimal') {
+      const d = numAtom(tokens[i + 1]);
+      if (!d) break;
+      let frac = '';
+      let j = i + 1;
+      while (j < tokens.length) { const a = numAtom(tokens[j]); if (!a || a.kind === 'hundred' || a.kind === 'thousand') break; frac += String(a.v); j++; }
+      cur = (total + cur) + parseFloat('0.' + frac);
+      total = 0; i = j; seen = true;
+      break;
+    }
+    if (t === 'half' && seen) { cur += 0.5; i++; break; }
+
+    const a = numAtom(t);
+    if (!a) break;
+
+    if (a.kind === 'digit') {
+      // "2 25" from the recogniser: a lone digit then a two-digit number
+      if (seen && hundreds === null && a.digits === 2 && cur >= 1 && cur <= 9 && total === 0) {
+        cur = cur * 100 + a.v; i++; continue;
+      }
+      if (seen) break;               // a second full number belongs to the next field
+      cur = a.v; seen = true; i++;
+      continue;
+    }
+    if (a.kind === 'hundred') { cur = (cur || 1) * 100; seen = true; i++; continue; }
+    if (a.kind === 'thousand') { total += (cur || 1) * 1000; cur = 0; seen = true; i++; continue; }
+
+    if (a.kind === 'one') {
+      if (!seen) {
+        // could be the hundreds digit of "two twenty five" / "one oh five"
+        const nx = numAtom(tokens[i + 1]);
+        if (a.v >= 1 && a.v <= 9 && nx && (nx.kind === 'ten' || (nx.kind === 'one' && nx.v === 0))) {
+          hundreds = a.v; cur = a.v * 100; seen = true; i++; continue;
+        }
+        cur = a.v; seen = true; i++; continue;
+      }
+      if (hundreds !== null || cur % 100 === 0 || (cur % 10 === 0 && cur % 100 !== 0)) { cur += a.v; i++; continue; }
+      break;
+    }
+    if (a.kind === 'ten') {
+      if (!seen) { cur = a.v; seen = true; i++; continue; }
+      if (cur > 0 && cur % 100 === 0) { cur += a.v; i++; continue; }   // "two hundred and twenty five"
+      break;
+    }
+    break;
+  }
+  if (!seen) return null;
+  return { value: total + cur, used: i - start };
+}
+
+/* Pull every number out of an utterance, tagged with the word that introduced
+   it, so the caller can tell "by eight" (reps) from "at eight" (RPE). */
+function scanNumbers(tokens) {
+  const out = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const n = readNumber(tokens, i);
+    if (!n) continue;
+    out.push({ value: n.value, at: i, end: i + n.used, before: tokens[i - 1] || '', after: tokens[i + n.used] || '' });
+    i += n.used - 1;
+  }
+  return out;
+}
+
+/* Gym shorthand. The right-hand side is a canonical name resolved through the
+   normal matcher, so these stay correct if the library is renamed. */
+const VOICE_ALIASES = {
+  bench: 'Bench Press', benches: 'Bench Press', benching: 'Bench Press',
+  'flat bench': 'Bench Press', 'comp bench': 'Bench Press',
+  squat: 'Back Squat', squats: 'Back Squat', squatting: 'Back Squat',
+  'back squat': 'Back Squat', 'high bar': 'High Bar Squat', 'low bar': 'Low Bar Squat',
+  deadlift: 'Deadlift', deadlifts: 'Deadlift', deads: 'Deadlift', dead: 'Deadlift',
+  ohp: 'Overhead Press', 'overhead press': 'Overhead Press', 'shoulder press': 'Overhead Press',
+  press: 'Overhead Press', 'military press': 'Overhead Press',
+  rdl: 'Romanian Deadlift', rdls: 'Romanian Deadlift',
+  sldl: 'Stiff Leg Deadlift',
+  'close grip': 'Close Grip Bench', cgbp: 'Close Grip Bench',
+  incline: 'Incline Bench', 'incline bench': 'Incline Bench',
+  row: 'Barbell Row', rows: 'Barbell Row', 'barbell row': 'Barbell Row',
+  pendlay: 'Pendlay Row', 'pull up': 'Pull Up', 'pull ups': 'Pull Up', pullups: 'Pull Up',
+  'chin up': 'Chin Up', 'chin ups': 'Chin Up', chins: 'Chin Up',
+  pulldown: 'Lat Pulldown', 'lat pulldown': 'Lat Pulldown',
+  curl: 'Barbell Curl', curls: 'Barbell Curl',
+  pushdown: 'Tricep Pushdown', pushdowns: 'Tricep Pushdown',
+  'leg press': 'Leg Press', 'hip thrust': 'Hip Thrust', 'front squat': 'Front Squat',
+  'pause squat': 'Pause Squat', 'pause bench': 'Pause Bench', 'box squat': 'Box Squat',
+  'good morning': 'Good Morning', 'face pull': 'Face Pull', dips: 'Dips',
+};
+
+/* Resolve a spoken exercise name. Unlike the CSV importer this may fall back to
+   a fuzzy match, because nothing commits until the confirmation card is
+   accepted — the user sees the name before it lands. Anything below an exact
+   match is reported so the card can say how sure it is. */
+function voiceMatchExercise(spoken, active) {
+  const k = normEx(spoken);
+  if (!k) return null;
+
+  // 1. an exercise already open in this session
+  if (active && active.exercises.length) {
+    const inSession = active.exercises.map(e => e.name);
+    const exact = inSession.find(n => normEx(n) === k);
+    if (exact) return { name: exact, how: 'session', sure: true };
+    const part = inSession.find(n => { const nk = normEx(n); return nk.includes(k) || k.includes(nk); });
+    if (part) return { name: part, how: 'session', sure: true };
+  }
+  // 2. gym shorthand
+  if (VOICE_ALIASES[k]) {
+    const target = VOICE_ALIASES[k];
+    const real = allExercises().find(n => normEx(n) === normEx(target))
+      || Object.keys(EX_DB).find(n => normEx(n) === normEx(target));
+    return { name: real || target, how: 'alias', sure: true };
+  }
+  // 3. exact, in the log or the database
+  const own = allExercises().find(n => normEx(n) === k);
+  if (own) return { name: own, how: 'exact', sure: true };
+  const db = Object.keys(EX_DB).find(n => normEx(n) === k);
+  if (db) return { name: db, how: 'db', sure: true };
+
+  // 4. best effort, flagged as unsure
+  const w = k.split(' ');
+  let best = null, bs = 0;
+  const consider = n => {
+    const pw = normEx(n).split(' ');
+    const hit = w.filter(x => pw.includes(x)).length;
+    const sc = hit / Math.max(w.length, pw.length);
+    if (sc > bs) { bs = sc; best = n; }
+  };
+  allExercises().forEach(consider);
+  if (bs < 0.5) Object.keys(EX_DB).forEach(consider);
+  return bs >= 0.5 ? { name: best, how: 'fuzzy', sure: false } : null;
+}
+
+const REP_WORDS = ['by', 'x', 'times', 'for'];
+const RPE_WORDS = ['at', 'rpe', '@'];
+
+/* The grammar, in one pass:
+     [exercise] <weight> [kg|lb] (by|x|for) <reps> [at <n> (rpe|rir)]
+   Every part except the numbers is optional — mid-session "two twenty by five"
+   means the exercise you're already on. */
+function parseSetSpeech(text, active) {
+  const raw = String(text || '').toLowerCase().trim();
+  if (!raw) return null;
+  const tokens = raw
+    .replace(/[,!?]/g, ' ')
+    .replace(/@/g, ' at ')
+    .replace(/(\d)\s*(kg|kgs|kilos?|kilograms?)\b/g, '$1 kg')
+    .replace(/(\d)\s*(lbs?|pounds?)\b/g, '$1 lb')
+    .replace(/\bx(\d)/g, 'x $1')
+    .split(/\s+/).filter(Boolean);
+
+  const nums = scanNumbers(tokens);
+  if (!nums.length) return null;
+
+  const out = { exercise: null, exerciseHow: null, sure: true, kg: null, reps: null, rpe: null, rir: null, unit: null, said: raw };
+
+  // RPE / RIR: the number introduced by "at", or followed by the word itself
+  let rpeIdx = -1;
+  nums.forEach((n, i) => {
+    const isRir = n.after === 'rir' || tokens[n.end] === 'rir';
+    const isRpe = n.after === 'rpe' || tokens[n.end] === 'rpe' || n.before === 'rpe';
+    if (isRir) { out.rir = n.value; out.rpe = clamp(10 - n.value, 4, 10); rpeIdx = i; }
+    else if (isRpe) { out.rpe = clamp(n.value, 4, 10); out.rir = 10 - out.rpe; rpeIdx = i; }
+  });
+  if (rpeIdx < 0) {
+    // bare "at eight" after reps — only plausible as an RPE
+    const i = nums.findIndex(n => RPE_WORDS.includes(n.before) && n.value >= 4 && n.value <= 10);
+    if (i > 0) { out.rpe = nums[i].value; out.rir = 10 - out.rpe; rpeIdx = i; }
+  }
+
+  const rest = nums.filter((_, i) => i !== rpeIdx);
+
+  // reps: the number introduced by by/x/times/for; else the second number
+  let repIdx = rest.findIndex(n => REP_WORDS.includes(n.before));
+  if (repIdx < 0 && rest.length >= 2) repIdx = 1;
+  if (repIdx >= 0) out.reps = Math.round(rest[repIdx].value);
+
+  // weight: the first number that isn't the reps
+  const wIdx = rest.findIndex((_, i) => i !== repIdx);
+  if (wIdx >= 0) {
+    const n = rest[wIdx];
+    out.kg = n.value;
+    const unitTok = tokens[n.end];
+    if (unitTok === 'lb') out.unit = 'lb';
+    else if (unitTok === 'kg') out.unit = 'kg';
+    // words before the first number are the exercise
+    const head = tokens.slice(0, n.at).filter(w => !['log', 'add', 'set', 'did', 'i', 'a', 'an', 'the', 'do', 'just'].includes(w)).join(' ');
+    if (head) {
+      const m = voiceMatchExercise(head, active);
+      if (m) { out.exercise = m.name; out.exerciseHow = m.how; out.sure = m.sure; }
+      else { out.exercise = null; out.exerciseHow = 'unknown'; out.sure = false; out.heard = head; }
+    }
+  }
+
+  if (out.kg == null || out.reps == null) return null;
+  if (out.unit === 'lb') out.kg = Math.round(out.kg / LB_PER_KG * 100) / 100;
+  else if (out.unit == null && U() === 'lb') { out.unit = 'lb'; out.kg = Math.round(out.kg / LB_PER_KG * 100) / 100; }
+  else out.unit = out.unit || 'kg';
+
+  if (out.kg <= 0 || out.reps <= 0 || out.reps > 100) return null;
+  return out;
+}
+
+/* Chrome 138+ can run recognition entirely on the device. Ask for it whenever
+   it's there, so gym audio never leaves the phone; where it isn't, say so on
+   the button rather than quietly streaming to a server. */
+let _voiceMode = null;          // 'local' | 'cloud' | null until first use
+
+function speechCtor() { return window.SpeechRecognition || window.webkitSpeechRecognition; }
+
+async function voiceLocalState() {
+  const SR = speechCtor();
+  if (!SR) return 'none';
+  if (typeof SR.available !== 'function') return 'unknown';
+  try { return await SR.available({ langs: ['en-GB'], processLocally: true }); }
+  catch (e) { return 'unknown'; }
+}
+
+/* Offer to fetch the on-device model once, rather than nagging every session. */
+async function voiceInstallLocal() {
+  const SR = speechCtor();
+  if (!SR || typeof SR.install !== 'function') return false;
+  try { return await SR.install({ langs: ['en-GB'], processLocally: true }); }
+  catch (e) { return false; }
+}
+
+let _setRec = null;
+
+function dictateSet() {
+  const SR = speechCtor();
+  const btn = $('#voiceBtn');
+  if (!SR) return toast('This browser has no speech recognition — type the set instead');
+  if (_setRec) { _setRec.stop(); return; }
+  if (!S.active) return toast('Start a workout first');
+
+  const idle = () => { _setRec = null; if ($('#voiceBtn')) { $('#voiceBtn').textContent = '🎤 Log a set'; $('#voiceBtn').classList.remove('primary'); } };
+
+  const run = (local) => {
+    const rec = _setRec = new SR();
+    rec.lang = 'en-GB';
+    rec.interimResults = true;
+    rec.continuous = false;
+    rec.maxAlternatives = 3;
+    if (local && 'processLocally' in rec) { rec.processLocally = true; _voiceMode = 'local'; }
+    else _voiceMode = 'cloud';
+
+    let finalText = '', heard = false;
+    rec.onresult = ev => {
+      let t = '';
+      for (let i = 0; i < ev.results.length; i++) t += ev.results[i][0].transcript;
+      finalText = t.trim();
+      heard = true;
+      if (btn) btn.textContent = '● ' + (finalText.slice(0, 22) || 'Listening');
+    };
+    rec.onerror = ev => {
+      // an on-device model that isn't there reports a service error: retry in the cloud once
+      if (local && (ev.error === 'service-not-allowed' || ev.error === 'language-not-supported')) {
+        rec.onend = null; _setRec = null;
+        toast('On-device model unavailable — using cloud recognition');
+        return run(false);
+      }
+      if (ev.error === 'not-allowed') toast('Microphone blocked — allow it in site settings');
+      else if (ev.error !== 'aborted' && ev.error !== 'no-speech') toast('Could not hear that');
+    };
+    rec.onend = () => {
+      idle();
+      if (heard && finalText) resolveVoiceSet(finalText);
+    };
+    try { rec.start(); if (btn) { btn.textContent = '● Listening'; btn.classList.add('primary'); } }
+    catch (e) { idle(); }
+  };
+
+  voiceLocalState().then(st => {
+    if (st === 'available' || st === 'unknown') return run(true);
+    if (st === 'downloadable' && !S.settings.voiceLocalDeclined) {
+      return confirmDlg(
+        'Download the on-device speech model? Recognition then runs entirely on the phone and works with no signal. It is a one-off download of a few tens of MB.',
+        async () => {
+          toast('Downloading the speech model…');
+          const ok = await voiceInstallLocal();
+          toast(ok ? 'On-device speech ready' : 'Download failed — using cloud recognition', ok ? 'green' : '');
+          run(ok);
+        },
+        'Download',
+        () => { S.settings.voiceLocalDeclined = true; save(); run(false); });
+    }
+    run(false);
+  });
+}
+
+/* Local grammar first. Haiku is only reached when the grammar can't make a set
+   out of the utterance at all — which is the point of having the grammar. */
+async function resolveVoiceSet(text) {
+  const local = parseSetSpeech(text, S.active);
+  if (local) return confirmVoiceSet(local, 'local');
+
+  if (!aiKey()) {
+    return confirmVoiceSet(
+      { exercise: null, exerciseHow: 'unknown', sure: false, kg: null, reps: null, rpe: null, rir: null, said: text },
+      'failed');
+  }
+  toast('Asking Claude…');
+  try {
+    const r = await claudeParseSet(text);
+    const p = {
+      exercise: null, exerciseHow: null, sure: false, said: text,
+      kg: r.kg != null ? +r.kg : null, reps: r.reps != null ? Math.round(r.reps) : null,
+      rpe: r.rpe != null ? clamp(+r.rpe, 4, 10) : null,
+    };
+    p.rir = p.rpe != null ? 10 - p.rpe : null;
+    if (r.exercise) {
+      const m = voiceMatchExercise(r.exercise, S.active);
+      if (m) { p.exercise = m.name; p.exerciseHow = m.how; p.sure = m.sure; }
+      else { p.heard = r.exercise; p.exerciseHow = 'unknown'; }
+    }
+    confirmVoiceSet(p, 'ai');
+  } catch (e) {
+    confirmVoiceSet({ exercise: null, exerciseHow: 'unknown', sure: false, kg: null, reps: null, rpe: null, said: text }, 'failed');
+  }
+}
+
+const SET_SYSTEM = `You turn a spoken gym sentence into one logged set.
+Reply with JSON only: {"exercise":string|null,"kg":number|null,"reps":number|null,"rpe":number|null}
+- Weight in kilograms. If the speaker clearly used pounds, convert (1 kg = 2.2046226218 lb).
+- "at 2 RIR" means 2 reps in reserve, so rpe = 8. "at RPE 8" means rpe = 8.
+- Lifting shorthand: "two twenty five" is 225, "one forty" is 140.
+- exercise is the movement name only, no weight or reps. null if not stated.
+- Use null for anything not stated. No prose, no code fences.`;
+
+function claudeParseSet(text) { return claudeParse(text, SET_SYSTEM); }
+
+/* Nothing is written until this card is accepted. It shows the transcript as
+   well as the reading of it, because the two failure modes look very different:
+   a misheard word is the recogniser, a wrong field is the grammar. */
+function confirmVoiceSet(p, via) {
+  const usable = p.kg > 0 && p.reps > 0;
+  const dispW = p.kg ? nice(dw(p.kg)) : '';
+  const viaChip = via === 'ai' ? '<span class="chip blue">CLAUDE</span>'
+    : via === 'local' ? `<span class="chip">${_voiceMode === 'local' ? 'ON-DEVICE' : 'VOICE'}</span>` : '';
+
+  modal({
+    title: usable ? 'Log this set?' : "Didn't catch that",
+    body: `
+      <div class="sub" style="margin-bottom:10px">${viaChip} heard “${esc(p.said || '')}”</div>
+      ${!usable ? `<div class="sub" style="color:var(--red);margin-bottom:10px">
+        Couldn't read a weight and reps out of that. Try “bench two twenty five by eight at two RIR”,
+        or fill it in below.</div>` : ''}
+      <div class="field"><label>Exercise</label>
+        <button class="btn wide" id="vsEx" style="justify-content:flex-start">${esc(p.exercise || (p.heard ? p.heard + ' — tap to choose' : 'Tap to choose'))}</button>
+        ${p.exerciseHow === 'fuzzy' ? '<div class="sub" style="margin-top:4px;color:var(--gold)">Best guess — check it</div>' : ''}
+        ${p.exerciseHow === 'unknown' ? '<div class="sub" style="margin-top:4px;color:var(--gold)">Not recognised — pick the exercise</div>' : ''}
+      </div>
+      <div class="row" style="gap:8px">
+        <div class="grow"><label>Weight (${U()})</label>
+          <input type="number" step="0.5" inputmode="decimal" id="vsW" value="${dispW}"></div>
+        <div class="grow"><label>Reps</label>
+          <input type="number" inputmode="numeric" id="vsR" value="${p.reps || ''}"></div>
+        <div class="grow"><label>RPE</label>
+          <input type="number" step="0.5" inputmode="decimal" id="vsRpe" value="${p.rpe ?? ''}" placeholder="—"></div>
+      </div>
+      ${p.rir != null && p.rpe != null ? `<div class="sub" style="margin-top:6px">${p.rir} in reserve → RPE ${p.rpe}</div>` : ''}
+    `,
+    foot: `<button class="btn ghost" data-close>Cancel</button>
+           <button class="btn primary" id="vsGo">Log set</button>`,
+    onOpen: bg => {
+      let name = p.exercise;
+      $('#vsEx', bg).onclick = () => pickExercise(n => { name = n; $('#vsEx', bg).textContent = n; });
+      $('#vsGo', bg).onclick = () => {
+        const w = +$('#vsW', bg).value, r = +$('#vsR', bg).value;
+        const rpeRaw = $('#vsRpe', bg).value;
+        if (!name) return toast('Pick the exercise first');
+        if (!(w > 0) || !(r > 0)) return toast('Weight and reps are needed');
+        closeModal();
+        applyVoiceSet(name, toKg(w), Math.round(r), rpeRaw === '' ? null : +rpeRaw);
+      };
+    },
+  });
+}
+
+/* Appends to the exercise if it's already open in the session, otherwise adds
+   it. Marked done on the way in — the set already happened. PR check mirrors
+   the tick-box path so a voice PR announces itself the same way. */
+function applyVoiceSet(name, kg, reps, rpe) {
+  const a = S.active;
+  if (!a) return toast('No active workout');
+  let ex = a.exercises.find(e => e.name === name);
+  if (!ex) { ex = { name, notes: '', sets: [] }; a.exercises.push(ex); }
+
+  const st = statsFor(name);
+  const before = st ? st.best.e1 : 0;
+  ex.sets.push({ w: kg, r: reps, rpe: rpe, done: true, warm: false });
+  save(); bust(); render();
+
+  if (e1rm(kg, reps, rpe) > before) toast(st ? `★ PR — ${name} ${wt(kg)}×${reps}` : `★ First ${name} logged`, 'gold');
+  else toast(`${name} ${wt(kg)} × ${reps}${rpe ? ` @ ${rpe}` : ''}`, 'green');
 }
 
 /* ============================================================
