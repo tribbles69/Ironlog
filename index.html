@@ -4814,6 +4814,13 @@ async function parseFood() {
     st.innerHTML = '';
     toast(`Added ${found.length + items.length} item${found.length + items.length === 1 ? '' : 's'}`, 'green');
     render();
+    /* The model answered, but for fewer things than it was sent. Nothing
+       typed may disappear without a word, so say which chunks went out. */
+    if (items.length < missed.length) {
+      const st3 = $('#foodStatus');
+      if (st3) st3.innerHTML = `<div class="sub" style="margin-top:8px">The AI returned ${items.length} item${items.length === 1 ? '' : 's'} for the ${missed.length} it was sent
+        (${esc(missed.map(m => '“' + m + '”').join(', '))}) — check the log and add anything missing by hand.</div>`;
+    }
     return;
   } catch (e) {
     console.warn('parse failed', e);
