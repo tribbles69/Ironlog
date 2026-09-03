@@ -413,6 +413,8 @@ svg.chart{display:block;width:100%;height:auto;overflow:visible}
 
 /* toast */
 #toastRoot{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + 14px);z-index:200;display:flex;flex-direction:column;align-items:center;gap:7px;pointer-events:none}
+.plaus{margin:6px 0 10px;padding-left:18px;color:var(--gold);font-size:13px}
+.plaus li{margin:3px 0}
 .toast{
   background:var(--card2);border:1px solid var(--line2);border-radius:11px;
   padding:10px 15px;font-size:13px;font-weight:600;box-shadow:0 8px 26px rgba(0,0,0,.5);
@@ -1137,6 +1139,79 @@ function bestSingleInfo(name) {
     : { kg: st.best.e1, est: true, e1: st.best.e1 };
 }
 function bestSingleKg(name) { return bestSingleInfo(name).kg; }
+
+/* ---------------- plausibility ----------------
+   Catches the fat-finger set — 2250 for 225, 80 reps for 8, a lb figure typed
+   into a kg field — before it lands as a PR and skews every comparison after
+   it. Every rule is a "does this look right?" prompt, never a block: a real
+   300 kg pull must still be loggable. `before` reads history as it stood
+   before a date, so editing an old session compares against what was true
+   then rather than against itself. */
+const PLAUS = {
+  maxReps: 60,        // one set; past this it's a typo or a timed hold in the wrong field
+  maxKg: 500,         // beyond the heaviest competition lifts
+  overBest: 1.5,      // heavier than 1.5× your heaviest ever set of this movement
+  overE1: 1.4,        // e1RM 40% past your best
+  overElite: 1.5,     // no history: 1.5× the elite standard for your bodyweight
+};
+
+function plausibility(name, w, r, rpe, before) {
+  const why = [];
+  if (r > PLAUS.maxReps) why.push(`${r} reps in one set`);
+  if (w > PLAUS.maxKg) why.push(`${wt(w)} is beyond any recorded lift`);
+  if (rpe != null && (rpe < 1 || rpe > 10)) why.push(`RPE ${rpe} — the scale is 1 to 10`);
+  const st = statsFor(name, before);
+  const loaded = st && st.bestW.w > 0;
+  if (loaded && w > 0) {
+    const best = st.bestW.w;
+    const lbAsKg = w / 2.2046226218;
+    if (U() === 'kg' && w > best * 1.3 && lbAsKg >= best * 0.5 && lbAsKg <= best * 1.15) {
+      why.push(`${wt(w)} looks like a lb figure — your heaviest ${name} is ${wt(best)}`);
+    } else if (w > best * PLAUS.overBest) {
+      why.push(`${wt(w)} is ${Math.round((w / best - 1) * 100)}% over your heaviest ${name} (${wt(best)})`);
+    } else if (r > 0 && e1rm(w, r, rpe) > st.best.e1 * PLAUS.overE1) {
+      const e1 = e1rm(w, r, rpe);
+      why.push(`e1RM ${wt(e1)} is ${Math.round((e1 / st.best.e1 - 1) * 100)}% over your best (${wt(st.best.e1)})`);
+    }
+  } else if (w > 0) {
+    const th = stdFor(name), bw = bodyweightKg();
+    if (th && bw && w > th[4] * bw * PLAUS.overElite) {
+      why.push(`${wt(w)} is ${(w / bw).toFixed(1)}× bodyweight — past the elite standard for ${name}, with nothing logged yet`);
+    }
+  }
+  return why;
+}
+
+function plausLine(name, s) {
+  return `${name} · ${s.w > 0 ? wt(s.w) + ' × ' : ''}${s.r} reps${s.rpe != null ? ' @ ' + s.rpe : ''}`;
+}
+
+/* One set, one prompt. `ok` runs only on "Log anyway". */
+function plausDlg(name, s, why, ok) {
+  modal({
+    title: 'Does this look right?',
+    body: `<div style="font-weight:700;margin-bottom:6px">${esc(plausLine(name, s))}</div>
+      <ul class="plaus">${why.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+      <div class="sub">Fix the numbers, or log it as typed.</div>`,
+    foot: `<button class="btn ghost" data-close>Fix it</button><button class="btn primary" id="plOk">Log anyway</button>`,
+    onOpen: bg => { $('#plOk', bg).onclick = () => { closeModal(); ok(); }; },
+  });
+}
+
+/* Several sets at once, at finish or after an edit — anything ticked and then
+   retyped never went past the single-set prompt. */
+function plausListDlg(flagged, verb, ok) {
+  modal({
+    title: 'Some sets look off',
+    body: `${flagged.map(f => `<div class="card tight" style="margin-bottom:8px">
+        <div style="font-weight:700">${esc(plausLine(f.name, f.s))}</div>
+        <ul class="plaus" style="margin-bottom:0">${f.why.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+      </div>`).join('')}
+      <div class="sub">Go back and fix them, or ${esc(verb.toLowerCase())} as they are.</div>`,
+    foot: `<button class="btn ghost" data-close>Go back</button><button class="btn primary" id="plOk">${esc(verb)} anyway</button>`,
+    onOpen: bg => { $('#plOk', bg).onclick = () => { closeModal(); ok(); }; },
+  });
+}
 
 /* ---------------- testing log ----------------
    A test is a completed session flagged `tested`, holding one 1-rep set per
@@ -2227,11 +2302,21 @@ function openPlates(targetKg, presetBar) {
   });
 }
 
-function finishWorkout() {
+function finishWorkout(force) {
   const a = S.active;
   const logged = a.exercises.map(e => ({ ...e, sets: e.sets.filter(s => s.done && s.r > 0) }))
     .filter(e => e.sets.length);
   if (!logged.length) return toast('Log at least one set first');
+
+  // sets ticked and then retyped never met the single-set prompt
+  if (!force) {
+    const flagged = [];
+    logged.forEach(e => e.sets.filter(s => !s.warm).forEach(s => {
+      const why = plausibility(e.name, s.w, s.r, s.rpe);
+      if (why.length) flagged.push({ name: e.name, s, why });
+    }));
+    if (flagged.length) return plausListDlg(flagged, 'Finish', () => finishWorkout(true));
+  }
 
   // PRs — compare against history BEFORE this workout is saved
   const prs = [];
@@ -4465,16 +4550,19 @@ function wireActive(v) {
     const [ei, si] = key(b.dataset.done);
     const s = a.exercises[ei].sets[si];
     const ex = a.exercises[ei];
-    if (!s.done) {
-      if (!s.r) return toast('Enter reps first');
+    if (s.done) { s.done = false; save(); bust(); render(); return; }
+    if (!s.r) return toast('Enter reps first');
+    const commit = () => {
       // PR check against history captured before flipping the flag
       const st = statsFor(ex.name);
       s.done = true;
       if (!s.warm && (!st || beatsBest(st, s.w, s.r, s.rpe))) {
         toast(st ? `★ PR — ${ex.name} ${s.w > 0 ? `${wt(s.w)}×${s.r}` : `${s.r} reps`}` : `★ First ${ex.name} logged`, 'gold');
       }
-    } else s.done = false;
-    save(); bust(); render();
+      save(); bust(); render();
+    };
+    const why = s.warm ? [] : plausibility(ex.name, s.w, s.r, s.rpe);
+    if (why.length) plausDlg(ex.name, s, why, commit); else commit();
   });
 
   v.querySelectorAll('[data-warm]').forEach(b => b.onclick = () => {
@@ -4546,7 +4634,7 @@ function wireActive(v) {
   });
 
   if ($('#voiceBtn')) $('#voiceBtn').onclick = dictateSet;
-  $('#finishBtn').onclick = finishWorkout;
+  $('#finishBtn').onclick = () => finishWorkout();   // no event object as `force`
   $('#discardBtn').onclick = () => confirmDlg('Discard this workout? Nothing will be saved.', () => {
     S.active = null; save(); render(); toast('Workout discarded');
   }, 'Discard');
@@ -4968,8 +5056,10 @@ function confirmVoiceSet(p, via) {
         const rpeRaw = $('#vsRpe', bg).value;
         if (!name) return toast('Pick the exercise first');
         if (!(r > 0)) return toast('Reps are needed');
-        closeModal();
-        applyVoiceSet(name, toKg(w), Math.round(r), rpeRaw === '' ? null : +rpeRaw);
+        const kg = toKg(w), reps = Math.round(r), rpe = rpeRaw === '' ? null : +rpeRaw;
+        const commit = () => { closeModal(); applyVoiceSet(name, kg, reps, rpe); };
+        const why = plausibility(name, kg, reps, rpe);
+        if (why.length) plausDlg(name, { w: kg, r: reps, rpe }, why, commit); else commit();
       };
     },
   });
