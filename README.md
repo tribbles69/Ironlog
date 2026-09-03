@@ -55,14 +55,18 @@ restores it. Worth doing after a meet, or any time you'd be annoyed to lose it.
 
 # Food tab — setup
 
-The Food tab works with no setup at all. Press Parse and, if no parser
-is reachable, it estimates from a built-in food table — that covers
-GitHub Pages, aeroplane mode and basement gyms. Those items are tagged
-TABLE in the log.
+The Food tab needs no setup and, for ordinary food, no network. Press
+Parse and every item is looked up in the built-in tables first: 2,848 UK
+foods from CoFID plus the curated rows. Those are tagged TABLE, cost
+nothing and work in aeroplane mode and basement gyms.
 
-Deploying the serverless function upgrades the estimates: model-parsed
-items are tagged EST and handle anything the table doesn't know. That
-is the only part that needs Netlify and a key.
+Only what the tables cannot name is sent to Claude — and only that part
+of the sentence, not the whole thing. Those items are tagged EST. A
+normal day of food usually makes no API call at all, so the key below is
+worth having but is rarely used.
+
+Without a key, unrecognised items are listed by name and you add them by
+hand rather than the app inventing a number.
 
 ## 1. Get an API key
 
@@ -127,15 +131,33 @@ get round it you need an https address for Ollama, e.g.
 and your machine has to be awake whenever you log a meal. For a phone
 app the table is usually the better trade until the key is sorted.
 
-## Editing the food table
+## The two food tables
 
-`LOCAL_FOODS` in index.html, one row per food:
+**`LOCAL_FOODS`** — the curated rows, hand-edited, one per food:
 
     ['Display name', 'keyword|other keyword', kcal, protein, carbs, fat, fibre, eachGrams]
 
 Values are per 100 g. The last field is optional and only for things
 counted rather than weighed — an egg, a slice of bread, a pint. The
 longest matching keyword wins, so "chicken breast" beats "chicken".
+
+**`FOOD_DB`** — CoFID 2021 (McCance & Widdowson's), Crown copyright,
+Open Government Licence v3. 2,848 UK foods as one generated line of
+`name<TAB>kcal<TAB>protein<TAB>carbs<TAB>fat<TAB>fibre`. Don't hand-edit
+it; regenerate when a new CoFID edition is published:
+
+    node tools/build-foods.cjs
+
+That downloads the current spreadsheet from gov.uk and rewrites the one
+`FOOD_DB` line, leaving the rest of index.html alone. Pass a path to use
+a local .xlsx instead. Bump APP_VERSION and sw.js VERSION afterwards.
+
+**Which one answers.** The curated row wins when its *name* accounts for
+what you typed, because it is tuned to how food is actually logged —
+rice and pasta cooked, mince at 5%, a whole egg — where CoFID leads with
+raw weights. Otherwise the database answers, which is what makes
+"hummus" houmous at 307 kcal rather than chickpeas at 164, and
+"orange juice" juice rather than an orange.
 
 ---
 
