@@ -4806,9 +4806,9 @@ async function parseFood() {
   } catch (e) {
     console.warn('parse failed', e);
     box.value = '';
-    render();
-    btn.disabled = false;
-    st.innerHTML = `<div class="sub" style="margin-top:8px;color:${found.length ? 'var(--dim)' : 'var(--red)'}">
+    render();                                  // the log now shows what the tables found
+    const st2 = $('#foodStatus');             // render() replaced the node `st` pointed at
+    if (st2) st2.innerHTML = `<div class="sub" style="margin-top:8px;color:${found.length ? 'var(--dim)' : 'var(--red)'}">
       ${found.length ? `Logged ${found.length} item${found.length === 1 ? '' : 's'} from the food tables. ` : ''}
       Nothing in the tables matches ${esc(missed.map(m => '“' + m + '”').join(', '))}.
       ${esc(parseError(e))} Add ${missed.length === 1 ? 'it' : 'them'} by hand.</div>`;
