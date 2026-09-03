@@ -562,7 +562,10 @@ async function load() {
   const raw = await storeGet(KEY);
   if (!raw) return structuredClone(DEFAULT_STATE);
   try {
-    const st = Object.assign(structuredClone(DEFAULT_STATE), JSON.parse(raw));
+    const parsed = JSON.parse(raw);
+    const st = Object.assign(structuredClone(DEFAULT_STATE), parsed);
+    // settings is merged a level deeper, so a key added to DEFAULT_STATE later still gets its default
+    st.settings = Object.assign(structuredClone(DEFAULT_STATE.settings), parsed.settings || {});
     /* 0.3.0: the `backfilled` boolean became `source`. Only 'backfill' is the plan's
        prescription — imported history is real lifting and always counts toward PRs.
        `backfilled` is left in place so an older export re-imported through Settings
@@ -699,7 +702,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.4.1';
+const APP_VERSION = '0.4.2';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -1003,11 +1006,13 @@ function viewMuscleMap() {
 
 /* ---------------- PR engine ---------------- */
 // Returns every logged (completed, non-warmup) set for an exercise, oldest first.
-function historyFor(name) {
+// `before` (ISO date) limits it to sessions dated earlier — "history as it stood".
+// A set is a set when it has reps; weight may be 0 (pull ups, dips, planks).
+function historyFor(name, before) {
   const out = [];
-  S.workouts.filter(wo => wo.status === 'completed').forEach(wo => {
+  S.workouts.filter(wo => wo.status === 'completed' && (!before || wo.date < before)).forEach(wo => {
     wo.exercises.filter(e => e.name === name).forEach(e => {
-      e.sets.filter(s => s.done && !s.warm && s.w > 0 && s.r > 0).forEach(s => {
+      e.sets.filter(s => s.done && !s.warm && s.r > 0).forEach(s => {
         out.push({ date: wo.date, w: s.w, r: s.r, rpe: s.rpe, e1: e1rm(s.w, s.r, s.rpe), workoutId: wo.id, est: wo.source === 'backfill' });
       });
     });
@@ -1015,8 +1020,8 @@ function historyFor(name) {
   return out.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
 }
 
-function statsFor(name) {
-  const h = historyFor(name);
+function statsFor(name, before) {
+  const h = historyFor(name, before);
   if (!h.length) return null;
   const sessions = [...new Set(h.map(s => s.date))].sort();
   /* Backfilled sets are the plan's prescription, not what came off the bar.
@@ -1028,13 +1033,14 @@ function statsFor(name) {
      really was just the plan's prescription. */
   const countEst = S.settings.prCountEst !== false;
   const prSrc = countEst ? h : (real.length ? real : h);
-  let best = prSrc[0], bestW = prSrc[0];
+  let best = prSrc[0], bestW = prSrc[0], bestBw = null;
   const byRep = {};                    // reps -> heaviest weight
   let volume = 0;
   prSrc.forEach(s => {
     if (s.e1 > best.e1) best = s;
     if (s.w > bestW.w || (s.w === bestW.w && s.r > bestW.r)) bestW = s;
     if (!byRep[s.r] || s.w > byRep[s.r].w) byRep[s.r] = s;
+    if (!(s.w > 0) && (!bestBw || s.r > bestBw.r)) bestBw = s;   // bodyweight rep record
   });
   h.forEach(s => { volume += s.w * s.r; });
   // per-session best e1RM series
@@ -1053,7 +1059,7 @@ function statsFor(name) {
   const pct = first.e1 ? (delta / first.e1) * 100 : 0;
   return {
     name, sessions: sessions.length, totalSets: h.length, volume,
-    best, bestW, byRep, series, first, last, delta, pct,
+    best, bestW, bestBw, byRep, series, first, last, delta, pct,
     bestIsEst: !!best.est, bestWIsEst: !!bestW.est,
     estOnly: !real.length,
     lastDate: sessions[sessions.length - 1], firstDate: sessions[0],
@@ -1069,9 +1075,55 @@ function allStats() {
   _statCache = [...names].map(statsFor).filter(Boolean).sort((a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name));
   return _statCache;
 }
-function bust() { _statCache = null; }
+function bust() { _statCache = null; _prCache = null; }
 
 function prFor(name) { return statsFor(name); }
+
+/* One rule for "does this set beat the history?" — shared by the live tick,
+   voice logging, finishWorkout and the derived PR list below, so they can't
+   drift. `st` is statsFor() output for the history being beaten; null means
+   nothing logged yet, which is "first time", not a PR. RPE counts on both
+   sides of the comparison: history's e1 already includes it. */
+function beatsBest(st, w, r, rpe) {
+  if (!st) return false;
+  /* Bodyweight (w = 0): e1RM is meaningless, so the record is reps. Compared
+     only against earlier bodyweight sets of the same movement — a weighted
+     history is never "beaten" by an unloaded set. */
+  if (!(w > 0)) return !!st.bestBw && r > st.bestBw.r;
+  return e1rm(w, r, rpe) > st.best.e1;
+}
+
+/* The session's best set of an exercise: heaviest e1RM if anything was
+   loaded, otherwise most reps. */
+function bestSetOf(sets) {
+  const loaded = sets.filter(s => s.w > 0);
+  if (loaded.length) return loaded.reduce((a, b) => e1rm(b.w, b.r, b.rpe) > e1rm(a.w, a.r, a.rpe) ? b : a);
+  return sets.reduce((a, b) => b.r > a.r ? b : a);
+}
+
+/* PRs derived at read time from the history dated before the session, so
+   imports, backfills, deletions and edits are all reflected. summary.prs is
+   still written at finish (the summary modal shows it, "first time" and all)
+   but nothing else treats it as truth. One entry per exercise: its best set. */
+let _prCache = null;
+function prsFor(wo) {
+  if (!_prCache) _prCache = new Map();
+  if (_prCache.has(wo.id)) return _prCache.get(wo.id);
+  const out = [];
+  wo.exercises.forEach(e => {
+    const sets = e.sets.filter(s => s.done && !s.warm && s.r > 0);
+    if (!sets.length) return;
+    const st = statsFor(e.name, wo.date);
+    if (!st) return;
+    const best = bestSetOf(sets);
+    if (beatsBest(st, best.w, best.r, best.rpe)) {
+      out.push({ name: e.name, w: best.w, r: best.r, e1: e1rm(best.w, best.r, best.rpe), prev: st.best.e1,
+                 prevReps: st.bestBw ? st.bestBw.r : 0 });
+    }
+  });
+  _prCache.set(wo.id, out);
+  return out;
+}
 
 // Best single. An actual 1-rep set always wins — that's the real PR. If you've
 // never pulled a true single we fall back to the best estimate and flag it.
@@ -1147,7 +1199,7 @@ function srcChip(w) {
 function toast(msg, cls = '') {
   const el = document.createElement('div');
   el.className = 'toast ' + cls;
-  el.innerHTML = msg;
+  el.textContent = msg;   // plain text only — exercise names come from the user, CSV imports and JSON files
   $('#toastRoot').appendChild(el);
   setTimeout(() => { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 320); }, 2400);
 }
@@ -1491,6 +1543,8 @@ function openGoal(id) {
         <div class="field"><label>Target</label>
           <input type="number" step="0.5" inputmode="decimal" id="gTarget" value="${g.target ? (g.type === 'sessions' ? g.target : dw(g.target)) : ''}"></div>
       </div>
+      <div class="field" id="gCurWrap"><label>Current value</label>
+        <input type="number" step="0.5" inputmode="decimal" id="gCur" value="${g.current ? dw(g.current) : ''}" placeholder="update as you go"></div>
       <div class="field"><label>Deadline (optional)</label>
         <input type="date" id="gDead" value="${g.deadline || ''}"></div>
     `,
@@ -1499,6 +1553,7 @@ function openGoal(id) {
       const sync = () => {
         const t = $('#gType', bg).value;
         $('#gExWrap', bg).style.display = t === 'lift' ? '' : 'none';
+        $('#gCurWrap', bg).style.display = t === 'custom' ? '' : 'none';
       };
       $('#gType', bg).onchange = sync; sync();
       const del = $('#gDel', bg);
@@ -1517,6 +1572,10 @@ function openGoal(id) {
           deadline: $('#gDead', bg).value || '',
           since: g.since || today(),
         };
+        if (type === 'custom') {
+          const curRaw = $('#gCur', bg).value;
+          rec.current = curRaw !== '' ? toKg(+curRaw) : (g.current || 0);
+        }
         rec.startVal = startRaw !== '' ? (isCount ? +startRaw : toKg(+startRaw)) : (g.startVal ?? goalCurrent(rec));
         S.goals = S.goals.filter(x => x.id !== g.id);
         S.goals.push(rec);
@@ -1601,7 +1660,7 @@ function dayPanel(ds) {
 }
 
 function completedCard(wo) {
-  const prs = (wo.summary && wo.summary.prs) || [];
+  const prs = prsFor(wo);
   const sets = wo.exercises.reduce((a, e) => a + e.sets.filter(s => s.done && !s.warm).length, 0);
   return `<div class="card">
     <div class="row between" style="margin-bottom:9px">
@@ -1926,8 +1985,8 @@ function exerciseCard(e, ei) {
     : `<span class="chip">First time — everything is a PR</span>`;
 
   const rows = e.sets.map((s, si) => {
-    const isPR = s.done && !s.warm && s.w > 0 && s.r > 0 && st && e1rm(s.w, s.r, s.rpe) > bestE1;
-    const isFirstPR = s.done && !s.warm && s.w > 0 && s.r > 0 && !st;
+    const isPR = s.done && !s.warm && s.r > 0 && beatsBest(st, s.w, s.r, s.rpe);
+    const isFirstPR = s.done && !s.warm && s.r > 0 && !st;
     const p = prev && prev.sets[si];
     return `<tr class="${s.done ? 'done' : ''} ${isPR || isFirstPR ? 'pr' : ''}">
       <td class="c-set"><div class="setno ${s.warm ? 'warm' : ''}" data-warm="${ei}.${si}" title="Toggle warm-up">${s.warm ? 'W' : si + 1 - e.sets.slice(0, si).filter(x => x.warm).length}</div></td>
@@ -2170,7 +2229,7 @@ function openPlates(targetKg, presetBar) {
 
 function finishWorkout() {
   const a = S.active;
-  const logged = a.exercises.map(e => ({ ...e, sets: e.sets.filter(s => s.done && s.w > 0 && s.r > 0) }))
+  const logged = a.exercises.map(e => ({ ...e, sets: e.sets.filter(s => s.done && s.r > 0) }))
     .filter(e => e.sets.length);
   if (!logged.length) return toast('Log at least one set first');
 
@@ -2180,9 +2239,10 @@ function finishWorkout() {
     const st = statsFor(e.name);
     const working = e.sets.filter(s => !s.warm);
     if (!working.length) return;
-    const best = working.reduce((a, b) => e1rm(b.w, b.r) > e1rm(a.w, a.r) ? b : a);
-    if (!st) prs.push({ name: e.name, w: best.w, r: best.r, e1: e1rm(best.w, best.r), first: true });
-    else if (e1rm(best.w, best.r) > st.best.e1) prs.push({ name: e.name, w: best.w, r: best.r, e1: e1rm(best.w, best.r), prev: st.best.e1 });
+    const best = bestSetOf(working);
+    const e1 = e1rm(best.w, best.r, best.rpe);
+    if (!st) prs.push({ name: e.name, w: best.w, r: best.r, e1, first: true });
+    else if (beatsBest(st, best.w, best.r, best.rpe)) prs.push({ name: e.name, w: best.w, r: best.r, e1, prev: st.best.e1, prevReps: st.bestBw ? st.bestBw.r : 0 });
   });
 
   const mins = a.start ? Math.max(1, Math.round((Date.now() - a.start) / 60000)) : 0;
@@ -2210,7 +2270,7 @@ function finishWorkout() {
 function sessionCardCanvas(wo) {
   const W = 1080, P = 72;
   const ws = wo.exercises.map(e => ({ e, sets: e.sets.filter(s => !s.warm) })).filter(x => x.sets.length);
-  const prs = (wo.summary && wo.summary.prs) || [];
+  const prs = prsFor(wo);
   const rows = ws.slice(0, 9);
   const extra = ws.length - rows.length;
 
@@ -2340,9 +2400,9 @@ function showSummary(wo) {
         ${prs.map(p => `<div class="card tight" style="background:rgba(255,197,66,.07);border-color:rgba(255,197,66,.28);margin-bottom:8px">
           <div class="row between"><div>
             <div style="font-weight:700">${esc(p.name)}</div>
-            <div class="sub">${p.first ? 'First time logged' : `previous e1RM ${wt(p.prev)}`}</div>
-          </div><div class="right"><div style="font-weight:780;font-size:17px;color:var(--gold)">${wt(p.w)} × ${p.r}</div>
-            <div class="sub">e1RM ${wt(p.e1)}</div></div></div>
+            <div class="sub">${p.first ? 'First time logged' : p.w > 0 ? `previous e1RM ${wt(p.prev)}` : `previous best ${p.prevReps} reps`}</div>
+          </div><div class="right"><div style="font-weight:780;font-size:17px;color:var(--gold)">${p.w > 0 ? `${wt(p.w)} × ${p.r}` : `${p.r} reps`}</div>
+            <div class="sub">${p.w > 0 ? `e1RM ${wt(p.e1)}` : 'bodyweight'}</div></div></div>
         </div>`).join('')}` : `<div class="empty">No PRs this session — still money in the bank.</div>`}
 
       <div class="eyebrow" style="margin:16px 0 8px">Breakdown</div>
@@ -2419,7 +2479,7 @@ function viewAnalytics() {
 
   const totalSessions = S.workouts.filter(w => w.status === 'completed').length;
   const totalVol = S.workouts.filter(w => w.status === 'completed').reduce((a, w) => a + totalVolume(w), 0);
-  const totalPRs = S.workouts.filter(w => w.status === 'completed').reduce((a, w) => a + ((w.summary && w.summary.prs) ? w.summary.prs.length : 0), 0);
+  const totalPRs = S.workouts.filter(w => w.status === 'completed').reduce((a, w) => a + prsFor(w).length, 0);
 
   return `
   <h1>Analytics</h1>
@@ -3160,7 +3220,7 @@ function backfillPlanned(days) {
   if (!hits.length) return 0;
 
   hits.forEach(w => {
-    w.exercises.forEach(e => e.sets.forEach(s => { if (s.w > 0 && s.r > 0) s.done = true; }));
+    w.exercises.forEach(e => e.sets.forEach(s => { if (s.r > 0) s.done = true; }));
     w.exercises = w.exercises
       .map(e => ({ ...e, sets: e.sets.filter(s => s.done) }))
       .filter(e => e.sets.length);
@@ -3697,6 +3757,7 @@ function openSettings() {
             const data = JSON.parse(rd.result);
             if (!data.workouts) throw new Error('bad file');
             S = Object.assign(structuredClone(DEFAULT_STATE), data);
+            S.settings = Object.assign(structuredClone(DEFAULT_STATE.settings), data.settings || {});
             save(); closeAllModals(); render(); toast('Data imported', 'green');
           } catch (err) { toast('Could not read that file'); }
         };
@@ -3816,7 +3877,7 @@ function viewFood() {
         <span class="muted mono" style="font-size:12px">${Math.round(mt.kcal)} kcal</span>
       </div>
       ${items.map(f => `<div class="exline">
-        <span class="grow">${esc(f.name)}${f.serving ? ` <span class="muted">· ${esc(f.serving)}</span>` : ''}
+        <span class="grow" data-edit-food="${f.id}" style="cursor:pointer">${esc(f.name)}${f.serving ? ` <span class="muted">· ${esc(f.serving)}</span>` : ''}
           ${f.src === 'ai' ? '<span class="chip">EST</span>' : ''}${f.src === 'offline' ? '<span class="chip">TABLE</span>' : ''}</span>
         <span class="muted mono" style="white-space:nowrap">${Math.round(f.kcal)} · ${Math.round(f.p)}p</span>
         <button class="btn ghost xs" data-del-food="${f.id}">×</button>
@@ -3872,7 +3933,7 @@ function viewFood() {
 function foodHistoryCard() {
   const days = [];
   for (let i = 6; i >= 0; i--) {
-    const dt = new Date(); dt.setDate(dt.getDate() - i);
+    const dt = parseISO(fDate()); dt.setDate(dt.getDate() - i);
     const dd = iso(dt);
     days.push({ d: dd, t: macroTotals(foodsOn(dd)) });
   }
@@ -4125,13 +4186,18 @@ async function claudeParse(text, system = FOOD_SYSTEM) {
   }
 }
 
+/* On a host with no function (GitHub Pages) the endpoint 404s every time.
+   Remember that for the session so only the first keyless parse pays for it. */
+let netlifyAbsent = false;
 async function netlifyParse(text) {
+  if (netlifyAbsent) { const e = new Error('no parser'); e.status = 404; throw e; }
   const r = await fetch('/.netlify/functions/parse-food', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
   });
   if (!r.ok) {
+    if (r.status === 404) netlifyAbsent = true;
     const body = await r.text().catch(() => '');
     const err = new Error(body || ('HTTP ' + r.status));
     err.status = r.status; err.body = body;
@@ -4156,7 +4222,7 @@ async function parseFood() {
 
     addParsed(items, 'ai');
     box.value = '';
-    toast(`Added ${items.length} item${items.length === 1 ? '' : 's'}`, 'good');
+    toast(`Added ${items.length} item${items.length === 1 ? '' : 's'}`, 'green');
     render();
   } catch (e) {
     console.warn('parse failed', e);
@@ -4166,7 +4232,7 @@ async function parseFood() {
     if (guess.length && !e.empty) {
       addParsed(guess, 'offline');
       box.value = '';
-      toast(`Added ${guess.length} item${guess.length === 1 ? '' : 's'} offline`, 'good');
+      toast(`Added ${guess.length} item${guess.length === 1 ? '' : 's'} offline`, 'green');
       render();
       return;
     }
@@ -4225,7 +4291,7 @@ function openFoodEntry(existing) {
         };
         if (existing) Object.assign(existing, rec);
         else S.foods.push(Object.assign({ id: uid(), date: fDate() }, rec));
-        syncCheckinKcal(fDate()); save(); bg.remove(); render();
+        syncCheckinKcal(fDate()); save(); closeModal(); render();
       };
     },
   });
@@ -4246,7 +4312,7 @@ function openFoodTargets() {
         const g = id => $('#' + id, bg).value ? +$('#' + id, bg).value : null;
         st.kcalTarget = g('tK'); st.proteinTarget = g('tP');
         st.carbTarget = g('tC'); st.fatTarget = g('tF');
-        save(); bg.remove(); render();
+        save(); closeModal(); render();
       };
     },
   });
@@ -4287,6 +4353,10 @@ function wire() {
     syncCheckinKcal(fDate()); save(); render();
   });
   v.querySelectorAll('[data-food-targets]').forEach(b => b.onclick = openFoodTargets);
+  v.querySelectorAll('[data-edit-food]').forEach(b => b.onclick = () => {
+    const f = S.foods.find(x => x.id === b.dataset.editFood);
+    if (f) openFoodEntry(f);
+  });
   if ($('#foodMic', v)) $('#foodMic', v).onclick = dictateFood;
   if ($('#foodParse', v)) $('#foodParse', v).onclick = parseFood;
   if ($('#foodManual', v)) $('#foodManual', v).onclick = () => openFoodEntry(null);
@@ -4396,13 +4466,12 @@ function wireActive(v) {
     const s = a.exercises[ei].sets[si];
     const ex = a.exercises[ei];
     if (!s.done) {
-      if (!s.w || !s.r) return toast('Enter weight and reps first');
+      if (!s.r) return toast('Enter reps first');
       // PR check against history captured before flipping the flag
       const st = statsFor(ex.name);
-      const before = st ? st.best.e1 : 0;
       s.done = true;
-      if (!s.warm && e1rm(s.w, s.r, s.rpe) > before) {
-        toast(st ? `★ PR — ${ex.name} ${wt(s.w)}×${s.r}` : `★ First ${ex.name} logged`, 'gold');
+      if (!s.warm && (!st || beatsBest(st, s.w, s.r, s.rpe))) {
+        toast(st ? `★ PR — ${ex.name} ${s.w > 0 ? `${wt(s.w)}×${s.r}` : `${s.r} reps`}` : `★ First ${ex.name} logged`, 'gold');
       }
     } else s.done = false;
     save(); bust(); render();
@@ -4898,7 +4967,7 @@ function confirmVoiceSet(p, via) {
         const w = +$('#vsW', bg).value, r = +$('#vsR', bg).value;
         const rpeRaw = $('#vsRpe', bg).value;
         if (!name) return toast('Pick the exercise first');
-        if (!(w > 0) || !(r > 0)) return toast('Weight and reps are needed');
+        if (!(r > 0)) return toast('Reps are needed');
         closeModal();
         applyVoiceSet(name, toKg(w), Math.round(r), rpeRaw === '' ? null : +rpeRaw);
       };
@@ -4916,11 +4985,10 @@ function applyVoiceSet(name, kg, reps, rpe) {
   if (!ex) { ex = { name, notes: '', sets: [] }; a.exercises.push(ex); }
 
   const st = statsFor(name);
-  const before = st ? st.best.e1 : 0;
   ex.sets.push({ w: kg, r: reps, rpe: rpe, done: true, warm: false });
   save(); bust(); render();
 
-  if (e1rm(kg, reps, rpe) > before) toast(st ? `★ PR — ${name} ${wt(kg)}×${reps}` : `★ First ${name} logged`, 'gold');
+  if (!st || beatsBest(st, kg, reps, rpe)) toast(st ? `★ PR — ${name} ${kg > 0 ? `${wt(kg)}×${reps}` : `${reps} reps`}` : `★ First ${name} logged`, 'gold');
   else toast(`${name} ${wt(kg)} × ${reps}${rpe ? ` @ ${rpe}` : ''}`, 'green');
 }
 
