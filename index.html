@@ -267,17 +267,25 @@ h3{font-size:13.5px;margin:0 0 8px}
   background:rgba(74,168,255,.07);border:1px solid rgba(74,168,255,.16);
   color:#9fc4e8;font-size:11.5px;line-height:1.35;
 }
-.settable{width:100%;border-collapse:collapse}
+.settable{width:100%;border-collapse:collapse;table-layout:fixed}
 .settable th{
   font-size:9.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--dim2);
   font-weight:700;padding:8px 4px;text-align:center;
 }
 .settable td{padding:4px;text-align:center;border-top:1px solid rgba(255,255,255,.04)}
 .settable td input{padding:8px 4px;text-align:center;font-weight:650;font-size:14px;border-radius:8px}
-.settable .c-set{width:38px}
-.settable .c-prev{width:66px;font-size:11px;color:var(--dim2)}
-.settable .c-chk{width:42px}
-.settable .c-del{width:26px;padding:0}
+/* Every column is sized here because auto layout shares the slack out by
+   header text, and "REPS" is a wider word than "KG" — so the weight field,
+   the one that has to hold 112.5, was handed the least room and clipped to
+   "112." while Reps sat on 56px for a single digit. Widths are measured
+   against what each cell actually holds at these fonts: 112.5 renders 37px,
+   so 62px covers the input's padding and border with room for 1000. */
+.settable .c-set{width:34px}
+.settable .c-prev{width:68px;font-size:11px;color:var(--dim2)}
+.settable .c-chk{width:40px}
+.settable .c-del{width:24px;padding:0}
+.settable .c-kg{width:62px}
+.settable .c-reps,.settable .c-rpe{width:46px}
 .delset{width:24px;height:24px;border:0;background:transparent;color:var(--dim2,#5e6c7a);
   font-size:16px;line-height:1;padding:0;border-radius:5px}
 .delset:active{color:var(--red,#e0483d);background:rgba(224,72,61,.12)}
@@ -2096,7 +2104,7 @@ function exerciseCard(e, ei) {
       ${e.notes ? `<div class="ex-note">${esc(e.notes)}</div>` : ''}
     </div>
     <table class="settable">
-      <thead><tr><th class="c-set">Set</th><th class="c-del"></th><th class="c-prev">Prev</th><th>${U()}</th><th class="c-pl"></th><th>Reps</th><th>RPE</th><th class="c-chk"></th></tr></thead>
+      <thead><tr><th class="c-set">Set</th><th class="c-del"></th><th class="c-prev">Prev</th><th class="c-kg">${U()}</th><th class="c-pl"></th><th class="c-reps">Reps</th><th class="c-rpe">RPE</th><th class="c-chk"></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     <div class="ex-foot">
@@ -2771,7 +2779,7 @@ function renderEditWorkout() {
       <button class="btn xs danger" data-eex-rm="${ei}" title="Remove exercise">✕</button>
     </div></div>
     <table class="settable">
-      <thead><tr><th class="c-set">Set</th><th class="c-del"></th><th>${U()}</th><th>Reps</th><th>RPE</th><th class="c-chk"></th></tr></thead>
+      <thead><tr><th class="c-set">Set</th><th class="c-del"></th><th class="c-kg">${U()}</th><th class="c-reps">Reps</th><th class="c-rpe">RPE</th><th class="c-chk"></th></tr></thead>
       <tbody>${e.sets.map((s, si) => `<tr class="${s.done ? 'done' : ''}">
         <td class="c-set"><div class="setno ${s.warm ? 'warm' : ''}" data-ewarm="${ei}.${si}" title="Toggle warm-up">${s.warm ? 'W' : si + 1 - e.sets.slice(0, si).filter(x => x.warm).length}</div></td>
         <td class="c-del"><button class="delset" data-edelset="${ei}.${si}" title="Delete set">×</button></td>
