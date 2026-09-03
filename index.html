@@ -267,26 +267,31 @@ h3{font-size:13.5px;margin:0 0 8px}
   background:rgba(74,168,255,.07);border:1px solid rgba(74,168,255,.16);
   color:#9fc4e8;font-size:11.5px;line-height:1.35;
 }
-.settable{width:100%;border-collapse:collapse}
+.settable{width:100%;border-collapse:collapse;table-layout:fixed}
 .settable th{
   font-size:9.5px;letter-spacing:.9px;text-transform:uppercase;color:var(--dim2);
   font-weight:700;padding:8px 4px;text-align:center;
 }
 .settable td{padding:4px;text-align:center;border-top:1px solid rgba(255,255,255,.04)}
 .settable td input{padding:8px 4px;text-align:center;font-weight:650;font-size:14px;border-radius:8px}
-.settable .c-set{width:38px}
-.settable .c-prev{width:74px;font-size:11px;color:var(--dim2)}
-.settable .c-chk{width:42px}
-.settable .c-del{width:26px;padding:0}
+/* Every column is sized here because auto layout shares the slack out by
+   header text, and "REPS" is a wider word than "KG" — so the weight field,
+   the one that has to hold 112.5, was handed the least room and clipped to
+   "112." while Reps sat on 56px for a single digit. Widths are measured
+   against what each cell actually holds at these fonts: 112.5 renders 37px,
+   so 62px covers the input's padding and border with room for 1000. */
+.settable .c-set{width:34px}
+.settable .c-prev{width:68px;font-size:11px;color:var(--dim2)}
+.settable .c-chk{width:40px}
+.settable .c-del{width:24px;padding:0}
+.settable .c-kg{width:62px}
+.settable .c-reps,.settable .c-rpe{width:46px}
 .delset{width:24px;height:24px;border:0;background:transparent;color:var(--dim2,#5e6c7a);
   font-size:16px;line-height:1;padding:0;border-radius:5px}
 .delset:active{color:var(--red,#e0483d);background:rgba(224,72,61,.12)}
-.settable .c-wt{position:relative}
-/* extra right padding shifts the centred value left so the plate button
-   sits beside the number instead of on top of it */
-.settable .c-wt input{padding-right:23px}
-.plbtn{position:absolute;right:3px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:4px;
-  border:1px solid var(--line);background:transparent;color:var(--dim2,#5e6c7a);font-size:9.5px;line-height:1;
+.settable .c-pl{width:22px;padding:4px 0}
+.plbtn{width:22px;height:32px;border-radius:5px;margin:0 auto;
+  border:1px solid var(--line);background:transparent;color:var(--dim2,#5e6c7a);font-size:10px;line-height:1;
   display:grid;place-items:center;padding:0}
 .plbtn:active{color:var(--chalk,#e8ecf3);border-color:var(--dim)}
 .setno{
@@ -704,7 +709,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.6.2';
+const APP_VERSION = '0.6.3';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -1269,6 +1274,19 @@ function srcChip(w) {
   if (w.source === 'backfill') return ' <span class="chip">EST</span>';
   if (w.source === 'imported') return ' <span class="chip blue">IMPORT</span>';
   return '';
+}
+
+/* Tapping a set field selects what's in it, so typing replaces the number
+   rather than appending to it — mid-session you are overwriting the last
+   set's value, not editing one digit of it. On focus only: once the field is
+   open a second tap places a caret as usual. select() rather than
+   setSelectionRange because Chrome throws on selectionStart for
+   input[type=number]; deferred a tick so the browser's own caret placement
+   (which lands after focus on touch) doesn't collapse the selection. */
+function selectOnFocus(inp) {
+  inp.onfocus = () => setTimeout(() => {
+    try { inp.select(); } catch (e) { /* not selectable — leave the caret */ }
+  }, 0);
 }
 
 function toast(msg, cls = '') {
@@ -2067,8 +2085,8 @@ function exerciseCard(e, ei) {
       <td class="c-set"><div class="setno ${s.warm ? 'warm' : ''}" data-warm="${ei}.${si}" title="Toggle warm-up">${s.warm ? 'W' : si + 1 - e.sets.slice(0, si).filter(x => x.warm).length}</div></td>
       <td class="c-del"><button class="delset" data-delset="${ei}.${si}" title="Delete set">×</button></td>
       <td class="c-prev mono">${p ? `${wt(p.w)}×${p.r}` : '—'}</td>
-      <td class="c-wt"><input type="number" step="0.5" inputmode="decimal" data-f="w" data-k="${ei}.${si}" value="${s.w ? dw(s.w) : ''}" placeholder="0">
-        ${s.w > 0 ? `<button class="plbtn" data-plates="${ei}.${si}" title="Plates">▤</button>` : ''}</td>
+      <td class="c-wt"><input type="number" step="0.5" inputmode="decimal" data-f="w" data-k="${ei}.${si}" value="${s.w ? dw(s.w) : ''}" placeholder="0"></td>
+      <td class="c-pl">${s.w > 0 ? `<button class="plbtn" data-plates="${ei}.${si}" title="Plates">▤</button>` : ''}</td>
       <td><input type="number" inputmode="numeric" data-f="r" data-k="${ei}.${si}" value="${s.r || ''}" placeholder="0"></td>
       <td><input type="number" step="0.5" inputmode="decimal" data-f="rpe" data-k="${ei}.${si}" value="${s.rpe ?? ''}" placeholder="—"></td>
       <td class="c-chk"><button class="chk ${s.done ? 'on' : ''}" data-done="${ei}.${si}">✓</button></td>
@@ -2086,7 +2104,7 @@ function exerciseCard(e, ei) {
       ${e.notes ? `<div class="ex-note">${esc(e.notes)}</div>` : ''}
     </div>
     <table class="settable">
-      <thead><tr><th class="c-set">Set</th><th class="c-del"></th><th class="c-prev">Prev</th><th>${U()}</th><th>Reps</th><th>RPE</th><th class="c-chk"></th></tr></thead>
+      <thead><tr><th class="c-set">Set</th><th class="c-del"></th><th class="c-prev">Prev</th><th class="c-kg">${U()}</th><th class="c-pl"></th><th class="c-reps">Reps</th><th class="c-rpe">RPE</th><th class="c-chk"></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     <div class="ex-foot">
@@ -2761,7 +2779,7 @@ function renderEditWorkout() {
       <button class="btn xs danger" data-eex-rm="${ei}" title="Remove exercise">✕</button>
     </div></div>
     <table class="settable">
-      <thead><tr><th class="c-set">Set</th><th class="c-del"></th><th>${U()}</th><th>Reps</th><th>RPE</th><th class="c-chk"></th></tr></thead>
+      <thead><tr><th class="c-set">Set</th><th class="c-del"></th><th class="c-kg">${U()}</th><th class="c-reps">Reps</th><th class="c-rpe">RPE</th><th class="c-chk"></th></tr></thead>
       <tbody>${e.sets.map((s, si) => `<tr class="${s.done ? 'done' : ''}">
         <td class="c-set"><div class="setno ${s.warm ? 'warm' : ''}" data-ewarm="${ei}.${si}" title="Toggle warm-up">${s.warm ? 'W' : si + 1 - e.sets.slice(0, si).filter(x => x.warm).length}</div></td>
         <td class="c-del"><button class="delset" data-edelset="${ei}.${si}" title="Delete set">×</button></td>
@@ -2793,13 +2811,16 @@ function renderEditWorkout() {
       };
       const re = () => { grab(); renderEditWorkout(); };
       // typing updates the draft silently so focus is never stolen
-      bg.querySelectorAll('[data-ef]').forEach(inp => inp.oninput = () => {
+      bg.querySelectorAll('[data-ef]').forEach(inp => {
+        selectOnFocus(inp);
+        inp.oninput = () => {
         const [ei, si] = key(inp.dataset.k);
         const s = d.exercises[ei].sets[si];
         const val = inp.value === '' ? null : +inp.value;
         if (inp.dataset.ef === 'w') s.w = val ? toKg(val) : 0;
         if (inp.dataset.ef === 'r') s.r = val || 0;
         if (inp.dataset.ef === 'rpe') s.rpe = val;
+        };
       });
       bg.querySelectorAll('[data-edone]').forEach(b => b.onclick = () => {
         const [ei, si] = key(b.dataset.edone); const s = d.exercises[ei].sets[si]; s.done = !s.done; re();
@@ -5050,6 +5071,7 @@ function wireActive(v) {
 
   // typing updates the model silently so focus is never stolen
   v.querySelectorAll('[data-f]').forEach(inp => {
+    selectOnFocus(inp);
     inp.oninput = () => {
       const [ei, si] = key(inp.dataset.k);
       const s = a.exercises[ei].sets[si];
