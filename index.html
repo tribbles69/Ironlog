@@ -413,6 +413,8 @@ svg.chart{display:block;width:100%;height:auto;overflow:visible}
 
 /* toast */
 #toastRoot{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + 14px);z-index:200;display:flex;flex-direction:column;align-items:center;gap:7px;pointer-events:none}
+.plaus{margin:6px 0 10px;padding-left:18px;color:var(--gold);font-size:13px}
+.plaus li{margin:3px 0}
 .toast{
   background:var(--card2);border:1px solid var(--line2);border-radius:11px;
   padding:10px 15px;font-size:13px;font-weight:600;box-shadow:0 8px 26px rgba(0,0,0,.5);
@@ -479,7 +481,7 @@ const DEFAULT_STATE = {
     kcalTarget: null, proteinTarget: null, carbTarget: null, fatTarget: null,
   },
   checkins: [],   // {date,'YYYY-MM-DD', weight(kg), sleepH, sleepQ, energy, soreness, stress, kcal, notes}
-  workouts: [],   // {id,date,name,status,source,exercises:[{name,notes,sets:[{w,r,rpe,done,warm}]}],start,end,summary}
+  workouts: [],   // {id,date,name,status,source,exercises:[{name,notes,sets:[{w,r,rpe,done,warm}]}],start,end,summary,edited?}
                   // source: 'logged' | 'backfill' | 'imported' — only 'backfill' is the plan's prescription
   goals: [],      // {id,name,type,exercise,startVal,target,deadline,current(for custom)}
   meets: [],      // {id,name,date,fed,loc,wclass,bwTarget,lifts:{squat,bench,deadlift},pct:{o,s}}
@@ -702,7 +704,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.4.2';
+const APP_VERSION = '0.6.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -1137,6 +1139,79 @@ function bestSingleInfo(name) {
     : { kg: st.best.e1, est: true, e1: st.best.e1 };
 }
 function bestSingleKg(name) { return bestSingleInfo(name).kg; }
+
+/* ---------------- plausibility ----------------
+   Catches the fat-finger set — 2250 for 225, 80 reps for 8, a lb figure typed
+   into a kg field — before it lands as a PR and skews every comparison after
+   it. Every rule is a "does this look right?" prompt, never a block: a real
+   300 kg pull must still be loggable. `before` reads history as it stood
+   before a date, so editing an old session compares against what was true
+   then rather than against itself. */
+const PLAUS = {
+  maxReps: 60,        // one set; past this it's a typo or a timed hold in the wrong field
+  maxKg: 500,         // beyond the heaviest competition lifts
+  overBest: 1.5,      // heavier than 1.5× your heaviest ever set of this movement
+  overE1: 1.4,        // e1RM 40% past your best
+  overElite: 1.5,     // no history: 1.5× the elite standard for your bodyweight
+};
+
+function plausibility(name, w, r, rpe, before) {
+  const why = [];
+  if (r > PLAUS.maxReps) why.push(`${r} reps in one set`);
+  if (w > PLAUS.maxKg) why.push(`${wt(w)} is beyond any recorded lift`);
+  if (rpe != null && (rpe < 1 || rpe > 10)) why.push(`RPE ${rpe} — the scale is 1 to 10`);
+  const st = statsFor(name, before);
+  const loaded = st && st.bestW.w > 0;
+  if (loaded && w > 0) {
+    const best = st.bestW.w;
+    const lbAsKg = w / 2.2046226218;
+    if (U() === 'kg' && w > best * 1.3 && lbAsKg >= best * 0.5 && lbAsKg <= best * 1.15) {
+      why.push(`${wt(w)} looks like a lb figure — your heaviest ${name} is ${wt(best)}`);
+    } else if (w > best * PLAUS.overBest) {
+      why.push(`${wt(w)} is ${Math.round((w / best - 1) * 100)}% over your heaviest ${name} (${wt(best)})`);
+    } else if (r > 0 && e1rm(w, r, rpe) > st.best.e1 * PLAUS.overE1) {
+      const e1 = e1rm(w, r, rpe);
+      why.push(`e1RM ${wt(e1)} is ${Math.round((e1 / st.best.e1 - 1) * 100)}% over your best (${wt(st.best.e1)})`);
+    }
+  } else if (w > 0) {
+    const th = stdFor(name), bw = bodyweightKg();
+    if (th && bw && w > th[4] * bw * PLAUS.overElite) {
+      why.push(`${wt(w)} is ${(w / bw).toFixed(1)}× bodyweight — past the elite standard for ${name}, with nothing logged yet`);
+    }
+  }
+  return why;
+}
+
+function plausLine(name, s) {
+  return `${name} · ${s.w > 0 ? wt(s.w) + ' × ' : ''}${s.r} reps${s.rpe != null ? ' @ ' + s.rpe : ''}`;
+}
+
+/* One set, one prompt. `ok` runs only on "Log anyway". */
+function plausDlg(name, s, why, ok) {
+  modal({
+    title: 'Does this look right?',
+    body: `<div style="font-weight:700;margin-bottom:6px">${esc(plausLine(name, s))}</div>
+      <ul class="plaus">${why.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+      <div class="sub">Fix the numbers, or log it as typed.</div>`,
+    foot: `<button class="btn ghost" data-close>Fix it</button><button class="btn primary" id="plOk">Log anyway</button>`,
+    onOpen: bg => { $('#plOk', bg).onclick = () => { closeModal(); ok(); }; },
+  });
+}
+
+/* Several sets at once, at finish or after an edit — anything ticked and then
+   retyped never went past the single-set prompt. */
+function plausListDlg(flagged, verb, ok) {
+  modal({
+    title: 'Some sets look off',
+    body: `${flagged.map(f => `<div class="card tight" style="margin-bottom:8px">
+        <div style="font-weight:700">${esc(plausLine(f.name, f.s))}</div>
+        <ul class="plaus" style="margin-bottom:0">${f.why.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
+      </div>`).join('')}
+      <div class="sub">Go back and fix them, or ${esc(verb.toLowerCase())} as they are.</div>`,
+    foot: `<button class="btn ghost" data-close>Go back</button><button class="btn primary" id="plOk">${esc(verb)} anyway</button>`,
+    onOpen: bg => { $('#plOk', bg).onclick = () => { closeModal(); ok(); }; },
+  });
+}
 
 /* ---------------- testing log ----------------
    A test is a completed session flagged `tested`, holding one 1-rep set per
@@ -1664,11 +1739,11 @@ function completedCard(wo) {
   const sets = wo.exercises.reduce((a, e) => a + e.sets.filter(s => s.done && !s.warm).length, 0);
   return `<div class="card">
     <div class="row between" style="margin-bottom:9px">
-      <div class="grow"><div style="font-weight:700">${esc(wo.name)} <span class="chip green">COMPLETED</span>${srcChip(wo)}</div>
+      <div class="grow"><div style="font-weight:700">${esc(wo.name)} <span class="chip green">COMPLETED</span>${srcChip(wo)}${wo.edited ? ' <span class="chip">EDITED</span>' : ''}</div>
         <div class="sub">${sets} sets · ${wt(totalVolume(wo), 0)} volume${wo.summary && wo.summary.mins ? ` · ${wo.summary.mins} min` : ''}</div></div>
-      <button class="btn xs ghost" data-view-workout="${wo.id}">View</button>
+      <div class="row" style="gap:6px"><button class="btn xs ghost" data-edit-workout="${wo.id}">Edit</button><button class="btn xs ghost" data-view-workout="${wo.id}">View</button></div>
     </div>
-    ${prs.length ? `<div class="row wrap" style="gap:6px;margin-bottom:9px">${prs.map(p => `<span class="chip gold">★ ${esc(p.name)} ${wt(p.w)}×${p.r}</span>`).join('')}</div>` : ''}
+    ${prs.length ? `<div class="row wrap" style="gap:6px;margin-bottom:9px">${prs.map(p => `<span class="chip gold">★ ${esc(p.name)} ${p.w > 0 ? `${wt(p.w)}×${p.r}` : `${p.r} reps`}</span>`).join('')}</div>` : ''}
     ${wo.exercises.map(e => {
     const s = e.sets.filter(x => x.done && !x.warm);
     const top = s.length ? s.reduce((a, b) => e1rm(b.w, b.r) > e1rm(a.w, a.r) ? b : a) : null;
@@ -2227,11 +2302,21 @@ function openPlates(targetKg, presetBar) {
   });
 }
 
-function finishWorkout() {
+function finishWorkout(force) {
   const a = S.active;
   const logged = a.exercises.map(e => ({ ...e, sets: e.sets.filter(s => s.done && s.r > 0) }))
     .filter(e => e.sets.length);
   if (!logged.length) return toast('Log at least one set first');
+
+  // sets ticked and then retyped never met the single-set prompt
+  if (!force) {
+    const flagged = [];
+    logged.forEach(e => e.sets.filter(s => !s.warm).forEach(s => {
+      const why = plausibility(e.name, s.w, s.r, s.rpe);
+      if (why.length) flagged.push({ name: e.name, s, why });
+    }));
+    if (flagged.length) return plausListDlg(flagged, 'Finish', () => finishWorkout(true));
+  }
 
   // PRs — compare against history BEFORE this workout is saved
   const prs = [];
@@ -2262,110 +2347,291 @@ function finishWorkout() {
 }
 
 /* ---------------- shareable session card ----------------
-   Draws the session to a canvas at 1080 wide so it lands as a real image
-   rather than a screenshot of a phone screen. Height grows with content.
-   Everything is drawn by hand — no external fonts or libraries, because the
-   artifact sandbox blocks outside requests and a missing font would silently
-   ruin the layout. */
-function sessionCardCanvas(wo) {
-  const W = 1080, P = 72;
-  const ws = wo.exercises.map(e => ({ e, sets: e.sets.filter(s => !s.warm) })).filter(x => x.sets.length);
-  const prs = prsFor(wo);
-  const rows = ws.slice(0, 9);
-  const extra = ws.length - rows.length;
+   Two cards, both drawn by hand to a canvas at 1080 wide so they land as real
+   images rather than screenshots of a phone. Quick is a square with the totals
+   — the one for a story. Full grows with the session: every set, then what
+   the session asked of each muscle and how hard. No external fonts or
+   libraries: the artifact sandbox blocks outside requests and a missing font
+   would silently ruin the layout. */
+const CARD = {
+  bg: '#0d0f14', tile: '#171c26', accent: '#ff5c35', text: '#e8ecf3', dim: '#8a93a5', line: '#252c3a',
+  gold: '#ffc542', goldBg: 'rgba(255,197,66,.09)', warm: '#546074',
+  light: '#3b7ddd', moderate: '#4fb477', hard: '#ff5c35',
+};
+const cardFont = (sz, wt2 = 600) => `${wt2} ${sz}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
 
-  const H = 470 + rows.length * 62 + (prs.length ? 86 + Math.min(prs.length, 3) * 58 : 0) + (extra ? 46 : 0) + 110;
+/* Trim to the pixel width, not a character count — "Bulgarian Split Squat"
+   and "Dips" are the same length in characters to nobody. */
+function fitText(x, s, maxW) {
+  if (x.measureText(s).width <= maxW) return s;
+  let lo = 0, hi = s.length;
+  while (lo < hi) {
+    const mid = (lo + hi + 1) >> 1;
+    if (x.measureText(s.slice(0, mid) + '…').width <= maxW) lo = mid; else hi = mid - 1;
+  }
+  return s.slice(0, lo).trimEnd() + '…';
+}
+
+function wrapText(x, text, px, py, maxW, lineH, maxLines) {
+  const lines = [];
+  let cur = '';
+  text.split(' ').forEach(wd => {
+    const t = cur ? cur + ' ' + wd : wd;
+    if (!cur || x.measureText(t).width <= maxW) cur = t; else { lines.push(cur); cur = wd; }
+  });
+  if (cur) lines.push(cur);
+  lines.slice(0, maxLines).forEach((l, i) => {
+    const last = i === maxLines - 1 && lines.length > maxLines;
+    x.fillText(last ? fitText(x, lines.slice(i).join(' '), maxW) : l, px, py + i * lineH);
+  });
+}
+
+function roundRect(x, px, py, w2, h2, r) {
+  x.beginPath();
+  x.moveTo(px + r, py);
+  x.arcTo(px + w2, py, px + w2, py + h2, r);
+  x.arcTo(px + w2, py + h2, px, py + h2, r);
+  x.arcTo(px, py + h2, px, py, r);
+  x.arcTo(px, py, px + w2, py, r);
+  x.closePath();
+}
+
+function setLabel(s) {
+  return `${s.w > 0 ? wt(s.w) + ' × ' : ''}${s.r}${s.w > 0 ? '' : ' reps'}${s.rpe ? ' @ ' + s.rpe : ''}`;
+}
+
+function sessionTotals(wo) {
+  const ws = wo.exercises.map(e => ({ e, sets: e.sets.filter(s => !s.warm) })).filter(o => o.sets.length);
+  return {
+    ws,
+    sets: ws.reduce((n, o) => n + o.sets.length, 0),
+    reps: ws.reduce((n, o) => n + o.sets.reduce((a, s) => a + s.r, 0), 0),
+    volume: ws.reduce((n, o) => n + o.sets.reduce((a, s) => a + s.w * s.r, 0), 0),
+    mins: wo.summary && wo.summary.mins ? wo.summary.mins : 0,
+    prs: prsFor(wo),
+  };
+}
+
+/* What the session asked of each muscle: working sets × the movement's share,
+   so five sets of squats read as two quad sets, one and a bit of glutes, and so
+   on. Intensity is the mean RPE of those sets when it was logged, otherwise
+   the top set against the all-time best e1RM. Movements with no muscle map
+   (a custom name) are skipped and counted so the card can say so. */
+function sessionMuscles(wo) {
+  const acc = {};
+  let unknown = 0;
+  wo.exercises.forEach(e => {
+    const sets = e.sets.filter(s => !s.warm && s.r > 0);
+    if (!sets.length) return;
+    const m = exMuscles(e.name);
+    if (!m) { unknown++; return; }
+    const rpes = sets.map(s => s.rpe).filter(r => r >= 1 && r <= 10);
+    let hard;                                              // 0 = easy, 1 = maximal
+    if (rpes.length) hard = clamp((rpes.reduce((a, b) => a + b, 0) / rpes.length - 5) / 5, 0, 1);
+    else {
+      const st = statsFor(e.name);
+      const top = Math.max(...sets.map(s => e1rm(s.w, s.r)));
+      hard = st && st.best.e1 > 0 && top > 0 ? clamp((top / st.best.e1 - 0.6) / 0.4, 0, 1) : 0.5;
+    }
+    Object.entries(m).forEach(([k, share]) => {
+      if (!MUSCLES[k]) return;
+      const a = acc[k] = acc[k] || { key: k, name: MUSCLES[k], sets: 0, hardSum: 0 };
+      a.sets += sets.length * share;
+      a.hardSum += hard * sets.length * share;
+    });
+  });
+  const list = Object.values(acc).map(a => ({ ...a, hard: a.sets ? a.hardSum / a.sets : 0 }))
+    .sort((a, b) => b.sets - a.sets);
+  return { list, unknown, max: list.length ? list[0].sets : 0 };
+}
+function intensityOf(h) {
+  return h >= 0.7 ? { word: 'Hard', color: CARD.hard }
+    : h >= 0.4 ? { word: 'Moderate', color: CARD.moderate }
+    : { word: 'Light', color: CARD.light };
+}
+
+function cardHead(x, wo, W, P) {
+  x.fillStyle = CARD.bg; x.fillRect(0, 0, W, x.canvas.height);
+  x.fillStyle = CARD.accent; x.fillRect(0, 0, W, 8);
+  x.fillStyle = CARD.dim; x.font = cardFont(26, 600);
+  x.fillText(fmtDate(wo.date, { weekday: 'long', day: 'numeric', month: 'long' }).toUpperCase(), P, 96);
+  x.fillStyle = CARD.text; x.font = cardFont(54, 800);
+  x.fillText(fitText(x, wo.name, W - P * 2), P, 158);
+  return 158;
+}
+function cardFoot(x, W, H, P) {
+  const handle = (S.settings.handle || '').trim();
+  x.textAlign = 'left'; x.fillStyle = CARD.dim; x.font = cardFont(23, 600);
+  x.fillText(handle || 'IRONLOG', P, H - 44);
+}
+
+/* Square, four big numbers, what got done in one breath. */
+function quickCardCanvas(wo) {
+  const W = 1080, H = 1080, P = 72;
+  const t = sessionTotals(wo);
   const c = document.createElement('canvas');
   c.width = W; c.height = H;
   const x = c.getContext('2d');
-  const F = (sz, wt2 = 600) => `${wt2} ${sz}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+  cardHead(x, wo, W, P);
 
-  x.fillStyle = '#0d0f14'; x.fillRect(0, 0, W, H);
-  x.fillStyle = '#ff5c35'; x.fillRect(0, 0, W, 8);
-
-  let y = 96;
-  x.fillStyle = '#8a93a5'; x.font = F(26, 600);
-  x.fillText(`${fmtDate(wo.date, { weekday: 'long', day: 'numeric', month: 'long' })}`.toUpperCase(), P, y);
-
-  y += 62;
-  x.fillStyle = '#e8ecf3'; x.font = F(54, 800);
-  x.fillText(wo.name.length > 26 ? wo.name.slice(0, 25) + '…' : wo.name, P, y);
-
-  // headline stats
-  y += 64;
-  const sets = ws.reduce((n, o) => n + o.sets.length, 0);
-  const reps = ws.reduce((n, o) => n + o.sets.reduce((a, s) => a + s.r, 0), 0);
-  const stats = [
-    [wt(wo.summary.volume, 0), 'VOLUME'],
-    [String(sets), 'SETS'],
-    [String(reps), 'REPS'],
-    ...(wo.summary.mins ? [[`${wo.summary.mins}m`, 'TIME']] : []),
+  const tiles = [
+    [wt(t.volume, 0), 'VOLUME'], [String(t.sets), 'SETS'], [String(t.reps), 'REPS'],
+    t.mins ? [`${t.mins}m`, 'TIME'] : [String(t.ws.length), 'EXERCISES'],
   ];
+  const tw = (W - P * 2 - 24) / 2, th = 210;
+  tiles.forEach((s, i) => {
+    const tx = P + (i % 2) * (tw + 24), ty = 230 + Math.floor(i / 2) * (th + 24);
+    x.fillStyle = CARD.tile; roundRect(x, tx, ty, tw, th, 22); x.fill();
+    x.fillStyle = CARD.text; x.font = cardFont(74, 800);
+    x.fillText(fitText(x, s[0], tw - 60), tx + 30, ty + 118);
+    x.fillStyle = CARD.dim; x.font = cardFont(24, 650);
+    x.fillText(s[1], tx + 30, ty + 168);
+  });
+
+  let y = 230 + th * 2 + 24 + 70;
+  if (t.prs.length) {
+    x.fillStyle = CARD.goldBg; roundRect(x, P, y - 44, W - P * 2, 72, 16); x.fill();
+    x.fillStyle = CARD.gold; x.font = cardFont(30, 750);
+    const label = `★ ${t.prs.length} PERSONAL RECORD${t.prs.length === 1 ? '' : 'S'}`;
+    x.fillText(fitText(x, `${label}  ${t.prs.map(p => p.name).join(' · ')}`, W - P * 2 - 48), P + 24, y + 4);
+    y += 92;
+  }
+  x.fillStyle = CARD.dim; x.font = cardFont(27, 600);
+  wrapText(x, t.ws.map(o => `${o.e.name} ×${o.sets.length}`).join(' · '), P, y + 10, W - P * 2, 38, 2);
+  cardFoot(x, W, H, P);
+  return c;
+}
+
+/* Everything, height grows with the session. Measured first, drawn second. */
+function fullCardCanvas(wo) {
+  const W = 1080, P = 72;
+  const t = sessionTotals(wo);
+  const mus = sessionMuscles(wo);
+  const musRows = mus.list.slice(0, 10);
+  const allSets = wo.exercises.map(e => ({ e, sets: e.sets })).filter(o => o.sets.length);
+  const setLines = allSets.reduce((n, o) => n + o.sets.length, 0);
+  const prRows = Math.min(t.prs.length, 6);
+
+  const H = 330
+    + (prRows ? 60 + prRows * 58 + 20 : 0)
+    + 60 + allSets.length * 64 + setLines * 40 + 20
+    + (musRows.length ? 60 + musRows.length * 50 + (mus.unknown ? 40 : 0) + 20 : 0)
+    + 110;
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  let y = cardHead(x, wo, W, P) + 64;
+
+  const stats = [[wt(t.volume, 0), 'VOLUME'], [String(t.sets), 'SETS'], [String(t.reps), 'REPS'],
+    ...(t.mins ? [[`${t.mins}m`, 'TIME']] : [])];
   const cw = (W - P * 2) / stats.length;
   stats.forEach((s, i) => {
-    x.fillStyle = '#e8ecf3'; x.font = F(40, 780);
-    x.fillText(s[0], P + i * cw, y + 44);
-    x.fillStyle = '#8a93a5'; x.font = F(21, 600);
-    x.fillText(s[1], P + i * cw, y + 76);
+    x.fillStyle = CARD.text; x.font = cardFont(40, 780); x.fillText(s[0], P + i * cw, y + 44);
+    x.fillStyle = CARD.dim; x.font = cardFont(21, 600); x.fillText(s[1], P + i * cw, y + 76);
   });
-  y += 128;
+  y += 108;
 
-  if (prs.length) {
-    x.fillStyle = '#ffc542'; x.font = F(24, 700);
-    x.fillText(`★ ${prs.length} PERSONAL RECORD${prs.length === 1 ? '' : 'S'}`, P, y);
-    y += 24;
-    prs.slice(0, 3).forEach(p => {
-      x.fillStyle = 'rgba(255,197,66,.09)';
-      x.fillRect(P, y, W - P * 2, 48);
-      x.fillStyle = '#e8ecf3'; x.font = F(27, 650);
-      x.fillText(p.name.length > 24 ? p.name.slice(0, 23) + '…' : p.name, P + 18, y + 32);
-      x.fillStyle = '#ffc542'; x.font = F(27, 780); x.textAlign = 'right';
-      x.fillText(`${wt(p.w)} × ${p.r}`, W - P - 18, y + 32);
-      x.textAlign = 'left';
+  const section = (label, color = CARD.dim) => {
+    x.textAlign = 'left'; x.fillStyle = color; x.font = cardFont(22, 700);
+    x.fillText(label, P, y + 30); y += 60;
+  };
+
+  if (prRows) {
+    section(`★ ${t.prs.length} PERSONAL RECORD${t.prs.length === 1 ? '' : 'S'}`, CARD.gold);
+    t.prs.slice(0, prRows).forEach(p => {
+      x.fillStyle = CARD.goldBg; roundRect(x, P, y, W - P * 2, 48, 10); x.fill();
+      x.textAlign = 'left'; x.fillStyle = CARD.text; x.font = cardFont(27, 650);
+      x.fillText(fitText(x, p.name, W / 2), P + 18, y + 32);
+      x.textAlign = 'right'; x.fillStyle = CARD.gold; x.font = cardFont(27, 780);
+      x.fillText(p.w > 0 ? `${wt(p.w)} × ${p.r}` : `${p.r} reps`, W - P - 18, y + 32);
       y += 58;
     });
-    y += 28;
+    y += 20;
   }
 
-  x.fillStyle = '#8a93a5'; x.font = F(22, 600);
-  x.fillText('BREAKDOWN', P, y); y += 18;
-  x.strokeStyle = '#252c3a'; x.lineWidth = 2;
-
-  rows.forEach(({ e, sets: ss }) => {
-    const top = ss.reduce((a, b) => e1rm(b.w, b.r) > e1rm(a.w, a.r) ? b : a);
-    x.beginPath(); x.moveTo(P, y + 8); x.lineTo(W - P, y + 8); x.stroke();
-    x.fillStyle = '#e8ecf3'; x.font = F(28, 620);
-    const nm = e.name.length > 26 ? e.name.slice(0, 25) + '…' : e.name;
-    x.fillText(nm, P, y + 46);
-    x.fillStyle = '#8a93a5'; x.font = F(25, 600); x.textAlign = 'right';
-    x.fillText(`${ss.length} × ${wt(top.w)}`, W - P, y + 46);
-    x.textAlign = 'left';
-    y += 62;
+  section('EVERY SET');
+  const prNames = new Set(t.prs.map(p => p.name));
+  allSets.forEach(({ e, sets }) => {
+    x.strokeStyle = CARD.line; x.lineWidth = 2;
+    x.beginPath(); x.moveTo(P, y); x.lineTo(W - P, y); x.stroke();
+    const working = sets.filter(s => !s.warm);
+    const vol = working.reduce((a, s) => a + s.w * s.r, 0);
+    const prSet = prNames.has(e.name) && working.length ? bestSetOf(working) : null;   // the one set prsFor scored
+    const reps = working.reduce((a, s) => a + s.r, 0);
+    x.textAlign = 'left'; x.fillStyle = CARD.text; x.font = cardFont(29, 680);
+    x.fillText(fitText(x, e.name, W - P * 2 - 260), P, y + 42);
+    x.textAlign = 'right'; x.fillStyle = CARD.dim; x.font = cardFont(24, 600);
+    x.fillText(`${working.length} sets · ${vol > 0 ? wt(vol, 0) : reps + ' reps'}`, W - P, y + 42);   // bodyweight: reps, not 0kg
+    y += 64;
+    let n = 0;
+    sets.forEach(s => {
+      const isPR = s === prSet;
+      x.textAlign = 'left';
+      x.fillStyle = s.warm ? CARD.warm : CARD.dim; x.font = cardFont(23, 600);
+      x.fillText(s.warm ? 'W' : String(++n), P + 12, y + 28);
+      x.fillStyle = s.warm ? CARD.warm : isPR ? CARD.gold : CARD.text; x.font = cardFont(26, isPR ? 780 : 620);
+      x.fillText(setLabel(s) + (isPR ? '  ★' : ''), P + 64, y + 28);
+      if (s.w > 0 && s.r > 0 && !s.warm) {
+        x.textAlign = 'right'; x.fillStyle = CARD.dim; x.font = cardFont(22, 600);
+        x.fillText(`e1RM ${wt(e1rm(s.w, s.r, s.rpe))}`, W - P, y + 28);
+      }
+      y += 40;
+    });
   });
+  y += 20;
 
-  if (extra) {
-    x.fillStyle = '#8a93a5'; x.font = F(24, 600);
-    x.fillText(`+ ${extra} more`, P, y + 34);
-    y += 46;
+  if (musRows.length) {
+    section('MUSCLES WORKED');
+    const barX = P + 250, barW = W - P - barX - 170;
+    musRows.forEach(m => {
+      const it = intensityOf(m.hard);
+      x.textAlign = 'left'; x.fillStyle = CARD.text; x.font = cardFont(25, 640);
+      x.fillText(m.name, P, y + 30);
+      x.fillStyle = CARD.line; roundRect(x, barX, y + 10, barW, 26, 13); x.fill();
+      x.fillStyle = it.color; roundRect(x, barX, y + 10, Math.max(26, barW * (m.sets / mus.max)), 26, 13); x.fill();
+      x.textAlign = 'right'; x.fillStyle = it.color; x.font = cardFont(22, 700);
+      x.fillText(it.word.toUpperCase(), W - P, y + 30);
+      x.fillStyle = CARD.dim; x.font = cardFont(20, 600);
+      x.fillText(`${m.sets.toFixed(1)} sets`, W - P - 130, y + 30);
+      y += 50;
+    });
+    if (mus.unknown) {
+      x.textAlign = 'left'; x.fillStyle = CARD.warm; x.font = cardFont(21, 600);
+      x.fillText(`+ ${mus.unknown} movement${mus.unknown === 1 ? '' : 's'} with no muscle map`, P, y + 26);
+      y += 40;
+    }
+    y += 20;
   }
-
-  const handle = (S.settings.handle || '').trim();
-  x.fillStyle = '#8a93a5'; x.font = F(23, 600);
-  x.fillText(handle || 'IRONLOG', P, H - 44);
+  cardFoot(x, W, H, P);
   return c;
+}
+
+function openShare(wo) {
+  const opt = (id, head, sub) => `<button class="btn wide big" id="${id}" style="display:flex;flex-direction:column;align-items:flex-start;gap:3px;margin-bottom:10px">
+      <span>${head}</span><span class="sub">${sub}</span></button>`;
+  modal({
+    title: 'Share session',
+    body: opt('shQuick', 'Quick card', 'Square · volume, sets, reps, time, PRs')
+        + opt('shFull', 'Full detail', 'Every set · muscles worked and how hard'),
+    foot: `<button class="btn ghost" data-close>Cancel</button>`,
+    onOpen: bg => {
+      $('#shQuick', bg).onclick = () => { closeModal(); shareSession(wo, 'quick'); };
+      $('#shFull', bg).onclick = () => { closeModal(); shareSession(wo, 'full'); };
+    },
+  });
 }
 
 /* Share sheet where the platform allows it, download where it doesn't — the
    sandbox may block navigator.share, and a silent failure is worse than a file
    in the downloads folder. */
-async function shareSession(wo) {
+async function shareSession(wo, mode = 'quick') {
   let c;
-  try { c = sessionCardCanvas(wo); }
-  catch (e) { return toast('Could not build the image'); }
+  try { c = mode === 'full' ? fullCardCanvas(wo) : quickCardCanvas(wo); }
+  catch (e) { console.warn('share card', e); return toast('Could not build the image'); }
 
   const blob = await new Promise(res => c.toBlob(res, 'image/png'));
   if (!blob) return toast('Could not build the image');
-  const file = new File([blob], `session-${wo.date}.png`, { type: 'image/png' });
+  const file = new File([blob], `session-${wo.date}-${mode}.png`, { type: 'image/png' });
 
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try { await navigator.share({ files: [file] }); return; }
@@ -2426,7 +2692,7 @@ function showSummary(wo) {
     `,
     foot: `<button class="btn sm ghost" id="sumShare">↗ Share image</button><button class="btn primary" id="sumDone">Done</button>`,
     onOpen: bg => {
-      $('#sumShare', bg).onclick = () => shareSession(wo);
+      $('#sumShare', bg).onclick = () => openShare(wo);
       $('#sumDone', bg).onclick = () => { closeAllModals(); go('home'); };
       if (prs.length) setTimeout(() => toast(`★ ${prs.length} new PR${prs.length === 1 ? '' : 's'}`, 'gold'), 300);
     },
@@ -2439,7 +2705,7 @@ function viewCompleted(id) {
   modal({
     title: wo.name,
     body: `
-      <div class="sub" style="margin-bottom:12px">${fmtDate(wo.date, { weekday: 'long', month: 'long', day: 'numeric' })}</div>
+      <div class="sub" style="margin-bottom:12px">${fmtDate(wo.date, { weekday: 'long', month: 'long', day: 'numeric' })}${wo.edited ? ' · <span class="chip">EDITED</span>' : ''}</div>
       <div class="stats grid3" style="margin-bottom:14px">
         <div class="stat"><div class="k">Volume</div><div class="v">${w(totalVolume(wo), 0)}</div></div>
         <div class="stat"><div class="k">Sets</div><div class="v">${wo.exercises.reduce((n, e) => n + e.sets.filter(s => !s.warm).length, 0)}</div></div>
@@ -2452,14 +2718,165 @@ function viewCompleted(id) {
             <span class="mono">${wt(s.w)} × ${s.r}${s.rpe ? ` @ ${s.rpe}` : ''} <span class="dimmer">· e1RM ${wt(e1rm(s.w, s.r))}</span></span></div>`).join('')}
         </div>`).join('')}
     `,
-    foot: `<button class="btn danger" id="delWo">Delete</button><button class="btn sm ghost" id="woShare">↗ Share</button><button class="btn primary" data-close>Close</button>`,
+    foot: `<button class="btn danger" id="delWo">Delete</button><button class="btn sm ghost" id="editWo">✎ Edit</button><button class="btn sm ghost" id="woShare">↗ Share</button><button class="btn primary" data-close>Close</button>`,
     onOpen: bg => {
-      $('#woShare', bg).onclick = () => shareSession(wo);
+      $('#woShare', bg).onclick = () => openShare(wo);
+      $('#editWo', bg).onclick = () => openEditWorkout(id);
       $('#delWo', bg).onclick = () => confirmDlg('Delete this session permanently? PRs from it will be removed.', () => {
         S.workouts = S.workouts.filter(x => x.id !== id); save(); closeAllModals(); render(); toast('Session deleted');
       });
     },
   });
+}
+
+/* ============================================================
+   EDIT A COMPLETED SESSION
+   Works on a clone; nothing touches S.workouts until Save. Same table as the
+   live session so nothing has to be relearned. A set unticked here is dropped
+   from the log on save — finishWorkout keeps only ticked sets, and history
+   reads only ticked sets, so that's the one meaning of the tick. PRs are
+   derived at read time by prsFor, so the calendar, analytics and share cards
+   follow an edit with no second bookkeeping path; only summary.prs, the
+   at-finish snapshot, is rebuilt.
+   ============================================================ */
+let editDraft = null;
+
+function openEditWorkout(id) {
+  const wo = S.workouts.find(w => w.id === id);
+  if (!wo || wo.status !== 'completed') return;
+  editDraft = structuredClone(wo);
+  editDraft.exercises.forEach(e => e.sets.forEach(s => { s.done = s.done !== false; }));
+  renderEditWorkout();
+}
+
+function renderEditWorkout() {
+  closeAllModals();
+  const d = editDraft;
+  const key = k => k.split('.').map(Number);
+  const exCard = (e, ei) => `<div class="ex-card" style="margin-bottom:9px">
+    <div class="ex-head"><div class="row between" style="gap:6px">
+      <div class="ex-name grow">${esc(e.name)}</div>
+      <button class="btn xs ghost" data-eex-up="${ei}" title="Move up">↑</button>
+      <button class="btn xs ghost" data-eex-down="${ei}" title="Move down">↓</button>
+      <button class="btn xs danger" data-eex-rm="${ei}" title="Remove exercise">✕</button>
+    </div></div>
+    <table class="settable">
+      <thead><tr><th class="c-set">Set</th><th class="c-del"></th><th>${U()}</th><th>Reps</th><th>RPE</th><th class="c-chk"></th></tr></thead>
+      <tbody>${e.sets.map((s, si) => `<tr class="${s.done ? 'done' : ''}">
+        <td class="c-set"><div class="setno ${s.warm ? 'warm' : ''}" data-ewarm="${ei}.${si}" title="Toggle warm-up">${s.warm ? 'W' : si + 1 - e.sets.slice(0, si).filter(x => x.warm).length}</div></td>
+        <td class="c-del"><button class="delset" data-edelset="${ei}.${si}" title="Delete set">×</button></td>
+        <td class="c-wt"><input type="number" step="0.5" inputmode="decimal" data-ef="w" data-k="${ei}.${si}" value="${s.w ? dw(s.w) : ''}" placeholder="0"></td>
+        <td><input type="number" inputmode="numeric" data-ef="r" data-k="${ei}.${si}" value="${s.r || ''}" placeholder="0"></td>
+        <td><input type="number" step="0.5" inputmode="decimal" data-ef="rpe" data-k="${ei}.${si}" value="${s.rpe ?? ''}" placeholder="—"></td>
+        <td class="c-chk"><button class="chk ${s.done ? 'on' : ''}" data-edone="${ei}.${si}" title="Untick to drop this set">✓</button></td>
+      </tr>`).join('')}</tbody>
+    </table>
+    <div class="ex-foot"><button class="btn sm ghost grow" data-eaddset="${ei}">+ Set</button></div>
+  </div>`;
+
+  modal({
+    title: 'Edit session',
+    body: `
+      <div class="grid2">
+        <div class="field"><label>Name</label><input id="eName" value="${esc(d.name)}"></div>
+        <div class="field"><label>Date</label><input type="date" id="eDate" value="${d.date}" max="${today()}"></div>
+      </div>
+      <div class="sub" style="margin-bottom:10px">Untick a set to drop it. PRs and analytics follow the edit.</div>
+      ${d.exercises.length ? d.exercises.map(exCard).join('') : `<div class="empty" style="padding:14px">No exercises — add one below.</div>`}
+      <button class="btn wide ghost" id="eAddEx">+ Add exercise</button>
+    `,
+    foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="eSave">Save changes</button>`,
+    onOpen: bg => {
+      const grab = () => {
+        d.name = $('#eName', bg).value.trim() || d.name;
+        d.date = $('#eDate', bg).value || d.date;
+      };
+      const re = () => { grab(); renderEditWorkout(); };
+      // typing updates the draft silently so focus is never stolen
+      bg.querySelectorAll('[data-ef]').forEach(inp => inp.oninput = () => {
+        const [ei, si] = key(inp.dataset.k);
+        const s = d.exercises[ei].sets[si];
+        const val = inp.value === '' ? null : +inp.value;
+        if (inp.dataset.ef === 'w') s.w = val ? toKg(val) : 0;
+        if (inp.dataset.ef === 'r') s.r = val || 0;
+        if (inp.dataset.ef === 'rpe') s.rpe = val;
+      });
+      bg.querySelectorAll('[data-edone]').forEach(b => b.onclick = () => {
+        const [ei, si] = key(b.dataset.edone); const s = d.exercises[ei].sets[si]; s.done = !s.done; re();
+      });
+      bg.querySelectorAll('[data-ewarm]').forEach(b => b.onclick = () => {
+        const [ei, si] = key(b.dataset.ewarm); const s = d.exercises[ei].sets[si]; s.warm = !s.warm; re();
+      });
+      bg.querySelectorAll('[data-edelset]').forEach(b => b.onclick = () => {
+        const [ei, si] = key(b.dataset.edelset);
+        d.exercises[ei].sets.splice(si, 1);
+        if (!d.exercises[ei].sets.length) d.exercises.splice(ei, 1);
+        re();
+      });
+      bg.querySelectorAll('[data-eaddset]').forEach(b => b.onclick = () => {
+        const ex = d.exercises[+b.dataset.eaddset];
+        const last = ex.sets[ex.sets.length - 1] || { w: 0, r: 0 };
+        ex.sets.push({ w: last.w, r: last.r, rpe: null, done: true, warm: false });
+        re();
+      });
+      bg.querySelectorAll('[data-eex-up]').forEach(b => b.onclick = () => {
+        const i = +b.dataset.eexUp;
+        if (i > 0) { const [x] = d.exercises.splice(i, 1); d.exercises.splice(i - 1, 0, x); re(); }
+      });
+      bg.querySelectorAll('[data-eex-down]').forEach(b => b.onclick = () => {
+        const i = +b.dataset.eexDown;
+        if (i < d.exercises.length - 1) { const [x] = d.exercises.splice(i, 1); d.exercises.splice(i + 1, 0, x); re(); }
+      });
+      bg.querySelectorAll('[data-eex-rm]').forEach(b => b.onclick = () => {
+        grab();
+        const i = +b.dataset.eexRm, ex = d.exercises[i];
+        confirmDlg(`Remove ${ex.name} and its ${ex.sets.length} set${ex.sets.length === 1 ? '' : 's'} from this session?`,
+          () => { d.exercises.splice(i, 1); renderEditWorkout(); }, 'Remove');
+      });
+      $('#eAddEx', bg).onclick = () => {
+        grab();
+        pickExercise(name => {
+          d.exercises.push({ name, notes: '', sets: [{ w: 0, r: 0, rpe: null, done: true, warm: false }] });
+          renderEditWorkout();
+        });
+      };
+      $('#eSave', bg).onclick = () => { grab(); saveEdit(false); };
+    },
+  });
+}
+
+function saveEdit(force) {
+  const d = editDraft;
+  if (!d) return;
+  const logged = d.exercises.map(e => ({ ...e, sets: e.sets.filter(s => s.done && s.r > 0) })).filter(e => e.sets.length);
+  if (!logged.length) return toast('Keep at least one ticked set, or delete the session instead');
+
+  if (!force) {
+    const flagged = [];
+    logged.forEach(e => e.sets.filter(s => !s.warm).forEach(s => {
+      const why = plausibility(e.name, s.w, s.r, s.rpe, d.date);
+      if (why.length) flagged.push({ name: e.name, s, why });
+    }));
+    if (flagged.length) return plausListDlg(flagged, 'Save', () => saveEdit(true));
+  }
+
+  const orig = S.workouts.find(w => w.id === d.id) || {};
+  const done = {
+    ...orig, name: d.name, date: d.date, exercises: logged, edited: Date.now(),
+    summary: {
+      ...(orig.summary || {}),
+      volume: logged.reduce((t, e) => t + e.sets.filter(s => !s.warm).reduce((x, s) => x + s.w * s.r, 0), 0),
+      prs: [],
+    },
+  };
+  S.workouts = S.workouts.filter(w => w.id !== d.id);
+  S.workouts.push(done);
+  bust();
+  done.summary.prs = prsFor(done);   // the at-finish snapshot, rebuilt against history before this date
+  if (page === 'calendar') calSelected = done.date;
+  editDraft = null;
+  save(); bust(); closeAllModals(); render();
+  toast('Session updated', 'green');
 }
 
 /* ============================================================
@@ -4338,6 +4755,7 @@ function wire() {
   v.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
   v.querySelectorAll('[data-start-planned]').forEach(b => b.onclick = () => startPlanned(b.dataset.startPlanned));
   v.querySelectorAll('[data-view-workout]').forEach(b => b.onclick = () => viewCompleted(b.dataset.viewWorkout));
+  v.querySelectorAll('[data-edit-workout]').forEach(b => b.onclick = () => openEditWorkout(b.dataset.editWorkout));
   v.querySelectorAll('[data-edit-plan]').forEach(b => b.onclick = () => openPlanner(calSelected, b.dataset.editPlan));
   v.querySelectorAll('[data-del-workout]').forEach(b => b.onclick = () => confirmDlg('Delete this planned workout?', () => {
     S.workouts = S.workouts.filter(x => x.id !== b.dataset.delWorkout); save(); render();
@@ -4465,16 +4883,19 @@ function wireActive(v) {
     const [ei, si] = key(b.dataset.done);
     const s = a.exercises[ei].sets[si];
     const ex = a.exercises[ei];
-    if (!s.done) {
-      if (!s.r) return toast('Enter reps first');
+    if (s.done) { s.done = false; save(); bust(); render(); return; }
+    if (!s.r) return toast('Enter reps first');
+    const commit = () => {
       // PR check against history captured before flipping the flag
       const st = statsFor(ex.name);
       s.done = true;
       if (!s.warm && (!st || beatsBest(st, s.w, s.r, s.rpe))) {
         toast(st ? `★ PR — ${ex.name} ${s.w > 0 ? `${wt(s.w)}×${s.r}` : `${s.r} reps`}` : `★ First ${ex.name} logged`, 'gold');
       }
-    } else s.done = false;
-    save(); bust(); render();
+      save(); bust(); render();
+    };
+    const why = s.warm ? [] : plausibility(ex.name, s.w, s.r, s.rpe);
+    if (why.length) plausDlg(ex.name, s, why, commit); else commit();
   });
 
   v.querySelectorAll('[data-warm]').forEach(b => b.onclick = () => {
@@ -4546,7 +4967,7 @@ function wireActive(v) {
   });
 
   if ($('#voiceBtn')) $('#voiceBtn').onclick = dictateSet;
-  $('#finishBtn').onclick = finishWorkout;
+  $('#finishBtn').onclick = () => finishWorkout();   // no event object as `force`
   $('#discardBtn').onclick = () => confirmDlg('Discard this workout? Nothing will be saved.', () => {
     S.active = null; save(); render(); toast('Workout discarded');
   }, 'Discard');
@@ -4968,8 +5389,10 @@ function confirmVoiceSet(p, via) {
         const rpeRaw = $('#vsRpe', bg).value;
         if (!name) return toast('Pick the exercise first');
         if (!(r > 0)) return toast('Reps are needed');
-        closeModal();
-        applyVoiceSet(name, toKg(w), Math.round(r), rpeRaw === '' ? null : +rpeRaw);
+        const kg = toKg(w), reps = Math.round(r), rpe = rpeRaw === '' ? null : +rpeRaw;
+        const commit = () => { closeModal(); applyVoiceSet(name, kg, reps, rpe); };
+        const why = plausibility(name, kg, reps, rpe);
+        if (why.length) plausDlg(name, { w: kg, r: reps, rpe }, why, commit); else commit();
       };
     },
   });
