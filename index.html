@@ -3926,7 +3926,7 @@ function viewFood() {
 function foodHistoryCard() {
   const days = [];
   for (let i = 6; i >= 0; i--) {
-    const dt = new Date(); dt.setDate(dt.getDate() - i);
+    const dt = parseISO(fDate()); dt.setDate(dt.getDate() - i);
     const dd = iso(dt);
     days.push({ d: dd, t: macroTotals(foodsOn(dd)) });
   }
@@ -4179,13 +4179,18 @@ async function claudeParse(text, system = FOOD_SYSTEM) {
   }
 }
 
+/* On a host with no function (GitHub Pages) the endpoint 404s every time.
+   Remember that for the session so only the first keyless parse pays for it. */
+let netlifyAbsent = false;
 async function netlifyParse(text) {
+  if (netlifyAbsent) { const e = new Error('no parser'); e.status = 404; throw e; }
   const r = await fetch('/.netlify/functions/parse-food', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ text }),
   });
   if (!r.ok) {
+    if (r.status === 404) netlifyAbsent = true;
     const body = await r.text().catch(() => '');
     const err = new Error(body || ('HTTP ' + r.status));
     err.status = r.status; err.body = body;
@@ -4210,7 +4215,7 @@ async function parseFood() {
 
     addParsed(items, 'ai');
     box.value = '';
-    toast(`Added ${items.length} item${items.length === 1 ? '' : 's'}`, 'good');
+    toast(`Added ${items.length} item${items.length === 1 ? '' : 's'}`, 'green');
     render();
   } catch (e) {
     console.warn('parse failed', e);
@@ -4220,7 +4225,7 @@ async function parseFood() {
     if (guess.length && !e.empty) {
       addParsed(guess, 'offline');
       box.value = '';
-      toast(`Added ${guess.length} item${guess.length === 1 ? '' : 's'} offline`, 'good');
+      toast(`Added ${guess.length} item${guess.length === 1 ? '' : 's'} offline`, 'green');
       render();
       return;
     }
@@ -4279,7 +4284,7 @@ function openFoodEntry(existing) {
         };
         if (existing) Object.assign(existing, rec);
         else S.foods.push(Object.assign({ id: uid(), date: fDate() }, rec));
-        syncCheckinKcal(fDate()); save(); bg.remove(); render();
+        syncCheckinKcal(fDate()); save(); closeModal(); render();
       };
     },
   });
@@ -4300,7 +4305,7 @@ function openFoodTargets() {
         const g = id => $('#' + id, bg).value ? +$('#' + id, bg).value : null;
         st.kcalTarget = g('tK'); st.proteinTarget = g('tP');
         st.carbTarget = g('tC'); st.fatTarget = g('tF');
-        save(); bg.remove(); render();
+        save(); closeModal(); render();
       };
     },
   });
