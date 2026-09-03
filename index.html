@@ -4839,7 +4839,11 @@ async function parseFood() {
     console.warn('parse failed', e);
     addParsed(found, 'table');
     finish(found.length);
-    const why = parseError(e);
+    /* No key and things left over is the common case on a static host, and
+       "no parser at this address" is the wrong thing to say about it. */
+    const why = !aiKey()
+      ? `${missed.length} item${missed.length === 1 ? ' needs' : 's need'} AI parsing — no API key saved in Settings → AI parsing.`
+      : parseError(e);
     status(`<div class="sub" style="margin-top:8px;color:${found.length ? 'var(--dim)' : 'var(--red)'}">
       ${found.length ? `Logged ${found.length} item${found.length === 1 ? '' : 's'} from the food tables. ` : ''}
       Nothing in the tables matches ${esc(missed.map(m => '“' + m + '”').join(', '))}.
