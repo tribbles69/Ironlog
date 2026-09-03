@@ -1543,6 +1543,8 @@ function openGoal(id) {
         <div class="field"><label>Target</label>
           <input type="number" step="0.5" inputmode="decimal" id="gTarget" value="${g.target ? (g.type === 'sessions' ? g.target : dw(g.target)) : ''}"></div>
       </div>
+      <div class="field" id="gCurWrap"><label>Current value</label>
+        <input type="number" step="0.5" inputmode="decimal" id="gCur" value="${g.current ? dw(g.current) : ''}" placeholder="update as you go"></div>
       <div class="field"><label>Deadline (optional)</label>
         <input type="date" id="gDead" value="${g.deadline || ''}"></div>
     `,
@@ -1551,6 +1553,7 @@ function openGoal(id) {
       const sync = () => {
         const t = $('#gType', bg).value;
         $('#gExWrap', bg).style.display = t === 'lift' ? '' : 'none';
+        $('#gCurWrap', bg).style.display = t === 'custom' ? '' : 'none';
       };
       $('#gType', bg).onchange = sync; sync();
       const del = $('#gDel', bg);
@@ -1569,6 +1572,10 @@ function openGoal(id) {
           deadline: $('#gDead', bg).value || '',
           since: g.since || today(),
         };
+        if (type === 'custom') {
+          const curRaw = $('#gCur', bg).value;
+          rec.current = curRaw !== '' ? toKg(+curRaw) : (g.current || 0);
+        }
         rec.startVal = startRaw !== '' ? (isCount ? +startRaw : toKg(+startRaw)) : (g.startVal ?? goalCurrent(rec));
         S.goals = S.goals.filter(x => x.id !== g.id);
         S.goals.push(rec);
@@ -3870,7 +3877,7 @@ function viewFood() {
         <span class="muted mono" style="font-size:12px">${Math.round(mt.kcal)} kcal</span>
       </div>
       ${items.map(f => `<div class="exline">
-        <span class="grow">${esc(f.name)}${f.serving ? ` <span class="muted">· ${esc(f.serving)}</span>` : ''}
+        <span class="grow" data-edit-food="${f.id}" style="cursor:pointer">${esc(f.name)}${f.serving ? ` <span class="muted">· ${esc(f.serving)}</span>` : ''}
           ${f.src === 'ai' ? '<span class="chip">EST</span>' : ''}${f.src === 'offline' ? '<span class="chip">TABLE</span>' : ''}</span>
         <span class="muted mono" style="white-space:nowrap">${Math.round(f.kcal)} · ${Math.round(f.p)}p</span>
         <button class="btn ghost xs" data-del-food="${f.id}">×</button>
@@ -4346,6 +4353,10 @@ function wire() {
     syncCheckinKcal(fDate()); save(); render();
   });
   v.querySelectorAll('[data-food-targets]').forEach(b => b.onclick = openFoodTargets);
+  v.querySelectorAll('[data-edit-food]').forEach(b => b.onclick = () => {
+    const f = S.foods.find(x => x.id === b.dataset.editFood);
+    if (f) openFoodEntry(f);
+  });
   if ($('#foodMic', v)) $('#foodMic', v).onclick = dictateFood;
   if ($('#foodParse', v)) $('#foodParse', v).onclick = parseFood;
   if ($('#foodManual', v)) $('#foodManual', v).onclick = () => openFoodEntry(null);
