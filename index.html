@@ -562,7 +562,10 @@ async function load() {
   const raw = await storeGet(KEY);
   if (!raw) return structuredClone(DEFAULT_STATE);
   try {
-    const st = Object.assign(structuredClone(DEFAULT_STATE), JSON.parse(raw));
+    const parsed = JSON.parse(raw);
+    const st = Object.assign(structuredClone(DEFAULT_STATE), parsed);
+    // settings is merged a level deeper, so a key added to DEFAULT_STATE later still gets its default
+    st.settings = Object.assign(structuredClone(DEFAULT_STATE.settings), parsed.settings || {});
     /* 0.3.0: the `backfilled` boolean became `source`. Only 'backfill' is the plan's
        prescription — imported history is real lifting and always counts toward PRs.
        `backfilled` is left in place so an older export re-imported through Settings
@@ -3747,6 +3750,7 @@ function openSettings() {
             const data = JSON.parse(rd.result);
             if (!data.workouts) throw new Error('bad file');
             S = Object.assign(structuredClone(DEFAULT_STATE), data);
+            S.settings = Object.assign(structuredClone(DEFAULT_STATE.settings), data.settings || {});
             save(); closeAllModals(); render(); toast('Data imported', 'green');
           } catch (err) { toast('Could not read that file'); }
         };
