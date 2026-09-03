@@ -4655,17 +4655,21 @@ function estimateOffline(text) {
     .filter(Boolean);
 }
 
-/* Split a description into chunks and resolve each one locally, keeping the
-   ones the tables couldn't name so only those need the model. */
+/* Split a description into chunks and resolve each one locally. `chunks`
+   keeps every piece in the order it was typed, with its table hit or null,
+   so the log can be written back in that order once the model has answered
+   for the ones the tables couldn't name. */
 function resolveFoods(text) {
   const meal = guessMeal();
-  const found = [], missed = [];
+  const found = [], missed = [], chunks = [];
   text.split(/,|\band\b|\+|\n|;/g).forEach(chunk => {
-    if (!chunk.trim()) return;
-    const hit = lookupFood(chunk, meal);
-    if (hit) found.push(hit); else missed.push(chunk.trim());
+    const t = chunk.trim();
+    if (!t) return;
+    const hit = lookupFood(t, meal);
+    chunks.push({ text: t, hit });
+    if (hit) found.push(hit); else missed.push(t);
   });
-  return { found, missed };
+  return { found, missed, chunks };
 }
 
 /* ---------------- parsing ---------------- */
@@ -4788,50 +4792,58 @@ async function parseFood() {
   btn.disabled = true;
   st.innerHTML = '<div class="sub" style="margin-top:8px">Parsing…</div>';
 
-  // the tables first: 2,846 UK foods plus the curated rows, no network, no key
-  const { found, missed } = resolveFoods(text);
-  if (found.length) addParsed(found, 'table');
+  // the tables first: 2,848 UK foods plus the curated rows, no network, no key
+  const { found, missed, chunks } = resolveFoods(text);
+
+  /* render() replaces #foodStatus, so anything written after it has to
+     re-query the node. */
+  const status = html => { const el = $('#foodStatus'); if (el) el.innerHTML = html; };
+  const finish = n => {
+    box.value = ''; btn.disabled = false; render();
+    if (n) toast(`Added ${n} item${n === 1 ? '' : 's'}`, 'green');
+  };
 
   if (!missed.length) {
-    box.value = '';
-    btn.disabled = false;
-    st.innerHTML = '';
-    toast(`Added ${found.length} item${found.length === 1 ? '' : 's'}`, 'green');
-    render();
+    addParsed(found, 'table');
+    finish(found.length);
     return;
   }
 
-  // only what the tables couldn't name goes to the model
+  /* Only what the tables couldn't name goes to the model, in one call. Table
+     hits are held back until it answers so the log reads in the order it was
+     typed — "chicken feet, 200g rice" must not come out as rice then feet.
+     If the call fails the table hits still go in. */
   const rest = missed.join(', ');
   try {
     const items = aiKey() ? await claudeParse(rest) : await netlifyParse(rest);
     if (!Array.isArray(items)) throw new Error('bad response');
     if (!items.length) { const e = new Error('empty'); e.empty = true; throw e; }
 
-    addParsed(items, 'ai');
-    box.value = '';
-    btn.disabled = false;
-    st.innerHTML = '';
-    toast(`Added ${found.length + items.length} item${found.length + items.length === 1 ? '' : 's'}`, 'green');
-    render();
-    /* The model answered, but for fewer things than it was sent. Nothing
-       typed may disappear without a word, so say which chunks went out. */
+    /* One model item per unresolved chunk is the usual case and maps 1:1.
+       Anything else — a chunk split in two, one dropped — can't be mapped
+       honestly, so the model's items all land where the first unknown was. */
+    const oneEach = items.length === missed.length;
+    const ai = items.slice();
+    let placed = false;
+    chunks.forEach(c => {
+      if (c.hit) { addParsed([c.hit], 'table'); return; }
+      if (oneEach) addParsed([ai.shift()], 'ai');
+      else if (!placed) { addParsed(ai, 'ai'); placed = true; }
+    });
+    finish(found.length + items.length);
     if (items.length < missed.length) {
-      const st3 = $('#foodStatus');
-      if (st3) st3.innerHTML = `<div class="sub" style="margin-top:8px">The AI returned ${items.length} item${items.length === 1 ? '' : 's'} for the ${missed.length} it was sent
-        (${esc(missed.map(m => '“' + m + '”').join(', '))}) — check the log and add anything missing by hand.</div>`;
+      status(`<div class="sub" style="margin-top:8px">The AI returned ${items.length} item${items.length === 1 ? '' : 's'} for the ${missed.length} it was sent
+        (${esc(missed.map(m => '“' + m + '”').join(', '))}) — check the log and add anything missing by hand.</div>`);
     }
-    return;
   } catch (e) {
     console.warn('parse failed', e);
-    box.value = '';
-    render();                                  // the log now shows what the tables found
-    const st2 = $('#foodStatus');             // render() replaced the node `st` pointed at
-    if (st2) st2.innerHTML = `<div class="sub" style="margin-top:8px;color:${found.length ? 'var(--dim)' : 'var(--red)'}">
+    addParsed(found, 'table');
+    finish(found.length);
+    const why = parseError(e);
+    status(`<div class="sub" style="margin-top:8px;color:${found.length ? 'var(--dim)' : 'var(--red)'}">
       ${found.length ? `Logged ${found.length} item${found.length === 1 ? '' : 's'} from the food tables. ` : ''}
       Nothing in the tables matches ${esc(missed.map(m => '“' + m + '”').join(', '))}.
-      ${esc(parseError(e))} Add ${missed.length === 1 ? 'it' : 'them'} by hand.</div>`;
-    if (found.length) toast(`Added ${found.length} item${found.length === 1 ? '' : 's'}`, 'green');
+      ${esc(why)} Add ${missed.length === 1 ? 'it' : 'them'} by hand.</div>`);
   }
 }
 
