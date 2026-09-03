@@ -4399,13 +4399,13 @@ const LOCAL_FOODS = [
   ['Egg',                 'egg',                                  143, 13,   1,  10,    0, 50],
   ['Egg white',           'egg white',                             52, 11,   0.7, 0.2,  0, 33],
   ['Whey protein',        'whey|protein shake|protein powder',    390, 80,   6,   5,    0, 30],
-  ['Greek yoghurt',       'greek yog|greek yoh|greek yoghurt',      59, 10,   3.6, 0.4,  0],
+  ['Greek yoghurt',       'greek yoghurt|greek yogurt',            59, 10,   3.6, 0.4,  0],
   ['Skyr',                'skyr',                                  63, 11,   4,   0.2,  0],
   ['Milk',                'milk',                                  47,  3.4, 4.7, 1.6,  0],
   ['Cottage cheese',      'cottage cheese',                        98, 11,   3.4, 4.3,  0],
   ['Cheddar',             'cheddar|cheese',                       402, 25,   1.3,33,    0],
   ['Butter',              'butter',                               717,  0.9, 0.1,81,    0],
-  ['Olive oil',           'olive oil|oil',                        884,  0,   0,  100,   0],
+  ['Olive oil',           'olive oil',                            884,  0,   0,  100,   0],
   ['Rice (cooked)',       'rice',                                 130,  2.7,28,   0.3,  0.4],
   ['Pasta (cooked)',      'pasta|spaghetti|penne|macaroni',       158,  5.8,31,   0.9,  1.8],
   ['Potato',              'potato|spud',                           77,  2,  17,   0.1,  2.2],
@@ -4434,7 +4434,7 @@ const LOCAL_FOODS = [
   ['Apple',               'apple',                                 52,  0.3, 14,  0.2,  2.4, 180],
   ['Banana',              'banana',                                 89, 1.1, 23,  0.3,  2.6, 120],
   ['Orange',              'orange',                                 47, 0.9, 12,  0.1,  2.4, 130],
-  ['Berries',             'berries|strawberr|blueberr|raspberr',    45, 0.8, 10,  0.4,  2.5],
+  ['Berries',             'berries|berry|strawberry|strawberries|blueberry|blueberries|raspberry|raspberries', 45, 0.8, 10, 0.4, 2.5],
   ['Grapes',              'grape',                                  69, 0.7, 18,  0.2,  0.9],
   ['Peanut butter',       'peanut butter',                         588, 25,  20,  50,    6,  16],
   ['Nuts',                'nuts|almond|cashew|walnut',             607, 21,  21,  50,    9],
@@ -4623,13 +4623,25 @@ function lookupFood(chunk, defaultMeal) {
   };
 }
 
-/* The curated table, matched on its keyword lists. Longest keyword wins, so
-   "chicken breast" beats "chicken". */
+/* The curated table, matched on its keyword lists as whole words: "boiled"
+   must not hit 'oil', "steak" must not hit 'tea', "eggplant" must not hit
+   'egg', "priced" must not hit 'rice'. A trailing s or es is allowed so
+   "2 eggs" and "potatoes" still land. Multi-word keywords match inside a
+   longer phrase. Longest keyword wins, so "chicken breast" beats "chicken". */
+const _kwRe = new Map();
+function kwRegex(kw) {
+  let re = _kwRe.get(kw);
+  if (!re) {
+    re = new RegExp('\\b' + kw.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:e?s)?\\b');
+    _kwRe.set(kw, re);
+  }
+  return re;
+}
 function curatedRow(raw) {
   let hit = null, hitLen = 0;
   for (const row of LOCAL_FOODS) {
     for (const kw of row[1].split('|')) {
-      if (raw.includes(kw) && kw.length > hitLen) { hit = row; hitLen = kw.length; }
+      if (kw.length > hitLen && kwRegex(kw).test(raw)) { hit = row; hitLen = kw.length; }
     }
   }
   return hit ? { row: hit, kwLen: hitLen } : null;
