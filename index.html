@@ -1196,7 +1196,7 @@ function srcChip(w) {
 function toast(msg, cls = '') {
   const el = document.createElement('div');
   el.className = 'toast ' + cls;
-  el.innerHTML = msg;
+  el.textContent = msg;   // plain text only — exercise names come from the user, CSV imports and JSON files
   $('#toastRoot').appendChild(el);
   setTimeout(() => { el.style.transition = 'opacity .3s'; el.style.opacity = '0'; setTimeout(() => el.remove(), 320); }, 2400);
 }
