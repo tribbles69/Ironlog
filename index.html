@@ -1003,9 +1003,10 @@ function viewMuscleMap() {
 
 /* ---------------- PR engine ---------------- */
 // Returns every logged (completed, non-warmup) set for an exercise, oldest first.
-function historyFor(name) {
+// `before` (ISO date) limits it to sessions dated earlier — "history as it stood".
+function historyFor(name, before) {
   const out = [];
-  S.workouts.filter(wo => wo.status === 'completed').forEach(wo => {
+  S.workouts.filter(wo => wo.status === 'completed' && (!before || wo.date < before)).forEach(wo => {
     wo.exercises.filter(e => e.name === name).forEach(e => {
       e.sets.filter(s => s.done && !s.warm && s.w > 0 && s.r > 0).forEach(s => {
         out.push({ date: wo.date, w: s.w, r: s.r, rpe: s.rpe, e1: e1rm(s.w, s.r, s.rpe), workoutId: wo.id, est: wo.source === 'backfill' });
@@ -1015,8 +1016,8 @@ function historyFor(name) {
   return out.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
 }
 
-function statsFor(name) {
-  const h = historyFor(name);
+function statsFor(name, before) {
+  const h = historyFor(name, before);
   if (!h.length) return null;
   const sessions = [...new Set(h.map(s => s.date))].sort();
   /* Backfilled sets are the plan's prescription, not what came off the bar.
@@ -1069,9 +1070,42 @@ function allStats() {
   _statCache = [...names].map(statsFor).filter(Boolean).sort((a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name));
   return _statCache;
 }
-function bust() { _statCache = null; }
+function bust() { _statCache = null; _prCache = null; }
 
 function prFor(name) { return statsFor(name); }
+
+/* One rule for "does this set beat the history?" — shared by the live tick,
+   voice logging, finishWorkout and the derived PR list below, so they can't
+   drift. `st` is statsFor() output for the history being beaten; null means
+   nothing logged yet, which is "first time", not a PR. RPE counts on both
+   sides of the comparison: history's e1 already includes it. */
+function beatsBest(st, w, r, rpe) {
+  if (!st) return false;
+  return e1rm(w, r, rpe) > st.best.e1;
+}
+
+/* PRs derived at read time from the history dated before the session, so
+   imports, backfills, deletions and edits are all reflected. summary.prs is
+   still written at finish (the summary modal shows it, "first time" and all)
+   but nothing else treats it as truth. One entry per exercise: its best set. */
+let _prCache = null;
+function prsFor(wo) {
+  if (!_prCache) _prCache = new Map();
+  if (_prCache.has(wo.id)) return _prCache.get(wo.id);
+  const out = [];
+  wo.exercises.forEach(e => {
+    const sets = e.sets.filter(s => s.done && !s.warm && s.w > 0 && s.r > 0);
+    if (!sets.length) return;
+    const st = statsFor(e.name, wo.date);
+    if (!st) return;
+    const best = sets.reduce((a, b) => e1rm(b.w, b.r, b.rpe) > e1rm(a.w, a.r, a.rpe) ? b : a);
+    if (beatsBest(st, best.w, best.r, best.rpe)) {
+      out.push({ name: e.name, w: best.w, r: best.r, e1: e1rm(best.w, best.r, best.rpe), prev: st.best.e1 });
+    }
+  });
+  _prCache.set(wo.id, out);
+  return out;
+}
 
 // Best single. An actual 1-rep set always wins — that's the real PR. If you've
 // never pulled a true single we fall back to the best estimate and flag it.
@@ -1601,7 +1635,7 @@ function dayPanel(ds) {
 }
 
 function completedCard(wo) {
-  const prs = (wo.summary && wo.summary.prs) || [];
+  const prs = prsFor(wo);
   const sets = wo.exercises.reduce((a, e) => a + e.sets.filter(s => s.done && !s.warm).length, 0);
   return `<div class="card">
     <div class="row between" style="margin-bottom:9px">
@@ -1926,7 +1960,7 @@ function exerciseCard(e, ei) {
     : `<span class="chip">First time — everything is a PR</span>`;
 
   const rows = e.sets.map((s, si) => {
-    const isPR = s.done && !s.warm && s.w > 0 && s.r > 0 && st && e1rm(s.w, s.r, s.rpe) > bestE1;
+    const isPR = s.done && !s.warm && s.w > 0 && s.r > 0 && beatsBest(st, s.w, s.r, s.rpe);
     const isFirstPR = s.done && !s.warm && s.w > 0 && s.r > 0 && !st;
     const p = prev && prev.sets[si];
     return `<tr class="${s.done ? 'done' : ''} ${isPR || isFirstPR ? 'pr' : ''}">
@@ -2180,9 +2214,10 @@ function finishWorkout() {
     const st = statsFor(e.name);
     const working = e.sets.filter(s => !s.warm);
     if (!working.length) return;
-    const best = working.reduce((a, b) => e1rm(b.w, b.r) > e1rm(a.w, a.r) ? b : a);
-    if (!st) prs.push({ name: e.name, w: best.w, r: best.r, e1: e1rm(best.w, best.r), first: true });
-    else if (e1rm(best.w, best.r) > st.best.e1) prs.push({ name: e.name, w: best.w, r: best.r, e1: e1rm(best.w, best.r), prev: st.best.e1 });
+    const best = working.reduce((a, b) => e1rm(b.w, b.r, b.rpe) > e1rm(a.w, a.r, a.rpe) ? b : a);
+    const e1 = e1rm(best.w, best.r, best.rpe);
+    if (!st) prs.push({ name: e.name, w: best.w, r: best.r, e1, first: true });
+    else if (beatsBest(st, best.w, best.r, best.rpe)) prs.push({ name: e.name, w: best.w, r: best.r, e1, prev: st.best.e1 });
   });
 
   const mins = a.start ? Math.max(1, Math.round((Date.now() - a.start) / 60000)) : 0;
@@ -2210,7 +2245,7 @@ function finishWorkout() {
 function sessionCardCanvas(wo) {
   const W = 1080, P = 72;
   const ws = wo.exercises.map(e => ({ e, sets: e.sets.filter(s => !s.warm) })).filter(x => x.sets.length);
-  const prs = (wo.summary && wo.summary.prs) || [];
+  const prs = prsFor(wo);
   const rows = ws.slice(0, 9);
   const extra = ws.length - rows.length;
 
@@ -2419,7 +2454,7 @@ function viewAnalytics() {
 
   const totalSessions = S.workouts.filter(w => w.status === 'completed').length;
   const totalVol = S.workouts.filter(w => w.status === 'completed').reduce((a, w) => a + totalVolume(w), 0);
-  const totalPRs = S.workouts.filter(w => w.status === 'completed').reduce((a, w) => a + ((w.summary && w.summary.prs) ? w.summary.prs.length : 0), 0);
+  const totalPRs = S.workouts.filter(w => w.status === 'completed').reduce((a, w) => a + prsFor(w).length, 0);
 
   return `
   <h1>Analytics</h1>
@@ -4399,9 +4434,8 @@ function wireActive(v) {
       if (!s.w || !s.r) return toast('Enter weight and reps first');
       // PR check against history captured before flipping the flag
       const st = statsFor(ex.name);
-      const before = st ? st.best.e1 : 0;
       s.done = true;
-      if (!s.warm && e1rm(s.w, s.r, s.rpe) > before) {
+      if (!s.warm && (!st || beatsBest(st, s.w, s.r, s.rpe))) {
         toast(st ? `★ PR — ${ex.name} ${wt(s.w)}×${s.r}` : `★ First ${ex.name} logged`, 'gold');
       }
     } else s.done = false;
@@ -4916,11 +4950,10 @@ function applyVoiceSet(name, kg, reps, rpe) {
   if (!ex) { ex = { name, notes: '', sets: [] }; a.exercises.push(ex); }
 
   const st = statsFor(name);
-  const before = st ? st.best.e1 : 0;
   ex.sets.push({ w: kg, r: reps, rpe: rpe, done: true, warm: false });
   save(); bust(); render();
 
-  if (e1rm(kg, reps, rpe) > before) toast(st ? `★ PR — ${name} ${wt(kg)}×${reps}` : `★ First ${name} logged`, 'gold');
+  if (!st || beatsBest(st, kg, reps, rpe)) toast(st ? `★ PR — ${name} ${wt(kg)}×${reps}` : `★ First ${name} logged`, 'gold');
   else toast(`${name} ${wt(kg)} × ${reps}${rpe ? ` @ ${rpe}` : ''}`, 'green');
 }
 
