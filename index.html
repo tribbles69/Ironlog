@@ -481,7 +481,7 @@ const DEFAULT_STATE = {
     kcalTarget: null, proteinTarget: null, carbTarget: null, fatTarget: null,
   },
   checkins: [],   // {date,'YYYY-MM-DD', weight(kg), sleepH, sleepQ, energy, soreness, stress, kcal, notes}
-  workouts: [],   // {id,date,name,status,source,exercises:[{name,notes,sets:[{w,r,rpe,done,warm}]}],start,end,summary}
+  workouts: [],   // {id,date,name,status,source,exercises:[{name,notes,sets:[{w,r,rpe,done,warm}]}],start,end,summary,edited?}
                   // source: 'logged' | 'backfill' | 'imported' — only 'backfill' is the plan's prescription
   goals: [],      // {id,name,type,exercise,startVal,target,deadline,current(for custom)}
   meets: [],      // {id,name,date,fed,loc,wclass,bwTarget,lifts:{squat,bench,deadlift},pct:{o,s}}
@@ -1739,9 +1739,9 @@ function completedCard(wo) {
   const sets = wo.exercises.reduce((a, e) => a + e.sets.filter(s => s.done && !s.warm).length, 0);
   return `<div class="card">
     <div class="row between" style="margin-bottom:9px">
-      <div class="grow"><div style="font-weight:700">${esc(wo.name)} <span class="chip green">COMPLETED</span>${srcChip(wo)}</div>
+      <div class="grow"><div style="font-weight:700">${esc(wo.name)} <span class="chip green">COMPLETED</span>${srcChip(wo)}${wo.edited ? ' <span class="chip">EDITED</span>' : ''}</div>
         <div class="sub">${sets} sets · ${wt(totalVolume(wo), 0)} volume${wo.summary && wo.summary.mins ? ` · ${wo.summary.mins} min` : ''}</div></div>
-      <button class="btn xs ghost" data-view-workout="${wo.id}">View</button>
+      <div class="row" style="gap:6px"><button class="btn xs ghost" data-edit-workout="${wo.id}">Edit</button><button class="btn xs ghost" data-view-workout="${wo.id}">View</button></div>
     </div>
     ${prs.length ? `<div class="row wrap" style="gap:6px;margin-bottom:9px">${prs.map(p => `<span class="chip gold">★ ${esc(p.name)} ${wt(p.w)}×${p.r}</span>`).join('')}</div>` : ''}
     ${wo.exercises.map(e => {
@@ -2524,7 +2524,7 @@ function viewCompleted(id) {
   modal({
     title: wo.name,
     body: `
-      <div class="sub" style="margin-bottom:12px">${fmtDate(wo.date, { weekday: 'long', month: 'long', day: 'numeric' })}</div>
+      <div class="sub" style="margin-bottom:12px">${fmtDate(wo.date, { weekday: 'long', month: 'long', day: 'numeric' })}${wo.edited ? ' · <span class="chip">EDITED</span>' : ''}</div>
       <div class="stats grid3" style="margin-bottom:14px">
         <div class="stat"><div class="k">Volume</div><div class="v">${w(totalVolume(wo), 0)}</div></div>
         <div class="stat"><div class="k">Sets</div><div class="v">${wo.exercises.reduce((n, e) => n + e.sets.filter(s => !s.warm).length, 0)}</div></div>
@@ -2537,14 +2537,165 @@ function viewCompleted(id) {
             <span class="mono">${wt(s.w)} × ${s.r}${s.rpe ? ` @ ${s.rpe}` : ''} <span class="dimmer">· e1RM ${wt(e1rm(s.w, s.r))}</span></span></div>`).join('')}
         </div>`).join('')}
     `,
-    foot: `<button class="btn danger" id="delWo">Delete</button><button class="btn sm ghost" id="woShare">↗ Share</button><button class="btn primary" data-close>Close</button>`,
+    foot: `<button class="btn danger" id="delWo">Delete</button><button class="btn sm ghost" id="editWo">✎ Edit</button><button class="btn sm ghost" id="woShare">↗ Share</button><button class="btn primary" data-close>Close</button>`,
     onOpen: bg => {
       $('#woShare', bg).onclick = () => shareSession(wo);
+      $('#editWo', bg).onclick = () => openEditWorkout(id);
       $('#delWo', bg).onclick = () => confirmDlg('Delete this session permanently? PRs from it will be removed.', () => {
         S.workouts = S.workouts.filter(x => x.id !== id); save(); closeAllModals(); render(); toast('Session deleted');
       });
     },
   });
+}
+
+/* ============================================================
+   EDIT A COMPLETED SESSION
+   Works on a clone; nothing touches S.workouts until Save. Same table as the
+   live session so nothing has to be relearned. A set unticked here is dropped
+   from the log on save — finishWorkout keeps only ticked sets, and history
+   reads only ticked sets, so that's the one meaning of the tick. PRs are
+   derived at read time by prsFor, so the calendar, analytics and share cards
+   follow an edit with no second bookkeeping path; only summary.prs, the
+   at-finish snapshot, is rebuilt.
+   ============================================================ */
+let editDraft = null;
+
+function openEditWorkout(id) {
+  const wo = S.workouts.find(w => w.id === id);
+  if (!wo || wo.status !== 'completed') return;
+  editDraft = structuredClone(wo);
+  editDraft.exercises.forEach(e => e.sets.forEach(s => { s.done = s.done !== false; }));
+  renderEditWorkout();
+}
+
+function renderEditWorkout() {
+  closeAllModals();
+  const d = editDraft;
+  const key = k => k.split('.').map(Number);
+  const exCard = (e, ei) => `<div class="ex-card" style="margin-bottom:9px">
+    <div class="ex-head"><div class="row between" style="gap:6px">
+      <div class="ex-name grow">${esc(e.name)}</div>
+      <button class="btn xs ghost" data-eex-up="${ei}" title="Move up">↑</button>
+      <button class="btn xs ghost" data-eex-down="${ei}" title="Move down">↓</button>
+      <button class="btn xs danger" data-eex-rm="${ei}" title="Remove exercise">✕</button>
+    </div></div>
+    <table class="settable">
+      <thead><tr><th class="c-set">Set</th><th class="c-del"></th><th>${U()}</th><th>Reps</th><th>RPE</th><th class="c-chk"></th></tr></thead>
+      <tbody>${e.sets.map((s, si) => `<tr class="${s.done ? 'done' : ''}">
+        <td class="c-set"><div class="setno ${s.warm ? 'warm' : ''}" data-ewarm="${ei}.${si}" title="Toggle warm-up">${s.warm ? 'W' : si + 1 - e.sets.slice(0, si).filter(x => x.warm).length}</div></td>
+        <td class="c-del"><button class="delset" data-edelset="${ei}.${si}" title="Delete set">×</button></td>
+        <td class="c-wt"><input type="number" step="0.5" inputmode="decimal" data-ef="w" data-k="${ei}.${si}" value="${s.w ? dw(s.w) : ''}" placeholder="0"></td>
+        <td><input type="number" inputmode="numeric" data-ef="r" data-k="${ei}.${si}" value="${s.r || ''}" placeholder="0"></td>
+        <td><input type="number" step="0.5" inputmode="decimal" data-ef="rpe" data-k="${ei}.${si}" value="${s.rpe ?? ''}" placeholder="—"></td>
+        <td class="c-chk"><button class="chk ${s.done ? 'on' : ''}" data-edone="${ei}.${si}" title="Untick to drop this set">✓</button></td>
+      </tr>`).join('')}</tbody>
+    </table>
+    <div class="ex-foot"><button class="btn sm ghost grow" data-eaddset="${ei}">+ Set</button></div>
+  </div>`;
+
+  modal({
+    title: 'Edit session',
+    body: `
+      <div class="grid2">
+        <div class="field"><label>Name</label><input id="eName" value="${esc(d.name)}"></div>
+        <div class="field"><label>Date</label><input type="date" id="eDate" value="${d.date}" max="${today()}"></div>
+      </div>
+      <div class="sub" style="margin-bottom:10px">Untick a set to drop it. PRs and analytics follow the edit.</div>
+      ${d.exercises.length ? d.exercises.map(exCard).join('') : `<div class="empty" style="padding:14px">No exercises — add one below.</div>`}
+      <button class="btn wide ghost" id="eAddEx">+ Add exercise</button>
+    `,
+    foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="eSave">Save changes</button>`,
+    onOpen: bg => {
+      const grab = () => {
+        d.name = $('#eName', bg).value.trim() || d.name;
+        d.date = $('#eDate', bg).value || d.date;
+      };
+      const re = () => { grab(); renderEditWorkout(); };
+      // typing updates the draft silently so focus is never stolen
+      bg.querySelectorAll('[data-ef]').forEach(inp => inp.oninput = () => {
+        const [ei, si] = key(inp.dataset.k);
+        const s = d.exercises[ei].sets[si];
+        const val = inp.value === '' ? null : +inp.value;
+        if (inp.dataset.ef === 'w') s.w = val ? toKg(val) : 0;
+        if (inp.dataset.ef === 'r') s.r = val || 0;
+        if (inp.dataset.ef === 'rpe') s.rpe = val;
+      });
+      bg.querySelectorAll('[data-edone]').forEach(b => b.onclick = () => {
+        const [ei, si] = key(b.dataset.edone); const s = d.exercises[ei].sets[si]; s.done = !s.done; re();
+      });
+      bg.querySelectorAll('[data-ewarm]').forEach(b => b.onclick = () => {
+        const [ei, si] = key(b.dataset.ewarm); const s = d.exercises[ei].sets[si]; s.warm = !s.warm; re();
+      });
+      bg.querySelectorAll('[data-edelset]').forEach(b => b.onclick = () => {
+        const [ei, si] = key(b.dataset.edelset);
+        d.exercises[ei].sets.splice(si, 1);
+        if (!d.exercises[ei].sets.length) d.exercises.splice(ei, 1);
+        re();
+      });
+      bg.querySelectorAll('[data-eaddset]').forEach(b => b.onclick = () => {
+        const ex = d.exercises[+b.dataset.eaddset];
+        const last = ex.sets[ex.sets.length - 1] || { w: 0, r: 0 };
+        ex.sets.push({ w: last.w, r: last.r, rpe: null, done: true, warm: false });
+        re();
+      });
+      bg.querySelectorAll('[data-eex-up]').forEach(b => b.onclick = () => {
+        const i = +b.dataset.eexUp;
+        if (i > 0) { const [x] = d.exercises.splice(i, 1); d.exercises.splice(i - 1, 0, x); re(); }
+      });
+      bg.querySelectorAll('[data-eex-down]').forEach(b => b.onclick = () => {
+        const i = +b.dataset.eexDown;
+        if (i < d.exercises.length - 1) { const [x] = d.exercises.splice(i, 1); d.exercises.splice(i + 1, 0, x); re(); }
+      });
+      bg.querySelectorAll('[data-eex-rm]').forEach(b => b.onclick = () => {
+        grab();
+        const i = +b.dataset.eexRm, ex = d.exercises[i];
+        confirmDlg(`Remove ${ex.name} and its ${ex.sets.length} set${ex.sets.length === 1 ? '' : 's'} from this session?`,
+          () => { d.exercises.splice(i, 1); renderEditWorkout(); }, 'Remove');
+      });
+      $('#eAddEx', bg).onclick = () => {
+        grab();
+        pickExercise(name => {
+          d.exercises.push({ name, notes: '', sets: [{ w: 0, r: 0, rpe: null, done: true, warm: false }] });
+          renderEditWorkout();
+        });
+      };
+      $('#eSave', bg).onclick = () => { grab(); saveEdit(false); };
+    },
+  });
+}
+
+function saveEdit(force) {
+  const d = editDraft;
+  if (!d) return;
+  const logged = d.exercises.map(e => ({ ...e, sets: e.sets.filter(s => s.done && s.r > 0) })).filter(e => e.sets.length);
+  if (!logged.length) return toast('Keep at least one ticked set, or delete the session instead');
+
+  if (!force) {
+    const flagged = [];
+    logged.forEach(e => e.sets.filter(s => !s.warm).forEach(s => {
+      const why = plausibility(e.name, s.w, s.r, s.rpe, d.date);
+      if (why.length) flagged.push({ name: e.name, s, why });
+    }));
+    if (flagged.length) return plausListDlg(flagged, 'Save', () => saveEdit(true));
+  }
+
+  const orig = S.workouts.find(w => w.id === d.id) || {};
+  const done = {
+    ...orig, name: d.name, date: d.date, exercises: logged, edited: Date.now(),
+    summary: {
+      ...(orig.summary || {}),
+      volume: logged.reduce((t, e) => t + e.sets.filter(s => !s.warm).reduce((x, s) => x + s.w * s.r, 0), 0),
+      prs: [],
+    },
+  };
+  S.workouts = S.workouts.filter(w => w.id !== d.id);
+  S.workouts.push(done);
+  bust();
+  done.summary.prs = prsFor(done);   // the at-finish snapshot, rebuilt against history before this date
+  if (page === 'calendar') calSelected = done.date;
+  editDraft = null;
+  save(); bust(); closeAllModals(); render();
+  toast('Session updated', 'green');
 }
 
 /* ============================================================
@@ -4423,6 +4574,7 @@ function wire() {
   v.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
   v.querySelectorAll('[data-start-planned]').forEach(b => b.onclick = () => startPlanned(b.dataset.startPlanned));
   v.querySelectorAll('[data-view-workout]').forEach(b => b.onclick = () => viewCompleted(b.dataset.viewWorkout));
+  v.querySelectorAll('[data-edit-workout]').forEach(b => b.onclick = () => openEditWorkout(b.dataset.editWorkout));
   v.querySelectorAll('[data-edit-plan]').forEach(b => b.onclick = () => openPlanner(calSelected, b.dataset.editPlan));
   v.querySelectorAll('[data-del-workout]').forEach(b => b.onclick = () => confirmDlg('Delete this planned workout?', () => {
     S.workouts = S.workouts.filter(x => x.id !== b.dataset.delWorkout); save(); render();
