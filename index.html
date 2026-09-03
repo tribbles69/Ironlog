@@ -1271,6 +1271,19 @@ function srcChip(w) {
   return '';
 }
 
+/* Tapping a set field selects what's in it, so typing replaces the number
+   rather than appending to it — mid-session you are overwriting the last
+   set's value, not editing one digit of it. On focus only: once the field is
+   open a second tap places a caret as usual. select() rather than
+   setSelectionRange because Chrome throws on selectionStart for
+   input[type=number]; deferred a tick so the browser's own caret placement
+   (which lands after focus on touch) doesn't collapse the selection. */
+function selectOnFocus(inp) {
+  inp.onfocus = () => setTimeout(() => {
+    try { inp.select(); } catch (e) { /* not selectable — leave the caret */ }
+  }, 0);
+}
+
 function toast(msg, cls = '') {
   const el = document.createElement('div');
   el.className = 'toast ' + cls;
@@ -2793,13 +2806,16 @@ function renderEditWorkout() {
       };
       const re = () => { grab(); renderEditWorkout(); };
       // typing updates the draft silently so focus is never stolen
-      bg.querySelectorAll('[data-ef]').forEach(inp => inp.oninput = () => {
+      bg.querySelectorAll('[data-ef]').forEach(inp => {
+        selectOnFocus(inp);
+        inp.oninput = () => {
         const [ei, si] = key(inp.dataset.k);
         const s = d.exercises[ei].sets[si];
         const val = inp.value === '' ? null : +inp.value;
         if (inp.dataset.ef === 'w') s.w = val ? toKg(val) : 0;
         if (inp.dataset.ef === 'r') s.r = val || 0;
         if (inp.dataset.ef === 'rpe') s.rpe = val;
+        };
       });
       bg.querySelectorAll('[data-edone]').forEach(b => b.onclick = () => {
         const [ei, si] = key(b.dataset.edone); const s = d.exercises[ei].sets[si]; s.done = !s.done; re();
@@ -5050,6 +5066,7 @@ function wireActive(v) {
 
   // typing updates the model silently so focus is never stolen
   v.querySelectorAll('[data-f]').forEach(inp => {
+    selectOnFocus(inp);
     inp.oninput = () => {
       const [ei, si] = key(inp.dataset.k);
       const s = a.exercises[ei].sets[si];
