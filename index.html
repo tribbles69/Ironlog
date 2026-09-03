@@ -275,18 +275,15 @@ h3{font-size:13.5px;margin:0 0 8px}
 .settable td{padding:4px;text-align:center;border-top:1px solid rgba(255,255,255,.04)}
 .settable td input{padding:8px 4px;text-align:center;font-weight:650;font-size:14px;border-radius:8px}
 .settable .c-set{width:38px}
-.settable .c-prev{width:74px;font-size:11px;color:var(--dim2)}
+.settable .c-prev{width:66px;font-size:11px;color:var(--dim2)}
 .settable .c-chk{width:42px}
 .settable .c-del{width:26px;padding:0}
 .delset{width:24px;height:24px;border:0;background:transparent;color:var(--dim2,#5e6c7a);
   font-size:16px;line-height:1;padding:0;border-radius:5px}
 .delset:active{color:var(--red,#e0483d);background:rgba(224,72,61,.12)}
-.settable .c-wt{position:relative}
-/* extra right padding shifts the centred value left so the plate button
-   sits beside the number instead of on top of it */
-.settable .c-wt input{padding-right:23px}
-.plbtn{position:absolute;right:3px;top:50%;transform:translateY(-50%);width:18px;height:18px;border-radius:4px;
-  border:1px solid var(--line);background:transparent;color:var(--dim2,#5e6c7a);font-size:9.5px;line-height:1;
+.settable .c-pl{width:22px;padding:4px 0}
+.plbtn{width:22px;height:32px;border-radius:5px;margin:0 auto;
+  border:1px solid var(--line);background:transparent;color:var(--dim2,#5e6c7a);font-size:10px;line-height:1;
   display:grid;place-items:center;padding:0}
 .plbtn:active{color:var(--chalk,#e8ecf3);border-color:var(--dim)}
 .setno{
@@ -2080,8 +2077,8 @@ function exerciseCard(e, ei) {
       <td class="c-set"><div class="setno ${s.warm ? 'warm' : ''}" data-warm="${ei}.${si}" title="Toggle warm-up">${s.warm ? 'W' : si + 1 - e.sets.slice(0, si).filter(x => x.warm).length}</div></td>
       <td class="c-del"><button class="delset" data-delset="${ei}.${si}" title="Delete set">×</button></td>
       <td class="c-prev mono">${p ? `${wt(p.w)}×${p.r}` : '—'}</td>
-      <td class="c-wt"><input type="number" step="0.5" inputmode="decimal" data-f="w" data-k="${ei}.${si}" value="${s.w ? dw(s.w) : ''}" placeholder="0">
-        ${s.w > 0 ? `<button class="plbtn" data-plates="${ei}.${si}" title="Plates">▤</button>` : ''}</td>
+      <td class="c-wt"><input type="number" step="0.5" inputmode="decimal" data-f="w" data-k="${ei}.${si}" value="${s.w ? dw(s.w) : ''}" placeholder="0"></td>
+      <td class="c-pl">${s.w > 0 ? `<button class="plbtn" data-plates="${ei}.${si}" title="Plates">▤</button>` : ''}</td>
       <td><input type="number" inputmode="numeric" data-f="r" data-k="${ei}.${si}" value="${s.r || ''}" placeholder="0"></td>
       <td><input type="number" step="0.5" inputmode="decimal" data-f="rpe" data-k="${ei}.${si}" value="${s.rpe ?? ''}" placeholder="—"></td>
       <td class="c-chk"><button class="chk ${s.done ? 'on' : ''}" data-done="${ei}.${si}">✓</button></td>
@@ -2099,7 +2096,7 @@ function exerciseCard(e, ei) {
       ${e.notes ? `<div class="ex-note">${esc(e.notes)}</div>` : ''}
     </div>
     <table class="settable">
-      <thead><tr><th class="c-set">Set</th><th class="c-del"></th><th class="c-prev">Prev</th><th>${U()}</th><th>Reps</th><th>RPE</th><th class="c-chk"></th></tr></thead>
+      <thead><tr><th class="c-set">Set</th><th class="c-del"></th><th class="c-prev">Prev</th><th>${U()}</th><th class="c-pl"></th><th>Reps</th><th>RPE</th><th class="c-chk"></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     <div class="ex-foot">
