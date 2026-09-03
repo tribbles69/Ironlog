@@ -1004,11 +1004,12 @@ function viewMuscleMap() {
 /* ---------------- PR engine ---------------- */
 // Returns every logged (completed, non-warmup) set for an exercise, oldest first.
 // `before` (ISO date) limits it to sessions dated earlier — "history as it stood".
+// A set is a set when it has reps; weight may be 0 (pull ups, dips, planks).
 function historyFor(name, before) {
   const out = [];
   S.workouts.filter(wo => wo.status === 'completed' && (!before || wo.date < before)).forEach(wo => {
     wo.exercises.filter(e => e.name === name).forEach(e => {
-      e.sets.filter(s => s.done && !s.warm && s.w > 0 && s.r > 0).forEach(s => {
+      e.sets.filter(s => s.done && !s.warm && s.r > 0).forEach(s => {
         out.push({ date: wo.date, w: s.w, r: s.r, rpe: s.rpe, e1: e1rm(s.w, s.r, s.rpe), workoutId: wo.id, est: wo.source === 'backfill' });
       });
     });
@@ -1029,13 +1030,14 @@ function statsFor(name, before) {
      really was just the plan's prescription. */
   const countEst = S.settings.prCountEst !== false;
   const prSrc = countEst ? h : (real.length ? real : h);
-  let best = prSrc[0], bestW = prSrc[0];
+  let best = prSrc[0], bestW = prSrc[0], bestBw = null;
   const byRep = {};                    // reps -> heaviest weight
   let volume = 0;
   prSrc.forEach(s => {
     if (s.e1 > best.e1) best = s;
     if (s.w > bestW.w || (s.w === bestW.w && s.r > bestW.r)) bestW = s;
     if (!byRep[s.r] || s.w > byRep[s.r].w) byRep[s.r] = s;
+    if (!(s.w > 0) && (!bestBw || s.r > bestBw.r)) bestBw = s;   // bodyweight rep record
   });
   h.forEach(s => { volume += s.w * s.r; });
   // per-session best e1RM series
@@ -1054,7 +1056,7 @@ function statsFor(name, before) {
   const pct = first.e1 ? (delta / first.e1) * 100 : 0;
   return {
     name, sessions: sessions.length, totalSets: h.length, volume,
-    best, bestW, byRep, series, first, last, delta, pct,
+    best, bestW, bestBw, byRep, series, first, last, delta, pct,
     bestIsEst: !!best.est, bestWIsEst: !!bestW.est,
     estOnly: !real.length,
     lastDate: sessions[sessions.length - 1], firstDate: sessions[0],
@@ -1081,7 +1083,19 @@ function prFor(name) { return statsFor(name); }
    sides of the comparison: history's e1 already includes it. */
 function beatsBest(st, w, r, rpe) {
   if (!st) return false;
+  /* Bodyweight (w = 0): e1RM is meaningless, so the record is reps. Compared
+     only against earlier bodyweight sets of the same movement — a weighted
+     history is never "beaten" by an unloaded set. */
+  if (!(w > 0)) return !!st.bestBw && r > st.bestBw.r;
   return e1rm(w, r, rpe) > st.best.e1;
+}
+
+/* The session's best set of an exercise: heaviest e1RM if anything was
+   loaded, otherwise most reps. */
+function bestSetOf(sets) {
+  const loaded = sets.filter(s => s.w > 0);
+  if (loaded.length) return loaded.reduce((a, b) => e1rm(b.w, b.r, b.rpe) > e1rm(a.w, a.r, a.rpe) ? b : a);
+  return sets.reduce((a, b) => b.r > a.r ? b : a);
 }
 
 /* PRs derived at read time from the history dated before the session, so
@@ -1094,13 +1108,14 @@ function prsFor(wo) {
   if (_prCache.has(wo.id)) return _prCache.get(wo.id);
   const out = [];
   wo.exercises.forEach(e => {
-    const sets = e.sets.filter(s => s.done && !s.warm && s.w > 0 && s.r > 0);
+    const sets = e.sets.filter(s => s.done && !s.warm && s.r > 0);
     if (!sets.length) return;
     const st = statsFor(e.name, wo.date);
     if (!st) return;
-    const best = sets.reduce((a, b) => e1rm(b.w, b.r, b.rpe) > e1rm(a.w, a.r, a.rpe) ? b : a);
+    const best = bestSetOf(sets);
     if (beatsBest(st, best.w, best.r, best.rpe)) {
-      out.push({ name: e.name, w: best.w, r: best.r, e1: e1rm(best.w, best.r, best.rpe), prev: st.best.e1 });
+      out.push({ name: e.name, w: best.w, r: best.r, e1: e1rm(best.w, best.r, best.rpe), prev: st.best.e1,
+                 prevReps: st.bestBw ? st.bestBw.r : 0 });
     }
   });
   _prCache.set(wo.id, out);
@@ -1960,8 +1975,8 @@ function exerciseCard(e, ei) {
     : `<span class="chip">First time — everything is a PR</span>`;
 
   const rows = e.sets.map((s, si) => {
-    const isPR = s.done && !s.warm && s.w > 0 && s.r > 0 && beatsBest(st, s.w, s.r, s.rpe);
-    const isFirstPR = s.done && !s.warm && s.w > 0 && s.r > 0 && !st;
+    const isPR = s.done && !s.warm && s.r > 0 && beatsBest(st, s.w, s.r, s.rpe);
+    const isFirstPR = s.done && !s.warm && s.r > 0 && !st;
     const p = prev && prev.sets[si];
     return `<tr class="${s.done ? 'done' : ''} ${isPR || isFirstPR ? 'pr' : ''}">
       <td class="c-set"><div class="setno ${s.warm ? 'warm' : ''}" data-warm="${ei}.${si}" title="Toggle warm-up">${s.warm ? 'W' : si + 1 - e.sets.slice(0, si).filter(x => x.warm).length}</div></td>
@@ -2204,7 +2219,7 @@ function openPlates(targetKg, presetBar) {
 
 function finishWorkout() {
   const a = S.active;
-  const logged = a.exercises.map(e => ({ ...e, sets: e.sets.filter(s => s.done && s.w > 0 && s.r > 0) }))
+  const logged = a.exercises.map(e => ({ ...e, sets: e.sets.filter(s => s.done && s.r > 0) }))
     .filter(e => e.sets.length);
   if (!logged.length) return toast('Log at least one set first');
 
@@ -2214,10 +2229,10 @@ function finishWorkout() {
     const st = statsFor(e.name);
     const working = e.sets.filter(s => !s.warm);
     if (!working.length) return;
-    const best = working.reduce((a, b) => e1rm(b.w, b.r, b.rpe) > e1rm(a.w, a.r, a.rpe) ? b : a);
+    const best = bestSetOf(working);
     const e1 = e1rm(best.w, best.r, best.rpe);
     if (!st) prs.push({ name: e.name, w: best.w, r: best.r, e1, first: true });
-    else if (beatsBest(st, best.w, best.r, best.rpe)) prs.push({ name: e.name, w: best.w, r: best.r, e1, prev: st.best.e1 });
+    else if (beatsBest(st, best.w, best.r, best.rpe)) prs.push({ name: e.name, w: best.w, r: best.r, e1, prev: st.best.e1, prevReps: st.bestBw ? st.bestBw.r : 0 });
   });
 
   const mins = a.start ? Math.max(1, Math.round((Date.now() - a.start) / 60000)) : 0;
@@ -2375,9 +2390,9 @@ function showSummary(wo) {
         ${prs.map(p => `<div class="card tight" style="background:rgba(255,197,66,.07);border-color:rgba(255,197,66,.28);margin-bottom:8px">
           <div class="row between"><div>
             <div style="font-weight:700">${esc(p.name)}</div>
-            <div class="sub">${p.first ? 'First time logged' : `previous e1RM ${wt(p.prev)}`}</div>
-          </div><div class="right"><div style="font-weight:780;font-size:17px;color:var(--gold)">${wt(p.w)} × ${p.r}</div>
-            <div class="sub">e1RM ${wt(p.e1)}</div></div></div>
+            <div class="sub">${p.first ? 'First time logged' : p.w > 0 ? `previous e1RM ${wt(p.prev)}` : `previous best ${p.prevReps} reps`}</div>
+          </div><div class="right"><div style="font-weight:780;font-size:17px;color:var(--gold)">${p.w > 0 ? `${wt(p.w)} × ${p.r}` : `${p.r} reps`}</div>
+            <div class="sub">${p.w > 0 ? `e1RM ${wt(p.e1)}` : 'bodyweight'}</div></div></div>
         </div>`).join('')}` : `<div class="empty">No PRs this session — still money in the bank.</div>`}
 
       <div class="eyebrow" style="margin:16px 0 8px">Breakdown</div>
@@ -3195,7 +3210,7 @@ function backfillPlanned(days) {
   if (!hits.length) return 0;
 
   hits.forEach(w => {
-    w.exercises.forEach(e => e.sets.forEach(s => { if (s.w > 0 && s.r > 0) s.done = true; }));
+    w.exercises.forEach(e => e.sets.forEach(s => { if (s.r > 0) s.done = true; }));
     w.exercises = w.exercises
       .map(e => ({ ...e, sets: e.sets.filter(s => s.done) }))
       .filter(e => e.sets.length);
@@ -4431,12 +4446,12 @@ function wireActive(v) {
     const s = a.exercises[ei].sets[si];
     const ex = a.exercises[ei];
     if (!s.done) {
-      if (!s.w || !s.r) return toast('Enter weight and reps first');
+      if (!s.r) return toast('Enter reps first');
       // PR check against history captured before flipping the flag
       const st = statsFor(ex.name);
       s.done = true;
       if (!s.warm && (!st || beatsBest(st, s.w, s.r, s.rpe))) {
-        toast(st ? `★ PR — ${ex.name} ${wt(s.w)}×${s.r}` : `★ First ${ex.name} logged`, 'gold');
+        toast(st ? `★ PR — ${ex.name} ${s.w > 0 ? `${wt(s.w)}×${s.r}` : `${s.r} reps`}` : `★ First ${ex.name} logged`, 'gold');
       }
     } else s.done = false;
     save(); bust(); render();
@@ -4932,7 +4947,7 @@ function confirmVoiceSet(p, via) {
         const w = +$('#vsW', bg).value, r = +$('#vsR', bg).value;
         const rpeRaw = $('#vsRpe', bg).value;
         if (!name) return toast('Pick the exercise first');
-        if (!(w > 0) || !(r > 0)) return toast('Weight and reps are needed');
+        if (!(r > 0)) return toast('Reps are needed');
         closeModal();
         applyVoiceSet(name, toKg(w), Math.round(r), rpeRaw === '' ? null : +rpeRaw);
       };
@@ -4953,7 +4968,7 @@ function applyVoiceSet(name, kg, reps, rpe) {
   ex.sets.push({ w: kg, r: reps, rpe: rpe, done: true, warm: false });
   save(); bust(); render();
 
-  if (!st || beatsBest(st, kg, reps, rpe)) toast(st ? `★ PR — ${name} ${wt(kg)}×${reps}` : `★ First ${name} logged`, 'gold');
+  if (!st || beatsBest(st, kg, reps, rpe)) toast(st ? `★ PR — ${name} ${kg > 0 ? `${wt(kg)}×${reps}` : `${reps} reps`}` : `★ First ${name} logged`, 'gold');
   else toast(`${name} ${wt(kg)} × ${reps}${rpe ? ` @ ${rpe}` : ''}`, 'green');
 }
 
