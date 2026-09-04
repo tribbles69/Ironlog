@@ -106,9 +106,16 @@ Per D2, leaf identity is **movement + equipment + execution +
 attachment**.
 
 - `attachment` is **nullable**, and valid only where the movement
-  declares an `attachments` list (29 movements — all cable or
-  ankle-strap based). For everything else it is `null` and must not be
-  shown in the UI.
+  declares an `attachments` list (29 movements) **and the chosen
+  equipment takes one**. Attachment is not a property of the movement
+  alone: a cable takes any handle, a barbell takes a straight or EZ bar,
+  a dumbbell takes nothing. The catalogue encodes this as
+  `vocabularies.attachmentApplies`. For everything else it is `null` and
+  must not be shown in the UI.
+  *(Corrected in Phase 1 — the original read "all cable or ankle-strap
+  based", which is wrong: several of the 29, e.g. `biceps-curl`, are also
+  barbell and dumbbell movements. Without equipment scoping, "DB Hammer
+  Curl" resolves to a dumbbell curl holding a rope.)*
 - Attachment is part of identity, not a modifier: a rope pushdown and a
   straight-bar pushdown are different leaves with separate PRs. That is
   the point of D2.
@@ -195,8 +202,18 @@ Seed vocabulary, taken from Aaron's existing program notes:
 Materially different lift. Must never share a PR pool with the
 unmodified version.
 
-Seed vocabulary: `deficit`, `block/rack pull`, `board press`, `chains`,
-`bands`, `slingshot`, `equipped` (shirt/suit).
+Seed vocabulary: `chains`, `bands`, `slingshot`, `equipped`
+(shirt/suit).
+
+*(Corrected in Phase 1. The original list also carried `deficit`,
+`block/rack pull` and `board press`. Those are **movements**, not
+modifiers — `rack-pull`, `box-squat` and `pin-press` already exist as
+movement ids in the catalogue, and identity cannot be both. The
+governing rule, and the fate of `deficit`, are in
+`exercise-system-phase1.md` §8.1. Note also that unlike the
+`splitsPR: false` list above — all ten of which are verifiably drawn
+from the program notes — **none** of the `splitsPR: true` seeds appears
+anywhere in the current program.)*
 
 **This distinction is the load-bearing part.** A paused bench belongs in
 the same PR pool as a competition bench; a shirted bench does not. If
@@ -237,15 +254,34 @@ Replace the current boolean `warm` flag with an enum:
 
 `standard` | `warmup` | `amrap` | `dropset` | `failure` | `myoreps`
 
-**Critical:** Aaron's program stores AMRAP sets as `r: 0` — 346 of them.
-Batch 1 introduced the rule "a set is valid when reps > 0". These two
-are in conflict.
+**Critical:** the program records AMRAP in prose, and in two places as
+`r: 0`. Batch 1 introduced the rule "a set is valid when reps > 0", so
+those sets cannot be ticked, are dropped at finish, and never reach
+history. The two are in conflict.
+
+*Figures corrected in Phase 1 — the original said "346 of them", which
+counted the wrong thing.* Verified against the bundled program:
+
+| | Count |
+|---|---|
+| Exercise entries whose notes mention AMRAP | **355** |
+| …storing a real rep count on the last set (no defect) | **243** |
+| …storing it as `r: 0` | **112** |
+| Zero-rep **sets** in total | **143** |
+| — Smith Calf Raise, always the last set of its entry | **100** |
+| — Machine Chest Press, in 12 entries where *every* set is zero | **43** |
+
+**These are two different defects and must not be migrated the same
+way.** An AMRAP is only ever the last set of an exercise, so the 100
+Smith Calf Raise sets are a genuine unrecorded AMRAP. The 12 Machine
+Chest Press entries are entirely zero-rep, including non-final sets —
+that is bad extraction from the source PDF, not an AMRAP. Converting
+both would fabricate 43 AMRAP sets that never happened.
 
 Required fix: AMRAP becomes a set *type* with reps unset, not reps zero.
-Migration must convert every `r: 0` set carrying an AMRAP note to
-`type: "amrap"` with `r: null`, and any prescribed set that is genuinely
-zero-rep must be identified separately. **Verify current behaviour before
-migrating — the batch-1 rule may already have invalidated these.**
+Migration converts the last-set pattern to `setType: "amrap"` with
+`r: null`; anything else that is zero-rep is flagged `needsReview` and
+left for manual resolution. It is never guessed at.
 
 Zero *weight* remains valid (pull-ups, dips, planks). Zero or absent
 *reps* is only valid for `amrap` and non-`reps_weight` metrics.
