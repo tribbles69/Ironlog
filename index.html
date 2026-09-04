@@ -298,7 +298,7 @@ h3{font-size:13.5px;margin:0 0 8px}
   width:26px;height:26px;line-height:24px;border-radius:8px;margin:0 auto;
   background:var(--card2);border:1px solid var(--line);font-size:12px;font-weight:700;
 }
-.setno.warm{background:rgba(255,197,66,.13);border-color:rgba(255,197,66,.3);color:var(--gold)}
+.isWarm(setno){background:rgba(255,197,66,.13);border-color:rgba(255,197,66,.3);color:var(--gold)}
 tr.done td input{background:rgba(61,220,132,.07);border-color:rgba(61,220,132,.22)}
 tr.pr td input{background:rgba(255,197,66,.1);border-color:rgba(255,197,66,.35)}
 .chk{
@@ -719,15 +719,25 @@ const LIB = {
   'Back': ['Barbell Row', 'Pendlay Row', 'Pull Up', 'Chin Up', 'Lat Pulldown', 'Cable Row', 'Dumbbell Row', 'Face Pull', 'Shrug'],
   'Accessory': ['Barbell Curl', 'Dumbbell Curl', 'Hammer Curl', 'Ab Wheel', 'Plank', 'Hanging Leg Raise', 'Calf Raise', 'Farmers Walk'],
 };
+/* Every leaf worth offering: the catalogue at its default leaf, plus every
+   leaf actually logged, so a variant you have used is always reachable. */
 function allExercises() {
-  const set = new Set();
-  Object.values(LIB).forEach(a => a.forEach(n => set.add(n)));
-  S.customEx.forEach(n => set.add(n));
-  S.workouts.forEach(wo => wo.exercises.forEach(e => set.add(e.name)));
-  if (S.active) S.active.exercises.forEach(e => set.add(e.name));
-  return [...set].sort((a, b) => a.localeCompare(b));
+  const map = new Map();
+  const add = leaf => { const k = leafKey(leaf); if (!map.has(k)) map.set(k, { key: k, leaf, name: displayName(leaf) }); };
+  const cat = catalogue();
+  cat.C.movements.forEach(m => add(completeLeaf(m, null)));
+  (S.customMovements || []).forEach(m => add(completeLeaf(m, null)));
+  S.workouts.forEach(wo => wo.exercises.forEach(e => e.leaf && add(e.leaf)));
+  if (S.active) S.active.exercises.forEach(e => e.leaf && add(e.leaf));
+  return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
 }
-function categoryOf(name) {
+function categoryOf(leafOrName) {
+  if (leafOrName && leafOrName.movement) {
+    const m = movementById(leafOrName.movement);
+    if (m && m.category) return m.category[0].toUpperCase() + m.category.slice(1);
+    return 'Other';
+  }
+  const name = leafOrName;
   for (const [c, list] of Object.entries(LIB)) if (list.includes(name)) return c;
   const d = EX_DB[name];
   if (d && d.cat) return d.cat[0].toUpperCase() + d.cat.slice(1);
@@ -752,19 +762,24 @@ const EXERCISE_CATALOGUE = {"schemaVersion":2,"note":"Movement catalogue for the
    import resolution non-deterministic, so this throws rather than picking a
    winner. Better a loud failure at boot than a silently wrong PR history. */
 let _cat = null;
+function bustCatalogue() { _cat = null; }
 function catalogue() {
   if (_cat) return _cat;
   const C = EXERCISE_CATALOGUE, V = C.vocabularies || {};
   const byId = new Map(), byName = new Map(), byAlias = new Map(), problems = [];
 
-  (C.movements || []).forEach(m => {
+  /* Custom movements are the user's own, plus anything migration could not
+     resolve. An unresolved name becomes its own movement rather than being
+     guessed into an existing one — declining to guess, not guessing. */
+  const all = (C.movements || []).concat((typeof S === 'object' && S && S.customMovements) || []);
+  all.forEach(m => {
     if (byId.has(m.id)) problems.push(`duplicate movement id "${m.id}"`);
     byId.set(m.id, m);
     const k = m.name.toLowerCase();
     if (byName.has(k)) problems.push(`two movements named "${m.name}"`);
     byName.set(k, { m, a: null });
   });
-  (C.movements || []).forEach(m => (m.aliases || []).forEach(a => {
+  all.forEach(m => (m.aliases || []).forEach(a => {
     const k = a.name.toLowerCase();
     if (byName.has(k)) return;                      // a movement's own name always wins
     const prev = byAlias.get(k);
@@ -817,6 +832,8 @@ function resolveName(name) {
 }
 
 function leafKey(l) { return `${l.movement}/${l.equipment}/${l.execution}/${l.attachment}`; }
+function keyLeaf(k) { const p = String(k).split('/'); return { movement: p[0], equipment: p[1], execution: p[2], attachment: p[3] }; }
+function leafName(k) { return displayName(keyLeaf(k)); }
 
 /* prKey adds any splitsPR modifiers. Sorted, because it is a persisted grouping
    key: a different order would silently split a PR history. */
@@ -872,6 +889,104 @@ function displayName(leaf) {
   if (leaf.execution !== base.execution) bits.push(leaf.execution === 'unilateral' ? 'single' : 'alt');
   return bits.length ? `${m.name} (${bits.join(', ')})` : m.name;
 }
+
+
+/* ---------------- migration: v1 -> v2 ----------------
+   Identity only. It never alters a stored w, r or rpe — the dry run asserts
+   that, and the invariants below re-assert it after the fact.
+
+   An unresolved name becomes a custom movement carrying that exact name. That
+   is not the fuzzy matching section 8 forbids: nothing is merged into an
+   existing movement on a guess. They are listed in the report for manual
+   remapping later. */
+function customMovementFor(name) {
+  const slug = String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'movement';
+  const V = catalogue().V;
+  return {
+    id: 'custom-' + slug, name: String(name), category: 'other', type: 'strength',
+    equipment: (V.equipment || []).slice(), defaultEquipment: 'barbell',
+    execution: (V.execution || []).slice(), defaultExecution: 'bilateral',
+    primary: [], secondary: [], aliases: [{ name: String(name) }],
+    verified: false, custom: true,
+  };
+}
+
+/* warm -> setType, and the AMRAP rule from Phase 1 section 8.3: a single
+   trailing zero in an otherwise-real entry is a genuine unrecorded AMRAP, but
+   an entry where EVERY set is zero is bad extraction and none of it converts. */
+function migrateSets(e) {
+  const sets = e.sets || [];
+  const allZero = sets.length > 0 && sets.every(s => s.r === 0);
+  return sets.map((s, i) => {
+    const out = { w: s.w, r: s.r, rpe: s.rpe == null ? null : s.rpe, done: !!s.done };
+    if (isWarm(s)) out.setType = 'warmup';
+    else if (!allZero && s.r === 0 && i === sets.length - 1 && /amrap/i.test(e.notes || '')) {
+      out.setType = 'amrap'; out.r = null;
+    } else out.setType = 'working';
+    if (s.r === 0 && out.setType !== 'amrap') out.needsReview = true;
+    return out;
+  });
+}
+
+/* Modifiers are extracted from the note; the note itself is never rewritten. */
+function modsFromNote(note) {
+  const V = catalogue().V, hay = ' ' + String(note || '').toLowerCase() + ' ';
+  return (V.modifier || []).filter(m => (m.detect || []).some(d => hay.includes(d))).map(m => m.id);
+}
+
+function migrateToV2(st) {
+  const report = { orphans: [], entries: 0, sets: 0, customCreated: [] };
+  st.customMovements = st.customMovements || [];
+  const known = new Set(st.customMovements.map(m => m.id));
+
+  const leafFor = name => {
+    const r = resolveName(name);
+    if (r) return r.leaf;
+    const cm = customMovementFor(name);
+    if (!known.has(cm.id)) { st.customMovements.push(cm); known.add(cm.id); report.customCreated.push(cm.id); bustCatalogue(); }
+    if (!report.orphans.includes(String(name))) report.orphans.push(String(name));
+    return { movement: cm.id, equipment: cm.defaultEquipment, execution: cm.defaultExecution, attachment: 'none' };
+  };
+
+  const doWorkout = wo => (wo.exercises || []).forEach(e => {
+    if (e.leaf) return;
+    report.entries++; report.sets += (e.sets || []).length;
+    e.leaf = leafFor(e.name);
+    e.legacyName = e.name;
+    e.mods = modsFromNote(e.notes);
+    e.sets = migrateSets(e);
+    delete e.name;
+    delete e.warm;
+  });
+  (st.workouts || []).forEach(doWorkout);
+  if (st.active) doWorkout(st.active);
+
+  // settings.priority becomes slot-bound leaf refs
+  const PRIORITY_SLOTS = ['squat', 'bench', 'deadlift'];
+  const SLOTS = PRIORITY_SLOTS;
+  if (Array.isArray(st.settings.priority) && st.settings.priority.some(p => typeof p === 'string')) {
+    st.settings.priority = st.settings.priority.slice(0, 3).map((n, i) => (
+      typeof n === 'string' ? { slot: SLOTS[i] || SLOTS[0], leaf: leafFor(n) } : n
+    ));
+  }
+  // goals reference a leafKey
+  (st.goals || []).forEach(g => { if (typeof g.exercise === 'string' && g.exercise) g.exercise = leafKey(leafFor(g.exercise)); });
+  // customEx strings become custom movements
+  (st.customEx || []).forEach(n => leafFor(n));
+  st.customEx = [];
+
+  st.schemaVersion = 2;
+  st.migration = { at: Date.now(), from: 1, to: 2, ...report };
+  bustCatalogue();
+  return report;
+}
+
+/* The identity of an entry, for every history/PR join. */
+function exKey(e) { return e && e.leaf ? leafKey(e.leaf) : ''; }
+function exName(e) { return e && e.leaf ? displayName(e.leaf) : (e && e.legacyName) || ''; }
+/* A set counts as working when it is not a warm-up. */
+function isWorking(s) { return s.setType !== 'warmup'; }
+function isWarm(s) { return s.setType === 'warmup'; }
 
 /* ---------------- migration dry run ----------------
    Spec section 8: dry-run mode is mandatory and must run first. It reports what
@@ -1258,11 +1373,11 @@ function viewMuscleMap() {
 // Returns every logged (completed, non-warmup) set for an exercise, oldest first.
 // `before` (ISO date) limits it to sessions dated earlier — "history as it stood".
 // A set is a set when it has reps; weight may be 0 (pull ups, dips, planks).
-function historyFor(name, before) {
+function historyFor(key, before) {
   const out = [];
   S.workouts.filter(wo => wo.status === 'completed' && (!before || wo.date < before)).forEach(wo => {
-    wo.exercises.filter(e => e.name === name).forEach(e => {
-      e.sets.filter(s => s.done && !s.warm && s.r > 0).forEach(s => {
+    wo.exercises.filter(e => exKey(e) === key).forEach(e => {
+      e.sets.filter(s => s.done && isWorking(s) && s.r > 0).forEach(s => {
         out.push({ date: wo.date, w: s.w, r: s.r, rpe: s.rpe, e1: e1rm(s.w, s.r, s.rpe), workoutId: wo.id, est: wo.source === 'backfill' });
       });
     });
@@ -1270,8 +1385,8 @@ function historyFor(name, before) {
   return out.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
 }
 
-function statsFor(name, before) {
-  const h = historyFor(name, before);
+function statsFor(key, before) {
+  const h = historyFor(key, before);
   if (!h.length) return null;
   const sessions = [...new Set(h.map(s => s.date))].sort();
   /* Backfilled sets are the plan's prescription, not what came off the bar.
@@ -1308,7 +1423,8 @@ function statsFor(name, before) {
   const delta = last.e1 - first.e1;
   const pct = first.e1 ? (delta / first.e1) * 100 : 0;
   return {
-    name, sessions: sessions.length, totalSets: h.length, volume,
+    key, name: leafName(key), leaf: keyLeaf(key),
+    sessions: sessions.length, totalSets: h.length, volume,
     best, bestW, bestBw, byRep, series, first, last, delta, pct,
     bestIsEst: !!best.est, bestWIsEst: !!bestW.est,
     estOnly: !real.length,
@@ -1321,8 +1437,9 @@ let _statCache = null;
 function allStats() {
   if (_statCache) return _statCache;
   const names = new Set();
-  S.workouts.filter(w => w.status === 'completed').forEach(wo => wo.exercises.forEach(e => names.add(e.name)));
-  _statCache = [...names].map(statsFor).filter(Boolean).sort((a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name));
+  S.workouts.filter(w => w.status === 'completed').forEach(wo => wo.exercises.forEach(e => names.add(exKey(e))));
+  _statCache = [...names].filter(Boolean).map(k => statsFor(k)).filter(Boolean)
+    .sort((a, b) => b.sessions - a.sessions || a.name.localeCompare(b.name));
   return _statCache;
 }
 function bust() { _statCache = null; _prCache = null; }
@@ -1361,13 +1478,13 @@ function prsFor(wo) {
   if (_prCache.has(wo.id)) return _prCache.get(wo.id);
   const out = [];
   wo.exercises.forEach(e => {
-    const sets = e.sets.filter(s => s.done && !s.warm && s.r > 0);
+    const sets = e.sets.filter(s => s.done && isWorking(s) && s.r > 0);
     if (!sets.length) return;
-    const st = statsFor(e.name, wo.date);
+    const st = statsFor(exKey(e), wo.date);
     if (!st) return;
     const best = bestSetOf(sets);
     if (beatsBest(st, best.w, best.r, best.rpe)) {
-      out.push({ name: e.name, w: best.w, r: best.r, e1: e1rm(best.w, best.r, best.rpe), prev: st.best.e1,
+      out.push({ name: exName(e), key: exKey(e), w: best.w, r: best.r, e1: e1rm(best.w, best.r, best.rpe), prev: st.best.e1,
                  prevReps: st.bestBw ? st.bestBw.r : 0 });
     }
   });
@@ -1378,15 +1495,15 @@ function prsFor(wo) {
 // Best single. An actual 1-rep set always wins — that's the real PR. If you've
 // never pulled a true single we fall back to the best estimate and flag it.
 // `e1` carries the best estimate alongside, so a big rep PR still shows up.
-function bestSingleInfo(name) {
-  const st = statsFor(name);
+function bestSingleInfo(key) {
+  const st = statsFor(key);
   if (!st) return { kg: 0, est: false, e1: 0 };
   const single = st.byRep[1];
   return single
     ? { kg: single.w, est: false, e1: st.best.e1 }
     : { kg: st.best.e1, est: true, e1: st.best.e1 };
 }
-function bestSingleKg(name) { return bestSingleInfo(name).kg; }
+function bestSingleKg(key) { return bestSingleInfo(key).kg; }
 
 /* ---------------- plausibility ----------------
    Catches the fat-finger set — 2250 for 225, 80 reps for 8, a lb figure typed
@@ -1403,12 +1520,13 @@ const PLAUS = {
   overElite: 1.5,     // no history: 1.5× the elite standard for your bodyweight
 };
 
-function plausibility(name, w, r, rpe, before) {
+function plausibility(key, w, r, rpe, before) {
+  const name = leafName(key);
   const why = [];
   if (r > PLAUS.maxReps) why.push(`${r} reps in one set`);
   if (w > PLAUS.maxKg) why.push(`${wt(w)} is beyond any recorded lift`);
   if (rpe != null && (rpe < 1 || rpe > 10)) why.push(`RPE ${rpe} — the scale is 1 to 10`);
-  const st = statsFor(name, before);
+  const st = statsFor(key, before);
   const loaded = st && st.bestW.w > 0;
   if (loaded && w > 0) {
     const best = st.bestW.w;
@@ -1430,15 +1548,17 @@ function plausibility(name, w, r, rpe, before) {
   return why;
 }
 
-function plausLine(name, s) {
+function plausLine(key, s) {
+  const name = leafName(key);
   return `${name} · ${s.w > 0 ? wt(s.w) + ' × ' : ''}${s.r} reps${s.rpe != null ? ' @ ' + s.rpe : ''}`;
 }
 
 /* One set, one prompt. `ok` runs only on "Log anyway". */
-function plausDlg(name, s, why, ok) {
+function plausDlg(key, s, why, ok) {
+  const name = leafName(key);
   modal({
     title: 'Does this look right?',
-    body: `<div style="font-weight:700;margin-bottom:6px">${esc(plausLine(name, s))}</div>
+    body: `<div style="font-weight:700;margin-bottom:6px">${esc(plausLine(key, s))}</div>
       <ul class="plaus">${why.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
       <div class="sub">Fix the numbers, or log it as typed.</div>`,
     foot: `<button class="btn ghost" data-close>Fix it</button><button class="btn primary" id="plOk">Log anyway</button>`,
@@ -1452,7 +1572,7 @@ function plausListDlg(flagged, verb, ok) {
   modal({
     title: 'Some sets look off',
     body: `${flagged.map(f => `<div class="card tight" style="margin-bottom:8px">
-        <div style="font-weight:700">${esc(plausLine(f.name, f.s))}</div>
+        <div style="font-weight:700">${esc(f.name)} · ${esc(f.s.w > 0 ? wt(f.s.w) + ' × ' : '')}${f.s.r} reps</div>
         <ul class="plaus" style="margin-bottom:0">${f.why.map(x => `<li>${esc(x)}</li>`).join('')}</ul>
       </div>`).join('')}
       <div class="sub">Go back and fix them, or ${esc(verb.toLowerCase())} as they are.</div>`,
@@ -1468,14 +1588,14 @@ function plausListDlg(flagged, verb, ok) {
    a true single rather than an Epley estimate, and everything downstream —
    total, DOTS, rankings, opener suggestions — follows without a second path. */
 function logTest(date, entries, notes) {
-  const clean = entries.filter(e => e.name && e.kg > 0);
+  const clean = entries.filter(e => e.leaf && e.kg > 0);
   if (!clean.length) return 0;
   S.workouts.push({
     id: uid(), date, name: clean.length === 1 ? `${shortLift(clean[0].name)} test` : 'Max test',
     status: 'completed', source: 'logged', tested: true, notes: notes || '',
     exercises: clean.map(e => ({
-      name: e.name, notes: '',
-      sets: [{ w: e.kg, r: 1, rpe: null, done: true, warm: false }],
+      leaf: e.leaf, legacyName: e.legacyName || displayName(e.leaf), notes: '', mods: [],
+      sets: [{ w: e.kg, r: 1, rpe: null, done: true, setType: 'working' }],
     })),
     start: null, end: parseISO(date).getTime(),
     summary: { mins: 0, prs: [], volume: clean.reduce((t, e) => t + e.kg, 0) },
@@ -1683,7 +1803,7 @@ function viewHome() {
         <div class="sub">${p.exercises.length} exercise${p.exercises.length === 1 ? '' : 's'} planned</div></div>
         <button class="btn primary sm" data-start-planned="${p.id}">Start</button>
       </div>
-      <div>${p.exercises.map(e => `<div class="exline"><span>${esc(e.name)}</span>
+      <div>${p.exercises.map(e => `<div class="exline"><span>${esc(exName(e))}</span>
           <span class="muted mono" style="white-space:nowrap">${setSummary(e)}</span></div>`).join('')}</div>`)
       .join('<div class="hr"></div>');
   } else if (done.length) {
@@ -1769,14 +1889,15 @@ function setSummary(e) {
     `${g.n}×${g.r || 'AMRAP'}${g.w ? ` @ ${wt(g.w)}` : ''}`).join(', ') || '—';
 }
 
+/* Volume respects the load convention: a per-side set of 20 kg x 10 is 400 kg. */
 function totalVolume(wo) {
-  return wo.exercises.reduce((a, e) => a + e.sets.filter(s => s.done && !s.warm).reduce((b, s) => b + (s.w || 0) * (s.r || 0), 0), 0);
+  return wo.exercises.reduce((a, e) => a + e.sets.filter(s => s.done && isWorking(s)).reduce((b, s) => b + setVolume(e.leaf, s), 0), 0);
 }
 
 function goalCurrent(g) {
   if (g.type === 'lift') return bestSingleKg(g.exercise);
   if (g.type === 'bodyweight') return bodyweightKg();
-  if (g.type === 'total') return S.settings.priority.reduce((a, n) => a + bestSingleKg(n), 0);
+  if (g.type === 'total') return priorityKeys().reduce((a, k) => a + bestSingleKg(k), 0);
   if (g.type === 'sessions') return S.workouts.filter(w => w.status === 'completed' && (!g.since || w.date >= g.since)).length;
   return g.current || 0;
 }
@@ -1997,7 +2118,7 @@ function dayPanel(ds) {
 
 function completedCard(wo) {
   const prs = prsFor(wo);
-  const sets = wo.exercises.reduce((a, e) => a + e.sets.filter(s => s.done && !s.warm).length, 0);
+  const sets = wo.exercises.reduce((a, e) => a + e.sets.filter(s => s.done && isWorking(s)).length, 0);
   return `<div class="card">
     <div class="row between" style="margin-bottom:9px">
       <div class="grow"><div style="font-weight:700">${esc(wo.name)} <span class="chip green">COMPLETED</span>${srcChip(wo)}${wo.edited ? ' <span class="chip">EDITED</span>' : ''}</div>
@@ -2006,9 +2127,9 @@ function completedCard(wo) {
     </div>
     ${prs.length ? `<div class="row wrap" style="gap:6px;margin-bottom:9px">${prs.map(p => `<span class="chip gold">★ ${esc(p.name)} ${p.w > 0 ? `${wt(p.w)}×${p.r}` : `${p.r} reps`}</span>`).join('')}</div>` : ''}
     ${wo.exercises.map(e => {
-    const s = e.sets.filter(x => x.done && !x.warm);
+    const s = e.sets.filter(x => x.done && isWorking(x));
     const top = s.length ? s.reduce((a, b) => e1rm(b.w, b.r) > e1rm(a.w, a.r) ? b : a) : null;
-    return `<div class="exline"><span>${esc(e.name)} <span class="dimmer">×${s.length}</span></span>
+    return `<div class="exline"><span>${esc(exName(e))} <span class="dimmer">×${s.length}</span></span>
         <span class="mono muted">${top ? `${wt(top.w)} × ${top.r}` : '—'}</span></div>`;
   }).join('')}
   </div>`;
@@ -2026,7 +2147,7 @@ function plannedCard(wo) {
     </div>
     ${wo.exercises.map(e => `<div class="plan-ex">
       <div class="row between" style="gap:12px;align-items:baseline">
-        <span class="n grow">${esc(e.name)}</span>
+        <span class="n grow">${esc(exName(e))}</span>
         <span class="mono muted sets">${setSummary(e)}</span>
       </div>
       ${e.notes ? `<div class="note">${esc(e.notes)}</div>` : ''}
@@ -2063,7 +2184,7 @@ function renderPlanner() {
       ${p.exercises.length ? p.exercises.map((e, i) => `
         <div class="card tight" style="margin-bottom:9px;background:var(--card)">
           <div class="row between" style="margin-bottom:8px">
-            <div style="font-weight:650">${esc(e.name)}</div>
+            <div style="font-weight:650">${esc(exName(e))}</div>
             <button class="icon-btn" data-pl-rm="${i}" style="font-size:15px">✕</button>
           </div>
           <div class="grid3">
@@ -2088,7 +2209,7 @@ function renderPlanner() {
           if (inp.dataset.pl === 'sets') {
             const n = clamp(+inp.value || 1, 1, 20);
             const tmpl = ex.sets[0] || { w: 0, r: 0 };
-            while (ex.sets.length < n) ex.sets.push({ w: tmpl.w, r: tmpl.r, rpe: null, done: false, warm: false });
+            while (ex.sets.length < n) ex.sets.push({ w: tmpl.w, r: tmpl.r, rpe: null, done: false, setType: 'working' });
             ex.sets.length = n;
           }
           if (inp.dataset.pl === 'reps') ex.sets.forEach(s => s.r = +inp.value || 0);
@@ -2099,8 +2220,8 @@ function renderPlanner() {
       bg.querySelectorAll('[data-pl-rm]').forEach(b => b.onclick = () => { grab(); p.exercises.splice(+b.dataset.plRm, 1); renderPlanner(); });
       $('#plAdd', bg).onclick = () => {
         grab();
-        pickExercise(name => {
-          p.exercises.push({ name, notes: '', sets: Array.from({ length: 3 }, () => ({ w: 0, r: 5, rpe: null, done: false, warm: false })) });
+        pickExercise(leaf => {
+          p.exercises.push({ leaf, legacyName: displayName(leaf), notes: '', mods: [], sets: Array.from({ length: 3 }, () => ({ w: 0, r: 5, rpe: null, done: false, setType: 'working' })) });
           renderPlanner();
         });
       };
@@ -2118,40 +2239,34 @@ function renderPlanner() {
 
 /* ---------------- exercise picker ---------------- */
 function pickExercise(cb) {
-  const recent = [...new Set(S.workouts.filter(w => w.status === 'completed').slice(-12).reverse()
-    .flatMap(w => w.exercises.map(e => e.name)))].slice(0, 8);
+  const seenRecent = new Set();
+  const recent = S.workouts.filter(w => w.status === 'completed').slice(-12).reverse()
+    .flatMap(w => w.exercises.filter(e => e.leaf).map(e => ({ key: exKey(e), leaf: e.leaf, name: exName(e) })))
+    .filter(x => !seenRecent.has(x.key) && seenRecent.add(x.key)).slice(0, 8);
   const draw = (q) => {
     const all = allExercises();
-    let list;
-    if (q) {
-      const ql = q.toLowerCase();
-      const own = all.filter(n => n.toLowerCase().includes(ql));
-      const extra = Object.keys(EX_DB)
-        .filter(n => n.toLowerCase().includes(ql) && !all.includes(n))
-        .sort((a, b) => a.localeCompare(b));
-      list = [...own, ...extra];
-    } else list = all;
+    const ql = (q || '').toLowerCase();
+    const list = ql ? all.filter(x => x.name.toLowerCase().includes(ql)) : all;
     const groups = {};
-    list.forEach(n => { const c = categoryOf(n); (groups[c] = groups[c] || []).push(n); });
+    list.forEach(x => { const c = categoryOf(x.leaf); (groups[c] = groups[c] || []).push(x); });
     let html = '';
     if (!q && recent.length) {
       html += `<div style="padding:8px 16px 4px" class="eyebrow">Recent</div>`;
-      html += recent.map(n => item(n)).join('');
+      html += recent.map(item).join('');
     }
     Object.entries(groups).forEach(([c, names]) => {
       html += `<div style="padding:10px 16px 4px" class="eyebrow">${c}</div>`;
-      html += names.map(n => item(n)).join('');
+      html += names.map(item).join('');
     });
     if (q && !list.length) html = `<div class="empty">No match. Create “${esc(q)}” below.</div>`;
     return html;
   };
-  const item = n => {
-    const st = statsFor(n);
-    const inf = exInfo(n);
+  const item = x => {
+    const st = statsFor(x.key);
     const meta = st ? `PR ${wt(st.bestW.w)} × ${st.bestW.r} · ${st.sessions} sessions`
-                    : (inf && inf.eq ? inf.eq : 'No history');
-    return `<div class="pickitem" data-pick="${esc(n)}">
-      <div><div class="n">${esc(n)}</div><div class="m">${esc(meta)}</div></div>
+                    : (EQ_LABEL[x.leaf.equipment] || 'No history');
+    return `<div class="pickitem" data-pick="${esc(x.key)}">
+      <div><div class="n">${esc(x.name)}</div><div class="m">${esc(meta)}</div></div>
       <span class="dimmer">›</span></div>`;
   };
   modal({
@@ -2162,21 +2277,18 @@ function pickExercise(cb) {
     onOpen: bg => {
       const list = $('#pkList', bg), q = $('#pkQ', bg);
       const bind = () => list.querySelectorAll('[data-pick]').forEach(el =>
-        el.onclick = () => {
-          const n = el.dataset.pick;
-          // an EX_DB pick isn't in LIB, so remember it as a custom name
-          if (!allExercises().includes(n) && !S.customEx.includes(n)) {
-            S.customEx.push(n); save();
-          }
-          closeModal(); cb(n);
-        });
+        el.onclick = () => { closeModal(); cb(keyLeaf(el.dataset.pick)); });
       bind();
       q.oninput = () => { list.innerHTML = draw(q.value.trim()); bind(); };
       $('#pkNew', bg).onclick = () => {
         const name = q.value.trim();
         if (!name) return toast('Type a name first');
-        if (!S.customEx.includes(name)) S.customEx.push(name);
-        save(); closeModal(); cb(name);
+        /* A name the catalogue does not know becomes its own movement rather
+           than being guessed into an existing one. */
+        const cm = customMovementFor(name);
+        S.customMovements = S.customMovements || [];
+        if (!S.customMovements.some(m => m.id === cm.id)) { S.customMovements.push(cm); bustCatalogue(); }
+        save(); closeModal(); cb(completeLeaf(cm, null));
       };
       setTimeout(() => q.focus(), 60);
     },
@@ -2219,7 +2331,7 @@ function workoutLanding() {
     <div class="card tight">
       <div class="row between">
         <div class="grow"><div style="font-weight:650">${esc(r.name)}</div>
-          <div class="sub">${fmtDate(r.date)} · ${r.exercises.map(e => e.name).slice(0, 3).join(', ')}${r.exercises.length > 3 ? '…' : ''}</div></div>
+          <div class="sub">${fmtDate(r.date)} · ${r.exercises.map(e => exName(e)).slice(0, 3).join(', ')}${r.exercises.length > 3 ? '…' : ''}</div></div>
         <button class="btn sm" data-repeat="${r.id}">Repeat</button>
       </div>
     </div>`).join('') : `<div class="card"><div class="empty">No completed sessions yet.</div></div>`}
@@ -2263,12 +2375,12 @@ function elapsed() {
 }
 
 // last time this exercise was performed before now
-function lastSession(name) {
-  const prev = S.workouts.filter(w => w.status === 'completed' && w.exercises.some(e => e.name === name))
+function lastSession(key) {
+  const prev = S.workouts.filter(w => w.status === 'completed' && w.exercises.some(e => exKey(e) === key))
     .sort((a, b) => a.date < b.date ? 1 : -1)[0];
   if (!prev) return null;
-  const ex = prev.exercises.find(e => e.name === name);
-  return { date: prev.date, sets: ex.sets.filter(s => s.done && !s.warm) };
+  const ex = prev.exercises.find(e => exKey(e) === key);
+  return { date: prev.date, sets: ex.sets.filter(s => s.done && isWorking(s)) };
 }
 
 function activeWorkout() {
@@ -2305,12 +2417,12 @@ function activeWorkout() {
 }
 
 function exerciseCard(e, ei) {
-  const st = statsFor(e.name);
-  const prev = lastSession(e.name);
+  const st = statsFor(exKey(e));
+  const prev = lastSession(exKey(e));
   const bestE1 = st ? st.best.e1 : 0;
 
   // did anything today beat the historical PR?
-  const todayBest = Math.max(0, ...e.sets.filter(s => s.done && !s.warm && s.w && s.r).map(s => e1rm(s.w, s.r, s.rpe)));
+  const todayBest = Math.max(0, ...e.sets.filter(s => s.done && isWorking(s) && s.w && s.r).map(s => e1rm(s.w, s.r, s.rpe)));
   const beatE1 = st && todayBest > bestE1;
 
   const prBanner = st
@@ -2321,11 +2433,11 @@ function exerciseCard(e, ei) {
     : `<span class="chip">First time — everything is a PR</span>`;
 
   const rows = e.sets.map((s, si) => {
-    const isPR = s.done && !s.warm && s.r > 0 && beatsBest(st, s.w, s.r, s.rpe);
-    const isFirstPR = s.done && !s.warm && s.r > 0 && !st;
+    const isPR = s.done && isWorking(s) && s.r > 0 && beatsBest(st, s.w, s.r, s.rpe);
+    const isFirstPR = s.done && isWorking(s) && s.r > 0 && !st;
     const p = prev && prev.sets[si];
     return `<tr class="${s.done ? 'done' : ''} ${isPR || isFirstPR ? 'pr' : ''}">
-      <td class="c-set"><div class="setno ${s.warm ? 'warm' : ''}" data-warm="${ei}.${si}" title="Toggle warm-up">${s.warm ? 'W' : si + 1 - e.sets.slice(0, si).filter(x => x.warm).length}</div></td>
+      <td class="c-set"><div class="setno ${isWarm(s) ? 'warm' : ''}" data-warm="${ei}.${si}" title="Toggle warm-up">${isWarm(s) ? 'W' : si + 1 - e.sets.slice(0, si).filter(x => isWarm(x)).length}</div></td>
       <td class="c-del"><button class="delset" data-delset="${ei}.${si}" title="Delete set">×</button></td>
       <td class="c-prev mono">${p ? `${wt(p.w)}×${p.r}` : '—'}</td>
       <td class="c-wt"><input type="number" step="0.5" inputmode="decimal" data-f="w" data-k="${ei}.${si}" value="${s.w ? dw(s.w) : ''}" placeholder="0"></td>
@@ -2339,7 +2451,7 @@ function exerciseCard(e, ei) {
   return `<div class="ex-card">
     <div class="ex-head">
       <div class="row between">
-        <div class="ex-name grow">${esc(e.name)}</div>
+        <div class="ex-name grow">${esc(exName(e))}</div>
         <button class="btn xs ghost" data-ramp="${ei}" title="Warm-up ramp">▲ Warm-up</button>
         <button class="icon-btn" data-ex-menu="${ei}">⋯</button>
       </div>
@@ -2572,9 +2684,9 @@ function finishWorkout(force) {
   // sets ticked and then retyped never met the single-set prompt
   if (!force) {
     const flagged = [];
-    logged.forEach(e => e.sets.filter(s => !s.warm).forEach(s => {
-      const why = plausibility(e.name, s.w, s.r, s.rpe);
-      if (why.length) flagged.push({ name: e.name, s, why });
+    logged.forEach(e => e.sets.filter(s => isWorking(s)).forEach(s => {
+      const why = plausibility(exKey(e), s.w, s.r, s.rpe);
+      if (why.length) flagged.push({ name: exName(e), s, why });
     }));
     if (flagged.length) return plausListDlg(flagged, 'Finish', () => finishWorkout(true));
   }
@@ -2582,20 +2694,20 @@ function finishWorkout(force) {
   // PRs — compare against history BEFORE this workout is saved
   const prs = [];
   logged.forEach(e => {
-    const st = statsFor(e.name);
-    const working = e.sets.filter(s => !s.warm);
+    const st = statsFor(exKey(e));
+    const working = e.sets.filter(s => isWorking(s));
     if (!working.length) return;
     const best = bestSetOf(working);
     const e1 = e1rm(best.w, best.r, best.rpe);
-    if (!st) prs.push({ name: e.name, w: best.w, r: best.r, e1, first: true });
-    else if (beatsBest(st, best.w, best.r, best.rpe)) prs.push({ name: e.name, w: best.w, r: best.r, e1, prev: st.best.e1, prevReps: st.bestBw ? st.bestBw.r : 0 });
+    if (!st) prs.push({ name: exName(e), key: exKey(e), w: best.w, r: best.r, e1, first: true });
+    else if (beatsBest(st, best.w, best.r, best.rpe)) prs.push({ name: exName(e), key: exKey(e), w: best.w, r: best.r, e1, prev: st.best.e1, prevReps: st.bestBw ? st.bestBw.r : 0 });
   });
 
   const mins = a.start ? Math.max(1, Math.round((Date.now() - a.start) / 60000)) : 0;
   const done = {
     id: a.id, date: a.date, name: a.name, status: 'completed', source: 'logged',
     exercises: logged, start: a.start, end: Date.now(),
-    summary: { mins, prs, volume: logged.reduce((t, e) => t + e.sets.filter(s => !s.warm).reduce((x, s) => x + s.w * s.r, 0), 0) },
+    summary: { mins, prs, volume: logged.reduce((t, e) => t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + s.w * s.r, 0), 0) },
   };
 
   // if this came from a plan, replace the planned entry
@@ -2662,7 +2774,7 @@ function setLabel(s) {
 }
 
 function sessionTotals(wo) {
-  const ws = wo.exercises.map(e => ({ e, sets: e.sets.filter(s => !s.warm) })).filter(o => o.sets.length);
+  const ws = wo.exercises.map(e => ({ e, sets: e.sets.filter(s => isWorking(s)) })).filter(o => o.sets.length);
   return {
     ws,
     sets: ws.reduce((n, o) => n + o.sets.length, 0),
@@ -2682,15 +2794,15 @@ function sessionMuscles(wo) {
   const acc = {};
   let unknown = 0;
   wo.exercises.forEach(e => {
-    const sets = e.sets.filter(s => !s.warm && s.r > 0);
+    const sets = e.sets.filter(s => isWorking(s) && s.r > 0);
     if (!sets.length) return;
-    const m = exMuscles(e.name);
+    const m = exMuscles(exName(e));
     if (!m) { unknown++; return; }
     const rpes = sets.map(s => s.rpe).filter(r => r >= 1 && r <= 10);
     let hard;                                              // 0 = easy, 1 = maximal
     if (rpes.length) hard = clamp((rpes.reduce((a, b) => a + b, 0) / rpes.length - 5) / 5, 0, 1);
     else {
-      const st = statsFor(e.name);
+      const st = statsFor(exKey(e));
       const top = Math.max(...sets.map(s => e1rm(s.w, s.r)));
       hard = st && st.best.e1 > 0 && top > 0 ? clamp((top / st.best.e1 - 0.6) / 0.4, 0, 1) : 0.5;
     }
@@ -2758,7 +2870,7 @@ function quickCardCanvas(wo) {
     y += 92;
   }
   x.fillStyle = CARD.dim; x.font = cardFont(27, 600);
-  wrapText(x, t.ws.map(o => `${o.e.name} ×${o.sets.length}`).join(' · '), P, y + 10, W - P * 2, 38, 2);
+  wrapText(x, t.ws.map(o => `${exName(o.e)} ×${o.sets.length}`).join(' · '), P, y + 10, W - P * 2, 38, 2);
   cardFoot(x, W, H, P);
   return c;
 }
@@ -2815,12 +2927,12 @@ function fullCardCanvas(wo) {
   allSets.forEach(({ e, sets }) => {
     x.strokeStyle = CARD.line; x.lineWidth = 2;
     x.beginPath(); x.moveTo(P, y); x.lineTo(W - P, y); x.stroke();
-    const working = sets.filter(s => !s.warm);
+    const working = sets.filter(s => isWorking(s));
     const vol = working.reduce((a, s) => a + s.w * s.r, 0);
-    const prSet = prNames.has(e.name) && working.length ? bestSetOf(working) : null;   // the one set prsFor scored
+    const prSet = prNames.has(exName(e)) && working.length ? bestSetOf(working) : null;   // the one set prsFor scored
     const reps = working.reduce((a, s) => a + s.r, 0);
     x.textAlign = 'left'; x.fillStyle = CARD.text; x.font = cardFont(29, 680);
-    x.fillText(fitText(x, e.name, W - P * 2 - 260), P, y + 42);
+    x.fillText(fitText(x, exName(e), W - P * 2 - 260), P, y + 42);
     x.textAlign = 'right'; x.fillStyle = CARD.dim; x.font = cardFont(24, 600);
     x.fillText(`${working.length} sets · ${vol > 0 ? wt(vol, 0) : reps + ' reps'}`, W - P, y + 42);   // bodyweight: reps, not 0kg
     y += 64;
@@ -2828,11 +2940,11 @@ function fullCardCanvas(wo) {
     sets.forEach(s => {
       const isPR = s === prSet;
       x.textAlign = 'left';
-      x.fillStyle = s.warm ? CARD.warm : CARD.dim; x.font = cardFont(23, 600);
-      x.fillText(s.warm ? 'W' : String(++n), P + 12, y + 28);
-      x.fillStyle = s.warm ? CARD.warm : isPR ? CARD.gold : CARD.text; x.font = cardFont(26, isPR ? 780 : 620);
+      x.fillStyle = isWarm(s) ? CARD.warm : CARD.dim; x.font = cardFont(23, 600);
+      x.fillText(isWarm(s) ? 'W' : String(++n), P + 12, y + 28);
+      x.fillStyle = isWarm(s) ? CARD.warm : isPR ? CARD.gold : CARD.text; x.font = cardFont(26, isPR ? 780 : 620);
       x.fillText(setLabel(s) + (isPR ? '  ★' : ''), P + 64, y + 28);
-      if (s.w > 0 && s.r > 0 && !s.warm) {
+      if (s.w > 0 && s.r > 0 && isWorking(s)) {
         x.textAlign = 'right'; x.fillStyle = CARD.dim; x.font = cardFont(22, 600);
         x.fillText(`e1RM ${wt(e1rm(s.w, s.r, s.rpe))}`, W - P, y + 28);
       }
@@ -2907,8 +3019,8 @@ async function shareSession(wo, mode = 'quick') {
 }
 
 function showSummary(wo) {
-  const sets = wo.exercises.reduce((n, e) => n + e.sets.filter(s => !s.warm).length, 0);
-  const reps = wo.exercises.reduce((n, e) => n + e.sets.filter(s => !s.warm).reduce((a, s) => a + s.r, 0), 0);
+  const sets = wo.exercises.reduce((n, e) => n + e.sets.filter(s => isWorking(s)).length, 0);
+  const reps = wo.exercises.reduce((n, e) => n + e.sets.filter(s => isWorking(s)).reduce((a, s) => a + s.r, 0), 0);
   const prs = wo.summary.prs;
   modal({
     title: 'Session complete',
@@ -2934,17 +3046,17 @@ function showSummary(wo) {
 
       <div class="eyebrow" style="margin:16px 0 8px">Breakdown</div>
       ${wo.exercises.map(e => {
-      const ws = e.sets.filter(s => !s.warm);
-      const warm = e.sets.filter(s => s.warm);
+      const ws = e.sets.filter(s => isWorking(s));
+      const warm = e.sets.filter(s => isWarm(s));
       const v = ws.reduce((a, s) => a + s.w * s.r, 0);
       const top = ws.length ? ws.reduce((a, b) => e1rm(b.w, b.r) > e1rm(a.w, a.r) ? b : a) : null;
       return `<div class="card tight" style="margin-bottom:8px">
           <div class="row between" style="margin-bottom:6px">
-            <div style="font-weight:680">${esc(e.name)}</div>
+            <div style="font-weight:680">${esc(exName(e))}</div>
             <div class="mono sub">${wt(v, 0)}</div>
           </div>
           ${e.sets.map((st, i) => `<div class="row between" style="padding:3px 0;font-size:13px">
-            <span class="sub" style="width:52px">${st.warm ? 'warm' : 'Set ' + (ws.indexOf(st) + 1)}</span>
+            <span class="sub" style="width:52px">${isWarm(st) ? 'warm' : 'Set ' + (ws.indexOf(st) + 1)}</span>
             <span class="mono grow" style="${st === top && ws.length > 1 ? 'color:var(--gold);font-weight:700' : ''}">${wt(st.w)} × ${st.r}</span>
             <span class="mono sub">${st.rpe ? 'RPE ' + st.rpe : ''}</span>
           </div>`).join('')}
@@ -2969,13 +3081,13 @@ function viewCompleted(id) {
       <div class="sub" style="margin-bottom:12px">${fmtDate(wo.date, { weekday: 'long', month: 'long', day: 'numeric' })}${wo.edited ? ' · <span class="chip">EDITED</span>' : ''}</div>
       <div class="stats grid3" style="margin-bottom:14px">
         <div class="stat"><div class="k">Volume</div><div class="v">${w(totalVolume(wo), 0)}</div></div>
-        <div class="stat"><div class="k">Sets</div><div class="v">${wo.exercises.reduce((n, e) => n + e.sets.filter(s => !s.warm).length, 0)}</div></div>
+        <div class="stat"><div class="k">Sets</div><div class="v">${wo.exercises.reduce((n, e) => n + e.sets.filter(s => isWorking(s)).length, 0)}</div></div>
         <div class="stat"><div class="k">Time</div><div class="v">${wo.summary && wo.summary.mins ? wo.summary.mins : '—'}<small>min</small></div></div>
       </div>
       ${wo.exercises.map(e => `
         <div class="card tight" style="background:var(--card)">
-          <div style="font-weight:700;margin-bottom:7px">${esc(e.name)}</div>
-          ${e.sets.map((s, i) => `<div class="exline"><span class="dimmer">${s.warm ? 'W' : 'Set ' + (i + 1)}</span>
+          <div style="font-weight:700;margin-bottom:7px">${esc(exName(e))}</div>
+          ${e.sets.map((s, i) => `<div class="exline"><span class="dimmer">${isWarm(s) ? 'W' : 'Set ' + (i + 1)}</span>
             <span class="mono">${wt(s.w)} × ${s.r}${s.rpe ? ` @ ${s.rpe}` : ''} <span class="dimmer">· e1RM ${wt(e1rm(s.w, s.r))}</span></span></div>`).join('')}
         </div>`).join('')}
     `,
@@ -3016,7 +3128,7 @@ function renderEditWorkout() {
   const key = k => k.split('.').map(Number);
   const exCard = (e, ei) => `<div class="ex-card" style="margin-bottom:9px">
     <div class="ex-head"><div class="row between" style="gap:6px">
-      <div class="ex-name grow">${esc(e.name)}</div>
+      <div class="ex-name grow">${esc(exName(e))}</div>
       <button class="btn xs ghost" data-eex-up="${ei}" title="Move up">↑</button>
       <button class="btn xs ghost" data-eex-down="${ei}" title="Move down">↓</button>
       <button class="btn xs danger" data-eex-rm="${ei}" title="Remove exercise">✕</button>
@@ -3024,7 +3136,7 @@ function renderEditWorkout() {
     <table class="settable">
       <thead><tr><th class="c-set">Set</th><th class="c-del"></th><th class="c-kg">${U()}</th><th class="c-reps">Reps</th><th class="c-rpe">RPE</th><th class="c-chk"></th></tr></thead>
       <tbody>${e.sets.map((s, si) => `<tr class="${s.done ? 'done' : ''}">
-        <td class="c-set"><div class="setno ${s.warm ? 'warm' : ''}" data-ewarm="${ei}.${si}" title="Toggle warm-up">${s.warm ? 'W' : si + 1 - e.sets.slice(0, si).filter(x => x.warm).length}</div></td>
+        <td class="c-set"><div class="setno ${isWarm(s) ? 'warm' : ''}" data-ewarm="${ei}.${si}" title="Toggle warm-up">${isWarm(s) ? 'W' : si + 1 - e.sets.slice(0, si).filter(x => isWarm(x)).length}</div></td>
         <td class="c-del"><button class="delset" data-edelset="${ei}.${si}" title="Delete set">×</button></td>
         <td class="c-wt"><input type="number" step="0.5" inputmode="decimal" data-ef="w" data-k="${ei}.${si}" value="${s.w ? dw(s.w) : ''}" placeholder="0"></td>
         <td><input type="number" inputmode="numeric" data-ef="r" data-k="${ei}.${si}" value="${s.r || ''}" placeholder="0"></td>
@@ -3069,7 +3181,7 @@ function renderEditWorkout() {
         const [ei, si] = key(b.dataset.edone); const s = d.exercises[ei].sets[si]; s.done = !s.done; re();
       });
       bg.querySelectorAll('[data-ewarm]').forEach(b => b.onclick = () => {
-        const [ei, si] = key(b.dataset.ewarm); const s = d.exercises[ei].sets[si]; s.warm = !s.warm; re();
+        const [ei, si] = key(b.dataset.ewarm); const s = d.exercises[ei].sets[si]; s.setType = isWarm(s) ? 'working' : 'warmup'; re();
       });
       bg.querySelectorAll('[data-edelset]').forEach(b => b.onclick = () => {
         const [ei, si] = key(b.dataset.edelset);
@@ -3080,7 +3192,7 @@ function renderEditWorkout() {
       bg.querySelectorAll('[data-eaddset]').forEach(b => b.onclick = () => {
         const ex = d.exercises[+b.dataset.eaddset];
         const last = ex.sets[ex.sets.length - 1] || { w: 0, r: 0 };
-        ex.sets.push({ w: last.w, r: last.r, rpe: null, done: true, warm: false });
+        ex.sets.push({ w: last.w, r: last.r, rpe: null, done: true, setType: 'working' });
         re();
       });
       bg.querySelectorAll('[data-eex-up]').forEach(b => b.onclick = () => {
@@ -3094,13 +3206,13 @@ function renderEditWorkout() {
       bg.querySelectorAll('[data-eex-rm]').forEach(b => b.onclick = () => {
         grab();
         const i = +b.dataset.eexRm, ex = d.exercises[i];
-        confirmDlg(`Remove ${ex.name} and its ${ex.sets.length} set${ex.sets.length === 1 ? '' : 's'} from this session?`,
+        confirmDlg(`Remove ${exName(ex)} and its ${ex.sets.length} set${ex.sets.length === 1 ? '' : 's'} from this session?`,
           () => { d.exercises.splice(i, 1); renderEditWorkout(); }, 'Remove');
       });
       $('#eAddEx', bg).onclick = () => {
         grab();
-        pickExercise(name => {
-          d.exercises.push({ name, notes: '', sets: [{ w: 0, r: 0, rpe: null, done: true, warm: false }] });
+        pickExercise(leaf => {
+          d.exercises.push({ leaf, legacyName: displayName(leaf), notes: '', mods: [], sets: [{ w: 0, r: 0, rpe: null, done: true, setType: 'working' }] });
           renderEditWorkout();
         });
       };
@@ -3117,9 +3229,9 @@ function saveEdit(force) {
 
   if (!force) {
     const flagged = [];
-    logged.forEach(e => e.sets.filter(s => !s.warm).forEach(s => {
-      const why = plausibility(e.name, s.w, s.r, s.rpe, d.date);
-      if (why.length) flagged.push({ name: e.name, s, why });
+    logged.forEach(e => e.sets.filter(s => isWorking(s)).forEach(s => {
+      const why = plausibility(exKey(e), s.w, s.r, s.rpe, d.date);
+      if (why.length) flagged.push({ name: exName(e), s, why });
     }));
     if (flagged.length) return plausListDlg(flagged, 'Save', () => saveEdit(true));
   }
@@ -3129,7 +3241,7 @@ function saveEdit(force) {
     ...orig, name: d.name, date: d.date, exercises: logged, edited: Date.now(),
     summary: {
       ...(orig.summary || {}),
-      volume: logged.reduce((t, e) => t + e.sets.filter(s => !s.warm).reduce((x, s) => x + s.w * s.r, 0), 0),
+      volume: logged.reduce((t, e) => t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + s.w * s.r, 0), 0),
       prs: [],
     },
   };
@@ -3318,9 +3430,9 @@ function openExDetail(name) {
 let testDraft = null;
 function openTestLog() {
   const ex = allExercises();
-  const rows = S.settings.priority.slice(0, 3);
-  testDraft = rows.map(n => ({ name: n, kg: 0 }));
-  const sel = (v, id) => `<select id="${id}">${ex.map(n => `<option${n === v ? ' selected' : ''}>${esc(n)}</option>`).join('')}</select>`;
+  const rows = priorityKeys().slice(0, 3);
+  testDraft = rows.map(k => ({ key: k, leaf: keyLeaf(k), name: leafName(k), kg: 0 }));
+  const sel = (v, id) => `<select id="${id}">${ex.map(x => `<option value="${esc(x.key)}"${x.key === v ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select>`;
 
   modal({
     title: 'Log a test',
@@ -3414,11 +3526,11 @@ function predictPlacing(field, gymTotal, applyHaircut = true) {
 /* Total from the tested singles that existed on a given date, so the placing
    delta tracks real test results rather than needing its own log. */
 function testedTotalAsOf(date) {
-  const lifts = S.settings.priority;
+  const lifts = priorityKeys();
   let t = 0, found = 0;
   lifts.forEach(n => {
     const hit = testLog().filter(w => w.date <= date)
-      .map(w => w.exercises.find(e => e.name === n))
+      .map(w => w.exercises.find(e => exKey(e) === n))
       .find(e => e && e.sets[0] && e.sets[0].w > 0);
     if (hit) { t += hit.sets[0].w; found++; }
   });
@@ -3431,8 +3543,7 @@ function ord(n) {
 }
 
 function priorityStats() {
-  const p = S.settings.priority;
-  const lifts = p.map(n => ({ name: n, ...bestSingleInfo(n) }));
+  const lifts = priorityKeys().map(k => ({ name: leafName(k), key: k, ...bestSingleInfo(k) }));
   const total = lifts.reduce((a, l) => a + l.kg, 0);
   const bw = bodyweightKg();
   return { lifts, total, bw, dots: dots(total, bw, S.settings.sex) };
@@ -3477,7 +3588,7 @@ function viewMeets() {
             <div class="n">${esc(t.name)}</div>
             <div class="m">${fmtDate(t.date, { month: 'short', day: 'numeric', year: '2-digit' })} · ${relDay(t.date)}${t.notes ? ' · ' + esc(t.notes) : ''}</div>
           </div>
-          <div class="pr">${t.exercises.map(e => `${shortLift(e.name)} ${wt(e.sets[0].w)}`).join('<br>')}</div>
+          <div class="pr">${t.exercises.map(e => `${shortLift(exName(e))} ${wt(e.sets[0].w)}`).join('<br>')}</div>
         </div>`).join('')}</div>`;
     })()}
 
@@ -3492,9 +3603,15 @@ function viewMeets() {
   `;
 }
 
-function liftName(k) {
+function priorityLeaf(k) {
   const i = ['squat', 'bench', 'deadlift'].indexOf(k);
-  return (i >= 0 && S.settings.priority[i]) || k;
+  const p = (S.settings.priority || [])[i];
+  return p && p.leaf ? p.leaf : null;
+}
+function priorityKeys() { return (S.settings.priority || []).map(p => p && p.leaf ? leafKey(p.leaf) : p); }
+function liftName(k) {
+  const l = priorityLeaf(k);
+  return l ? displayName(l) : k;
 }
 
 /* A tested single is better evidence than a number generated from a PDF months
@@ -3795,8 +3912,8 @@ function installProgram(P) {
     S.workouts.push({
       id, date: w.date, name: w.name, status: 'planned', prog: P.id, block: w.block,
       exercises: w.exercises.map(e => ({
-        name: e.name, notes: e.notes || '',
-        sets: e.sets.map(s => ({ w: s.w, r: s.r, rpe: null, done: false, warm: false })),
+        leaf: (resolveName(e.name) || {}).leaf || completeLeaf(customMovementFor(e.name), null), legacyName: e.name, notes: e.notes || '', mods: modsFromNote(e.notes),
+        sets: e.sets.map(s => ({ w: s.w, r: s.r, rpe: null, done: false, setType: 'working' })),
       })),
     });
     added++;
@@ -3807,7 +3924,20 @@ function installProgram(P) {
     S.meets.push({ id: uid(), prog: P.id, ...m });
   });
 
-  if (P.priority) S.settings.priority = [...P.priority];
+  /* Spec section 7: a program may SUGGEST priority lifts; installing must not
+     impose them. Only fill them in while they are still the untouched default —
+     a lifter who has chosen their own competition lifts keeps them. */
+  const stock = ['back-squat', 'bench-press', 'deadlift'];
+  const untouched = (S.settings.priority || []).every((p, i) =>
+    typeof p === 'string' ? p === ['Back Squat', 'Bench Press', 'Deadlift'][i]
+                          : !!(p && p.leaf && p.leaf.movement === stock[i]));
+  if (P.priority && untouched) {
+    S.settings.priority = P.priority.slice(0, 3).map((n, i) => {
+      const r = resolveName(n);
+      return { slot: ['squat', 'bench', 'deadlift'][i] || 'squat',
+               leaf: r ? r.leaf : completeLeaf(customMovementFor(n), null) };
+    });
+  }
   if (!S.programs.includes(P.id)) S.programs.push(P.id);
   save(); bust();
   return added;
@@ -3911,7 +4041,7 @@ function backfillPlanned(days) {
     w.summary = {
       mins: 0, prs: [],
       volume: w.exercises.reduce((t, e) =>
-        t + e.sets.filter(s => !s.warm).reduce((x, s) => x + s.w * s.r, 0), 0),
+        t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + s.w * s.r, 0), 0),
     };
   });
   save(); bust();
@@ -4089,7 +4219,7 @@ function importLiftoff(sessions, mapping, unit) {
       name: mapping[e.raw] || e.raw,
       notes: e.secs ? `${e.secs} s hold` : '',
       sets: e.sets.map(x => ({
-        w: toKgFrom(x.lb, unit), r: x.r, rpe: x.rpe, done: true, warm: false,
+        w: toKgFrom(x.lb, unit), r: x.r, rpe: x.rpe, done: true, setType: 'working',
       })),
     }));
     /* Two raw names can map onto one Ironlog name, and an exercise done in two
@@ -5343,28 +5473,28 @@ function wireActive(v) {
     if (!s.r) return toast('Enter reps first');
     const commit = () => {
       // PR check against history captured before flipping the flag
-      const st = statsFor(ex.name);
+      const st = statsFor(exKey(ex));
       s.done = true;
-      if (!s.warm && (!st || beatsBest(st, s.w, s.r, s.rpe))) {
-        toast(st ? `★ PR — ${ex.name} ${s.w > 0 ? `${wt(s.w)}×${s.r}` : `${s.r} reps`}` : `★ First ${ex.name} logged`, 'gold');
+      if (isWorking(s) && (!st || beatsBest(st, s.w, s.r, s.rpe))) {
+        toast(st ? `★ PR — ${exName(ex)} ${s.w > 0 ? `${wt(s.w)}×${s.r}` : `${s.r} reps`}` : `★ First ${exName(ex)} logged`, 'gold');
       }
       save(); bust(); render();
     };
-    const why = s.warm ? [] : plausibility(ex.name, s.w, s.r, s.rpe);
-    if (why.length) plausDlg(ex.name, s, why, commit); else commit();
+    const why = isWarm(s) ? [] : plausibility(exKey(ex), s.w, s.r, s.rpe);
+    if (why.length) plausDlg(exKey(ex), s, why, commit); else commit();
   });
 
   v.querySelectorAll('[data-warm]').forEach(b => b.onclick = () => {
-    const [ei, si] = key(b.dataset.warm);
+    const [ei, si] = key(b.isWarm(dataset));
     const s = a.exercises[ei].sets[si];
-    s.warm = !s.warm;
+    s.setType = isWarm(s) ? 'working' : 'warmup';
     save(); bust(); render();
   });
 
   v.querySelectorAll('[data-addset]').forEach(b => b.onclick = () => {
     const ex = a.exercises[+b.dataset.addset];
     const last = ex.sets[ex.sets.length - 1] || { w: 0, r: 0 };
-    ex.sets.push({ w: last.w, r: last.r, rpe: null, done: false, warm: false });
+    ex.sets.push({ w: last.w, r: last.r, rpe: null, done: false, setType: 'working' });
     save(); render();
   });
   v.querySelectorAll('[data-rmset]').forEach(b => b.onclick = () => {
@@ -5383,8 +5513,8 @@ function wireActive(v) {
   v.querySelectorAll('[data-ramp]').forEach(b => b.onclick = () => {
     const ex = a.exercises[+b.dataset.ramp];
     // seed from the heaviest set planned today — usually the top set you're ramping to
-    const top = ex.sets.filter(s => !s.warm && s.w > 0).reduce((m, s) => s.w > m ? s.w : m, 0);
-    openRamp(ex.name, top || null);
+    const top = ex.sets.filter(s => isWorking(s) && s.w > 0).reduce((m, s) => s.w > m ? s.w : m, 0);
+    openRamp(exKey(ex), top || null);
   });
 
   v.querySelectorAll('[data-delset]').forEach(b => b.onclick = () => {
@@ -5401,7 +5531,7 @@ function wireActive(v) {
   v.querySelectorAll('[data-ex-menu]').forEach(b => b.onclick = () => {
     const ei = +b.dataset.exMenu, ex = a.exercises[ei];
     modal({
-      title: ex.name,
+      title: exName(ex),
       body: `<div class="field"><label>Exercise notes</label>
           <textarea id="exNote" rows="3" placeholder="Cues, belt, tempo…">${esc(ex.notes || '')}</textarea></div>
         <button class="btn wide ghost" id="exUp" style="margin-bottom:8px">Move up</button>
@@ -5416,8 +5546,8 @@ function wireActive(v) {
     });
   });
 
-  $('#addEx').onclick = () => pickExercise(name => {
-    a.exercises.push({ name, notes: '', sets: [{ w: 0, r: 0, rpe: null, done: false, warm: false }] });
+  $('#addEx').onclick = () => pickExercise(leaf => {
+    a.exercises.push({ leaf, legacyName: displayName(leaf), notes: '', mods: [], sets: [{ w: 0, r: 0, rpe: null, done: false, setType: 'working' }] });
     save(); render();
     window.scrollTo(0, document.body.scrollHeight);
   });
@@ -5861,10 +5991,10 @@ function applyVoiceSet(name, kg, reps, rpe) {
   const a = S.active;
   if (!a) return toast('No active workout');
   let ex = a.exercises.find(e => e.name === name);
-  if (!ex) { ex = { name, notes: '', sets: [] }; a.exercises.push(ex); }
+  if (!ex) { ex = { leaf, legacyName: displayName(leaf), notes: '', mods: [], sets: [] }; a.exercises.push(ex); }
 
   const st = statsFor(name);
-  ex.sets.push({ w: kg, r: reps, rpe: rpe, done: true, warm: false });
+  ex.sets.push({ w: kg, r: reps, rpe: rpe, done: true, setType: 'working' });
   save(); bust(); render();
 
   if (!st || beatsBest(st, kg, reps, rpe)) toast(st ? `★ PR — ${name} ${kg > 0 ? `${wt(kg)}×${reps}` : `${reps} reps`}` : `★ First ${name} logged`, 'gold');
@@ -5888,6 +6018,18 @@ async function boot() {
   document.body.appendChild(veil);
 
   S = await load();
+
+  /* Spec section 8: the dry run reports first, and migration never alters a
+     stored number. A name the catalogue cannot resolve becomes its own custom
+     movement rather than being guessed into an existing one — the report lists
+     every one so they can be remapped by hand later. */
+  if ((S.schemaVersion || 1) < 2) {
+    const R = migrationDryRun(S);
+    console.log(migrationDryRunText(R));
+    const applied = migrateToV2(S);
+    if (applied.orphans.length) console.warn('migration: unresolved names became custom movements:', applied.orphans);
+    save(); await flush();
+  }
 
   // a bundled program installs itself on a fresh app so the plan is just *there*
   const P = theProgram();
