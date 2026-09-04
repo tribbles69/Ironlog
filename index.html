@@ -308,6 +308,30 @@ tr.pr td input{background:rgba(255,197,66,.1);border-color:rgba(255,197,66,.35)}
 }
 .chk.on{background:var(--green);border-color:var(--green);color:#07240f;font-weight:800}
 .ex-foot{display:flex;gap:8px;padding:9px 11px 11px}
+/* Equipment + execution, the two axes you change most often, as one pill.
+   Tapping either half opens the picker on that tab. */
+.leafchip{display:inline-flex;align-items:center;border-radius:9px;overflow:hidden;
+  border:1px solid var(--line2);background:var(--bg2);margin-top:8px;max-width:100%}
+.leafchip button{display:flex;align-items:center;gap:6px;border:0;background:transparent;
+  color:var(--txt);font-size:12.5px;font-weight:650;padding:7px 11px;line-height:1;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer}
+.leafchip button:first-child{background:rgba(255,92,53,.16);color:var(--accent2)}
+.leafchip button+button{border-left:1px solid var(--line2);color:var(--dim)}
+.leafchip button:active{background:rgba(255,92,53,.28)}
+.leafchip svg{width:14px;height:14px;flex:none}
+/* Picker rows. An option the movement does not allow is shown greyed and
+   unselectable rather than hidden, so the constraint is visible (spec 1a). */
+.axrow{display:flex;align-items:center;gap:12px;padding:11px 4px;width:100%;
+  border:0;background:transparent;color:var(--txt);font-size:14.5px;text-align:left;cursor:pointer;
+  border-bottom:1px solid rgba(255,255,255,.04)}
+.axrow:last-child{border-bottom:none}
+.axrow .lbl{flex:1}
+.axrow svg{width:22px;height:22px;flex:none;color:var(--accent2)}
+.axrow .rad{width:19px;height:19px;border-radius:50%;border:2px solid var(--line2);flex:none}
+.axrow.on .rad{border-color:var(--green);background:radial-gradient(circle,var(--green) 0 5px,transparent 6px)}
+.axrow.off{color:var(--dim2);cursor:not-allowed}
+.axrow.off svg{color:var(--dim2);opacity:.45}
+.axrow.off .rad{opacity:.35}
 
 .summary-hero{
   text-align:center;padding:6px 0 14px;
@@ -890,6 +914,129 @@ function displayName(leaf) {
   return bits.length ? `${m.name} (${bits.join(', ')})` : m.name;
 }
 
+
+/* Equipment and execution glyphs. Generic per-axis marks, not per-exercise
+   artwork — section 10 rules that out. Stroked in currentColor so a greyed row
+   dims them with the text. */
+const SVG = (d, extra) => `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">${d}${extra || ''}</svg>`;
+const EQ_ICON = {
+  bodyweight: SVG('<circle cx="12" cy="5" r="2.4"/><path d="M12 8v7M12 15l-3 5M12 15l3 5M7 10h10"/>'),
+  barbell: SVG('<path d="M3 9v6M6 7v10M18 7v10M21 9v6M6 12h12"/>'),
+  dumbbells: SVG('<path d="M5 8v8M8 6v12M16 6v12M19 8v8M8 12h8"/>'),
+  kettlebell: SVG('<path d="M9 7a3 3 0 0 1 6 0"/><path d="M8 7c-2 2-3 4-3 7a4 4 0 0 0 4 4h6a4 4 0 0 0 4-4c0-3-1-5-3-7z"/>'),
+  trap_bar: SVG('<path d="M4 8v8M20 8v8"/><path d="M7 6h10l3 6-3 6H7l-3-6z"/>'),
+  smith: SVG('<path d="M5 3v18M19 3v18M5 9h14M8 7v4M16 7v4"/>'),
+  machine: SVG('<rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h5"/>'),
+  plate_loaded_machine: SVG('<rect x="3" y="6" width="11" height="12" rx="2"/><circle cx="18.5" cy="12" r="3"/>'),
+  cable: SVG('<path d="M5 4h14M12 4v6"/><circle cx="12" cy="12" r="2.2"/><path d="M9 20h6M10.5 14l-1 6M13.5 14l1 6"/>'),
+  resistance_band: SVG('<path d="M3 14c3-5 5 5 8 0s5 5 8 0"/><path d="M3 8h2M19 8h2"/>'),
+  plate: SVG('<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.4"/>'),
+  safety_squat_bar: SVG('<path d="M3 9v6M21 9v6M6 12h12"/><path d="M9 9v6M15 9v6"/>'),
+  belt_squat: SVG('<path d="M4 8h16v5H4z"/><path d="M12 13v7M9 20h6"/>'),
+};
+const EXEC_ICON = {
+  bilateral: SVG('<circle cx="12" cy="12" r="7"/><circle cx="7.5" cy="12" r="1.6" fill="currentColor"/><circle cx="16.5" cy="12" r="1.6" fill="currentColor"/>'),
+  unilateral: SVG('<path d="M15 5a7 7 0 0 0 0 14"/><circle cx="17" cy="12" r="1.6" fill="currentColor"/>'),
+  alternating: SVG('<path d="M4 15c3-6 6 6 9 0s5-4 7-1"/><circle cx="4" cy="15" r="1.4" fill="currentColor"/>'),
+};
+const EXEC_LABEL = { bilateral: 'Bilateral', alternating: 'Alternating', unilateral: 'Unilateral' };
+const EQ_TITLE = {
+  bodyweight: 'Bodyweight', barbell: 'Barbell', dumbbells: 'Dumbbells', kettlebell: 'Kettlebell',
+  trap_bar: 'Trap Bar', smith: 'Smith Machine', machine: 'Stack Machine',
+  plate_loaded_machine: 'Plate Loaded', cable: 'Cable Machine', resistance_band: 'Resistance Band',
+  plate: 'Plate', safety_squat_bar: 'Safety Squat Bar', belt_squat: 'Belt Squat',
+};
+const ATT_TITLE = {
+  none: 'None', rope: 'Rope', straight_bar: 'Straight Bar', ez_bar: 'EZ Bar', v_handle: 'V-Handle',
+  wide_bar: 'Wide Bar', lat_bar: 'Lat Bar', single_handle: 'Single Handle',
+  ankle_strap: 'Ankle Strap', dual_handle: 'Dual Handle',
+};
+const ATT_ICON_FALLBACK = SVG('<path d="M8 4v6a4 4 0 0 0 8 0V4"/><path d="M12 14v6M9 20h6"/>');
+
+/* Changing one axis re-derives the others: equipment may carry its own default
+   execution, and attachment has to be re-scoped because a dumbbell takes none. */
+function withAxis(leaf, axis, value) {
+  const m = movementById(leaf.movement);
+  const next = Object.assign({}, leaf, { [axis]: value });
+  if (!m) return next;
+  if (axis === 'equipment') {
+    const ed = m.executionDefaults && m.executionDefaults[value];
+    if (ed && (m.execution || []).includes(ed)) next.execution = ed;
+    if (!(m.execution || []).includes(next.execution)) next.execution = m.defaultExecution;
+  }
+  const allowed = attachmentsFor(m, next.equipment);
+  next.attachment = !allowed.length ? 'none'
+    : (allowed.includes(next.attachment) ? next.attachment
+      : (allowed.includes(m.defaultAttachment) ? m.defaultAttachment : allowed[0]));
+  return next;
+}
+
+/* The pill on an exercise card. Each half opens the picker on its own tab. */
+function leafChip(leaf, ei) {
+  const m = movementById(leaf.movement);
+  const atts = m ? attachmentsFor(m, leaf.equipment) : [];
+  return `<div class="leafchip">
+    <button data-axis="${ei}.equipment">${EQ_ICON[leaf.equipment] || ''}${esc(EQ_TITLE[leaf.equipment] || leaf.equipment)}</button>
+    <button data-axis="${ei}.execution">${esc(EXEC_LABEL[leaf.execution] || leaf.execution)}</button>
+    ${atts.length > 1 ? `<button data-axis="${ei}.attachment">${esc(ATT_TITLE[leaf.attachment] || leaf.attachment)}</button>` : ''}
+  </div>`;
+}
+
+/* Equipment / execution / attachment picker. Invalid options are greyed and
+   unselectable, never hidden — the constraint should be visible (spec 1a). */
+function openAxisPicker(ei, axis) {
+  const a = S.active;
+  const e = a && a.exercises[ei];
+  if (!e) return;
+  const m = movementById(e.leaf.movement);
+  if (!m) return toast('This movement is not in the catalogue');
+  const V = catalogue().V;
+  let tab = axis || 'equipment';
+
+  const tabsFor = () => {
+    const t = [['equipment', 'Equipment'], ['execution', 'Execution']];
+    if (attachmentsFor(m, e.leaf.equipment).length > 1) t.push(['attachment', 'Attachment']);
+    return t;
+  };
+  const optionsFor = ax => {
+    if (ax === 'equipment') return (V.equipment || []).map(v => ({ v, label: EQ_TITLE[v] || v, icon: EQ_ICON[v], ok: (m.equipment || []).includes(v) }));
+    if (ax === 'execution') return (V.execution || []).map(v => ({ v, label: EXEC_LABEL[v] || v, icon: EXEC_ICON[v], ok: (m.execution || []).includes(v) }));
+    const allowed = attachmentsFor(m, e.leaf.equipment);
+    return (V.attachment || []).map(v => ({ v, label: ATT_TITLE[v] || v, icon: ATT_ICON_FALLBACK, ok: allowed.includes(v) || v === 'none' }));
+  };
+  const draw = () => `
+    <div class="seg" id="axTabs" style="margin-bottom:12px">
+      ${tabsFor().map(([k, lbl]) => `<button data-axtab="${k}" class="${k === tab ? 'on' : ''}">${lbl}</button>`).join('')}
+    </div>
+    <div id="axList">${optionsFor(tab).sort((x, y) => (y.ok ? 1 : 0) - (x.ok ? 1 : 0)).map(o => `
+      <button class="axrow ${o.v === e.leaf[tab] ? 'on' : ''} ${o.ok ? '' : 'off'}" ${o.ok ? `data-axpick="${esc(o.v)}"` : 'disabled'}>
+        ${o.icon || ''}<span class="lbl">${esc(o.label)}</span><span class="rad"></span>
+      </button>`).join('')}</div>
+    <div class="sub" style="margin-top:10px">Greyed options aren't valid for ${esc(m.name)}.</div>`;
+
+  modal({
+    title: exName(e),
+    body: draw(),
+    foot: `<button class="btn primary wide" data-close>Done</button>`,
+    onOpen: bg => {
+      const bind = () => {
+        bg.querySelectorAll('[data-axtab]').forEach(b => b.onclick = () => { tab = b.dataset.axtab; redraw(); });
+        bg.querySelectorAll('[data-axpick]').forEach(b => b.onclick = () => {
+          const before = leafKey(e.leaf);
+          e.leaf = withAxis(e.leaf, tab, b.dataset.axpick);
+          if (leafKey(e.leaf) !== before) {
+            /* The leaf is the PR pool, so changing it moves this exercise's
+               history. Say so rather than letting a number quietly change. */
+            toast(`${exName(e)} · ${loadConventionFor(e.leaf) === 'per_side' ? 'per side' : 'total'} load`, 'green');
+          }
+          save(); bust(); redraw(); render();
+        });
+      };
+      const redraw = () => { const b = $('.modal-body', bg); if (b) { b.innerHTML = draw(); bind(); } };
+      bind();
+    },
+  });
+}
 
 /* ---------------- migration: v1 -> v2 ----------------
    Identity only. It never alters a stored w, r or rpe — the dry run asserts
@@ -2455,6 +2602,7 @@ function exerciseCard(e, ei) {
         <button class="btn xs ghost" data-ramp="${ei}" title="Warm-up ramp">▲ Warm-up</button>
         <button class="icon-btn" data-ex-menu="${ei}">⋯</button>
       </div>
+      ${leafChip(e.leaf, ei)}
       <div class="pr-banner">${prBanner}</div>
       ${e.notes ? `<div class="ex-note">${esc(e.notes)}</div>` : ''}
     </div>
@@ -3359,8 +3507,8 @@ function viewAnalytics() {
 }
 
 let detailMetric = 'e1';
-function openExDetail(name) {
-  const s = statsFor(name);
+function openExDetail(key) {
+  const s = statsFor(key);
   if (!s) return;
   const draw = () => {
     const data = s.series.map(x => ({
@@ -3379,12 +3527,13 @@ function openExDetail(name) {
   const trendCls = s.pct > 1 ? 'up' : s.pct < -1 ? 'down' : 'flat';
 
   modal({
-    title: name,
+    title: leafName(key),
     body: `
       <div class="row wrap" style="gap:7px;margin-bottom:13px">
         <span class="chip gold">★ PR ${wt(s.bestW.w)} × ${s.bestW.r}</span>
         <span class="chip">best e1RM ${wt(s.best.e1)}</span>
-        <span class="chip">${categoryOf(name)}</span>
+        <span class="chip">${categoryOf(keyLeaf(key))}</span>
+        <span class="chip">${esc(loadConventionFor(keyLeaf(key)) === 'per_side' ? 'per side' : 'total')} load</span>
       </div>
 
       <div class="stats grid3" style="margin-bottom:6px">
@@ -5508,6 +5657,11 @@ function wireActive(v) {
     const [ei, si] = b.dataset.plates.split('.').map(Number);
     const st = a.exercises[ei].sets[si];
     if (st && st.w > 0) openPlates(st.w);
+  });
+
+  v.querySelectorAll('[data-axis]').forEach(b => b.onclick = () => {
+    const [ei, ax] = b.dataset.axis.split('.');
+    openAxisPicker(+ei, ax);
   });
 
   v.querySelectorAll('[data-ramp]').forEach(b => b.onclick = () => {
