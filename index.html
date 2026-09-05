@@ -763,7 +763,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.10.0';
+const APP_VERSION = '0.10.1';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -2556,7 +2556,7 @@ function renderPlanner() {
           if (inp.dataset.pl === 'wt') ex.sets.forEach(s => s.w = inp.value ? toKg(+inp.value) : 0);
         });
       };
-      bg.querySelectorAll('[data-pl]').forEach(i => i.onchange = () => { grab(); renderPlanner(); });
+      bg.querySelectorAll('[data-pl]').forEach(i => { selectOnFocus(i); i.onchange = () => { grab(); renderPlanner(); }; });
       bg.querySelectorAll('[data-pl-rm]').forEach(b => b.onclick = () => { grab(); p.exercises.splice(+b.dataset.plRm, 1); renderPlanner(); });
       $('#plAdd', bg).onclick = () => {
         grab();
@@ -5387,7 +5387,12 @@ const LOCAL_FOODS = [
 ];
 
 const UNITS = { g: 1, gram: 1, grams: 1, gr: 1, kg: 1000, kilo: 1000, kilos: 1000,
-                oz: 28.35, lb: 453.6, ml: 1, l: 1000, litre: 1000 };
+                oz: 28.35, lb: 453.6, ml: 1, l: 1000, litre: 1000,
+                /* Spoon measures are how oils, sauces and nut butters are
+                   actually described. Without them "1 tbsp olive oil" fell
+                   through to the per-item default and logged 100 g. */
+                tbsp: 15, tablespoon: 15, tablespoons: 15,
+                tsp: 5, teaspoon: 5, teaspoons: 5 };
 const WORDNUM = { a: 1, an: 1, one: 1, two: 2, three: 3, four: 4, five: 5, six: 6,
                   half: 0.5, couple: 2, few: 3 };
 
@@ -5499,7 +5504,7 @@ function foodSearch(query, limit = 5) {
 
 /* Grams for a chunk. `each` is the per-item weight when the food has one. */
 function foodGrams(raw, each) {
-  const m = raw.match(/(\d+(?:\.\d+)?)\s*(kgs?|kilos?|grams?|gr|g|oz|lbs?|lb|ml|l|litres?)\b/);
+  const m = raw.match(/(\d+(?:\.\d+)?)\s*(kgs?|kilos?|grams?|gr|g|oz|lbs?|lb|ml|l|litres?|tbsps?|tablespoons?|tsps?|teaspoons?)\b/);
   if (m) return parseFloat(m[1]) * (UNITS[m[2].replace(/s$/, '')] || UNITS[m[2]] || 1);
   const cm = raw.match(/(\d+(?:\.\d+)?)\s/) ||
              raw.match(new RegExp('\\b(' + Object.keys(WORDNUM).join('|') + ')\\b'));
@@ -5543,7 +5548,7 @@ function lookupFood(chunk, defaultMeal) {
     ? { name: dbHit.name, kcal: dbHit.kcal, p: dbHit.p, c: dbHit.c, f: dbHit.f, fib: dbHit.fib }
     : { name: curated.row[0], kcal: curated.row[2], p: curated.row[3], c: curated.row[4], f: curated.row[5], fib: curated.row[6] };
 
-  const counted = !/\d\s*(kgs?|kilos?|grams?|gr|g|oz|lbs?|lb|ml|l|litres?)\b/.test(raw) && each;
+  const counted = !/\d\s*(kgs?|kilos?|grams?|gr|g|oz|lbs?|lb|ml|l|litres?|tbsps?|tablespoons?|tsps?|teaspoons?)\b/.test(raw) && each;
   return {
     name: src.name,
     serving: counted ? `${Math.round(grams / each)} × ${curated.row[0].toLowerCase()}` : `${Math.round(grams)} g`,
