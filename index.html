@@ -547,6 +547,7 @@ const DEFAULT_STATE = {
   exAliases: {},  // imported exercise name -> Ironlog name, so a re-import doesn't re-ask
   active: null,   // active workout object
   programs: [],   // ids of installed training programs
+  programStarts: {},  // program id -> the start date it was installed against
   foods: [],      // {id,date,meal,name,serving,kcal,p,c,f,fib,src:'ai'|'manual'}
 };
 
@@ -762,7 +763,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.9.1';
+const APP_VERSION = '0.10.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4368,16 +4369,60 @@ async function loadProgram() {
   }
 }
 function programInstalled(id) { return S.programs.includes(id); }
-function progWorkoutId(P, i) { return `${P.id}#${i}`; }
+/* Where a session lands, in priority order:
+     1. an explicit date on the session wins — a plan written against real dates
+        keeps them, and installing it changes nothing;
+     2. otherwise lay it out on the weekdays the program declares, counting
+        whole weeks from the start date;
+     3. otherwise just count days from the start.
+   Only the resolved date is stored. */
+function sessionDate(P, s, startDate) {
+  if (s.date) return s.date;
+  const start = parseISO(startDate || today());
+  const week = Math.max(1, s.week || 1) - 1;
+  const day = Math.max(1, s.day || 1) - 1;
+  const wd = Array.isArray(P.weekdays) && P.weekdays.length ? P.weekdays : null;
+  const d = new Date(start);
+  if (wd) {
+    const target = wd[Math.min(day, wd.length - 1)];
+    const delta = (target - start.getDay() + 7) % 7;     // first such weekday on or after the start
+    d.setDate(d.getDate() + delta + week * 7);
+  } else {
+    d.setDate(d.getDate() + week * 7 + day);
+  }
+  return iso(d);
+}
+function programNeedsStart(P) { return (P.workouts || []).some(w => !w.date); }
 
-function installProgram(P) {
+/* Ids derive from content, not array position, so inserting a session no longer
+   renumbers every one after it. Sessions installed before 0.10 carry the old
+   positional id; installProgram checks both forms, so nothing is duplicated and
+   nothing already logged is re-keyed (Phase 1 section 8.6). */
+function progWorkoutId(P, s, date, slot) {
+  const base = s.date || (s.week != null || s.day != null)
+    ? (s.date ? `d${s.date}` : `w${s.week || 1}d${s.day || 1}`)
+    : `d${date}`;
+  return `${P.id}#${base}${slot > 1 ? '.' + slot : ''}`;
+}
+function legacyProgWorkoutId(P, i) { return `${P.id}#${i}`; }
+
+function installProgram(P, startDate) {
   const existing = new Set(S.workouts.map(w => w.id));
+  const start = startDate || (S.programStarts || {})[P.id] || today();
+  if (programNeedsStart(P)) {
+    S.programStarts = S.programStarts || {};
+    S.programStarts[P.id] = start;
+  }
+  const slots = {};
   let added = 0;
   P.workouts.forEach((w, i) => {
-    const id = progWorkoutId(P, i);
-    if (existing.has(id)) return;              // already there (or already completed)
+    const date = sessionDate(P, w, start);
+    const slot = (slots[date] = (slots[date] || 0) + 1);
+    const id = progWorkoutId(P, w, date, slot);
+    // both forms, so a plan installed before 0.10 is not installed twice over
+    if (existing.has(id) || existing.has(legacyProgWorkoutId(P, i))) return;
     S.workouts.push({
-      id, date: w.date, name: w.name, status: 'planned', prog: P.id, block: w.block,
+      id, date, name: w.name, status: 'planned', prog: P.id, block: w.block,
       exercises: w.exercises.map(e => ({
         leaf: (resolveName(e.name) || {}).leaf || completeLeaf(customMovementFor(e.name), null), legacyName: e.name, notes: e.notes || '', mods: modsFromNote(e.notes),
         sets: e.sets.map(s => ({ w: s.w, r: s.r, rpe: null, done: false, setType: 'working' })),
@@ -4431,6 +4476,25 @@ function programStats(P) {
   };
 }
 
+/* A plan written in weeks rather than dates needs to know when it begins.
+   One question, asked once, defaulting to today. */
+function installWithStart(P) {
+  if (!programNeedsStart(P)) return Promise.resolve(installProgram(P));
+  return new Promise(res => {
+    modal({
+      title: 'When does it start?',
+      body: `<div class="sub" style="margin-top:0">${esc(P.name)} is written in weeks, not dates. Pick the day week 1 begins — everything else follows from it.</div>
+        <div class="field" style="margin-top:12px"><label>Start date</label>
+          <input type="date" id="pgStart" value="${today()}"></div>`,
+      foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="pgGo">Install</button>`,
+      onOpen: bg => { $('#pgGo', bg).onclick = () => {
+        const d = $('#pgStart', bg).value || today();
+        closeModal(); res(installProgram(P, d));
+      }; },
+    });
+  });
+}
+
 async function openProgram() {
   const P = await loadProgram();
   if (!P) return toast("Couldn't load the program file — check your connection");
@@ -4459,8 +4523,8 @@ async function openProgram() {
     foot: `<button class="btn ghost" data-close>Close</button>`,
     onOpen: bg => {
       const ins = $('#pgInstall', bg);
-      if (ins) ins.onclick = () => {
-        const n = installProgram(P);
+      if (ins) ins.onclick = async () => {
+        const n = await installWithStart(P);
         closeAllModals(); render();
         toast(`${n} sessions added to your calendar`, 'green');
       };
