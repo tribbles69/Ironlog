@@ -759,7 +759,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.8.0';
+const APP_VERSION = '0.9.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -924,21 +924,44 @@ const ATT_LABEL = {
   wide_bar: 'wide bar', lat_bar: 'lat bar', single_handle: 'single handle',
   ankle_strap: 'ankle strap', dual_handle: 'dual handle',
 };
+/* The name is the MOVEMENT. Equipment is a separate attribute, never folded into
+   it: this is a Lateral Raise done on a cable, not a "Cable Lateral Raise". UI
+   renders the two as distinct elements so one movement reads as one thing with
+   an equipment axis, rather than as several unrelated exercises. */
 function displayName(leaf) {
   const m = movementById(leaf.movement);
-  if (!m) return leaf.movement;
-  /* Only name the axes that actually distinguish this leaf from the ordinary way
-     the movement is done, so "Back Squat" stays "Back Squat" rather than becoming
-     "Back Squat (barbell)". Execution and attachment are compared against their
-     defaults FOR THIS EQUIPMENT, so a cable lateral raise — unilateral by
-     executionDefaults — does not advertise what is already implied. */
+  return m ? m.name : leaf.movement;
+}
+
+/* What distinguishes this leaf from the ordinary way the movement is done, as
+   its own short label. Empty when the leaf IS the ordinary way. Execution and
+   attachment are compared against their defaults FOR THIS EQUIPMENT, so a cable
+   lateral raise — unilateral by executionDefaults — does not advertise what is
+   already implied by picking the cable. */
+function variantLabel(leaf) {
+  const m = movementById(leaf.movement);
+  if (!m) return '';
   const base = completeLeaf(m, { equipment: leaf.equipment });
   const bits = [];
   if (leaf.equipment !== m.defaultEquipment) bits.push(EQ_LABEL[leaf.equipment] || leaf.equipment);
   if (leaf.attachment !== 'none' && leaf.attachment !== base.attachment) bits.push(ATT_LABEL[leaf.attachment] || leaf.attachment);
   if (leaf.execution !== base.execution) bits.push(leaf.execution === 'unilateral' ? 'single' : 'alt');
-  return bits.length ? `${m.name} (${bits.join(', ')})` : m.name;
+  return bits.join(', ');
 }
+/* For plain-text contexts — toasts, canvas, confirm dialogs — where there is no
+   room for two elements. */
+function fullName(leaf) {
+  const v = variantLabel(leaf);
+  return v ? `${displayName(leaf)} · ${v}` : displayName(leaf);
+}
+/* HTML: the movement, then its equipment as a dimmed tail. */
+function nameHtml(leaf) {
+  const v = variantLabel(leaf);
+  return `${esc(displayName(leaf))}${v ? ` <span class="dimmer">${esc(v)}</span>` : ''}`;
+}
+function exVariant(e) { return e && e.leaf ? variantLabel(e.leaf) : ''; }
+function exFull(e) { return e && e.leaf ? fullName(e.leaf) : (e && e.legacyName) || ''; }
+function exNameHtml(e) { return e && e.leaf ? nameHtml(e.leaf) : esc((e && e.legacyName) || ''); }
 
 
 /* Equipment and execution glyphs. Generic per-axis marks, not per-exercise
@@ -1041,7 +1064,7 @@ function openAxisPicker(ei, axis) {
     <div class="sub" style="margin-top:10px">Greyed options aren't valid for ${esc(m.name)}.</div>`;
 
   modal({
-    title: exName(e),
+    title: exFull(e),
     body: draw(),
     foot: `<button class="btn primary wide" data-close>Done</button>`,
     onOpen: bg => {
@@ -1053,12 +1076,77 @@ function openAxisPicker(ei, axis) {
           if (leafKey(e.leaf) !== before) {
             /* The leaf is the PR pool, so changing it moves this exercise's
                history. Say so rather than letting a number quietly change. */
-            toast(`${exName(e)} · ${loadConventionFor(e.leaf) === 'per_side' ? 'per side' : 'total'} load`, 'green');
+            toast(`${exFull(e)} · ${loadConventionFor(e.leaf) === 'per_side' ? 'per side' : 'total'} load`, 'green');
           }
           save(); bust(); redraw(); render();
         });
       };
       const redraw = () => { const b = $('.modal-body', bg); if (b) { b.innerHTML = draw(); bind(); } };
+      bind();
+    },
+  });
+}
+
+/* ---------------- clearing data ----------------
+   Targeted deletions with a count against each, so nothing is removed on a
+   vague promise. Every option says exactly how many records it touches and
+   asks again before doing it. Erase-all stays separate, below this. */
+function clearTargets() {
+  const wos = S.workouts || [];
+  const customIds = new Set((S.customMovements || []).map(m => m.id));
+  const usesCustom = e => e.leaf && customIds.has(e.leaf.movement);
+  return [
+    { id: 'imported', label: 'Imported sessions',
+      note: 'Everything brought in from a Liftoff CSV.',
+      n: wos.filter(w => w.source === 'imported').length,
+      run: () => { S.workouts = wos.filter(w => w.source !== 'imported'); } },
+    { id: 'backfill', label: 'Backfilled sessions',
+      note: "Past plan sessions marked done at their prescribed loads — estimates, not what came off the bar.",
+      n: wos.filter(w => w.source === 'backfill').length,
+      run: () => { S.workouts = S.workouts.filter(w => w.source !== 'backfill'); } },
+    { id: 'planned', label: 'Planned sessions',
+      note: 'Future sessions not yet done. Completed training is kept.',
+      n: wos.filter(w => w.status === 'planned').length,
+      run: () => { S.workouts = S.workouts.filter(w => w.status !== 'planned'); } },
+    { id: 'unrecognised', label: 'Unrecognised exercises',
+      note: 'Movements the catalogue could not name, and every set logged against them.',
+      n: wos.reduce((a, w) => a + (w.exercises || []).filter(usesCustom).length, 0),
+      run: () => {
+        S.workouts.forEach(w => { w.exercises = (w.exercises || []).filter(e => !usesCustom(e)); });
+        S.workouts = S.workouts.filter(w => (w.exercises || []).length);
+        S.customMovements = [];
+      } },
+    { id: 'aliases', label: 'Remembered import names',
+      note: 'The raw-name mappings kept so a re-import does not ask twice.',
+      n: Object.keys(S.exAliases || {}).length,
+      run: () => { S.exAliases = {}; } },
+  ];
+}
+
+function openClearData() {
+  const draw = () => {
+    const t = clearTargets();
+    return `<div class="sub" style="margin-top:0;margin-bottom:12px">Each of these removes only what it names. Nothing else is touched.</div>
+      ${t.map(x => `<div class="row between" style="gap:12px;padding:10px 0;border-bottom:1px solid rgba(255,255,255,.05)">
+        <div class="grow"><div style="font-weight:650">${esc(x.label)}</div>
+          <div class="sub">${esc(x.note)}</div></div>
+        <button class="btn sm ${x.n ? 'danger' : ''}" data-clear="${x.id}" ${x.n ? '' : 'disabled'}>${x.n || 'none'}</button>
+      </div>`).join('')}`;
+  };
+  modal({
+    title: 'Clear data',
+    body: draw(),
+    foot: `<button class="btn primary wide" data-close>Done</button>`,
+    onOpen: bg => {
+      const bind = () => bg.querySelectorAll('[data-clear]').forEach(b => b.onclick = () => {
+        const t = clearTargets().find(x => x.id === b.dataset.clear);
+        if (!t || !t.n) return;
+        confirmDlg(`Remove ${t.n} · ${t.label.toLowerCase()}? This cannot be undone.`, () => {
+          t.run(); save(); bust();
+          const el = $('.modal-body', bg); if (el) { el.innerHTML = draw(); bind(); }
+          render(); toast(`${t.label} cleared`, 'green');
+        }, 'Remove');
+      });
       bind();
     },
   });
@@ -1415,9 +1503,13 @@ function stdFor(name) {
 /* Score is 0–100 with each tier worth 20 points, so the bar moves smoothly
    between tiers instead of jumping. Uses best real e1RM — backfilled sets are
    already excluded by statsFor, so an estimate can't inflate a rank. */
-function rankFor(name) {
+function rankFor(key) {
+  /* Keyed on the leaf like everything else. It took a display name until 0.7.0,
+     which silently returned no stats and emptied the rankings entirely.
+     Strength standards are per movement, so stdFor still looks up by name. */
+  const name = leafName(key);
   const bw = bodyweightKg();
-  const st = statsFor(name);
+  const st = statsFor(key);
   const th = stdFor(name);
   if (!bw || !st || !th) return null;
 
@@ -1442,7 +1534,7 @@ function rankFor(name) {
   }
 
   return {
-    name, e1, ratio, score: clamp(score, 0, 100),
+    name, key, leaf: keyLeaf(key), e1, ratio, score: clamp(score, 0, 100),
     tier, tierName: tier < 0 ? 'Untrained' : TIERS[tier],
     color: tier < 0 ? 'var(--dim)' : TIER_COLOR[tier],
     nextName: nextIdx == null ? null : TIERS[nextIdx],
@@ -1452,7 +1544,7 @@ function rankFor(name) {
 }
 
 function allRanks() {
-  return allStats().map(s => rankFor(s.name)).filter(Boolean)
+  return allStats().map(s => rankFor(s.key)).filter(Boolean)
     .sort((a, b) => b.score - a.score);
 }
 
@@ -1779,7 +1871,7 @@ function logTest(date, entries, notes) {
   const clean = entries.filter(e => e.leaf && e.kg > 0);
   if (!clean.length) return 0;
   S.workouts.push({
-    id: uid(), date, name: clean.length === 1 ? `${shortLift(clean[0].name)} test` : 'Max test',
+    id: uid(), date, name: clean.length === 1 ? `${shortLift(displayName(clean[0].leaf))} test` : 'Max test',
     status: 'completed', source: 'logged', tested: true, notes: notes || '',
     exercises: clean.map(e => ({
       leaf: e.leaf, legacyName: e.legacyName || displayName(e.leaf), notes: '', mods: [],
@@ -1799,9 +1891,12 @@ function testLog() {
 
 /* Most recent tested single for a lift — recency beats magnitude here, because
    an opener should reflect where you are now, not the best day you ever had. */
-function latestTest(name) {
+/* Keyed on the leaf. It matched on x.name until now, which no entry has carried
+   since 0.7.0 — so it always returned null and meets silently fell back to
+   planned attempts, never using a tested single. */
+function latestTest(key) {
   for (const w of testLog()) {
-    const e = w.exercises.find(x => x.name === name);
+    const e = (w.exercises || []).find(x => exKey(x) === key);
     if (e && e.sets[0] && e.sets[0].w > 0) return { kg: e.sets[0].w, date: w.date };
   }
   return null;
@@ -1812,8 +1907,8 @@ function openerPct() { return S.settings.openerPct || 90; }
 /* Suggested opener from the latest test, not from the goal third. Returns null
    when the lift hasn't been tested — better a blank than a number derived from
    a rep-max estimate, which is what the opener is meant to replace. */
-function testedOpener(name) {
-  const t = latestTest(name);
+function testedOpener(key) {
+  const t = latestTest(key);
   if (!t) return null;
   return { kg: roundBar(t.kg * (openerPct() / 100)), from: t.kg, date: t.date };
 }
@@ -2034,7 +2129,7 @@ function viewHome() {
         <div class="sub">${p.exercises.length} exercise${p.exercises.length === 1 ? '' : 's'} planned</div></div>
         <button class="btn primary sm" data-start-planned="${p.id}">Start</button>
       </div>
-      <div>${p.exercises.map(e => `<div class="exline"><span>${esc(exName(e))}</span>
+      <div>${p.exercises.map(e => `<div class="exline"><span>${exNameHtml(e)}</span>
           <span class="muted mono" style="white-space:nowrap">${setSummary(e)}</span></div>`).join('')}</div>`)
       .join('<div class="hr"></div>');
   } else if (done.length) {
@@ -2360,7 +2455,7 @@ function completedCard(wo) {
     ${wo.exercises.map(e => {
     const s = e.sets.filter(x => x.done && isWorking(x));
     const top = s.length ? s.reduce((a, b) => e1rm(b.w, b.r) > e1rm(a.w, a.r) ? b : a) : null;
-    return `<div class="exline"><span>${esc(exName(e))} <span class="dimmer">×${s.length}</span></span>
+    return `<div class="exline"><span>${exNameHtml(e)} <span class="dimmer">×${s.length}</span></span>
         <span class="mono muted">${top ? `${wt(top.w)} × ${top.r}` : '—'}</span></div>`;
   }).join('')}
   </div>`;
@@ -2378,7 +2473,7 @@ function plannedCard(wo) {
     </div>
     ${wo.exercises.map(e => `<div class="plan-ex">
       <div class="row between" style="gap:12px;align-items:baseline">
-        <span class="n grow">${esc(exName(e))}</span>
+        <span class="n grow">${exNameHtml(e)}</span>
         <span class="mono muted sets">${setSummary(e)}</span>
       </div>
       ${e.notes ? `<div class="note">${esc(e.notes)}</div>` : ''}
@@ -2415,7 +2510,7 @@ function renderPlanner() {
       ${p.exercises.length ? p.exercises.map((e, i) => `
         <div class="card tight" style="margin-bottom:9px;background:var(--card)">
           <div class="row between" style="margin-bottom:8px">
-            <div style="font-weight:650">${esc(exName(e))}</div>
+            <div style="font-weight:650">${exNameHtml(e)}</div>
             <button class="icon-btn" data-pl-rm="${i}" style="font-size:15px">✕</button>
           </div>
           <div class="grid3">
@@ -2494,8 +2589,9 @@ function pickExercise(cb) {
   };
   const item = x => {
     const st = statsFor(x.key);
-    const meta = st ? `PR ${wt(st.bestW.w)} × ${st.bestW.r} · ${st.sessions} sessions`
-                    : (EQ_LABEL[x.leaf.equipment] || 'No history');
+    const v = variantLabel(x.leaf);
+    const meta = [v, st ? `PR ${wt(st.bestW.w)} × ${st.bestW.r} · ${st.sessions} sessions` : 'No history']
+      .filter(Boolean).join(' · ');
     return `<div class="pickitem" data-pick="${esc(x.key)}">
       <div><div class="n">${esc(x.name)}</div><div class="m">${esc(meta)}</div></div>
       <span class="dimmer">›</span></div>`;
@@ -2559,7 +2655,7 @@ function workoutLanding() {
     <div class="card tight">
       <div class="row between">
         <div class="grow"><div style="font-weight:650">${esc(r.name)}</div>
-          <div class="sub">${fmtDate(r.date)} · ${r.exercises.map(e => exName(e)).slice(0, 3).join(', ')}${r.exercises.length > 3 ? '…' : ''}</div></div>
+          <div class="sub">${fmtDate(r.date)} · ${r.exercises.map(e => exFull(e)).slice(0, 3).join(', ')}${r.exercises.length > 3 ? '…' : ''}</div></div>
         <button class="btn sm" data-repeat="${r.id}">Repeat</button>
       </div>
     </div>`).join('') : `<div class="card"><div class="empty">No completed sessions yet.</div></div>`}
@@ -2915,7 +3011,7 @@ function finishWorkout(force) {
     const flagged = [];
     logged.forEach(e => e.sets.filter(s => isWorking(s)).forEach(s => {
       const why = plausibility(exKey(e), s.w, s.r, s.rpe);
-      if (why.length) flagged.push({ name: exName(e), s, why });
+      if (why.length) flagged.push({ name: exFull(e), s, why });
     }));
     if (flagged.length) return plausListDlg(flagged, 'Finish', () => finishWorkout(true));
   }
@@ -3099,7 +3195,7 @@ function quickCardCanvas(wo) {
     y += 92;
   }
   x.fillStyle = CARD.dim; x.font = cardFont(27, 600);
-  wrapText(x, t.ws.map(o => `${exName(o.e)} ×${o.sets.length}`).join(' · '), P, y + 10, W - P * 2, 38, 2);
+  wrapText(x, t.ws.map(o => `${exFull(o.e)} ×${o.sets.length}`).join(' · '), P, y + 10, W - P * 2, 38, 2);
   cardFoot(x, W, H, P);
   return c;
 }
@@ -3152,16 +3248,16 @@ function fullCardCanvas(wo) {
   }
 
   section('EVERY SET');
-  const prNames = new Set(t.prs.map(p => p.name));
+  const prKeys = new Set(t.prs.map(p => p.key));   // by leaf: names collapse across variants now
   allSets.forEach(({ e, sets }) => {
     x.strokeStyle = CARD.line; x.lineWidth = 2;
     x.beginPath(); x.moveTo(P, y); x.lineTo(W - P, y); x.stroke();
     const working = sets.filter(s => isWorking(s));
     const vol = working.reduce((a, s) => a + s.w * s.r, 0);
-    const prSet = prNames.has(exName(e)) && working.length ? bestSetOf(working) : null;   // the one set prsFor scored
+    const prSet = prKeys.has(exKey(e)) && working.length ? bestSetOf(working) : null;   // the one set prsFor scored
     const reps = working.reduce((a, s) => a + s.r, 0);
     x.textAlign = 'left'; x.fillStyle = CARD.text; x.font = cardFont(29, 680);
-    x.fillText(fitText(x, exName(e), W - P * 2 - 260), P, y + 42);
+    x.fillText(fitText(x, exFull(e), W - P * 2 - 260), P, y + 42);
     x.textAlign = 'right'; x.fillStyle = CARD.dim; x.font = cardFont(24, 600);
     x.fillText(`${working.length} sets · ${vol > 0 ? wt(vol, 0) : reps + ' reps'}`, W - P, y + 42);   // bodyweight: reps, not 0kg
     y += 64;
@@ -3281,7 +3377,7 @@ function showSummary(wo) {
       const top = ws.length ? ws.reduce((a, b) => e1rm(b.w, b.r) > e1rm(a.w, a.r) ? b : a) : null;
       return `<div class="card tight" style="margin-bottom:8px">
           <div class="row between" style="margin-bottom:6px">
-            <div style="font-weight:680">${esc(exName(e))}</div>
+            <div style="font-weight:680">${exNameHtml(e)}</div>
             <div class="mono sub">${wt(v, 0)}</div>
           </div>
           ${e.sets.map((st, i) => `<div class="row between" style="padding:3px 0;font-size:13px">
@@ -3315,7 +3411,7 @@ function viewCompleted(id) {
       </div>
       ${wo.exercises.map(e => `
         <div class="card tight" style="background:var(--card)">
-          <div style="font-weight:700;margin-bottom:7px">${esc(exName(e))}</div>
+          <div style="font-weight:700;margin-bottom:7px">${exNameHtml(e)}</div>
           ${e.sets.map((s, i) => `<div class="exline"><span class="dimmer">${isWarm(s) ? 'W' : 'Set ' + (i + 1)}</span>
             <span class="mono">${wt(s.w)} × ${s.r}${s.rpe ? ` @ ${s.rpe}` : ''} <span class="dimmer">· e1RM ${wt(e1rm(s.w, s.r))}</span></span></div>`).join('')}
         </div>`).join('')}
@@ -3435,7 +3531,7 @@ function renderEditWorkout() {
       bg.querySelectorAll('[data-eex-rm]').forEach(b => b.onclick = () => {
         grab();
         const i = +b.dataset.eexRm, ex = d.exercises[i];
-        confirmDlg(`Remove ${exName(ex)} and its ${ex.sets.length} set${ex.sets.length === 1 ? '' : 's'} from this session?`,
+        confirmDlg(`Remove ${exFull(ex)} and its ${ex.sets.length} set${ex.sets.length === 1 ? '' : 's'} from this session?`,
           () => { d.exercises.splice(i, 1); renderEditWorkout(); }, 'Remove');
       });
       $('#eAddEx', bg).onclick = () => {
@@ -3460,7 +3556,7 @@ function saveEdit(force) {
     const flagged = [];
     logged.forEach(e => e.sets.filter(s => isWorking(s)).forEach(s => {
       const why = plausibility(exKey(e), s.w, s.r, s.rpe, d.date);
-      if (why.length) flagged.push({ name: exName(e), s, why });
+      if (why.length) flagged.push({ name: exFull(e), s, why });
     }));
     if (flagged.length) return plausListDlg(flagged, 'Save', () => saveEdit(true));
   }
@@ -3528,7 +3624,7 @@ function viewAnalytics() {
     ${ranks.slice(0, 12).map(r => `
       <div class="rank-row" data-exdetail="${esc(r.key)}">
         <div class="grow">
-          <div class="n">${esc(r.name)}${r.estOnly ? ' <span class="chip">EST</span>' : ''}</div>
+          <div class="n">${r.leaf ? nameHtml(r.leaf) : esc(r.name)}${r.estOnly ? ' <span class="chip">EST</span>' : ''}</div>
           <div class="m"><span class="tierlab" style="color:${r.color}">${r.tierName}</span>
             · ${wt(r.e1)} e1RM · ${r.ratio.toFixed(2)}× bw${r.nextName ? ` · ${wt(r.toNext)} to ${r.nextName}` : ''}</div>
           ${bar(r.score, r.color)}
@@ -3573,7 +3669,7 @@ function viewAnalytics() {
           const t = s.pct > 1 ? 'up' : s.pct < -1 ? 'down' : 'flat';
           return `<div class="ex-row" data-exdetail="${esc(s.key)}">
         <div class="grow">
-          <div class="n">${esc(s.name)}</div>
+          <div class="n">${s.leaf ? nameHtml(s.leaf) : esc(s.name)}</div>
           <div class="m">${s.sessions} session${s.sessions === 1 ? '' : 's'} · ${s.totalSets} sets · last ${relDay(s.lastDate)}</div>
         </div>
         <div class="pr">
@@ -3620,7 +3716,7 @@ function openMovementPage(movementId, focusKey) {
 
   const strip = () => `<div class="varstrip">${vars.map(v => `
     <button class="vartab ${v.key === focus ? 'on' : ''}" data-var="${esc(v.key)}">
-      <span class="n">${esc(v.name)}</span>
+      <span class="n">${esc(variantLabel(v.leaf) || 'Standard')}</span>
       <span class="m">${v.stats ? `${v.stats.sessions} session${v.stats.sessions === 1 ? '' : 's'}` : 'not logged'}</span>
     </button>`).join('')}</div>`;
 
@@ -3658,18 +3754,18 @@ function openMovementPage(movementId, focusKey) {
        machine chest press outranking a competition bench is nonsense. */
     const headline = ps
       ? `<div class="stats grid3" style="margin-bottom:6px">
-          <div class="stat"><div class="k">Best e1RM</div><div class="v">${w(ps.best.e1)}</div><div class="d">${esc(displayName(keyLeaf(pk)))}</div></div>
+          <div class="stat"><div class="k">Best e1RM</div><div class="v">${w(ps.best.e1)}</div><div class="d">${esc(variantLabel(keyLeaf(pk)) || 'standard')}</div></div>
           <div class="stat"><div class="k">Top set</div><div class="v">${w(ps.bestW.w)}</div><div class="d">× ${ps.bestW.r}</div></div>
           <div class="stat"><div class="k">Sessions</div><div class="v">${ps.sessions}</div><div class="d">${ps.totalSets} sets</div></div>
         </div>`
       : `<div class="card tight" style="margin-bottom:10px"><div class="sub">No headline figure — the primary variant
-          (${esc(displayName(keyLeaf(pk)))}) hasn't been logged. Variants are never rolled up into one number.</div></div>`;
+          (${esc(variantLabel(keyLeaf(pk)) || 'the standard version')}) hasn't been logged. Variants are never rolled up into one number.</div></div>`;
     const rows = vars.filter(v => v.stats).map((v, i) => `
-      <tr><td><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${SERIES_COLORS[i % SERIES_COLORS.length]};margin-right:7px"></i>${esc(v.name)}</td>
+      <tr><td><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${SERIES_COLORS[i % SERIES_COLORS.length]};margin-right:7px"></i>${esc(variantLabel(v.leaf) || 'Standard')}</td>
         <td class="r mono">${w(v.stats.best.e1)}</td>
         <td class="r mono dimmer">${v.stats.sessions}s</td></tr>`).join('');
     const series = vars.filter(v => v.stats).map((v, i) => ({
-      label: v.name, color: SERIES_COLORS[i % SERIES_COLORS.length],
+      label: variantLabel(v.leaf) || 'Standard', color: SERIES_COLORS[i % SERIES_COLORS.length],
       points: v.stats.series.map(p => ({ date: p.date, v: dw(p.e1) })),
     }));
     return `${headline}
@@ -3685,14 +3781,14 @@ function openMovementPage(movementId, focusKey) {
       if (!e.leaf || e.leaf.movement !== movementId) return;
       const working = e.sets.filter(s => s.done && isWorking(s));
       if (!working.length) return;
-      rows.push({ date: wo.date, name: exName(e), key: exKey(e), sets: working, id: wo.id });
+      rows.push({ date: wo.date, name: exName(e), variant: exVariant(e), key: exKey(e), sets: working, id: wo.id });
     }));
     rows.sort((a, b) => a.date < b.date ? 1 : -1);
     if (!rows.length) return `<div class="empty">Nothing logged yet</div>`;
     return rows.slice(0, 40).map(r => `
       <div class="card tight" style="margin-bottom:8px">
         <div class="row between" style="margin-bottom:6px">
-          <div><div style="font-weight:650">${esc(r.name)}</div>
+          <div><div style="font-weight:650">${esc(r.name)}${r.variant ? ` <span class="dimmer">${esc(r.variant)}</span>` : ''}</div>
             <div class="sub">${fmtDate(r.date)} · ${relDay(r.date)}</div></div>
           <button class="btn xs ghost" data-hist-wo="${esc(r.id)}">View</button>
         </div>
@@ -3740,7 +3836,7 @@ function openExDetail(key) {
    skipped, so a squat-only day is a first-class entry, not a partial one. */
 let testDraft = null;
 function openTestLog() {
-  const ex = allExercises();
+  const ex = allExercises().filter(x => x.leaf.equipment === 'barbell');
   const rows = priorityKeys().slice(0, 3);
   testDraft = rows.map(k => ({ key: k, leaf: keyLeaf(k), name: leafName(k), kg: 0 }));
   const sel = (v, id) => `<select id="${id}">${ex.map(x => `<option value="${esc(x.key)}"${x.key === v ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select>`;
@@ -3853,11 +3949,19 @@ function ord(n) {
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 }
 
+/* A competition total is made of lifts you have actually tested, not of Epley
+   estimates off a set of five. An untested lift contributes nothing and says so,
+   rather than quietly inflating the total and the DOTS built on it. */
 function priorityStats() {
-  const lifts = priorityKeys().map(k => ({ name: leafName(k), key: k, ...bestSingleInfo(k) }));
+  const lifts = priorityKeys().map(k => {
+    const t = latestTest(k);
+    return { name: leafName(k), key: k, leaf: keyLeaf(k),
+             kg: t ? t.kg : 0, tested: !!t, date: t ? t.date : null };
+  });
   const total = lifts.reduce((a, l) => a + l.kg, 0);
+  const untested = lifts.filter(l => !l.tested).length;
   const bw = bodyweightKg();
-  return { lifts, total, bw, dots: dots(total, bw, S.settings.sex) };
+  return { lifts, total, untested, bw, dots: untested ? 0 : dots(total, bw, S.settings.sex) };
 }
 
 function viewMeets() {
@@ -3872,21 +3976,22 @@ function viewMeets() {
 
   <div class="bigtotal">
     <div class="row between">
-      <div class="eyebrow">Current bests · priority lifts</div>
+      <div class="eyebrow">Tested singles · priority lifts</div>
       <button class="icon-btn" id="editPriority" title="Change priority lifts">✎</button>
     </div>
     <div class="lift3">
       ${ps.lifts.map(l => `<div class="l"><div class="k">${esc(shortLift(l.name))}</div>
-        <div class="v">${l.kg ? w(l.kg, 0) : '—'}</div>
-        <div class="d sub" style="font-size:10px;margin-top:2px">${!l.kg ? 'no data'
-        : l.est ? 'estimated' : l.e1 > l.kg + 0.5 ? `e1RM ${wt(l.e1, 0)}` : 'true single'}</div></div>`).join('')}
+        <div class="v">${l.tested ? w(l.kg, 0) : '—'}</div>
+        <div class="d sub" style="font-size:10px;margin-top:2px">${l.tested
+        ? fmtDate(l.date, { month: 'short', day: 'numeric' }) : 'not tested'}</div></div>`).join('')}
     </div>
     <div class="totrow">
       <div><div class="k eyebrow">Total</div><div class="v">${ps.total ? nice(dw(ps.total, 0)) : '—'}<small class="sub"> ${U()}</small></div></div>
       <div><div class="k eyebrow">DOTS</div><div class="v" style="color:var(--purple)">${ps.dots ? Math.round(ps.dots) : '—'}</div></div>
       <div><div class="k eyebrow">Bodyweight</div><div class="v">${ps.bw ? nice(dw(ps.bw)) : '—'}<small class="sub"> ${U()}</small></div></div>
     </div>
-    ${!ps.bw ? `<div class="sub" style="margin-top:9px">Log a check-in with your bodyweight to get a DOTS score.</div>` : ''}
+    ${ps.untested ? `<div class="sub" style="margin-top:9px">${ps.untested} lift${ps.untested === 1 ? '' : 's'} not tested yet — a total needs all three. Log one with <b>Log test</b>.</div>`
+      : !ps.bw ? `<div class="sub" style="margin-top:9px">Log a check-in with your bodyweight to get a DOTS score.</div>` : ''}
   </div>
 
   <div class="sechead"><h2>Tests</h2><button class="btn xs" id="logTestBtn">+ Log a test</button></div>
@@ -3920,6 +4025,7 @@ function priorityLeaf(k) {
   return p && p.leaf ? p.leaf : null;
 }
 function priorityKeys() { return (S.settings.priority || []).map(p => p && p.leaf ? leafKey(p.leaf) : p); }
+function priorityKey(slot) { const l = priorityLeaf(slot); return l ? leafKey(l) : ''; }
 function liftName(k) {
   const l = priorityLeaf(k);
   return l ? displayName(l) : k;
@@ -3940,7 +4046,7 @@ function attemptsFor(m, lift) {
       ? (() => { const p = m.pct || { o: 90, s: 95 }; return { o: roundBar(goal * (p.o / 100)), s: roundBar(goal * (p.s / 100)) }; })()
       : { o: 0, s: 0 };
 
-  const t = latestTest(liftName(lift));
+  const t = latestTest(priorityKey(lift));
   if (!t || m.attemptsLocked) {
     return { ...planned, third: goal, from: 'planned', tested: t || null, planned };
   }
@@ -4188,7 +4294,9 @@ function openMeet(id) {
 }
 
 function openPriority() {
-  const ex = allExercises();
+  /* Barbell only for now. A competition total is three barbell lifts; offering
+     the machine variants here invites a total that means nothing. */
+  const ex = allExercises().filter(x => x.leaf.equipment === 'barbell');
   const p = priorityKeys();
   const sel = (i, label) => `<div class="field"><label>${label}</label>
     <select id="pri${i}">${ex.map(x => `<option value="${esc(x.key)}"${x.key === p[i] ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>`;
@@ -4833,6 +4941,7 @@ function openSettings() {
       </div>
       <button class="btn sm wide" id="stLiftoff" style="margin-top:9px">Import Liftoff CSV</button>
       <div class="sub" style="margin-top:6px">Real training history — imported sessions count toward your PRs.</div>
+      <button class="btn sm wide" id="stClear" style="margin-top:9px">Clear data…</button>
       <button class="btn sm danger wide" id="stWipe" style="margin-top:9px">Erase all data</button>
       <input type="file" id="stFile" accept="application/json" style="display:none">
       <input type="file" id="stCsvFile" accept=".csv,text/csv" style="display:none">
@@ -4913,6 +5022,7 @@ function openSettings() {
         rd.readAsText(f);
         e.target.value = '';   // so picking the same file twice still fires
       };
+      $('#stClear', bg).onclick = openClearData;
       $('#stWipe', bg).onclick = () => confirmDlg('This erases every workout, check-in, goal and meet. It cannot be undone.', () => {
         S = structuredClone(DEFAULT_STATE); save(); closeAllModals(); go('home'); toast('All data erased');
       }, 'Erase everything');
@@ -5806,7 +5916,7 @@ function wireActive(v) {
       const st = statsFor(exKey(ex));
       s.done = true;
       if (isWorking(s) && (!st || beatsBest(st, s.w, s.r, s.rpe))) {
-        toast(st ? `★ PR — ${exName(ex)} ${s.w > 0 ? `${wt(s.w)}×${s.r}` : `${s.r} reps`}` : `★ First ${exName(ex)} logged`, 'gold');
+        toast(st ? `★ PR — ${exFull(ex)} ${s.w > 0 ? `${wt(s.w)}×${s.r}` : `${s.r} reps`}` : `★ First ${exFull(ex)} logged`, 'gold');
       }
       save(); bust(); render();
     };
@@ -5866,7 +5976,7 @@ function wireActive(v) {
   v.querySelectorAll('[data-ex-menu]').forEach(b => b.onclick = () => {
     const ei = +b.dataset.exMenu, ex = a.exercises[ei];
     modal({
-      title: exName(ex),
+      title: exFull(ex),
       body: `<div class="field"><label>Exercise notes</label>
           <textarea id="exNote" rows="3" placeholder="Cues, belt, tempo…">${esc(ex.notes || '')}</textarea></div>
         <button class="btn wide ghost" id="exUp" style="margin-bottom:8px">Move up</button>
