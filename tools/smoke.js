@@ -125,6 +125,7 @@ window.smoke = async function smoke(opts) {
   await openCheck('modal: priority lifts', () => openPriority());
   await openCheck('modal: add event', () => openAddEvent());
   await openCheck('modal: food targets', () => openFoodTargets());
+  await openCheck('modal: profile', () => openProfile(), 300);
   await openCheck('modal: food entry', () => openFoodEntry(null));
   /* A real Liftoff export shape — header plus a few rows, lb weights like the
      app expects to guess. Passing nothing here only proved the harness could
@@ -273,6 +274,55 @@ window.smoke = async function smoke(opts) {
     close();
     if (bad.length) throw new Error(`renders null/NaN in: ${bad.join(', ')}`);
     return 'home, calendar, analytics, summary, detail, edit all clean';
+  });
+
+  /* The profile edits S.settings live so the derived figures recompute as you
+     type, which makes Cancel the interesting case: it has to put back what was
+     there. And "use these targets" has to actually reach the food targets. */
+  await step('profile: derives, applies, and cancels cleanly', async () => {
+    close();
+    const st = S.settings;
+    const before = { sex: st.sex, dob: st.dob, heightCm: st.heightCm, bodyweight: st.bodyweight, kcalTarget: st.kcalTarget };
+
+    // a complete profile should produce a calorie figure and a macro split
+    st.sex = 'male'; st.dob = '1990-06-01'; st.heightCm = 180; st.bodyweight = 90;
+    st.activity = 'moderate'; st.nutritionGoal = 'maintain';
+    const age = ageFrom(st.dob);
+    if (age == null || age < 30 || age > 60) throw new Error(`age came out ${age}`);
+    if (!ageCategory(age)) throw new Error('no age category');
+    const t = suggestedTargets();
+    if (!t) throw new Error('a complete profile derived no targets');
+    if (!(t.bmr > 1200 && t.bmr < 2600)) throw new Error(`BMR ${t.bmr} is not plausible`);
+    if (!(t.tdee > t.bmr)) throw new Error('maintenance below BMR');
+    if (t.c < 0) throw new Error('negative carbs');
+    const kcalFromMacros = t.p * 4 + t.c * 4 + t.f * 9;
+    if (Math.abs(kcalFromMacros - t.kcal) > 25) throw new Error(`macros sum to ${kcalFromMacros}, target is ${t.kcal}`);
+
+    // an incomplete profile must decline rather than invent a number
+    const h = st.heightCm; st.heightCm = 0;
+    if (suggestedTargets()) throw new Error('derived targets with no height');
+    st.heightCm = h;
+
+    // applying writes through to the food targets
+    openProfile(); await wait(200);
+    const use = document.querySelector('#pfUseTargets');
+    if (!use) throw new Error('no "use these targets" button on a complete profile');
+    use.click(); await wait(220); close();
+    if (S.settings.kcalTarget !== t.kcal) throw new Error(`kcal target is ${S.settings.kcalTarget}, expected ${t.kcal}`);
+    if (S.settings.proteinTarget !== t.p) throw new Error('protein target not applied');
+
+    // cancel restores what was there on opening
+    openProfile(); await wait(180);
+    const sel = document.querySelector('#pfSex');
+    sel.value = sel.value === 'male' ? 'female' : 'male';
+    sel.onchange(); await wait(200);
+    const cancel = document.querySelector('#pfCancel');
+    if (!cancel) throw new Error('no cancel button');
+    cancel.click(); await wait(180); close();
+    if (S.settings.sex !== 'male') throw new Error(`cancel left sex as ${S.settings.sex}`);
+
+    Object.assign(st, before);
+    return `age ${age}, ${t.kcal} kcal, ${t.p}/${t.c}/${t.f}`;
   });
 
   await step('picker: equipment icon row', async () => {
