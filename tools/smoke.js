@@ -215,6 +215,92 @@ window.smoke = async function smoke(opts) {
     return 'toggles both ways';
   });
 
+  /* Timed movements were unloggable: the tick refused without reps, and finish
+     dropped every set without one. Both failures were silent — the second
+     deleted the entry from the saved session. Worth its own check. */
+  await step('flow: timed exercise — log, tick, finish, keep', async () => {
+    close(); S.active = null; save();
+    newBlank();
+    const plank = resolveName('Plank').leaf;
+    if (!isTimed(plank)) throw new Error('Plank is not a timed movement');
+    S.active.exercises.push({ leaf: plank, legacyName: 'Plank', notes: '', mods: [], sets: [{ w: 0, r: null, sec: null, rpe: null, done: false, setType: 'working' }] });
+    // a squat alongside it, so the mixed case is covered too
+    S.active.exercises.push({ leaf: resolveName('Back Squat').leaf, legacyName: 'Back Squat', notes: '', mods: [], sets: [{ w: 100, r: 5, rpe: 8, done: false, setType: 'working' }] });
+    save(); render(); await wait(160);
+
+    const heads = [...document.querySelectorAll('.ex-card')[0].querySelectorAll('thead th')].map(t => t.textContent.trim()).filter(Boolean);
+    if (!heads.includes('Time')) throw new Error(`no Time column: ${heads.join('|')}`);
+    if (heads.some(h => /reps|rpe/i.test(h))) throw new Error(`timed card still offers reps/RPE: ${heads.join('|')}`);
+    const inp = document.querySelector('[data-f="sec"]');
+    if (!inp) throw new Error('no duration input');
+    if (document.querySelector('[data-f="r"][data-k="0.0"]')) throw new Error('timed card still has a reps input');
+
+    inp.value = '90'; inp.oninput(); inp.onblur();
+    if (S.active.exercises[0].sets[0].sec !== 90) throw new Error('duration not stored');
+    if (inp.value !== '1:30') throw new Error(`did not reformat on blur: "${inp.value}"`);
+
+    document.querySelector('[data-done="0.0"]').click(); await wait(240); close();
+    if (!S.active.exercises[0].sets[0].done) throw new Error('timed set would not tick');
+    document.querySelector('[data-done="1.0"]').click(); await wait(240); close();
+
+    finishWorkout(); await wait(360); close();
+    if (S.active) throw new Error('workout did not finish');
+    const wo = S.workouts.filter(w => w.status === 'completed').slice(-1)[0];
+    const kept = wo.exercises.find(e => e.legacyName === 'Plank');
+    if (!kept) throw new Error('the timed entry was dropped when the session was saved');
+    if (kept.sets[0].sec !== 90) throw new Error('the duration did not survive finishing');
+    if (!Number.isFinite(totalVolume(wo))) throw new Error('volume went non-finite');
+    return 'logs, ticks, finishes, survives';
+  });
+
+  /* Every display surface used to render a timed set as "0kg × null". */
+  await step('timed sets render as time everywhere', async () => {
+    close();
+    const wo = S.workouts.filter(w => w.status === 'completed')
+      .find(w => w.exercises.some(e => isTimed(e.leaf)));
+    if (!wo) return 'no timed session (skipped)';
+    const junk = /\bnull\b|\bNaN\b|\bundefined\b/;
+    const bad = [];
+    for (const p of ['home', 'calendar', 'analytics']) {
+      go(p); await wait(140);
+      if (junk.test(document.querySelector('#view').textContent)) bad.push(p);
+    }
+    for (const [label, open] of [['summary', () => showSummary(wo)], ['detail', () => viewCompleted(wo.id)], ['edit', () => openEditWorkout(wo.id)]]) {
+      close(); await wait(50); open(); await wait(200);
+      const b = document.querySelector('.modal-body');
+      if (b && junk.test(b.textContent)) bad.push(label);
+    }
+    close();
+    if (bad.length) throw new Error(`renders null/NaN in: ${bad.join(', ')}`);
+    return 'home, calendar, analytics, summary, detail, edit all clean';
+  });
+
+  await step('picker: equipment icon row', async () => {
+    close();
+    let got = null;
+    pickExercise(l => { got = l; }); await wait(220);
+    const rows = [...document.querySelectorAll('.pickitem')];
+    if (!rows.length) throw new Error('picker listed nothing');
+    const withIcons = rows.filter(r => r.querySelector('.eqrow'));
+    if (!withIcons.length) throw new Error('no equipment icon row on any item');
+    if (withIcons.some(r => !r.querySelector('.eqi.on'))) throw new Error('an icon row has nothing lit as current');
+    /* Assert a glyph actually draws, not just that the box is there — an empty
+       EQ_ICON leaves the markup intact and the row invisible, and a structural
+       check alone passes straight through that. */
+    const blank = withIcons.filter(r => r.querySelectorAll('.eqi').length !== r.querySelectorAll('.eqi svg').length);
+    if (blank.length) throw new Error(`${blank.length} row(s) have equipment slots with no icon in them`);
+    // tapping an icon picks that equipment, not the row's default
+    const multi = withIcons.find(r => r.querySelectorAll('.eqi').length > 1);
+    const off = [...multi.querySelectorAll('.eqi')].find(e => !e.classList.contains('on'));
+    off.click(); await wait(200);
+    if (!got) throw new Error('tapping an equipment icon picked nothing');
+    if (got.equipment !== off.dataset.pickeq.split('|')[1]) {
+      throw new Error(`icon tap gave ${got.equipment}, wanted ${off.dataset.pickeq.split('|')[1]}`);
+    }
+    close();
+    return `${withIcons.length}/${rows.length} rows show equipment`;
+  });
+
   await step('flow: equipment chip and picker', async () => {
     close(); S.active = null; save();
     newBlank();

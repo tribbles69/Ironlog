@@ -286,6 +286,10 @@ h3{font-size:13.5px;margin:0 0 8px}
 .settable .c-del{width:24px;padding:0}
 .settable .c-kg{width:62px}
 .settable .c-reps,.settable .c-rpe{width:46px}
+/* A timed set spans the columns weight/plates/reps/RPE would have used, so the
+   duration gets the room a hold deserves instead of a 46px reps box. */
+.settable .c-time{width:auto}
+.settable .c-time input{font-variant-numeric:tabular-nums;letter-spacing:.02em}
 .delset{width:24px;height:24px;border:0;background:transparent;color:var(--dim2,#5e6c7a);
   font-size:16px;line-height:1;padding:0;border-radius:5px}
 .delset:active{color:var(--red,#e0483d);background:rgba(224,72,61,.12)}
@@ -462,6 +466,15 @@ svg.chart{display:block;width:100%;height:auto;overflow:visible}
 .pickitem:hover{background:var(--card)}
 .pickitem .n{font-weight:600;font-size:14px}
 .pickitem .m{font-size:11px;color:var(--dim2);margin-top:1px}
+/* equipment a movement can be done with — dim by default, the current variant
+   lit, all of them tappable targets in their own right */
+.eqrow{display:flex;gap:4px;margin-top:6px}
+.eqi{display:inline-flex;align-items:center;justify-content:center;
+  width:26px;height:26px;border-radius:7px;flex:0 0 auto;
+  border:1px solid var(--line);color:var(--dim2);background:transparent}
+.eqi svg{width:15px;height:15px}
+.eqi.on{color:var(--gold);border-color:rgba(255,197,66,.42);background:rgba(255,197,66,.10)}
+.eqi:active{background:rgba(255,255,255,.09)}
 
 /* toast */
 #toastRoot{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + 14px);z-index:200;display:flex;flex-direction:column;align-items:center;gap:7px;pointer-events:none}
@@ -763,7 +776,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '1.13.1';
+const APP_VERSION = '0.14.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -914,6 +927,52 @@ function setVolume(leaf, s) {
   return w * reps * (loadConventionFor(leaf) === 'per_side' ? 2 : 1);
 }
 function metricFor(leaf) { const m = movementById(leaf.movement); return (m && m.metric) || 'reps_weight'; }
+/* Ten movements are logged by duration, not reps (spec §6): planks, dead hangs,
+   carries, the sled, and the cardio machines. A timed set records `sec` and
+   leaves `w`/`r` alone — `r: null` reads as "not recorded" everywhere else, and
+   the arithmetic already coerces it to 0, so volume and e1RM stay correct
+   without a special case. */
+function isTimed(leaf) { return leaf && metricFor(leaf) === 'time'; }
+
+/* Longest completed working hold for a leaf, in seconds. Deliberately not part
+   of statsFor: that whole machine is weight x reps, and threading a second
+   metric through it would touch rankings, the muscle map and the movement page
+   for no gain here. */
+function bestHold(key) {
+  let best = 0;
+  for (const w of S.workouts) {
+    if (w.status !== 'completed') continue;
+    for (const e of w.exercises) {
+      if (!e.leaf || exKey(e) !== key) continue;
+      for (const s of e.sets) if (s.done && isWorking(s) && s.sec > best) best = s.sec;
+    }
+  }
+  return best;
+}
+
+function fmtSec(sec) {
+  if (!sec && sec !== 0) return '';
+  const s = Math.max(0, Math.round(sec));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), r = s % 60;
+  return h
+    ? `${h}:${String(m).padStart(2, '0')}:${String(r).padStart(2, '0')}`
+    : `${m}:${String(r).padStart(2, '0')}`;
+}
+
+/* Accepts "90", "1:30", "1:02:03". A bare number is SECONDS — deliberately,
+   because a plank is the common case and guessing minutes for large values
+   would make the rule unpredictable. The input reformats on blur, so typing 30
+   for a half-hour run shows "0:30" immediately rather than being discovered
+   later. */
+function parseTime(str) {
+  const t = String(str == null ? '' : str).trim();
+  if (!t) return null;
+  if (!/^\d+(:\d{1,2}){0,2}$/.test(t)) return null;
+  const parts = t.split(':').map(Number);
+  if (parts.some(n => !Number.isFinite(n))) return null;
+  const sec = parts.reduce((a, n) => a * 60 + n, 0);
+  return sec > 0 ? sec : null;
+}
 
 /* Display text is derived from the leaf, never stored — a stored display string
    is a third source of truth and the thing that rots. Only axes that actually
@@ -2521,9 +2580,12 @@ function completedCard(wo) {
     ${prs.length ? `<div class="row wrap" style="gap:6px;margin-bottom:9px">${prs.map(p => `<span class="chip gold">★ ${esc(p.name)} ${p.w > 0 ? `${wt(p.w)}×${p.r}` : `${p.r} reps`}</span>`).join('')}</div>` : ''}
     ${wo.exercises.map(e => {
     const s = e.sets.filter(x => x.done && isWorking(x));
-    const top = s.length ? s.reduce((a, b) => e1rm(b.w, b.r) > e1rm(a.w, a.r) ? b : a) : null;
+    // a timed entry's headline set is the longest hold, not the heaviest load
+    const top = !s.length ? null
+      : isTimed(e.leaf) ? s.reduce((a, b) => (b.sec || 0) > (a.sec || 0) ? b : a)
+        : s.reduce((a, b) => e1rm(b.w, b.r) > e1rm(a.w, a.r) ? b : a);
     return `<div class="exline"><span>${exNameHtml(e)} <span class="dimmer">×${s.length}</span></span>
-        <span class="mono muted">${top ? `${wt(top.w)} × ${top.r}` : '—'}</span></div>`;
+        <span class="mono muted">${!top ? '—' : isTimed(e.leaf) ? fmtSec(top.sec) : `${wt(top.w)} × ${top.r}`}</span></div>`;
   }).join('')}
   </div>`;
 }
@@ -2654,13 +2716,27 @@ function pickExercise(cb) {
     if (q && !list.length) html = `<div class="empty">No match. Create “${esc(q)}” below.</div>`;
     return html;
   };
+  /* The name is the movement; the equipment is a separate axis. Showing the
+     equipment a movement can be done with — as icons, on the row itself — is
+     what makes that split legible: one "Lat Raise" that can be a cable or a
+     dumbbell, rather than two rows spelling it out. The icons are tappable, so
+     picking the variant is one gesture rather than add-then-change; a row of
+     icons that looked tappable and was not would be worse than none. */
+  const eqRow = x => {
+    const m = movementById(x.leaf.movement);
+    const opts = (m && m.equipment) || [];
+    if (opts.length < 2) return '';
+    return `<div class="eqrow">${opts.map(v => `<span class="eqi ${v === x.leaf.equipment ? 'on' : ''}"
+      data-pickeq="${esc(x.leaf.movement)}|${esc(v)}" title="${esc(EQ_TITLE[v] || v)}">${EQ_ICON[v] || ''}</span>`).join('')}</div>`;
+  };
+
   const item = x => {
     const st = statsFor(x.key);
     const v = variantLabel(x.leaf);
     const meta = [v, st ? `PR ${wt(st.bestW.w)} × ${st.bestW.r} · ${st.sessions} sessions` : 'No history']
       .filter(Boolean).join(' · ');
     return `<div class="pickitem" data-pick="${esc(x.key)}">
-      <div><div class="n">${esc(x.name)}</div><div class="m">${esc(meta)}</div></div>
+      <div class="grow"><div class="n">${esc(x.name)}</div><div class="m">${esc(meta)}</div>${eqRow(x)}</div>
       <span class="dimmer">›</span></div>`;
   };
   modal({
@@ -2670,8 +2746,20 @@ function pickExercise(cb) {
     foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn" id="pkNew">Create new</button>`,
     onOpen: bg => {
       const list = $('#pkList', bg), q = $('#pkQ', bg);
-      const bind = () => list.querySelectorAll('[data-pick]').forEach(el =>
-        el.onclick = () => { closeModal(); cb(keyLeaf(el.dataset.pick)); });
+      const bind = () => {
+        list.querySelectorAll('[data-pick]').forEach(el =>
+          el.onclick = () => { closeModal(); cb(keyLeaf(el.dataset.pick)); });
+        /* Bound after the row, and stops the event, so tapping an icon picks
+           that equipment instead of the row's default leaf. */
+        list.querySelectorAll('[data-pickeq]').forEach(el => el.onclick = ev => {
+          ev.stopPropagation();
+          const [movement, equipment] = el.dataset.pickeq.split('|');
+          const m = movementById(movement);
+          if (!m) return;
+          closeModal();
+          cb(completeLeaf(m, { equipment }));
+        });
+      };
       bind();
       q.oninput = () => { list.innerHTML = draw(q.value.trim()); bind(); };
       $('#pkNew', bg).onclick = () => {
@@ -2816,26 +2904,54 @@ function exerciseCard(e, ei) {
   const todayBest = Math.max(0, ...e.sets.filter(s => s.done && isWorking(s) && s.w && s.r).map(s => e1rm(s.w, s.r, s.rpe)));
   const beatE1 = st && todayBest > bestE1;
 
-  const prBanner = st
-    ? `<span class="chip gold">★ PR ${wt(st.bestW.w)} × ${st.bestW.r}${st.bestWIsEst ? ' <span class="dimmer">EST</span>' : ''}</span>
+  const timed = isTimed(e.leaf);
+
+  /* A timed movement never earns a weight PR, so the weight banner would sit on
+     "First time — everything is a PR" forever. Best hold is the number that
+     actually means something here, and reading it straight from history keeps
+     the stats machine (which is built on weight × reps) out of it. */
+  const holdBest = timed ? bestHold(exKey(e)) : 0;
+  const todayHold = timed
+    ? Math.max(0, ...e.sets.filter(s => s.done && isWorking(s) && s.sec).map(s => s.sec))
+    : 0;
+
+  const prBanner = timed
+    ? (holdBest
+      ? `<span class="chip gold">★ Best ${fmtSec(holdBest)}</span>
+         ${todayHold > holdBest ? `<span class="chip green">▲ BEAT IT · ${fmtSec(todayHold)}</span>` : ''}`
+      : `<span class="chip">First time — everything is a PR</span>`)
+    : st
+      ? `<span class="chip gold">★ PR ${wt(st.bestW.w)} × ${st.bestW.r}${st.bestWIsEst ? ' <span class="dimmer">EST</span>' : ''}</span>
        <span class="chip">e1RM ${wt(bestE1)}</span>
        <span class="dimmer">${st.sessions} sessions</span>
        ${beatE1 ? `<span class="chip green">▲ BEAT IT · ${wt(todayBest)}</span>` : ''}`
-    : `<span class="chip">First time — everything is a PR</span>`;
+      : `<span class="chip">First time — everything is a PR</span>`;
 
   const rows = e.sets.map((s, si) => {
     const isPR = s.done && isWorking(s) && s.r > 0 && beatsBest(st, s.w, s.r, s.rpe);
     const isFirstPR = s.done && isWorking(s) && s.r > 0 && !st;
     const p = prev && prev.sets[si];
+    const setNo = `<td class="c-set"><div class="setno ${isWarm(s) ? 'warm' : ''}" data-warm="${ei}.${si}" title="Toggle warm-up">${isWarm(s) ? 'W' : si + 1 - e.sets.slice(0, si).filter(x => isWarm(x)).length}</div></td>
+      <td class="c-del"><button class="delset" data-delset="${ei}.${si}" title="Delete set">×</button></td>`;
+    const chk = `<td class="c-chk"><button class="chk ${s.done ? 'on' : ''}" data-done="${ei}.${si}">✓</button></td>`;
+    /* A timed movement has no reps or weight input (spec §6) — one duration
+       field, and the plate button goes with the weight it belonged to. */
+    if (timed) {
+      return `<tr class="${s.done ? 'done' : ''}">
+      ${setNo}
+      <td class="c-prev mono">${p && p.sec ? fmtSec(p.sec) : '—'}</td>
+      <td class="c-time" colspan="4"><input type="text" inputmode="numeric" data-f="sec" data-k="${ei}.${si}" value="${fmtSec(s.sec)}" placeholder="m:ss"></td>
+      ${chk}
+    </tr>`;
+    }
     return `<tr class="${s.done ? 'done' : ''} ${isPR || isFirstPR ? 'pr' : ''}">
-      <td class="c-set"><div class="setno ${isWarm(s) ? 'warm' : ''}" data-warm="${ei}.${si}" title="Toggle warm-up">${isWarm(s) ? 'W' : si + 1 - e.sets.slice(0, si).filter(x => isWarm(x)).length}</div></td>
-      <td class="c-del"><button class="delset" data-delset="${ei}.${si}" title="Delete set">×</button></td>
+      ${setNo}
       <td class="c-prev mono">${p ? `${wt(p.w)}×${p.r}` : '—'}</td>
       <td class="c-wt"><input type="number" step="0.5" inputmode="decimal" data-f="w" data-k="${ei}.${si}" value="${s.w ? dw(s.w) : ''}" placeholder="0"></td>
       <td class="c-pl">${s.w > 0 ? `<button class="plbtn" data-plates="${ei}.${si}" title="Plates">▤</button>` : ''}</td>
       <td><input type="number" inputmode="numeric" data-f="r" data-k="${ei}.${si}" value="${s.r || ''}" placeholder="0"></td>
       <td><input type="number" step="0.5" inputmode="decimal" data-f="rpe" data-k="${ei}.${si}" value="${s.rpe ?? ''}" placeholder="—"></td>
-      <td class="c-chk"><button class="chk ${s.done ? 'on' : ''}" data-done="${ei}.${si}">✓</button></td>
+      ${chk}
     </tr>`;
   }).join('');
 
@@ -2843,7 +2959,7 @@ function exerciseCard(e, ei) {
     <div class="ex-head">
       <div class="row between">
         <div class="ex-name grow">${esc(exName(e))}</div>
-        <button class="btn xs ghost" data-ramp="${ei}" title="Warm-up ramp">▲ Warm-up</button>
+        ${timed ? '' : `<button class="btn xs ghost" data-ramp="${ei}" title="Warm-up ramp">▲ Warm-up</button>`}
         <button class="icon-btn" data-ex-menu="${ei}">⋯</button>
       </div>
       ${leafChip(e.leaf, ei)}
@@ -2851,7 +2967,9 @@ function exerciseCard(e, ei) {
       ${e.notes ? `<div class="ex-note">${esc(e.notes)}</div>` : ''}
     </div>
     <table class="settable">
-      <thead><tr><th class="c-set">Set</th><th class="c-del"></th><th class="c-prev">Prev</th><th class="c-kg">${U()}</th><th class="c-pl"></th><th class="c-reps">Reps</th><th class="c-rpe">RPE</th><th class="c-chk"></th></tr></thead>
+      <thead><tr><th class="c-set">Set</th><th class="c-del"></th><th class="c-prev">Prev</th>${timed
+      ? `<th class="c-time" colspan="4">Time</th>`
+      : `<th class="c-kg">${U()}</th><th class="c-pl"></th><th class="c-reps">Reps</th><th class="c-rpe">RPE</th>`}<th class="c-chk"></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
     <div class="ex-foot">
@@ -3088,23 +3206,33 @@ function openPlates(targetKg, presetBar, leaf) {
 
 function finishWorkout(force) {
   const a = S.active;
-  const logged = a.exercises.map(e => ({ ...e, sets: e.sets.filter(s => s.done && s.r > 0) }))
-    .filter(e => e.sets.length);
+  /* What counts as logged depends on the metric. Keeping only `s.r > 0` threw
+     away every timed set at the moment of finishing: a session of nothing but
+     planks refused to finish at all, and a mixed session dropped the planks
+     from the saved record without saying so. */
+  const logged = a.exercises.map(e => ({
+    ...e,
+    sets: e.sets.filter(s => s.done && (isTimed(e.leaf) ? s.sec > 0 : s.r > 0)),
+  })).filter(e => e.sets.length);
   if (!logged.length) return toast('Log at least one set first');
 
   // sets ticked and then retyped never met the single-set prompt
   if (!force) {
     const flagged = [];
-    logged.forEach(e => e.sets.filter(s => isWorking(s)).forEach(s => {
-      const why = plausibility(exKey(e), s.w, s.r, s.rpe);
-      if (why.length) flagged.push({ name: exFull(e), s, why });
-    }));
+    logged.forEach(e => {
+      if (isTimed(e.leaf)) return;              // nothing to say about a duration
+      e.sets.filter(s => isWorking(s)).forEach(s => {
+        const why = plausibility(exKey(e), s.w, s.r, s.rpe);
+        if (why.length) flagged.push({ name: exFull(e), s, why });
+      });
+    });
     if (flagged.length) return plausListDlg(flagged, 'Finish', () => finishWorkout(true));
   }
 
   // PRs — compare against history BEFORE this workout is saved
   const prs = [];
   logged.forEach(e => {
+    if (isTimed(e.leaf)) return;   // a hold is not an e1RM; its best is toasted at tick time
     const st = statsFor(exKey(e));
     const working = e.sets.filter(s => isWorking(s));
     if (!working.length) return;
@@ -3180,7 +3308,8 @@ function roundRect(x, px, py, w2, h2, r) {
   x.closePath();
 }
 
-function setLabel(s) {
+function setLabel(s, leaf) {
+  if (isTimed(leaf)) return s.sec ? fmtSec(s.sec) : '—';
   return `${s.w > 0 ? wt(s.w) + ' × ' : ''}${s.r}${s.w > 0 ? '' : ' reps'}${s.rpe ? ' @ ' + s.rpe : ''}`;
 }
 
@@ -3205,7 +3334,8 @@ function sessionMuscles(wo) {
   const acc = {};
   let unknown = 0;
   wo.exercises.forEach(e => {
-    const sets = e.sets.filter(s => isWorking(s) && s.r > 0);
+    // a plank is core work; counting only sets with reps left timed holds out of the map
+    const sets = e.sets.filter(s => isWorking(s) && (s.r > 0 || s.sec > 0));
     if (!sets.length) return;
     const m = exMuscles(exName(e));
     if (!m) { unknown++; return; }
@@ -3345,7 +3475,9 @@ function fullCardCanvas(wo) {
     x.textAlign = 'left'; x.fillStyle = CARD.text; x.font = cardFont(29, 680);
     x.fillText(fitText(x, exFull(e), W - P * 2 - 260), P, y + 42);
     x.textAlign = 'right'; x.fillStyle = CARD.dim; x.font = cardFont(24, 600);
-    x.fillText(`${working.length} sets · ${vol > 0 ? wt(vol, 0) : reps + ' reps'}`, W - P, y + 42);   // bodyweight: reps, not 0kg
+    // timed: total time. bodyweight: reps, not 0kg
+    const totSec = working.reduce((a, s) => a + (s.sec || 0), 0);
+    x.fillText(`${working.length} set${working.length === 1 ? '' : 's'} · ${isTimed(e.leaf) ? fmtSec(totSec) : vol > 0 ? wt(vol, 0) : reps + ' reps'}`, W - P, y + 42);
     y += 64;
     let n = 0;
     sets.forEach(s => {
@@ -3354,7 +3486,7 @@ function fullCardCanvas(wo) {
       x.fillStyle = isWarm(s) ? CARD.warm : CARD.dim; x.font = cardFont(23, 600);
       x.fillText(isWarm(s) ? 'W' : String(++n), P + 12, y + 28);
       x.fillStyle = isWarm(s) ? CARD.warm : isPR ? CARD.gold : CARD.text; x.font = cardFont(26, isPR ? 780 : 620);
-      x.fillText(setLabel(s) + (isPR ? '  ★' : ''), P + 64, y + 28);
+      x.fillText(setLabel(s, e.leaf) + (isPR ? '  ★' : ''), P + 64, y + 28);
       if (s.w > 0 && s.r > 0 && isWorking(s)) {
         x.textAlign = 'right'; x.fillStyle = CARD.dim; x.font = cardFont(22, 600);
         x.fillText(`e1RM ${wt(e1rm(s.w, s.r, s.rpe))}`, W - P, y + 28);
@@ -3459,16 +3591,21 @@ function showSummary(wo) {
       ${wo.exercises.map(e => {
       const ws = e.sets.filter(s => isWorking(s));
       const warm = e.sets.filter(s => isWarm(s));
+      const timed = isTimed(e.leaf);
       const v = ws.reduce((a, s) => a + s.w * s.r, 0);
-      const top = ws.length ? ws.reduce((a, b) => e1rm(b.w, b.r) > e1rm(a.w, a.r) ? b : a) : null;
+      // a timed entry's headline is total time held, and its best set the longest one
+      const totSec = ws.reduce((a, s) => a + (s.sec || 0), 0);
+      const top = !ws.length ? null
+        : timed ? ws.reduce((a, b) => (b.sec || 0) > (a.sec || 0) ? b : a)
+          : ws.reduce((a, b) => e1rm(b.w, b.r) > e1rm(a.w, a.r) ? b : a);
       return `<div class="card tight" style="margin-bottom:8px">
           <div class="row between" style="margin-bottom:6px">
             <div style="font-weight:680">${exNameHtml(e)}</div>
-            <div class="mono sub">${wt(v, 0)}</div>
+            <div class="mono sub">${timed ? fmtSec(totSec) : wt(v, 0)}</div>
           </div>
           ${e.sets.map((st, i) => `<div class="row between" style="padding:3px 0;font-size:13px">
             <span class="sub" style="width:52px">${isWarm(st) ? 'warm' : 'Set ' + (ws.indexOf(st) + 1)}</span>
-            <span class="mono grow" style="${st === top && ws.length > 1 ? 'color:var(--gold);font-weight:700' : ''}">${wt(st.w)} × ${st.r}</span>
+            <span class="mono grow" style="${st === top && ws.length > 1 ? 'color:var(--gold);font-weight:700' : ''}">${timed ? fmtSec(st.sec) || '—' : `${wt(st.w)} × ${st.r}`}</span>
             <span class="mono sub">${st.rpe ? 'RPE ' + st.rpe : ''}</span>
           </div>`).join('')}
         </div>`;
@@ -3499,7 +3636,9 @@ function viewCompleted(id) {
         <div class="card tight" style="background:var(--card)">
           <div style="font-weight:700;margin-bottom:7px">${exNameHtml(e)}</div>
           ${e.sets.map((s, i) => `<div class="exline"><span class="dimmer">${isWarm(s) ? 'W' : 'Set ' + (i + 1)}</span>
-            <span class="mono">${wt(s.w)} × ${s.r}${s.rpe ? ` @ ${s.rpe}` : ''} <span class="dimmer">· e1RM ${wt(e1rm(s.w, s.r))}</span></span></div>`).join('')}
+            <span class="mono">${isTimed(e.leaf)
+    ? fmtSec(s.sec) || '—'
+    : `${wt(s.w)} × ${s.r}${s.rpe ? ` @ ${s.rpe}` : ''} <span class="dimmer">· e1RM ${wt(e1rm(s.w, s.r))}</span>`}</span></div>`).join('')}
         </div>`).join('')}
     `,
     foot: `<button class="btn danger" id="delWo">Delete</button><button class="btn sm ghost" id="editWo">✎ Edit</button><button class="btn sm ghost" id="woShare">↗ Share</button><button class="btn primary" data-close>Close</button>`,
@@ -3545,13 +3684,17 @@ function renderEditWorkout() {
       <button class="btn xs danger" data-eex-rm="${ei}" title="Remove exercise">✕</button>
     </div></div>
     <table class="settable">
-      <thead><tr><th class="c-set">Set</th><th class="c-del"></th><th class="c-kg">${U()}</th><th class="c-reps">Reps</th><th class="c-rpe">RPE</th><th class="c-chk"></th></tr></thead>
+      <thead><tr><th class="c-set">Set</th><th class="c-del"></th>${isTimed(e.leaf)
+      ? `<th class="c-time" colspan="3">Time</th>`
+      : `<th class="c-kg">${U()}</th><th class="c-reps">Reps</th><th class="c-rpe">RPE</th>`}<th class="c-chk"></th></tr></thead>
       <tbody>${e.sets.map((s, si) => `<tr class="${s.done ? 'done' : ''}">
         <td class="c-set"><div class="setno ${isWarm(s) ? 'warm' : ''}" data-ewarm="${ei}.${si}" title="Toggle warm-up">${isWarm(s) ? 'W' : si + 1 - e.sets.slice(0, si).filter(x => isWarm(x)).length}</div></td>
         <td class="c-del"><button class="delset" data-edelset="${ei}.${si}" title="Delete set">×</button></td>
-        <td class="c-wt"><input type="number" step="0.5" inputmode="decimal" data-ef="w" data-k="${ei}.${si}" value="${s.w ? dw(s.w) : ''}" placeholder="0"></td>
+        ${isTimed(e.leaf)
+      ? `<td class="c-time" colspan="3"><input type="text" inputmode="numeric" data-ef="sec" data-k="${ei}.${si}" value="${fmtSec(s.sec)}" placeholder="m:ss"></td>`
+      : `<td class="c-wt"><input type="number" step="0.5" inputmode="decimal" data-ef="w" data-k="${ei}.${si}" value="${s.w ? dw(s.w) : ''}" placeholder="0"></td>
         <td><input type="number" inputmode="numeric" data-ef="r" data-k="${ei}.${si}" value="${s.r || ''}" placeholder="0"></td>
-        <td><input type="number" step="0.5" inputmode="decimal" data-ef="rpe" data-k="${ei}.${si}" value="${s.rpe ?? ''}" placeholder="—"></td>
+        <td><input type="number" step="0.5" inputmode="decimal" data-ef="rpe" data-k="${ei}.${si}" value="${s.rpe ?? ''}" placeholder="—"></td>`}
         <td class="c-chk"><button class="chk ${s.done ? 'on' : ''}" data-edone="${ei}.${si}" title="Untick to drop this set">✓</button></td>
       </tr>`).join('')}</tbody>
     </table>
@@ -3586,6 +3729,11 @@ function renderEditWorkout() {
         if (inp.dataset.ef === 'w') s.w = val ? toKg(val) : 0;
         if (inp.dataset.ef === 'r') s.r = val || 0;
         if (inp.dataset.ef === 'rpe') s.rpe = val;
+        if (inp.dataset.ef === 'sec') s.sec = parseTime(inp.value);
+        };
+        if (inp.dataset.ef === 'sec') inp.onblur = () => {
+          const [ei, si] = key(inp.dataset.k);
+          inp.value = fmtSec(d.exercises[ei].sets[si].sec);
         };
       });
       bg.querySelectorAll('[data-edone]').forEach(b => b.onclick = () => {
@@ -3603,7 +3751,7 @@ function renderEditWorkout() {
       bg.querySelectorAll('[data-eaddset]').forEach(b => b.onclick = () => {
         const ex = d.exercises[+b.dataset.eaddset];
         const last = ex.sets[ex.sets.length - 1] || { w: 0, r: 0 };
-        ex.sets.push({ w: last.w, r: last.r, rpe: null, done: true, setType: 'working' });
+        ex.sets.push({ w: last.w, r: last.r, sec: last.sec || null, rpe: null, done: true, setType: 'working' });
         re();
       });
       bg.querySelectorAll('[data-eex-up]').forEach(b => b.onclick = () => {
@@ -3635,15 +3783,22 @@ function renderEditWorkout() {
 function saveEdit(force) {
   const d = editDraft;
   if (!d) return;
-  const logged = d.exercises.map(e => ({ ...e, sets: e.sets.filter(s => s.done && s.r > 0) })).filter(e => e.sets.length);
+  // same metric-aware rule as finishWorkout — editing a session must not be a way to lose its holds
+  const logged = d.exercises.map(e => ({
+    ...e,
+    sets: e.sets.filter(s => s.done && (isTimed(e.leaf) ? s.sec > 0 : s.r > 0)),
+  })).filter(e => e.sets.length);
   if (!logged.length) return toast('Keep at least one ticked set, or delete the session instead');
 
   if (!force) {
     const flagged = [];
-    logged.forEach(e => e.sets.filter(s => isWorking(s)).forEach(s => {
-      const why = plausibility(exKey(e), s.w, s.r, s.rpe, d.date);
-      if (why.length) flagged.push({ name: exFull(e), s, why });
-    }));
+    logged.forEach(e => {
+      if (isTimed(e.leaf)) return;              // nothing to say about a duration
+      e.sets.filter(s => isWorking(s)).forEach(s => {
+        const why = plausibility(exKey(e), s.w, s.r, s.rpe, d.date);
+        if (why.length) flagged.push({ name: exFull(e), s, why });
+      });
+    });
     if (flagged.length) return plausListDlg(flagged, 'Save', () => saveEdit(true));
   }
 
@@ -3867,7 +4022,7 @@ function openMovementPage(movementId, focusKey) {
       if (!e.leaf || e.leaf.movement !== movementId) return;
       const working = e.sets.filter(s => s.done && isWorking(s));
       if (!working.length) return;
-      rows.push({ date: wo.date, name: exName(e), variant: exVariant(e), key: exKey(e), sets: working, id: wo.id });
+      rows.push({ date: wo.date, name: exName(e), variant: exVariant(e), key: exKey(e), leaf: e.leaf, sets: working, id: wo.id });
     }));
     rows.sort((a, b) => a.date < b.date ? 1 : -1);
     if (!rows.length) return `<div class="empty">Nothing logged yet</div>`;
@@ -3879,7 +4034,7 @@ function openMovementPage(movementId, focusKey) {
           <button class="btn xs ghost" data-hist-wo="${esc(r.id)}">View</button>
         </div>
         ${r.sets.map((s, i) => `<div class="exline"><span class="dimmer">Set ${i + 1}</span>
-          <span class="mono">${s.w > 0 ? `${wt(s.w)} × ${s.r == null ? 'AMRAP' : s.r}` : `${s.r == null ? 'AMRAP' : s.r} reps`}${s.rpe ? ` @ ${s.rpe}` : ''}</span></div>`).join('')}
+          <span class="mono">${isTimed(r.leaf) ? fmtSec(s.sec) || '—' : `${s.w > 0 ? `${wt(s.w)} × ${s.r == null ? 'AMRAP' : s.r}` : `${s.r == null ? 'AMRAP' : s.r} reps`}${s.rpe ? ` @ ${s.rpe}` : ''}`}</span></div>`).join('')}
       </div>`).join('');
   };
 
@@ -4771,7 +4926,7 @@ function backfillPlanned(days) {
   if (!hits.length) return 0;
 
   hits.forEach(w => {
-    w.exercises.forEach(e => e.sets.forEach(s => { if (s.r > 0) s.done = true; }));
+    w.exercises.forEach(e => e.sets.forEach(s => { if (s.r > 0 || s.sec > 0) s.done = true; }));
     w.exercises = w.exercises
       .map(e => ({ ...e, sets: e.sets.filter(s => s.done) }))
       .filter(e => e.sets.length);
@@ -4919,7 +5074,7 @@ function parseLiftoff(text) {
     if (!d.ex.has(raw)) d.ex.set(raw, { raw, sets: [], secs: 0 });
     const e = d.ex.get(raw);
     if (+r.Seconds > 0) e.secs = Math.max(e.secs, +r.Seconds);
-    e.sets.push({ lb: +r.Weight || 0, r: +r.Reps || 0, rpe: r.RPE ? +r.RPE : null });
+    e.sets.push({ lb: +r.Weight || 0, r: +r.Reps || 0, sec: +r.Seconds || null, rpe: r.RPE ? +r.RPE : null });
   });
   const sessions = [...byDay.values()]
     .map(d => ({
@@ -4955,15 +5110,22 @@ function importLiftoff(sessions, mapping, unit) {
     const srcId = 'liftoff:' + s.date;
     if (S.workouts.some(w => w.srcId === srcId)) { skipped++; return; }
 
-    const built = s.exercises.map(e => ({
-      leaf: leafForName(mapping[e.raw] || e.raw),
-      legacyName: e.raw,
-      mods: [],
-      notes: e.secs ? `${e.secs} s hold` : '',
-      sets: e.sets.map(x => ({
-        w: toKgFrom(x.lb, unit), r: x.r, rpe: x.rpe, done: true, setType: 'working',
-      })),
-    }));
+    const built = s.exercises.map(e => {
+      const leaf = leafForName(mapping[e.raw] || e.raw);
+      return {
+        leaf,
+        legacyName: e.raw,
+        mods: [],
+        /* The duration used to survive only as the note "60 s hold" — prose,
+           not data, so an imported plank could never be charted or beaten. It
+           is now a field. The note stays for movements that are not timed,
+           where seconds are a rest or a tempo rather than the set itself. */
+        notes: e.secs && !isTimed(leaf) ? `${e.secs} s hold` : '',
+        sets: e.sets.map(x => ({
+          w: toKgFrom(x.lb, unit), r: x.r, sec: x.sec, rpe: x.rpe, done: true, setType: 'working',
+        })),
+      };
+    });
     /* Two raw names can map onto one Ironlog name, and an exercise done in two
        blocks arrives twice — fold both into one entry, keeping set order. */
     const merged = [];
@@ -6204,7 +6366,15 @@ function wireActive(v) {
       if (inp.dataset.f === 'w') s.w = val ? toKg(val) : 0;
       if (inp.dataset.f === 'r') s.r = val || 0;
       if (inp.dataset.f === 'rpe') s.rpe = val;
+      if (inp.dataset.f === 'sec') s.sec = parseTime(inp.value);
       save();
+    };
+    /* Reformat a duration once the field is left, so "90" visibly becomes
+       "1:30" and a half-hour run typed as "30" shows up as "0:30" now rather
+       than being discovered in the history weeks later. */
+    if (inp.dataset.f === 'sec') inp.onblur = () => {
+      const [ei, si] = key(inp.dataset.k);
+      inp.value = fmtSec(a.exercises[ei].sets[si].sec);
     };
     // move to the next field on Enter
     inp.onkeydown = e => {
@@ -6222,17 +6392,28 @@ function wireActive(v) {
     const s = a.exercises[ei].sets[si];
     const ex = a.exercises[ei];
     if (s.done) { s.done = false; save(); bust(); render(); return; }
-    if (!s.r) return toast('Enter reps first');
+    /* A timed set is finished by its duration, not its reps — the reps guard
+       made every plank and every treadmill session impossible to tick off. */
+    const timed = isTimed(ex.leaf);
+    if (timed ? !s.sec : !s.r) return toast(timed ? 'Enter a time first' : 'Enter reps first');
     const commit = () => {
       // PR check against history captured before flipping the flag
       const st = statsFor(exKey(ex));
+      const prevHold = timed ? bestHold(exKey(ex)) : 0;
       s.done = true;
-      if (isWorking(s) && (!st || beatsBest(st, s.w, s.r, s.rpe))) {
+      if (timed) {
+        if (isWorking(s) && s.sec > prevHold) {
+          toast(prevHold ? `★ Best hold — ${exFull(ex)} ${fmtSec(s.sec)}` : `★ First ${exFull(ex)} logged`, 'gold');
+        }
+      } else if (isWorking(s) && (!st || beatsBest(st, s.w, s.r, s.rpe))) {
         toast(st ? `★ PR — ${exFull(ex)} ${s.w > 0 ? `${wt(s.w)}×${s.r}` : `${s.r} reps`}` : `★ First ${exFull(ex)} logged`, 'gold');
       }
       save(); bust(); render();
     };
-    const why = isWarm(s) ? [] : plausibility(exKey(ex), s.w, s.r, s.rpe);
+    /* plausibility() reasons about load and reps against history; it has
+       nothing to say about a duration, so a timed set skips it rather than
+       being asked a question in the wrong units. */
+    const why = (isWarm(s) || timed) ? [] : plausibility(exKey(ex), s.w, s.r, s.rpe);
     if (why.length) plausDlg(exKey(ex), s, why, commit); else commit();
   });
 
@@ -6246,7 +6427,7 @@ function wireActive(v) {
   v.querySelectorAll('[data-addset]').forEach(b => b.onclick = () => {
     const ex = a.exercises[+b.dataset.addset];
     const last = ex.sets[ex.sets.length - 1] || { w: 0, r: 0 };
-    ex.sets.push({ w: last.w, r: last.r, rpe: null, done: false, setType: 'working' });
+    ex.sets.push({ w: last.w, r: last.r, sec: last.sec || null, rpe: null, done: false, setType: 'working' });
     save(); render();
   });
   v.querySelectorAll('[data-rmset]').forEach(b => b.onclick = () => {
@@ -6304,7 +6485,7 @@ function wireActive(v) {
   });
 
   $('#addEx').onclick = () => pickExercise(leaf => {
-    a.exercises.push({ leaf, legacyName: displayName(leaf), notes: '', mods: [], sets: [{ w: 0, r: 0, rpe: null, done: false, setType: 'working' }] });
+    a.exercises.push({ leaf, legacyName: displayName(leaf), notes: '', mods: [], sets: [{ w: 0, r: isTimed(leaf) ? null : 0, sec: null, rpe: null, done: false, setType: 'working' }] });
     save(); render();
     window.scrollTo(0, document.body.scrollHeight);
   });
