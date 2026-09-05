@@ -16,7 +16,31 @@
 window.smoke = async function smoke(opts) {
   const o = opts || {};
   const results = [];
-  const wait = ms => new Promise(r => setTimeout(r, ms == null ? 90 : ms));
+  /* Let queued work run — deliberately not a wall-clock sleep.
+
+     A browser clamps setTimeout in a hidden tab and throttles it harder the
+     longer the tab stays hidden. Measured on the deployed build in a background
+     tab: setTimeout(40) fired at 936 ms, so a suite that sleeps between every
+     check stopped making visible progress after six of them. It was not
+     hanging, it was crawling — which is worse, because it looks like a fault in
+     the app.
+
+     Nothing here needs real time. Renders and modals are synchronous (a modal's
+     title and 2436 bytes of body are readable in the same turn as the open
+     call); these waits only ever existed to let queued tasks run. A
+     MessageChannel round-trip is a macrotask that background throttling does
+     not clamp: 50 of them cost 15 ms in the same tab where one setTimeout(40)
+     cost 936. Rounds scale with the requested delay so relative ordering is
+     preserved. */
+  const yieldTask = () => new Promise(r => {
+    const c = new MessageChannel();
+    c.port1.onmessage = () => r();
+    c.port2.postMessage(0);
+  });
+  const wait = async ms => {
+    const rounds = Math.max(2, Math.round((ms == null ? 90 : ms) / 20));
+    for (let i = 0; i < rounds; i++) await yieldTask();
+  };
 
   const step = async (name, fn) => {
     try {
