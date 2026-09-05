@@ -1,7 +1,7 @@
 /* Ironlog service worker.
    Bump VERSION whenever the app files change — that's what triggers the
    "Update ready" prompt on the next launch. */
-const VERSION = 'ironlog-v20';
+const VERSION = 'ironlog-v21';
 
 const ASSETS = [
   './',
@@ -32,7 +32,12 @@ self.addEventListener('message', e => {
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
-  if (new URL(req.url).origin !== self.location.origin) return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+  /* version.json is how a running app notices a new build. Serving it from the
+     cache would mean the app could never learn it was stale — the one file that
+     must always come from the network. */
+  if (url.pathname.endsWith('/version.json')) return;
 
   e.respondWith((async () => {
     const cache = await caches.open(VERSION);

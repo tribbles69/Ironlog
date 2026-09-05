@@ -763,7 +763,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.12.1';
+const APP_VERSION = '0.13.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -1089,6 +1089,60 @@ function openAxisPicker(ei, axis) {
       bind();
     },
   });
+}
+
+/* ---------------- updates ----------------
+   The service worker is cache-first, which is what makes the app open with no
+   signal — and what can strand you on a broken build. Until now the only way
+   forward was to wait for the worker to notice, and a session in progress
+   deferred that indefinitely. So: a check you can run yourself, and one that
+   runs at startup and tells you rather than deciding for you.
+
+   version.json is tiny and deliberately not cached (the worker passes it
+   straight to the network), so the check costs a few bytes rather than the
+   611 KB shell. */
+async function fetchLatestVersion() {
+  try {
+    const r = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+    if (!r.ok) return null;
+    const v = await r.json();
+    return v && v.version ? v : null;
+  } catch (e) { return null; }   // offline: nothing to say
+}
+
+/* Graceful first: let the waiting worker take over. If there is none — the
+   usual case when the shell is stale but the worker already activated — clear
+   the caches and reload, which always works. */
+async function applyUpdate() {
+  toast('Updating…');
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (reg) {
+      await reg.update().catch(() => {});
+      if (reg.waiting) { reg.waiting.postMessage({ type: 'SKIP_WAITING' }); return; }
+    }
+    for (const k of await caches.keys()) await caches.delete(k);
+  } catch (e) { /* fall through to the reload */ }
+  location.reload();
+}
+
+function updateAvailableDlg(latest) {
+  modal({
+    title: 'Update available',
+    body: `<div class="sub" style="margin-top:0">You're on <b>v${esc(APP_VERSION)}</b>. <b>v${esc(latest.version)}</b> is ready.</div>
+      ${S.active ? `<div class="sub" style="margin-top:10px;color:var(--gold)">Your workout in progress is saved and will still be here afterwards.</div>` : ''}`,
+    foot: `<button class="btn ghost" data-close>Later</button><button class="btn primary" id="upGo">Update now</button>`,
+    onOpen: bg => { $('#upGo', bg).onclick = () => { closeModal(); applyUpdate(); }; },
+  });
+}
+
+/* silent: say nothing when already current — that is the startup case. */
+async function checkForUpdate(silent) {
+  const latest = await fetchLatestVersion();
+  if (!latest) { if (!silent) toast("Couldn't reach the server — you may be offline"); return false; }
+  if (latest.version === APP_VERSION) { if (!silent) toast(`You're on the latest version (v${APP_VERSION})`, 'green'); return false; }
+  updateAvailableDlg(latest);
+  return true;
 }
 
 /* ---------------- clearing data ----------------
@@ -5198,6 +5252,7 @@ function openSettings() {
       <input type="file" id="stCsvFile" accept=".csv,text/csv" style="display:none">
     `,
     foot: `<span class="muted mono" style="font-size:11px;margin-right:auto">v${APP_VERSION}</span>
+      <button class="btn sm ghost" id="stUpdate">Check for update</button>
            <button class="btn primary" id="stSave">Save</button>`,
     onOpen: bg => {
       let units = U();
@@ -5274,6 +5329,7 @@ function openSettings() {
         e.target.value = '';   // so picking the same file twice still fires
       };
       $('#stClear', bg).onclick = openClearData;
+      $('#stUpdate', bg).onclick = () => checkForUpdate(false);
       $('#stWipe', bg).onclick = () => confirmDlg('This erases every workout, check-in, goal and meet. It cannot be undone.', () => {
         S = structuredClone(DEFAULT_STATE); save(); closeAllModals(); go('home'); toast('All data erased');
       }, 'Erase everything');
@@ -6741,6 +6797,9 @@ async function boot() {
 
   if (S.active) page = 'workout';     // resume straight into a live session
   go(page);
+  /* After first paint, never before it — an update prompt must not delay the
+     app opening, and it must not decide for you. */
+  setTimeout(() => checkForUpdate(true), 1200);
   veil.remove();
   requestPersistence();
 }
