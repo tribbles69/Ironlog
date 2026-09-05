@@ -298,7 +298,7 @@ h3{font-size:13.5px;margin:0 0 8px}
   width:26px;height:26px;line-height:24px;border-radius:8px;margin:0 auto;
   background:var(--card2);border:1px solid var(--line);font-size:12px;font-weight:700;
 }
-.isWarm(setno){background:rgba(255,197,66,.13);border-color:rgba(255,197,66,.3);color:var(--gold)}
+.setno.warm{background:rgba(255,197,66,.13);border-color:rgba(255,197,66,.3);color:var(--gold)}
 tr.done td input{background:rgba(61,220,132,.07);border-color:rgba(61,220,132,.22)}
 tr.pr td input{background:rgba(255,197,66,.1);border-color:rgba(255,197,66,.35)}
 .chk{
@@ -763,7 +763,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.13.0';
+const APP_VERSION = '0.13.1';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -6237,7 +6237,7 @@ function wireActive(v) {
   });
 
   v.querySelectorAll('[data-warm]').forEach(b => b.onclick = () => {
-    const [ei, si] = key(b.isWarm(dataset));
+    const [ei, si] = key(b.dataset.warm);
     const s = a.exercises[ei].sets[si];
     s.setType = isWarm(s) ? 'working' : 'warmup';
     save(); bust(); render();
@@ -6735,8 +6735,8 @@ function confirmVoiceSet(p, via) {
         if (!(r > 0)) return toast('Reps are needed');
         const kg = toKg(w), reps = Math.round(r), rpe = rpeRaw === '' ? null : +rpeRaw;
         const commit = () => { closeModal(); applyVoiceSet(leaf, kg, reps, rpe); };
-        const why = plausibility(name, kg, reps, rpe);
-        if (why.length) plausDlg(name, { w: kg, r: reps, rpe }, why, commit); else commit();
+        const why = plausibility(leafKey(leaf), kg, reps, rpe);
+        if (why.length) plausDlg(leafKey(leaf), { w: kg, r: reps, rpe }, why, commit); else commit();
       };
     },
   });
