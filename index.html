@@ -500,7 +500,7 @@ svg.chart{display:block;width:100%;height:auto;overflow:visible}
   <button data-page="workout"><span class="ico">⬤</span><span>Workout</span></button>
   <button data-page="food"><span class="ico">◍</span><span>Food</span></button>
   <button data-page="analytics"><span class="ico">◫</span><span>Stats</span></button>
-  <button data-page="meets"><span class="ico">★</span><span>Meets</span></button>
+  <button data-page="meets"><span class="ico">★</span><span>Events</span></button>
 </nav>
 
 <div id="modalRoot"></div>
@@ -1252,8 +1252,7 @@ function migrateToV2(st) {
   if (st.active) doWorkout(st.active);
 
   // settings.priority becomes slot-bound leaf refs
-  const PRIORITY_SLOTS = ['squat', 'bench', 'deadlift'];
-  const SLOTS = PRIORITY_SLOTS;
+  const SLOTS = EVENT_TYPES[DEFAULT_EVENT_TYPE].lifts.map(l => l.slot);
   if (Array.isArray(st.settings.priority) && st.settings.priority.some(p => typeof p === 'string')) {
     st.settings.priority = st.settings.priority.slice(0, 3).map((n, i) => (
       typeof n === 'string' ? { slot: SLOTS[i] || SLOTS[0], leaf: leafFor(n) } : n
@@ -3914,6 +3913,39 @@ function openTestLog() {
    Raw, via the OpenPowerlifting project (public domain, attribution kept).
    One year is a small sample — a single strong entry shifts everything under
    it — so this is a range, not a promise. */
+/* An event is a competition. Its TYPE decides which lifts are contested, how
+   attempts are planned and how a total is scored. Powerlifting is the only type
+   built so far; adding another — weightlifting, strongman, a push-pull — is a
+   record in here plus a movement in the catalogue, not new code.
+
+   Everything downstream reads the type: the card, the form, the attempt planner
+   and the priority lifts. The three keys that used to be written out by hand in
+   eight places now come from lifts[].slot. */
+const EVENT_TYPES = {
+  powerlifting: {
+    id: 'powerlifting',
+    label: 'Powerlifting',
+    blurb: 'Squat, bench and deadlift. Three attempts at each, best of each counted, DOTS from the total.',
+    icon: '★',
+    lifts: [
+      { slot: 'squat',    label: 'Squat',    movement: 'back-squat',  equipment: 'barbell' },
+      { slot: 'bench',    label: 'Bench',    movement: 'bench-press', equipment: 'barbell' },
+      { slot: 'deadlift', label: 'Deadlift', movement: 'deadlift',    equipment: 'barbell' },
+    ],
+    attempts: true,      // opener / second / third planning
+    scored: 'dots',      // total -> DOTS against bodyweight
+    wclass: true,        // weight classes and a bodyweight target apply
+  },
+};
+const DEFAULT_EVENT_TYPE = 'powerlifting';
+/* Events saved before types existed are powerlifting meets — no migration
+   needed, the default covers them. */
+function eventType(m) {
+  return EVENT_TYPES[(m && m.type) || DEFAULT_EVENT_TYPE] || EVENT_TYPES[DEFAULT_EVENT_TYPE];
+}
+function eventLifts(m) { return eventType(m).lifts; }
+function eventTypeList() { return Object.values(EVENT_TYPES); }
+
 const FIELDS = {
   'wm-93-classic': {
     label: 'EPA West Midlands Spring · 2025',
@@ -3986,9 +4018,11 @@ function ord(n) {
    estimates off a set of five. An untested lift contributes nothing and says so,
    rather than quietly inflating the total and the DOTS built on it. */
 function priorityStats() {
-  const lifts = priorityKeys().map(k => {
+  const slots = EVENT_TYPES[DEFAULT_EVENT_TYPE].lifts;
+  const lifts = priorityKeys().map((k, i) => {
     const t = latestTest(k);
-    return { name: leafName(k), key: k, leaf: keyLeaf(k),
+    return { name: leafName(k), key: k, leaf: keyLeaf(k), slot: slots[i] ? slots[i].slot : k,
+             label: slots[i] ? slots[i].label : leafName(k),
              kg: t ? t.kg : 0, tested: !!t, date: t ? t.date : null };
   });
   const total = lifts.reduce((a, l) => a + l.kg, 0);
@@ -4004,7 +4038,7 @@ function viewMeets() {
   const past = meets.filter(m => daysBetween(today(), m.date) < 0);
 
   return `
-  <h1>Meets</h1>
+  <h1>Events</h1>
   <div class="sub" style="margin-bottom:14px">Current standing and what you're building toward.</div>
 
   <div class="bigtotal">
@@ -4041,19 +4075,19 @@ function viewMeets() {
         </div>`).join('')}</div>`;
     })()}
 
-  <div class="sechead"><h2>Upcoming</h2><button class="btn xs" id="addMeet">+ Add meet</button></div>
+  <div class="sechead"><h2>Upcoming</h2><button class="btn xs" id="addMeet">+ Add event</button></div>
   ${upcoming.length ? upcoming.map(m => meetCard(m, ps)).join('')
-      : `<div class="card"><div class="empty"><span class="big">★</span>No meets scheduled.<br>Add one to plan attempts and track progress.</div></div>`}
+      : `<div class="card"><div class="empty"><span class="big">★</span>No events scheduled.<br>Add one to plan attempts and track progress.</div></div>`}
 
   ${past.length ? `<div class="sechead"><h2>Past</h2></div>
     ${past.reverse().map(m => `<div class="card tight"><div class="row between">
-      <div><div style="font-weight:650">${esc(m.name)}</div><div class="sub">${fmtDate(m.date, { month: 'long', day: 'numeric', year: 'numeric' })}${m.loc ? ' · ' + esc(m.loc) : ''}</div></div>
+      <div><div style="font-weight:650">${esc(m.name)}</div><div class="sub">${esc(eventType(m).label)} · ${fmtDate(m.date, { month: 'long', day: 'numeric', year: 'numeric' })}${m.loc ? ' · ' + esc(m.loc) : ''}</div></div>
       <button class="btn xs ghost" data-edit-meet="${m.id}">Edit</button></div></div>`).join('')}` : ''}
   `;
 }
 
 function priorityLeaf(k) {
-  const i = ['squat', 'bench', 'deadlift'].indexOf(k);
+  const i = EVENT_TYPES[DEFAULT_EVENT_TYPE].lifts.findIndex(l => l.slot === k);
   const p = (S.settings.priority || [])[i];
   return p && p.leaf ? p.leaf : null;
 }
@@ -4103,26 +4137,29 @@ function shortLift(n) {
 function meetCard(m, ps) {
   const days = daysBetween(today(), m.date);
   const weeks = Math.floor(days / 7);
-  const keys = ['squat', 'bench', 'deadlift'];
-  const goalTotal = keys.reduce((a, k) => a + (m.lifts[k] || 0), 0);
+  const lifts = eventLifts(m);
+  const goalTotal = lifts.reduce((a, l) => a + ((m.lifts || {})[l.slot] || 0), 0);
   const curTotal = ps.total;
   const pct = goalTotal ? (curTotal / goalTotal) * 100 : 0;
   const projDots = dots(goalTotal, m.bwTarget || ps.bw, S.settings.sex);
 
-  const rows = keys.map((k, i) => {
-    const goal = m.lifts[k] || 0;
-    const cur = ps.lifts[i] ? ps.lifts[i].kg : 0;
+  const BARC = ['', 'blue', 'gold', 'green', 'red'];
+  const rows = lifts.map((lift, i) => {
+    const k = lift.slot;
+    const goal = (m.lifts || {})[k] || 0;
+    const mine = ps.lifts.find(x => x.slot === k);
+    const cur = mine ? mine.kg : 0;
     const p = goal ? (cur / goal) * 100 : 0;
     const gap = goal - cur;
     const att = attemptsFor(m, k);
     const o = att.o, s2 = att.s, third = att.third || goal;
     return `<div style="margin-bottom:14px">
       <div class="row between" style="margin-bottom:5px">
-        <div><b>${esc(shortLift(ps.lifts[i] ? ps.lifts[i].name : k))}</b>
+        <div><b>${esc(lift.label)}</b>
           <span class="sub"> · now ${cur ? wt(cur) : '—'} → goal ${goal ? wt(goal) : '—'}</span></div>
         <div class="mono" style="font-weight:700;${p >= 100 ? 'color:var(--green)' : ''}">${Math.round(p)}%</div>
       </div>
-      ${bar(p, ['', 'blue', 'gold'][i] || '')}
+      ${bar(p, BARC[i % BARC.length])}
       <div class="sub" style="margin-top:4px">${gap > 0 ? `${wt(gap)} to go` : gap < 0 ? `${wt(-gap)} over goal` : 'on target'}${weeks > 0 && gap > 0 ? ` · ${wt(gap / Math.max(weeks, 1))}/week needed` : ''}</div>
       <div class="attempts">
         <div class="att o"><div class="k">Opener</div><div class="v">${o ? nice(dw(o, 1)) : '—'}</div><div class="p">${pctOf(o, third)}</div></div>
@@ -4147,7 +4184,7 @@ function meetCard(m, ps) {
     <div class="row between" style="margin-bottom:12px">
       <div class="grow">
         <div style="font-weight:750;font-size:16px">${esc(m.name)}</div>
-        <div class="sub">${fmtDate(m.date, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}${m.loc ? ' · ' + esc(m.loc) : ''}${m.fed ? ' · ' + esc(m.fed) : ''}</div>
+        <div class="sub">${esc(eventType(m).label)} · ${fmtDate(m.date, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}${m.loc ? ' · ' + esc(m.loc) : ''}${m.fed ? ' · ' + esc(m.fed) : ''}</div>
       </div>
       <button class="btn xs ghost" data-edit-meet="${m.id}">Edit</button>
     </div>
@@ -4231,24 +4268,27 @@ function meetCard(m, ps) {
   </div>`;
 }
 
-function openMeet(id) {
+function openMeet(id, typeId) {
   const ps = priorityStats();
   const existing = S.meets.find(x => x.id === id);
+  const type = EVENT_TYPES[typeId] || eventType(existing);
   const m = existing || {
-    id: uid(), name: '', date: '', fed: '', loc: '', wclass: '', bwTarget: 0, notes: '',
-    lifts: {
-      squat: roundBar(ps.lifts[0] ? ps.lifts[0].kg * 1.05 : 0),
-      bench: roundBar(ps.lifts[1] ? ps.lifts[1].kg * 1.05 : 0),
-      deadlift: roundBar(ps.lifts[2] ? ps.lifts[2].kg * 1.05 : 0),
-    },
+    id: uid(), type: type.id, name: '', date: '', fed: '', loc: '', wclass: '', bwTarget: 0, notes: '',
+    /* Seed each contested lift 5% above the current tested single. */
+    lifts: type.lifts.reduce((o, l) => {
+      const mine = ps.lifts.find(x => x.slot === l.slot);
+      o[l.slot] = roundBar(mine ? mine.kg * 1.05 : 0);
+      return o;
+    }, {}),
     pct: { o: 90, s: 95 },
   };
   const dflt = new Date(); dflt.setDate(dflt.getDate() + 84);
 
   modal({
-    title: id ? 'Edit meet' : 'New meet',
+    title: id ? `Edit ${type.label.toLowerCase()} event` : `New ${type.label.toLowerCase()} event`,
     body: `
-      <div class="field"><label>Meet name</label><input id="mName" value="${esc(m.name)}" placeholder="e.g. British Classic Qualifier"></div>
+      <div class="row wrap" style="gap:6px;margin-bottom:12px"><span class="chip accent">${esc(type.icon)} ${esc(type.label)}</span></div>
+      <div class="field"><label>Event name</label><input id="mName" value="${esc(m.name)}" placeholder="e.g. British Classic Qualifier"></div>
       <div class="grid2">
         <div class="field"><label>Date</label><input type="date" id="mDate" value="${m.date || iso(dflt)}"></div>
         <div class="field"><label>Federation</label><input id="mFed" value="${esc(m.fed)}" placeholder="IPF / USAPL…"></div>
@@ -4261,11 +4301,13 @@ function openMeet(id) {
         <input type="number" step="0.1" inputmode="decimal" id="mBw" value="${m.bwTarget ? dw(m.bwTarget) : ''}" placeholder="optional"></div>
 
       <div class="eyebrow" style="margin:16px 0 8px">Attempts (${U()})</div>
-      ${['squat', 'bench', 'deadlift'].map((k, i) => {
+      ${type.lifts.map(lift => {
+      const k = lift.slot;
       const a = attemptsFor(m, k);
+      const mine = ps.lifts.find(x => x.slot === k);
       return `<div style="margin-bottom:10px">
-          <label class="sub" style="display:block;margin-bottom:5px;font-weight:600">${['Squat', 'Bench', 'Deadlift'][i]}
-            <span class="dimmer">· current best ${ps.lifts[i] && ps.lifts[i].kg ? wt(ps.lifts[i].kg) : '—'}</span></label>
+          <label class="sub" style="display:block;margin-bottom:5px;font-weight:600">${esc(lift.label)}
+            <span class="dimmer">· current best ${mine && mine.kg ? wt(mine.kg) : '—'}</span></label>
           <div class="grid3">
             <input type="number" step="0.5" inputmode="decimal" data-att="${k}.o" placeholder="opener" value="${a.o ? dw(a.o) : ''}">
             <input type="number" step="0.5" inputmode="decimal" data-att="${k}.s" placeholder="second" value="${a.s ? dw(a.s) : ''}">
@@ -4280,7 +4322,7 @@ function openMeet(id) {
     foot: `${id ? '<button class="btn danger" id="mDel">Delete</button>' : ''}<button class="btn primary" id="mSave">Save meet</button>`,
     onOpen: bg => {
       const del = $('#mDel', bg);
-      if (del) del.onclick = () => confirmDlg('Delete this meet?', () => {
+      if (del) del.onclick = () => confirmDlg('Delete this event?', () => {
         S.meets = S.meets.filter(x => x.id !== id); save(); closeAllModals(); render();
       });
       const attVal = k => {
@@ -4288,7 +4330,7 @@ function openMeet(id) {
         return el && el.value !== '' ? toKg(+el.value) : 0;
       };
       $('#mAuto', bg).onclick = () => {
-        ['squat', 'bench', 'deadlift'].forEach(k => {
+        type.lifts.forEach(({ slot: k }) => {
           const t = attVal(`${k}.t`);
           if (!t) return;
           bg.querySelector(`[data-att="${k}.o"]`).value = dw(roundBar(t * 0.9));
@@ -4307,22 +4349,42 @@ function openMeet(id) {
           wclass: $('#mWc', bg).value.trim(),
           bwTarget: $('#mBw', bg).value ? toKg(+$('#mBw', bg).value) : 0,
           notes: $('#mNotes', bg).value.trim(),
-          lifts: {
-            squat: attVal('squat.t'), bench: attVal('bench.t'), deadlift: attVal('deadlift.t'),
-          },
-          attempts: {
-            squat: { o: attVal('squat.o'), s: attVal('squat.s') },
-            bench: { o: attVal('bench.o'), s: attVal('bench.s') },
-            deadlift: { o: attVal('deadlift.o'), s: attVal('deadlift.s') },
-          },
+          type: type.id,
+          lifts: type.lifts.reduce((o, l) => { o[l.slot] = attVal(`${l.slot}.t`); return o; }, {}),
+          attempts: type.lifts.reduce((o, l) => {
+            o[l.slot] = { o: attVal(`${l.slot}.o`), s: attVal(`${l.slot}.s`) };
+            return o;
+          }, {}),
           pct: m.pct || { o: 90, s: 95 },
           prog: m.prog,
         };
         S.meets = S.meets.filter(x => x.id !== m.id);
         S.meets.push(rec);
-        save(); closeAllModals(); render(); toast('Meet saved', 'green');
+        save(); closeAllModals(); render(); toast('Event saved', 'green');
       };
     },
+  });
+}
+
+/* Adding an event starts with what kind it is. One card per type — the list is
+   short today and that is the point: the model is open, the catalogue of types
+   is what grows. */
+function openAddEvent() {
+  const types = eventTypeList();
+  modal({
+    title: 'Add event',
+    body: `<div class="sub" style="margin-top:0;margin-bottom:12px">What are you competing in?</div>
+      ${types.map(t => `<button class="btn wide big" data-etype="${esc(t.id)}"
+        style="display:flex;flex-direction:column;align-items:flex-start;gap:4px;margin-bottom:10px">
+        <span>${esc(t.icon)} ${esc(t.label)}</span>
+        <span class="sub" style="white-space:normal;text-align:left">${esc(t.blurb)}</span>
+      </button>`).join('')}
+      <div class="sub" style="margin-top:6px">More disciplines can be added — each one declares its own lifts and scoring.</div>`,
+    foot: `<button class="btn ghost wide" data-close>Cancel</button>`,
+    onOpen: bg => bg.querySelectorAll('[data-etype]').forEach(b => b.onclick = () => {
+      closeModal();
+      openMeet(null, b.dataset.etype);
+    }),
   });
 }
 
@@ -4339,7 +4401,8 @@ function openPriority() {
       ${sel(0, 'Squat movement')}${sel(1, 'Bench movement')}${sel(2, 'Deadlift movement')}`,
     foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="priSave">Save</button>`,
     onOpen: bg => $('#priSave', bg).onclick = () => {
-      S.settings.priority = ['squat', 'bench', 'deadlift'].map((slot, i) => ({ slot, leaf: keyLeaf($('#pri' + i, bg).value) }));
+      S.settings.priority = EVENT_TYPES[DEFAULT_EVENT_TYPE].lifts
+        .map((l, i) => ({ slot: l.slot, leaf: keyLeaf($('#pri' + i, bg).value) }));
       save(); closeModal(); render();
     },
   });
@@ -4446,7 +4509,8 @@ function installProgram(P, startDate) {
   if (P.priority && untouched) {
     S.settings.priority = P.priority.slice(0, 3).map((n, i) => {
       const r = resolveName(n);
-      return { slot: ['squat', 'bench', 'deadlift'][i] || 'squat',
+      const l = EVENT_TYPES[DEFAULT_EVENT_TYPE].lifts[i];
+      return { slot: l ? l.slot : 'squat',
                leaf: r ? r.leaf : completeLeaf(customMovementFor(n), null) };
     });
   }
@@ -5957,7 +6021,7 @@ function wire() {
   }
 
   if (page === 'meets') {
-    $('#addMeet').onclick = () => openMeet();
+    $('#addMeet').onclick = openAddEvent;
     const lt = $('#logTestBtn');
     if (lt) lt.onclick = openTestLog;
     v.querySelectorAll('[data-lockmeet]').forEach(b => b.onclick = () => {
