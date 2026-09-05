@@ -325,6 +325,120 @@ window.smoke = async function smoke(opts) {
     return `age ${age}, ${t.kcal} kcal, ${t.p}/${t.c}/${t.f}`;
   });
 
+  /* Velocity. The engine is Slew's, bundled rather than reimplemented, so what
+     is checked here is the JOIN: that it loaded, that leaves map to the right
+     velocity profile, that a measured set attaches to the right place, and that
+     a set taken to failure calibrates the profile. */
+  const vbtSignal = (ups, miss) => {
+    const HZ = 60, DT = 1000 / HZ;
+    let t = 0, x = 0; const out = [];
+    const hold = s => { for (let i = 0; i < s * HZ; i++) out.push({ t: t += DT, x, conf: 1 }); };
+    const move = (d, s) => {
+      const x0 = x, n = Math.round(s * HZ);
+      for (let i = 1; i <= n; i++) { const p = i / n; x = x0 + d * (p - Math.sin(2 * Math.PI * p) / (2 * Math.PI)); out.push({ t: t += DT, x, conf: 1 }); }
+    };
+    hold(0.8);
+    for (const up of ups) { move(-0.5, 1.4); hold(0.25); move(0.5, up); hold(1.0); }
+    if (miss) { move(-0.5, 1.4); hold(0.25); move(0.26, 1.6); move(-0.26, 0.9); hold(1.2); }
+    return out;
+  };
+  const vbtRun = (liftId, ups, miss, loadKg) => {
+    const p = slewProfile(liftId);
+    const o = Slew.analyse(vbtSignal(ups, miss), { targetHz: 60, minRom: p.minRom, loadKg });
+    const reps = Slew.withRpe(o.reps, p);
+    const est = Slew.estimateSet(reps, p, o.failure);
+    return { o, reps, est, p, v: packVbt({ timestamp: Date.now(), reps, summary: o.summary, provenance: { mode: 'sensor', sampleRate: 60, sourceRate: 60 } }, est, liftId) };
+  };
+
+  await step('velocity: engine loaded and leaves map to profiles', async () => {
+    if (!window.Slew) throw new Error('slew-core.js did not load');
+    for (const fn of ['analyse', 'withRpe', 'estimateSet', 'MotionCapture', 'defaultProfile', 'integrateMotion']) {
+      if (typeof Slew[fn] === 'undefined') throw new Error(`engine is missing ${fn}`);
+    }
+    const want = [['Back Squat', 'Squat (free bar)'], ['Bench Press', 'Bench press'], ['Deadlift', 'Deadlift (conv.)'], ['Overhead Press', 'Overhead press']];
+    for (const [name, id] of want) {
+      const got = slewLiftFor(resolveName(name).leaf);
+      if (got !== id) throw new Error(`${name} mapped to ${got}, expected ${id}`);
+    }
+    // a movement with no sensible velocity bucket must map to nothing, not to the nearest one
+    if (slewLiftFor(resolveName('Plank').leaf)) throw new Error('Plank was given a velocity profile');
+    return `${Object.keys(Slew.DEFAULT_PROFILES).length} profiles`;
+  });
+
+  await step('velocity: a set measures, decays and attaches', async () => {
+    close(); S.active = null; save();
+    const { v, est } = vbtRun('Squat (free bar)', [0.8, 0.95, 1.15, 1.45], false, 140);
+    if (v.reps.length !== 4) throw new Error(`${v.reps.length} reps detected, expected 4`);
+    if (!(v.best > 0.4 && v.best < 1.5)) throw new Error(`best velocity ${v.best} is not plausible`);
+    for (let i = 1; i < v.reps.length; i++) {
+      if (v.reps[i].v >= v.reps[i - 1].v) throw new Error('velocity did not fall across a set that slowed down');
+    }
+    if (!(v.loss > 20)) throw new Error(`velocity loss only ${v.loss}%`);
+    if (!v.est) throw new Error('no effort estimate for a mapped lift');
+    if (!v.est.because) throw new Error('an estimate with no explanation');
+    // samples must never be stored — the whole state is one blob rewritten on every save
+    const json = JSON.stringify(v);
+    if (/"samples"|"x":/.test(json)) throw new Error('raw samples got stored');
+    if (json.length > 4000) throw new Error(`stored payload is ${json.length} bytes`);
+
+    newBlank();
+    S.active.exercises.push({ leaf: resolveName('Back Squat').leaf, legacyName: 'Back Squat', notes: '', mods: [], sets: [{ w: 140, r: 0, rpe: null, done: false, setType: 'working' }] });
+    save(); render(); await wait(150);
+    if (!document.querySelector('[data-vbt="0"]')) throw new Error('no measure button on the card');
+    attachVbt(0, v, est);
+    await wait(180);
+    const s = S.active.exercises[0].sets[0];
+    if (!s.vbt) throw new Error('nothing attached to the set');
+    if (s.r !== 4) throw new Error(`rep count not filled from the sensor (got ${s.r})`);
+    if (!document.querySelector('.vbtstrip')) throw new Error('measured set not shown on the card');
+
+    /* Finishing and editing both rebuild the exercise list, and that is exactly
+       how timed sets were silently discarded. Measured sets go the same way if
+       nobody checks. */
+    S.active.exercises[0].sets.forEach(x => { x.done = true; });
+    const woId = S.active.id;
+    /* force: on an empty history a heavy single trips the plausibility prompt,
+       which stops the finish and would leave this checking some earlier
+       session. Find the workout by id for the same reason. */
+    save(); finishWorkout(true); await wait(360); close();
+    const wo = S.workouts.find(w => w.id === woId);
+    if (!wo || wo.status !== 'completed') throw new Error('the session did not finish');
+    if (!wo.exercises[0].sets[0].vbt) throw new Error('velocity data was dropped when the session was finished');
+    openEditWorkout(wo.id); await wait(200); saveEdit(true); await wait(240); close();
+    const after = S.workouts.find(w => w.id === woId);
+    if (!after || !after.exercises[0].sets[0].vbt) throw new Error('velocity data was dropped when the session was edited');
+
+    S.active = null; save();
+    return `${v.reps.length} reps, ${v.best.toFixed(2)} m/s, ▾${v.loss.toFixed(0)}%, ${json.length} bytes, survives finish+edit`;
+  });
+
+  await step('velocity: a failed rep calibrates the profile', async () => {
+    close();
+    const before = S.settings.slewProfiles;
+    S.settings.slewProfiles = {};
+    const { o, est, v } = vbtRun('Squat (free bar)', [0.8, 0.95, 1.15, 1.45], true, 140);
+    if (!o.failure.failedAttempt) throw new Error('a missed rep was not detected');
+    if (o.reps.length !== 4) throw new Error(`the miss was counted as a rep (${o.reps.length})`);
+    if (est.method !== 'observed-failure') throw new Error(`method was ${est.method}`);
+    if (est.rir !== 0) throw new Error(`RIR ${est.rir} after an observed failure`);
+    if (!est.measuredV0) throw new Error('failure did not measure a 0-RIR velocity');
+
+    S.active = null; newBlank();
+    S.active.exercises.push({ leaf: resolveName('Back Squat').leaf, legacyName: 'Back Squat', notes: '', mods: [], sets: [{ w: 140, r: 0, rpe: null, done: false, setType: 'working' }] });
+    attachVbt(0, v, est);
+    const cal = slewProfile('Squat (free bar)').v0Observed;
+    if (!cal) throw new Error('the measured velocity was not written back to the profile');
+
+    // and the payoff: the next estimate should be less uncertain than it was
+    const after = vbtRun('Squat (free bar)', [0.8, 0.95, 1.15], false, 140).est;
+    S.settings.slewProfiles = {};
+    const raw = vbtRun('Squat (free bar)', [0.8, 0.95, 1.15], false, 140).est;
+    if (!(after.spread < raw.spread)) throw new Error(`calibration did not narrow the spread (${after.spread} vs ${raw.spread})`);
+
+    S.settings.slewProfiles = before; S.active = null; save();
+    return `v0 ${cal.toFixed(2)} m/s, spread ${raw.spread.toFixed(1)} -> ${after.spread.toFixed(1)} RIR`;
+  });
+
   await step('picker: equipment icon row', async () => {
     close();
     let got = null;
