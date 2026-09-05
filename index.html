@@ -332,6 +332,29 @@ tr.pr td input{background:rgba(255,197,66,.1);border-color:rgba(255,197,66,.35)}
 .axrow.off{color:var(--dim2);cursor:not-allowed}
 .axrow.off svg{color:var(--dim2);opacity:.45}
 .axrow.off .rad{opacity:.35}
+/* Variant strip. One chip per leaf of this movement that has been logged,
+   plus the primary. Horizontal scroll rather than wrap — it is a rail, not a
+   grid, and it must not push the tabs off screen. */
+.varstrip{display:flex;gap:7px;overflow-x:auto;padding:10px 0 2px;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.varstrip::-webkit-scrollbar{display:none}
+.vartab{flex:none;border:1px solid var(--line2);background:var(--bg2);color:var(--dim);
+  border-radius:9px;padding:7px 11px;font-size:12.5px;font-weight:650;cursor:pointer;white-space:nowrap}
+.vartab .n{display:block;color:var(--txt)}
+.vartab .m{display:block;font-size:11px;font-weight:600;margin-top:2px}
+.vartab.on{border-color:var(--accent);background:rgba(255,92,53,.13)}
+.vartab.on .n{color:var(--accent2)}
+.iconrow{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 2px}
+.iconrow .ic{width:34px;height:34px;display:grid;place-items:center;border-radius:9px;
+  border:1px solid var(--line2);background:var(--bg2);color:var(--dim2)}
+.iconrow .ic.on{border-color:var(--accent);color:var(--accent2);background:rgba(255,92,53,.13)}
+.iconrow .ic svg{width:19px;height:19px}
+.legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:12px}
+.legend span{display:inline-flex;align-items:center;gap:5px;color:var(--dim)}
+.legend i{width:9px;height:9px;border-radius:50%;display:inline-block}
+.vartable{width:100%;border-collapse:collapse;font-size:13px}
+.vartable td{padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)}
+.vartable tr:last-child td{border-bottom:none}
+.vartable .r{text-align:right;white-space:nowrap}
 
 .summary-hero{
   text-align:center;padding:6px 0 14px;
@@ -736,7 +759,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.7.1';
+const APP_VERSION = '0.8.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -1865,6 +1888,49 @@ function bar(pct, cls = '') {
 }
 
 /* line chart: data = [{date, v}] */
+/* One line per variant, overlaid on a shared date axis. Section 4.5: never
+   merged, never averaged — aggregating across variants is a lie, because a
+   machine press and a competition bench are not the same lift. Series may
+   cover different dates, so the x axis is the union of all of them. */
+const SERIES_COLORS = ['var(--accent)', 'var(--blue)', 'var(--green)', 'var(--purple)', 'var(--gold)'];
+function chartMulti(series, { h = 170, fmt = v => nice(v) } = {}) {
+  const live = series.filter(s => s.points.length);
+  if (!live.length) return `<div class="empty">No data yet</div>`;
+  const dates = [...new Set(live.flatMap(s => s.points.map(p => p.date)))].sort();
+  const vals = live.flatMap(s => s.points.map(p => p.v));
+  let min = Math.min(...vals), max = Math.max(...vals);
+  if (min === max) { min = min * 0.95 || 0; max = max * 1.05 || 1; }
+  const span = max - min || 1;
+  min -= span * 0.08; max += span * 0.08;
+  const W = 320, H = h, padL = 34, padR = 8, padT = 12, padB = 20;
+  const x = d => padL + (dates.length === 1 ? (W - padL - padR) / 2
+    : dates.indexOf(d) * (W - padL - padR) / (dates.length - 1));
+  const y = v => padT + (1 - (v - min) / (max - min)) * (H - padT - padB);
+
+  let grid = '';
+  for (let i = 0; i <= 4; i++) {
+    const v = min + (max - min) * (i / 4), yy = y(v);
+    grid += `<line class="grid" x1="${padL}" x2="${W - padR}" y1="${yy.toFixed(1)}" y2="${yy.toFixed(1)}" opacity=".5"/>
+             <text class="axis" x="${padL - 5}" y="${(yy + 3).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`;
+  }
+  const lines = live.map((s, si) => {
+    const c = s.color || SERIES_COLORS[si % SERIES_COLORS.length];
+    const pts = s.points.map(p => [x(p.date), y(p.v)]);
+    const d = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
+    return `<path class="ln" d="${d}" stroke="${c}" fill="none"/>` +
+      pts.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.6" fill="${c}"/>`).join('');
+  }).join('');
+  const labIdx = dates.length <= 2 ? dates.map((_, i) => i) : [0, Math.floor((dates.length - 1) / 2), dates.length - 1];
+  const xlabs = labIdx.map(i => {
+    const anchor = i === 0 ? 'start' : i === dates.length - 1 ? 'end' : 'middle';
+    return `<text class="axis" x="${x(dates[i]).toFixed(1)}" y="${H - 5}" text-anchor="${anchor}">${parseISO(dates[i]).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</text>`;
+  }).join('');
+  const legend = live.length > 1 ? `<div class="legend">${live.map((s, si) =>
+    `<span><i style="background:${s.color || SERIES_COLORS[si % SERIES_COLORS.length]}"></i>${esc(s.label)}</span>`).join('')}</div>` : '';
+  return `<div class="chartbox"><svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${H}px">
+    ${grid}${lines}${xlabs}</svg></div>${legend}`;
+}
+
 function chart(data, { color = 'var(--accent)', h = 150, fmt = v => nice(v) } = {}) {
   if (data.length === 0) return `<div class="empty">No data yet</div>`;
   const W = 320, H = h, padL = 34, padR = 8, padT = 12, padB = 20;
@@ -3460,7 +3526,7 @@ function viewAnalytics() {
       <div class="sub" style="font-size:11px">at ${wt(bw, 1)} bw</div>
     </div>
     ${ranks.slice(0, 12).map(r => `
-      <div class="rank-row" data-exdetail="${esc(r.name)}">
+      <div class="rank-row" data-exdetail="${esc(r.key)}">
         <div class="grow">
           <div class="n">${esc(r.name)}${r.estOnly ? ' <span class="chip">EST</span>' : ''}</div>
           <div class="m"><span class="tierlab" style="color:${r.color}">${r.tierName}</span>
@@ -3505,7 +3571,7 @@ function viewAnalytics() {
   <div class="card flush">
     ${list.map(s => {
           const t = s.pct > 1 ? 'up' : s.pct < -1 ? 'down' : 'flat';
-          return `<div class="ex-row" data-exdetail="${esc(s.name)}">
+          return `<div class="ex-row" data-exdetail="${esc(s.key)}">
         <div class="grow">
           <div class="n">${esc(s.name)}</div>
           <div class="m">${s.sessions} session${s.sessions === 1 ? '' : 's'} · ${s.totalSets} sets · last ${relDay(s.lastDate)}</div>
@@ -3522,68 +3588,149 @@ function viewAnalytics() {
 }
 
 let detailMetric = 'e1';
-function openExDetail(key) {
-  const s = statsFor(key);
-  if (!s) return;
-  const draw = () => {
-    const data = s.series.map(x => ({
-      date: x.date,
-      v: detailMetric === 'e1' ? dw(x.e1) : detailMetric === 'top' ? dw(x.top) : dw(x.vol, 0),
-    }));
-    return chart(data, { h: 160, fmt: v => nice(Math.round(v)) });
-  };
-  const repRows = Object.keys(s.byRep).map(Number).sort((a, b) => a - b).slice(0, 12)
-    .map(r => {
-      const x = s.byRep[r];
-      return `<tr><td><b>${r}RM</b></td><td class="muted">${fmtDate(x.date, { month: 'short', day: 'numeric', year: '2-digit' })}</td>
-        <td class="mono"><b>${wt(x.w)}</b> <span class="dimmer">· e1RM ${wt(x.e1)}</span></td></tr>`;
-    }).join('');
+/* Every leaf of this movement that has been logged, plus the primary — so the
+   page always offers the canonical variant even before it has been done. */
+function movementVariants(movementId) {
+  const keys = new Set();
+  S.workouts.filter(w => w.status === 'completed').forEach(wo => wo.exercises.forEach(e => {
+    if (e.leaf && e.leaf.movement === movementId) keys.add(exKey(e));
+  }));
+  const m = movementById(movementId);
+  if (m) keys.add(leafKey(completeLeaf(m, null)));
+  return [...keys].map(k => ({ key: k, leaf: keyLeaf(k), name: displayName(keyLeaf(k)), stats: statsFor(k) }))
+    .sort((a, b) => (b.stats ? b.stats.sessions : 0) - (a.stats ? a.stats.sessions : 0));
+}
+/* The primary variant is the movement at its defaults — Aaron's IPF squat is
+   Back Squat / barbell / bilateral, not "best squat variant". */
+function primaryVariantKey(movementId) {
+  const m = movementById(movementId);
+  return m ? leafKey(completeLeaf(m, null)) : null;
+}
 
-  const trendCls = s.pct > 1 ? 'up' : s.pct < -1 ? 'down' : 'flat';
+let _mvTab = 'info';
+/* The movement page. A parent rolls its leaves up for presentation and stores
+   nothing (section 4.3); the headline is the primary variant's or nothing at
+   all (4.4), never the maximum across variants. */
+function openMovementPage(movementId, focusKey) {
+  const m = movementById(movementId);
+  if (!m) return toast('Not in the exercise catalogue');
+  const vars = movementVariants(movementId);
+  let focus = focusKey && vars.some(v => v.key === focusKey) ? focusKey : (vars[0] && vars[0].key);
+  _mvTab = 'info';
+
+  const strip = () => `<div class="varstrip">${vars.map(v => `
+    <button class="vartab ${v.key === focus ? 'on' : ''}" data-var="${esc(v.key)}">
+      <span class="n">${esc(v.name)}</span>
+      <span class="m">${v.stats ? `${v.stats.sessions} session${v.stats.sessions === 1 ? '' : 's'}` : 'not logged'}</span>
+    </button>`).join('')}</div>`;
+
+  const infoTab = () => {
+    const leaf = keyLeaf(focus);
+    const atts = attachmentsFor(m, leaf.equipment);
+    const icons = (list, cur, iconMap, labelMap) => `<div class="iconrow">${list.map(v =>
+      `<span class="ic ${v === cur ? 'on' : ''}" title="${esc((labelMap && labelMap[v]) || v)}">${(iconMap && iconMap[v]) || ''}</span>`).join('')}</div>`;
+    const muscles = ms => (ms || []).map(x => `<span class="chip">${esc(x)}</span>`).join(' ') || '<span class="sub">—</span>';
+    return `
+      <div class="row wrap" style="gap:7px;margin-bottom:12px">
+        <span class="chip">${esc(m.category)}</span>
+        <span class="chip">${esc(m.metric || 'reps_weight') === 'time' ? 'timed' : 'reps × weight'}</span>
+        <span class="chip">${loadConventionFor(leaf) === 'per_side' ? 'per side' : 'total'} load</span>
+        ${m.verified === false ? '<span class="chip">unverified</span>' : ''}
+      </div>
+      <div class="eyebrow">Equipment</div>
+      ${icons(m.equipment || [], leaf.equipment, EQ_ICON, EQ_TITLE)}
+      <div class="eyebrow" style="margin-top:12px">Execution</div>
+      ${icons(m.execution || [], leaf.execution, EXEC_ICON, EXEC_LABEL)}
+      ${atts.length > 1 ? `<div class="eyebrow" style="margin-top:12px">Attachment</div>
+        <div class="row wrap" style="gap:6px;margin-top:6px">${atts.map(a =>
+          `<span class="chip ${a === leaf.attachment ? 'accent' : ''}">${esc(ATT_TITLE[a] || a)}</span>`).join('')}</div>` : ''}
+      <div class="eyebrow" style="margin-top:14px">Primary muscles</div>
+      <div class="row wrap" style="gap:6px;margin-top:6px">${muscles(m.primary)}</div>
+      ${(m.secondary || []).length ? `<div class="eyebrow" style="margin-top:12px">Secondary</div>
+        <div class="row wrap" style="gap:6px;margin-top:6px">${muscles(m.secondary)}</div>` : ''}
+      <div class="sub" style="margin-top:14px">${vars.length} variant${vars.length === 1 ? '' : 's'} known · each keeps its own records.</div>`;
+  };
+
+  const statsTab = () => {
+    const pk = primaryVariantKey(movementId);
+    const ps = statsFor(pk);
+    /* Section 4.4 — the headline is the primary variant's, or nothing. A
+       machine chest press outranking a competition bench is nonsense. */
+    const headline = ps
+      ? `<div class="stats grid3" style="margin-bottom:6px">
+          <div class="stat"><div class="k">Best e1RM</div><div class="v">${w(ps.best.e1)}</div><div class="d">${esc(displayName(keyLeaf(pk)))}</div></div>
+          <div class="stat"><div class="k">Top set</div><div class="v">${w(ps.bestW.w)}</div><div class="d">× ${ps.bestW.r}</div></div>
+          <div class="stat"><div class="k">Sessions</div><div class="v">${ps.sessions}</div><div class="d">${ps.totalSets} sets</div></div>
+        </div>`
+      : `<div class="card tight" style="margin-bottom:10px"><div class="sub">No headline figure — the primary variant
+          (${esc(displayName(keyLeaf(pk)))}) hasn't been logged. Variants are never rolled up into one number.</div></div>`;
+    const rows = vars.filter(v => v.stats).map((v, i) => `
+      <tr><td><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${SERIES_COLORS[i % SERIES_COLORS.length]};margin-right:7px"></i>${esc(v.name)}</td>
+        <td class="r mono">${w(v.stats.best.e1)}</td>
+        <td class="r mono dimmer">${v.stats.sessions}s</td></tr>`).join('');
+    const series = vars.filter(v => v.stats).map((v, i) => ({
+      label: v.name, color: SERIES_COLORS[i % SERIES_COLORS.length],
+      points: v.stats.series.map(p => ({ date: p.date, v: dw(p.e1) })),
+    }));
+    return `${headline}
+      <div class="eyebrow" style="margin:14px 0 6px">Estimated 1RM by variant</div>
+      ${chartMulti(series, { fmt: v => nice(Math.round(v)) })}
+      <div class="eyebrow" style="margin:16px 0 4px">Records per variant</div>
+      <table class="vartable"><tbody>${rows || '<tr><td class="sub">Nothing logged yet</td></tr>'}</tbody></table>`;
+  };
+
+  const historyTab = () => {
+    const rows = [];
+    S.workouts.filter(wo => wo.status === 'completed').forEach(wo => wo.exercises.forEach(e => {
+      if (!e.leaf || e.leaf.movement !== movementId) return;
+      const working = e.sets.filter(s => s.done && isWorking(s));
+      if (!working.length) return;
+      rows.push({ date: wo.date, name: exName(e), key: exKey(e), sets: working, id: wo.id });
+    }));
+    rows.sort((a, b) => a.date < b.date ? 1 : -1);
+    if (!rows.length) return `<div class="empty">Nothing logged yet</div>`;
+    return rows.slice(0, 40).map(r => `
+      <div class="card tight" style="margin-bottom:8px">
+        <div class="row between" style="margin-bottom:6px">
+          <div><div style="font-weight:650">${esc(r.name)}</div>
+            <div class="sub">${fmtDate(r.date)} · ${relDay(r.date)}</div></div>
+          <button class="btn xs ghost" data-hist-wo="${esc(r.id)}">View</button>
+        </div>
+        ${r.sets.map((s, i) => `<div class="exline"><span class="dimmer">Set ${i + 1}</span>
+          <span class="mono">${s.w > 0 ? `${wt(s.w)} × ${s.r == null ? 'AMRAP' : s.r}` : `${s.r == null ? 'AMRAP' : s.r} reps`}${s.rpe ? ` @ ${s.rpe}` : ''}</span></div>`).join('')}
+      </div>`).join('');
+  };
+
+  const body = () => `
+    <div class="seg" id="mvTabs">
+      <button data-mvtab="info" class="${_mvTab === 'info' ? 'on' : ''}">Info</button>
+      <button data-mvtab="stats" class="${_mvTab === 'stats' ? 'on' : ''}">Statistics</button>
+      <button data-mvtab="history" class="${_mvTab === 'history' ? 'on' : ''}">History</button>
+    </div>
+    ${strip()}
+    <div style="margin-top:12px">${_mvTab === 'info' ? infoTab() : _mvTab === 'stats' ? statsTab() : historyTab()}</div>`;
 
   modal({
-    title: leafName(key),
-    body: `
-      <div class="row wrap" style="gap:7px;margin-bottom:13px">
-        <span class="chip gold">★ PR ${wt(s.bestW.w)} × ${s.bestW.r}</span>
-        <span class="chip">best e1RM ${wt(s.best.e1)}</span>
-        <span class="chip">${categoryOf(keyLeaf(key))}</span>
-        <span class="chip">${esc(loadConventionFor(keyLeaf(key)) === 'per_side' ? 'per side' : 'total')} load</span>
-      </div>
-
-      <div class="stats grid3" style="margin-bottom:6px">
-        <div class="stat"><div class="k">Sessions</div><div class="v">${s.sessions}</div><div class="d">${s.totalSets} sets</div></div>
-        <div class="stat"><div class="k">Progress</div><div class="v ${trendCls}" style="color:${s.pct > 1 ? 'var(--green)' : s.pct < -1 ? 'var(--red)' : 'inherit'}">${s.pct >= 0 ? '+' : ''}${Math.round(s.pct)}<small>%</small></div>
-          <div class="d">${s.delta >= 0 ? '+' : ''}${wt(s.delta)} e1RM</div></div>
-        <div class="stat"><div class="k">Volume</div><div class="v">${w(s.volume, 0)}</div><div class="d">all time</div></div>
-      </div>
-
-      <div class="seg" style="margin:12px 0 4px">
-        <button data-metric="e1" class="${detailMetric === 'e1' ? 'on' : ''}">Est. 1RM</button>
-        <button data-metric="top" class="${detailMetric === 'top' ? 'on' : ''}">Top set</button>
-        <button data-metric="vol" class="${detailMetric === 'vol' ? 'on' : ''}">Volume</button>
-      </div>
-      <div id="exChart">${draw()}</div>
-
-      <div class="eyebrow" style="margin:14px 0 6px">Rep maxes</div>
-      <table class="rep-tab"><tbody>${repRows}</tbody></table>
-
-      <div class="eyebrow" style="margin:18px 0 6px">Recent sessions</div>
-      ${[...s.series].reverse().slice(0, 8).map(x => `
-        <div class="exline"><span>${fmtDate(x.date)}</span>
-          <span class="mono muted">top ${wt(x.top)} · e1RM ${wt(x.e1)} · ${x.sets} sets</span></div>`).join('')}
-
-      <div class="sub" style="margin-top:14px">First logged ${fmtDate(s.firstDate, { month: 'short', day: 'numeric', year: 'numeric' })} · last ${relDay(s.lastDate)}</div>
-    `,
-    foot: `<button class="btn primary" data-close>Close</button>`,
+    title: m.name,
+    body: body(),
+    foot: `<button class="btn primary wide" data-close>Close</button>`,
     onOpen: bg => {
-      bg.querySelectorAll('[data-metric]').forEach(b => b.onclick = () => {
-        detailMetric = b.dataset.metric;
-        bg.querySelectorAll('[data-metric]').forEach(x => x.classList.toggle('on', x === b));
-        $('#exChart', bg).innerHTML = draw();
-      });
+      const bind = () => {
+        bg.querySelectorAll('[data-mvtab]').forEach(b => b.onclick = () => { _mvTab = b.dataset.mvtab; redraw(); });
+        bg.querySelectorAll('[data-var]').forEach(b => b.onclick = () => { focus = b.dataset.var; redraw(); });
+        bg.querySelectorAll('[data-hist-wo]').forEach(b => b.onclick = () => { closeAllModals(); viewCompleted(b.dataset.histWo); });
+      };
+      const redraw = () => { const el = $('.modal-body', bg); if (el) { el.innerHTML = body(); bind(); } };
+      bind();
     },
   });
+}
+
+/* Entered from a leaf; opens that leaf's movement page focused on it. */
+function openExDetail(key) {
+  const leaf = keyLeaf(key);
+  if (!leaf || !leaf.movement) return;
+  openMovementPage(leaf.movement, key);
 }
 
 /* ============================================================
