@@ -763,7 +763,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.12.0';
+const APP_VERSION = '0.12.1';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4276,7 +4276,7 @@ function meetCard(m, ps) {
     ${(() => {
       const field = fieldForMeet(m);
       if (!field) return '';
-      const now = predictPlacing(field, curTotal);
+      const now = predictPlacing(field, curTotalOwn);
       if (!now) return '';
       const goal = goalTotal ? predictPlacing(field, goalTotal) : null;
 
