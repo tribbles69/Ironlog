@@ -763,7 +763,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.11.0';
+const APP_VERSION = '0.12.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -3936,6 +3936,35 @@ const EVENT_TYPES = {
     scored: 'dots',      // total -> DOTS against bodyweight
     wclass: true,        // weight classes and a bodyweight target apply
   },
+  strengthlifting: {
+    id: 'strengthlifting',
+    label: 'Strengthlifting',
+    blurb: 'Squat, overhead press and deadlift. Three attempts at each, best of each counted.',
+    icon: '◈',
+    lifts: [
+      { slot: 'squat',    label: 'Squat',    movement: 'back-squat',     equipment: 'barbell' },
+      { slot: 'press',    label: 'Press',    movement: 'overhead-press', equipment: 'barbell' },
+      { slot: 'deadlift', label: 'Deadlift', movement: 'deadlift',       equipment: 'barbell' },
+    ],
+    attempts: true,
+    /* No DOTS. The coefficients are fitted to powerlifting totals; running a
+       squat-press-deadlift total through them produces a number that looks
+       comparable to a powerlifting DOTS and is not. Total only, until there is
+       a formula that means something here. */
+    scored: 'total',
+    wclass: true,
+  },
+  'single-lift': {
+    id: 'single-lift',
+    label: 'Single lift',
+    blurb: 'One lift, three attempts. Bench-only, deadlift-only, or whatever the meet contests.',
+    icon: '▲',
+    chooseLift: true,     // the lift is picked per event, not fixed by the type
+    lifts: [],
+    attempts: true,
+    scored: 'total',
+    wclass: true,
+  },
 };
 const DEFAULT_EVENT_TYPE = 'powerlifting';
 /* Events saved before types existed are powerlifting meets — no migration
@@ -3943,7 +3972,26 @@ const DEFAULT_EVENT_TYPE = 'powerlifting';
 function eventType(m) {
   return EVENT_TYPES[(m && m.type) || DEFAULT_EVENT_TYPE] || EVENT_TYPES[DEFAULT_EVENT_TYPE];
 }
-function eventLifts(m) { return eventType(m).lifts; }
+/* The type supplies the lifts; an event may carry its own, which is how a
+   single-lift meet says which lift it actually contests. */
+function eventLifts(m) {
+  if (m && Array.isArray(m.lifts$) && m.lifts$.length) return m.lifts$;
+  return eventType(m).lifts;
+}
+
+/* Which leaf a contested lift means for YOU. Your own choice for that slot wins
+   — an IPF squat is whatever you compete with — and otherwise it falls back to
+   the movement the type names. Resolving by movement rather than by position in
+   settings.priority is what lets a discipline contest a lift that is not one of
+   your three, like the strengthlifting press. */
+function liftKey(lift) {
+  const p = priorityLeaf(lift.slot);
+  if (p) return leafKey(p);
+  const mv = movementById(lift.movement);
+  if (!mv) return '';
+  return leafKey(completeLeaf(mv, { equipment: lift.equipment }));
+}
+function liftBest(lift) { return latestTest(liftKey(lift)); }
 function eventTypeList() { return Object.values(EVENT_TYPES); }
 
 const FIELDS = {
@@ -4105,15 +4153,16 @@ function liftName(k) {
    Third goes to whichever is higher. Testing above your goal third doesn't mean
    you should open at 90% of a target you've already beaten. */
 function attemptsFor(m, lift) {
-  const goal = (m.lifts && m.lifts[lift]) || 0;
-  const a = (m.attempts && m.attempts[lift]) || null;
+  const slot = typeof lift === 'string' ? lift : lift.slot;
+  const goal = (m.lifts && m.lifts[slot]) || 0;
+  const a = (m.attempts && m.attempts[slot]) || null;
   const planned = a && (a.o || a.s)
     ? { o: a.o || 0, s: a.s || 0 }
     : goal
       ? (() => { const p = m.pct || { o: 90, s: 95 }; return { o: roundBar(goal * (p.o / 100)), s: roundBar(goal * (p.s / 100)) }; })()
       : { o: 0, s: 0 };
 
-  const t = latestTest(priorityKey(lift));
+  const t = typeof lift === 'string' ? latestTest(priorityKey(lift)) : liftBest(lift);
   if (!t || m.attemptsLocked) {
     return { ...planned, third: goal, from: 'planned', tested: t || null, planned };
   }
@@ -4139,19 +4188,24 @@ function meetCard(m, ps) {
   const weeks = Math.floor(days / 7);
   const lifts = eventLifts(m);
   const goalTotal = lifts.reduce((a, l) => a + ((m.lifts || {})[l.slot] || 0), 0);
-  const curTotal = ps.total;
-  const pct = goalTotal ? (curTotal / goalTotal) * 100 : 0;
-  const projDots = dots(goalTotal, m.bwTarget || ps.bw, S.settings.sex);
+  const type = eventType(m);
+  const useDots = type.scored === 'dots';
+  /* The current total is this event's own lifts, not the priority triple — a
+     strengthlifting total is squat + press + deadlift, and reading it off the
+     powerlifting panel would quietly substitute the bench. */
+  const curTotalOwn = lifts.reduce((a, l) => { const b = liftBest(l); return a + (b ? b.kg : 0); }, 0);
+  const pct = goalTotal ? (curTotalOwn / goalTotal) * 100 : 0;
+  const projDots = useDots ? dots(goalTotal, m.bwTarget || ps.bw, S.settings.sex) : 0;
 
   const BARC = ['', 'blue', 'gold', 'green', 'red'];
   const rows = lifts.map((lift, i) => {
     const k = lift.slot;
     const goal = (m.lifts || {})[k] || 0;
-    const mine = ps.lifts.find(x => x.slot === k);
-    const cur = mine ? mine.kg : 0;
+    const best = liftBest(lift);          // by movement, so any discipline resolves
+    const cur = best ? best.kg : 0;
     const p = goal ? (cur / goal) * 100 : 0;
     const gap = goal - cur;
-    const att = attemptsFor(m, k);
+    const att = attemptsFor(m, lift);
     const o = att.o, s2 = att.s, third = att.third || goal;
     return `<div style="margin-bottom:14px">
       <div class="row between" style="margin-bottom:5px">
@@ -4196,11 +4250,14 @@ function meetCard(m, ps) {
 
     <div class="stats grid3" style="margin-bottom:14px">
       <div class="stat"><div class="k">Goal total</div><div class="v">${goalTotal ? w(goalTotal, 0) : '—'}</div>
-        <div class="d">now ${wt(curTotal, 0)}</div></div>
-      <div class="stat"><div class="k">To go</div><div class="v">${goalTotal ? w(Math.max(0, goalTotal - curTotal), 0) : '—'}</div>
-        <div class="d">${weeks > 0 && goalTotal > curTotal ? `${wt((goalTotal - curTotal) / weeks, 1)}/wk` : 'on track'}</div></div>
-      <div class="stat"><div class="k">Goal DOTS</div><div class="v" style="color:var(--purple)">${projDots ? Math.round(projDots) : '—'}</div>
-        <div class="d">now ${ps.dots ? Math.round(ps.dots) : '—'}</div></div>
+        <div class="d">now ${wt(curTotalOwn, 0)}</div></div>
+      <div class="stat"><div class="k">To go</div><div class="v">${goalTotal ? w(Math.max(0, goalTotal - curTotalOwn), 0) : '—'}</div>
+        <div class="d">${weeks > 0 && goalTotal > curTotalOwn ? `${wt((goalTotal - curTotalOwn) / weeks, 1)}/wk` : 'on track'}</div></div>
+      ${useDots
+        ? `<div class="stat"><div class="k">Goal DOTS</div><div class="v" style="color:var(--purple)">${projDots ? Math.round(projDots) : '—'}</div>
+             <div class="d">now ${ps.dots ? Math.round(ps.dots) : '—'}</div></div>`
+        : `<div class="stat"><div class="k">Lifts</div><div class="v">${lifts.length}</div>
+             <div class="d">${esc(type.label.toLowerCase())}</div></div>`}
     </div>
 
     <div style="margin-bottom:12px">
@@ -4268,16 +4325,19 @@ function meetCard(m, ps) {
   </div>`;
 }
 
-function openMeet(id, typeId) {
+function openMeet(id, typeId, ownLifts) {
   const ps = priorityStats();
   const existing = S.meets.find(x => x.id === id);
   const type = EVENT_TYPES[typeId] || eventType(existing);
+  const lifts = (ownLifts && ownLifts.length) ? ownLifts
+    : (existing ? eventLifts(existing) : type.lifts);
   const m = existing || {
     id: uid(), type: type.id, name: '', date: '', fed: '', loc: '', wclass: '', bwTarget: 0, notes: '',
+    lifts$: (ownLifts && ownLifts.length) ? ownLifts : undefined,
     /* Seed each contested lift 5% above the current tested single. */
-    lifts: type.lifts.reduce((o, l) => {
-      const mine = ps.lifts.find(x => x.slot === l.slot);
-      o[l.slot] = roundBar(mine ? mine.kg * 1.05 : 0);
+    lifts: lifts.reduce((o, l) => {
+      const b = liftBest(l);
+      o[l.slot] = roundBar(b ? b.kg * 1.05 : 0);
       return o;
     }, {}),
     pct: { o: 90, s: 95 },
@@ -4301,13 +4361,13 @@ function openMeet(id, typeId) {
         <input type="number" step="0.1" inputmode="decimal" id="mBw" value="${m.bwTarget ? dw(m.bwTarget) : ''}" placeholder="optional"></div>
 
       <div class="eyebrow" style="margin:16px 0 8px">Attempts (${U()})</div>
-      ${type.lifts.map(lift => {
+      ${lifts.map(lift => {
       const k = lift.slot;
-      const a = attemptsFor(m, k);
-      const mine = ps.lifts.find(x => x.slot === k);
+      const a = attemptsFor(m, lift);
+      const b = liftBest(lift);
       return `<div style="margin-bottom:10px">
           <label class="sub" style="display:block;margin-bottom:5px;font-weight:600">${esc(lift.label)}
-            <span class="dimmer">· current best ${mine && mine.kg ? wt(mine.kg) : '—'}</span></label>
+            <span class="dimmer">· current best ${b ? wt(b.kg) : '—'}</span></label>
           <div class="grid3">
             <input type="number" step="0.5" inputmode="decimal" data-att="${k}.o" placeholder="opener" value="${a.o ? dw(a.o) : ''}">
             <input type="number" step="0.5" inputmode="decimal" data-att="${k}.s" placeholder="second" value="${a.s ? dw(a.s) : ''}">
@@ -4330,7 +4390,7 @@ function openMeet(id, typeId) {
         return el && el.value !== '' ? toKg(+el.value) : 0;
       };
       $('#mAuto', bg).onclick = () => {
-        type.lifts.forEach(({ slot: k }) => {
+        lifts.forEach(({ slot: k }) => {
           const t = attVal(`${k}.t`);
           if (!t) return;
           bg.querySelector(`[data-att="${k}.o"]`).value = dw(roundBar(t * 0.9));
@@ -4350,8 +4410,9 @@ function openMeet(id, typeId) {
           bwTarget: $('#mBw', bg).value ? toKg(+$('#mBw', bg).value) : 0,
           notes: $('#mNotes', bg).value.trim(),
           type: type.id,
-          lifts: type.lifts.reduce((o, l) => { o[l.slot] = attVal(`${l.slot}.t`); return o; }, {}),
-          attempts: type.lifts.reduce((o, l) => {
+          lifts$: m.lifts$,
+          lifts: lifts.reduce((o, l) => { o[l.slot] = attVal(`${l.slot}.t`); return o; }, {}),
+          attempts: lifts.reduce((o, l) => {
             o[l.slot] = { o: attVal(`${l.slot}.o`), s: attVal(`${l.slot}.s`) };
             return o;
           }, {}),
@@ -4382,9 +4443,39 @@ function openAddEvent() {
       <div class="sub" style="margin-top:6px">More disciplines can be added — each one declares its own lifts and scoring.</div>`,
     foot: `<button class="btn ghost wide" data-close>Cancel</button>`,
     onOpen: bg => bg.querySelectorAll('[data-etype]').forEach(b => b.onclick = () => {
+      const t = EVENT_TYPES[b.dataset.etype];
       closeModal();
-      openMeet(null, b.dataset.etype);
+      if (t && t.chooseLift) openChooseLift(t);
+      else openMeet(null, b.dataset.etype);
     }),
+  });
+}
+
+/* A single-lift meet has to say which lift. Offered from the barbell movements,
+   the same set the priority lifts come from — a competition lift is a barbell
+   lift, and letting a cable variant in here would only produce a nonsense card. */
+function openChooseLift(type) {
+  const opts = allExercises().filter(x => x.leaf.equipment === 'barbell');
+  const common = ['bench-press', 'deadlift', 'back-squat', 'overhead-press'];
+  const ordered = [...opts].sort((a, b) => {
+    const ai = common.indexOf(a.leaf.movement), bi = common.indexOf(b.leaf.movement);
+    return (ai < 0 ? 99 : ai) - (bi < 0 ? 99 : bi) || a.name.localeCompare(b.name);
+  });
+  modal({
+    title: 'Which lift?',
+    body: `<div class="sub" style="margin-top:0;margin-bottom:12px">${esc(type.blurb)}</div>
+      <div class="field"><label>Contested lift</label>
+        <select id="slLift">${ordered.map(x => `<option value="${esc(x.key)}">${esc(x.name)}</option>`).join('')}</select></div>`,
+    foot: `<button class="btn ghost" data-close>Back</button><button class="btn primary" id="slGo">Continue</button>`,
+    onOpen: bg => { $('#slGo', bg).onclick = () => {
+      const leaf = keyLeaf($('#slLift', bg).value);
+      const mv = movementById(leaf.movement);
+      closeModal();
+      openMeet(null, type.id, [{
+        slot: leaf.movement, label: mv ? mv.name : leaf.movement,
+        movement: leaf.movement, equipment: leaf.equipment,
+      }]);
+    }; },
   });
 }
 
