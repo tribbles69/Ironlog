@@ -185,7 +185,8 @@
       "aliases": [
         { "name": "Barbell Curl", "equipment": "barbell" },
         { "name": "Biceps Curl" },
-        { "name": "Curl" }
+        { "name": "Curl" },
+        { "name": "Dumbbell Curl", "equipment": "dumbbells" }
       ],
       "verified": true,
       "attachments": ["straight_bar", "ez_bar", "rope", "single_handle"],
@@ -419,7 +420,8 @@
         { "name": "Triceps Dip" },
         { "name": "Tricep Dip" },
         { "name": "Bench Dip" },
-        { "name": "Reverse Dip" }
+        { "name": "Reverse Dip" },
+        { "name": "Dips" }
       ],
       "verified": false
     },
@@ -457,7 +459,8 @@
         { "name": "Rope Pushdown", "attachment": "rope" },
         { "name": "Tricep Bar Pushdown", "attachment": "straight_bar" },
         { "name": "Triceps Pushdown" },
-        { "name": "Pushdown" }
+        { "name": "Pushdown" },
+        { "name": "Tricep Pushdown" }
       ],
       "verified": true,
       "attachments": ["rope", "straight_bar", "ez_bar", "v_handle", "single_handle"],
@@ -731,7 +734,8 @@
         { "name": "DB Row", "equipment": "dumbbells" },
         { "name": "One Arm Row", "execution": "unilateral" },
         { "name": "Single Arm Row", "execution": "unilateral" },
-        { "name": "Kroc Row" }
+        { "name": "Kroc Row" },
+        { "name": "Dumbbell Row", "equipment": "dumbbells" }
       ],
       "verified": false,
       "attachments": ["single_handle"],
@@ -889,7 +893,11 @@
         { "name": "Machine Chest Press", "equipment": "machine" },
         { "name": "Flat DB Press", "equipment": "dumbbells" },
         { "name": "Chest Press" },
-        { "name": "Flat Bench" }
+        { "name": "Flat Bench" },
+        { "name": "Pause Bench" },
+        { "name": "Spoto Press" },
+        { "name": "Larsen Press" },
+        { "name": "Dumbbell Bench", "equipment": "dumbbells" }
       ],
       "verified": true
     },
@@ -1328,7 +1336,11 @@
       "aliases": [
         { "name": "Back Squat" },
         { "name": "Squat" },
-        { "name": "Comp Squat" }
+        { "name": "Comp Squat" },
+        { "name": "Pause Squat" },
+        { "name": "High Bar Squat" },
+        { "name": "Low Bar Squat" },
+        { "name": "Safety Bar Squat", "equipment": "safety_squat_bar" }
       ],
       "verified": true
     },
@@ -1420,7 +1432,8 @@
         { "name": "Deadlift" },
         { "name": "Hex Deadlift", "equipment": "trap_bar" },
         { "name": "Trap Bar Deadlift", "equipment": "trap_bar" },
-        { "name": "Conventional Deadlift" }
+        { "name": "Conventional Deadlift" },
+        { "name": "Deficit Deadlift" }
       ],
       "verified": true
     },
@@ -1978,7 +1991,8 @@
         { "name": "Smith Shoulder Press", "equipment": "smith" },
         { "name": "Military Press" },
         { "name": "Shoulder Press" },
-        { "name": "OHP" }
+        { "name": "OHP" },
+        { "name": "Dumbbell Shoulder Press", "equipment": "dumbbells" }
       ],
       "verified": true
     },
