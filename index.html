@@ -736,7 +736,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.7.0';
+const APP_VERSION = '0.7.1';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -1081,7 +1081,10 @@ function migrateSets(e) {
   const allZero = sets.length > 0 && sets.every(s => s.r === 0);
   return sets.map((s, i) => {
     const out = { w: s.w, r: s.r, rpe: s.rpe == null ? null : s.rpe, done: !!s.done };
-    if (isWarm(s)) out.setType = 'warmup';
+    /* Reads the v1 `warm` boolean, NOT isWarm() — `s` here is still an old
+       record and has no setType yet. Getting this wrong turns every warm-up
+       into a working set, which then counts toward volume and history. */
+    if (s.warm === true) out.setType = 'warmup';
     else if (!allZero && s.r === 0 && i === sets.length - 1 && /amrap/i.test(e.notes || '')) {
       out.setType = 'amrap'; out.r = null;
     } else out.setType = 'working';
