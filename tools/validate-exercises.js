@@ -82,11 +82,8 @@ ok(!M.some(m => m.review || m.reviewNote), 'no review flags remain (E10)');
 
 /* ------------------------------------------------------- 2. leaf-level dry run */
 console.log('\n=== 2. LEAF-LEVEL MIGRATION DRY RUN ===');
-const lines = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8').split(/\r?\n/);
-const li = lines.findIndex(l => l.trimStart().startsWith('window.IRONLOG_PROGRAM'));
-const window = {};
-eval(lines[li]);                                    // the program is one generated line
-const P = window.IRONLOG_PROGRAM;
+/* The program moved out of index.html in 0.7.0 — it is fetched on demand now. */
+const P = JSON.parse(fs.readFileSync(path.join(ROOT, 'program.json'), 'utf8'));
 
 const byName = new Map(M.map(m => [m.name.toLowerCase(), { m, a: null }]));
 const byAlias = new Map();
