@@ -65,6 +65,7 @@ a{color:var(--accent)}
   background:rgba(13,15,20,.88);backdrop-filter:blur(12px);
   border-bottom:1px solid var(--line);
 }
+.tb-right{display:flex;align-items:center;gap:2px}
 .brand{font-weight:800;letter-spacing:2px;font-size:15px}
 .brand .accent{color:var(--accent)}
 .icon-btn{
@@ -502,7 +503,10 @@ svg.chart{display:block;width:100%;height:auto;overflow:visible}
 <body>
 <header id="topbar">
   <div class="tb-left"><span class="brand">IRON<span class="accent">LOG</span></span></div>
-  <div class="tb-right"><button class="icon-btn" id="settingsBtn" title="Settings">⚙</button></div>
+  <div class="tb-right">
+    <button class="icon-btn" id="profileBtn" title="Profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></button>
+    <button class="icon-btn" id="settingsBtn" title="Settings">⚙</button>
+  </div>
 </header>
 
 <main id="view"></main>
@@ -536,8 +540,16 @@ const KEY = 'ironlog.v1';
 const DEFAULT_STATE = {
   settings: {
     units: 'kg',            // kg | lb
+    // --- profile. Deliberately still settings fields rather than a new S.profile:
+    // sex already drives DOTS from here and handle already reaches the share card,
+    // so moving them would mean a migration and a second place to look for the
+    // same fact. Profile is a view over these, not another copy of them.
     sex: 'male',            // for DOTS
     bodyweight: 0,          // kg (fallback if no check-ins)
+    dob: '',                // YYYY-MM-DD -> age, for masters category and BMR
+    heightCm: 0,            // for BMR
+    activity: 'moderate',   // sedentary | light | moderate | high | athlete
+    nutritionGoal: 'maintain',   // lose | maintain | gain
     priority: ['Back Squat', 'Bench Press', 'Deadlift'],
     restDefault: 180,
     openerPct: 90,          // opener as a % of the latest tested single
@@ -746,6 +758,83 @@ function bodyweightKg() {
   const ci = [...S.checkins].filter(c => c.weight > 0).sort((a, b) => a.date < b.date ? 1 : -1)[0];
   return ci ? ci.weight : (S.settings.bodyweight || 0);
 }
+/* Where the number came from, so the profile can say so rather than showing a
+   figure with no provenance — a stale fallback and a check-in from this morning
+   look identical otherwise. */
+function bodyweightSource() {
+  const ci = [...S.checkins].filter(c => c.weight > 0).sort((a, b) => a.date < b.date ? 1 : -1)[0];
+  if (ci) return { kg: ci.weight, from: 'checkin', date: ci.date };
+  if (S.settings.bodyweight) return { kg: S.settings.bodyweight, from: 'fallback' };
+  return { kg: 0, from: 'none' };
+}
+
+/* ---------------- profile ----------------
+   Age, and what the body data implies. Every field the profile stores is here
+   because something reads it: sex and bodyweight set the DOTS coefficient, date
+   of birth gives the masters category and a term in BMR, height and activity
+   turn that into a calorie figure the food targets can start from. */
+function ageFrom(dob) {
+  if (!dob) return null;
+  const d = parseISO(dob);
+  if (!d || isNaN(d)) return null;
+  const now = new Date();
+  let a = now.getFullYear() - d.getFullYear();
+  const m = now.getMonth() - d.getMonth();
+  if (m < 0 || (m === 0 && now.getDate() < d.getDate())) a--;
+  return a >= 0 && a < 120 ? a : null;
+}
+
+/* IPF divisions. Named for the federation because they are not universal —
+   other federations draw the lines elsewhere. */
+function ageCategory(age) {
+  if (age == null) return null;
+  if (age < 14) return null;
+  if (age <= 18) return 'Sub-junior';
+  if (age <= 23) return 'Junior';
+  if (age <= 39) return 'Open';
+  if (age <= 49) return 'Masters 1';
+  if (age <= 59) return 'Masters 2';
+  if (age <= 69) return 'Masters 3';
+  return 'Masters 4';
+}
+
+const ACTIVITY = {
+  sedentary: { mult: 1.2, label: 'Sedentary', note: 'desk job, no training' },
+  light: { mult: 1.375, label: 'Light', note: 'training 1–3 days' },
+  moderate: { mult: 1.55, label: 'Moderate', note: 'training 3–5 days' },
+  high: { mult: 1.725, label: 'High', note: 'training 6–7 days' },
+  athlete: { mult: 1.9, label: 'Very high', note: 'physical job plus training' },
+};
+const NUTRITION_GOAL = {
+  lose: { pct: -0.15, label: 'Lose' },
+  maintain: { pct: 0, label: 'Maintain' },
+  gain: { pct: 0.10, label: 'Gain' },
+};
+
+/* Mifflin-St Jeor — the usual estimate, and an estimate is all it is. */
+function bmrKcal() {
+  const kg = bodyweightKg(), cm = +S.settings.heightCm || 0, age = ageFrom(S.settings.dob);
+  if (!kg || !cm || age == null) return 0;
+  const base = 10 * kg + 6.25 * cm - 5 * age;
+  return Math.round(base + (S.settings.sex === 'female' ? -161 : 5));
+}
+
+/* Protein and fat are set per kilo of bodyweight and carbohydrate takes what is
+   left, which is the way a lifter actually plans a day. Carbs floor at zero
+   rather than going negative on a very low target. */
+function suggestedTargets() {
+  const bmr = bmrKcal();
+  if (!bmr) return null;
+  const act = ACTIVITY[S.settings.activity] || ACTIVITY.moderate;
+  const goal = NUTRITION_GOAL[S.settings.nutritionGoal] || NUTRITION_GOAL.maintain;
+  const tdee = Math.round(bmr * act.mult);
+  const kcal = Math.round((tdee * (1 + goal.pct)) / 10) * 10;
+  const kg = bodyweightKg();
+  const p = Math.round(kg * 2.0);
+  const f = Math.round(kg * 0.8);
+  const c = Math.max(0, Math.round((kcal - p * 4 - f * 9) / 4));
+  return { bmr, tdee, kcal, p, c, f };
+}
 
 /* ---------------- extended exercise database ----------------
    736 movements from free-exercise-db (public domain), remapped onto the
@@ -776,7 +865,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.14.0';
+const APP_VERSION = '0.15.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -5310,6 +5399,138 @@ function confirmLiftoffImport(p, mapping, unit, auto, merged) {
     'Import');
 }
 
+/* ---------------- profile ----------------
+   Who is lifting, kept apart from how the gym is set up. Sex and bodyweight
+   were already here doing real work, buried three screens into Settings between
+   plate inventory and API keys; this gives them somewhere to live and adds the
+   few fields that make the rest derivable.
+
+   Bodyweight is shown, not owned. It comes from the latest check-in, and the
+   box edits the fallback used until you check in — the same rule bodyweightKg()
+   has always applied, said out loud. */
+const PROFILE_FIELDS = ['handle', 'sex', 'dob', 'heightCm', 'bodyweight', 'activity', 'nutritionGoal'];
+
+function openProfile(snap) {
+  const st = S.settings;
+  /* The derived figures (BMR, DOTS, category) read S.settings, so editing has to
+     write there to recompute live. That would make Cancel a lie, so the values
+     as they were on opening are carried through each redraw and put back if you
+     cancel. */
+  const original = snap || Object.fromEntries(PROFILE_FIELDS.map(k => [k, st[k]]));
+  const draw = () => {
+    const age = ageFrom(st.dob);
+    const cat = ageCategory(age);
+    const bw = bodyweightSource();
+    const t = suggestedTargets();
+    const ps = priorityStats();
+    const missing = [
+      !bw.kg && 'bodyweight',
+      !st.heightCm && 'height',
+      age == null && 'date of birth',
+    ].filter(Boolean);
+    return `
+      <div class="field"><label>Name on shared images</label>
+        <input id="pfHandle" value="${esc(st.handle || '')}" placeholder="@yourname — leave blank for none"></div>
+
+      <div class="row" style="gap:8px">
+        <div class="grow"><label>Sex</label>
+          <select id="pfSex">
+            <option value="male"${st.sex === 'male' ? ' selected' : ''}>Male</option>
+            <option value="female"${st.sex === 'female' ? ' selected' : ''}>Female</option>
+          </select>
+          <div class="sub" style="margin-top:4px">Sets the DOTS coefficient.</div>
+        </div>
+        <div class="grow"><label>Date of birth</label>
+          <input type="date" id="pfDob" value="${esc(st.dob || '')}" max="${today()}">
+          <div class="sub" style="margin-top:4px">${age == null ? 'For your age category.' : `${age} · ${cat || 'no category'} (IPF)`}</div>
+        </div>
+      </div>
+
+      <div class="row" style="gap:8px">
+        <div class="grow"><label>Height (cm)</label>
+          <input type="number" inputmode="numeric" id="pfHeight" value="${st.heightCm || ''}" placeholder="—"></div>
+        <div class="grow"><label>Bodyweight (${U()})</label>
+          <input type="number" step="0.1" inputmode="decimal" id="pfBw" value="${st.bodyweight ? dw(st.bodyweight) : ''}" placeholder="—">
+        </div>
+      </div>
+      <div class="sub" style="margin-top:-4px;margin-bottom:10px">${bw.from === 'checkin'
+      ? `Using <b>${wt(bw.kg)}</b> from your check-in on ${fmtDate(bw.date)}. The box above is the fallback for when you have not checked in.`
+      : bw.from === 'fallback'
+        ? `No check-in yet, so <b>${wt(bw.kg)}</b> is being used. Log a check-in and that takes over.`
+        : 'No bodyweight yet — DOTS and calorie estimates need one.'}</div>
+
+      <div class="hr"></div>
+      <div class="eyebrow" style="margin-bottom:6px">Lifting</div>
+      <div class="stats grid3" style="margin-bottom:4px">
+        <div class="stat"><div class="k">Tested total</div><div class="v">${ps.total ? wt(ps.total, 0) : '—'}</div></div>
+        <div class="stat"><div class="k">DOTS</div><div class="v" style="color:var(--purple)">${ps.dots ? Math.round(ps.dots) : '—'}</div></div>
+        <div class="stat"><div class="k">Category</div><div class="v" style="font-size:15px">${cat || '—'}</div></div>
+      </div>
+      ${ps.untested ? `<div class="sub">${ps.untested === ps.lifts.length
+      ? 'None of your three lifts has a tested single yet, so there is no total.'
+      : `${ps.untested} of your three lifts ${ps.untested === 1 ? 'is' : 'are'} untested, so there is no total yet.`}</div>` : ''}
+
+      <div class="hr"></div>
+      <div class="eyebrow" style="margin-bottom:6px">Daily energy</div>
+      <div class="row" style="gap:8px">
+        <div class="grow"><label>Activity</label>
+          <select id="pfAct">${Object.entries(ACTIVITY).map(([k, a]) =>
+        `<option value="${k}"${st.activity === k ? ' selected' : ''}>${a.label} — ${a.note}</option>`).join('')}</select></div>
+      </div>
+      <div class="field"><label>Goal</label>
+        <div class="seg" id="pfGoalSeg">${Object.entries(NUTRITION_GOAL).map(([k, g]) =>
+          `<button data-g="${k}" class="${(st.nutritionGoal || 'maintain') === k ? 'on' : ''}">${g.label}</button>`).join('')}</div>
+      </div>
+      ${t ? `
+        <div class="stats grid3" style="margin-bottom:8px">
+          <div class="stat"><div class="k">BMR</div><div class="v">${t.bmr}<small>kcal</small></div></div>
+          <div class="stat"><div class="k">Maintenance</div><div class="v">${t.tdee}<small>kcal</small></div></div>
+          <div class="stat"><div class="k">Target</div><div class="v" style="color:var(--gold)">${t.kcal}<small>kcal</small></div></div>
+        </div>
+        <div class="sub" style="margin-bottom:9px">${t.p} g protein · ${t.c} g carbs · ${t.f} g fat — protein at 2 g and fat at 0.8 g per kilo, carbohydrate taking the rest. An estimate; correct it against the scale over a fortnight.</div>
+        <button class="btn sm wide" id="pfUseTargets">Use these as my daily targets</button>`
+      : `<div class="sub">Add ${missing.join(', ')} and this works out your maintenance calories and a macro split.</div>`}
+    `;
+  };
+
+  modal({
+    title: 'Profile',
+    body: draw(),
+    foot: `<button class="btn ghost" id="pfCancel">Cancel</button><button class="btn primary" id="pfSave">Save</button>`,
+    onOpen(bg) {
+      const collect = () => {
+        st.handle = $('#pfHandle', bg).value.trim().slice(0, 32);
+        st.sex = $('#pfSex', bg).value;
+        st.dob = $('#pfDob', bg).value || '';
+        st.heightCm = Math.max(0, Math.min(260, +$('#pfHeight', bg).value || 0));
+        const raw = $('#pfBw', bg).value;
+        st.bodyweight = raw === '' ? 0 : toKg(+raw);
+        st.activity = $('#pfAct', bg).value;
+      };
+      const re = () => { collect(); closeModal(); openProfile(original); };
+
+      ['#pfSex', '#pfDob', '#pfHeight', '#pfBw', '#pfAct'].forEach(sel => {
+        const el = $(sel, bg);
+        if (el) el.onchange = re;
+      });
+      bg.querySelectorAll('#pfGoalSeg [data-g]').forEach(b => b.onclick = () => {
+        st.nutritionGoal = b.dataset.g; re();
+      });
+      const use = $('#pfUseTargets', bg);
+      if (use) use.onclick = () => {
+        collect();
+        const t = suggestedTargets();
+        if (!t) return;
+        st.kcalTarget = t.kcal; st.proteinTarget = t.p; st.carbTarget = t.c; st.fatTarget = t.f;
+        save(); closeModal(); render();
+        toast(`Targets set — ${t.kcal} kcal`, 'green');
+      };
+      $('#pfCancel', bg).onclick = () => { Object.assign(st, original); closeModal(); render(); };
+      $('#pfSave', bg).onclick = () => { collect(); save(); closeModal(); render(); toast('Profile saved', 'green'); };
+    },
+  });
+}
+
 function openSettings() {
   modal({
     title: 'Settings',
@@ -5319,13 +5540,9 @@ function openSettings() {
           <button data-u="kg" class="${U() === 'kg' ? 'on' : ''}">Kilograms</button>
           <button data-u="lb" class="${U() === 'lb' ? 'on' : ''}">Pounds</button>
         </div></div>
-      <div class="field"><label>Sex (for DOTS coefficient)</label>
-        <select id="stSex">
-          <option value="male"${S.settings.sex === 'male' ? ' selected' : ''}>Male</option>
-          <option value="female"${S.settings.sex === 'female' ? ' selected' : ''}>Female</option>
-        </select></div>
-      <div class="field"><label>Fallback bodyweight (${U()})</label>
-        <input type="number" step="0.1" inputmode="decimal" id="stBw" value="${S.settings.bodyweight ? dw(S.settings.bodyweight) : ''}" placeholder="used until you check in">
+      <div class="field"><label>Profile</label>
+        <button class="btn sm wide ghost" id="stProfile">Sex, bodyweight, age and targets →</button>
+        <div class="sub" style="margin-top:4px">Sex and bodyweight set your DOTS; they live in the profile now rather than here.</div>
       </div>
       <div class="hr"></div>
       <div class="eyebrow" style="margin-bottom:6px">Bars</div>
@@ -5370,9 +5587,6 @@ function openSettings() {
         <div class="sub" style="margin-top:4px">Backfilled sets show EST against a best. Say No only if your backfill was the plan's prescription rather than what you actually lifted.</div>
       </div>
       <div class="hr"></div>
-      <div class="field"><label>Handle on shared images</label>
-        <input id="stHandle" value="${esc(S.settings.handle || '')}" placeholder="@yourname — leave blank for none">
-      </div>
       <div class="field"><label>Opener % of latest tested single</label>
         <input type="number" step="1" inputmode="numeric" id="stOpener" value="${openerPct()}" placeholder="90">
         <div class="sub" style="margin-top:4px">90% is the usual default. For a debut, 87–88% is a weight you could triple cold — a missed opener costs the whole session.</div>
@@ -5492,18 +5706,14 @@ function openSettings() {
       };
       $('#stClear', bg).onclick = openClearData;
       $('#stUpdate', bg).onclick = () => checkForUpdate(false);
+      $('#stProfile', bg).onclick = () => { closeModal(); openProfile(); };
       $('#stWipe', bg).onclick = () => confirmDlg('This erases every workout, check-in, goal and meet. It cannot be undone.', () => {
         S = structuredClone(DEFAULT_STATE); save(); closeAllModals(); go('home'); toast('All data erased');
       }, 'Erase everything');
       $('#stSave', bg).onclick = () => {
-        // capture bodyweight in the units currently displayed, before switching
-        const bwRaw = $('#stBw', bg).value;
-        if (bwRaw !== '') S.settings.bodyweight = toKg(+bwRaw);
-        S.settings.sex = $('#stSex', bg).value;
         S.settings.units = units;
         const op = +$('#stOpener', bg).value;
         if (op >= 50 && op <= 100) S.settings.openerPct = op;
-        S.settings.handle = $('#stHandle', bg).value.trim().slice(0, 32);
         setAiKey($('#stKey', bg).value.trim());
         const pp = +$('#stPlatform', bg).value;
         if (pp >= 80 && pp <= 100) S.settings.platformPct = pp;
@@ -6947,6 +7157,7 @@ function applyVoiceSet(leaf, kg, reps, rpe) {
    ============================================================ */
 document.querySelectorAll('#nav button').forEach(b => b.onclick = () => go(b.dataset.page));
 $('#settingsBtn').onclick = openSettings;
+$('#profileBtn').onclick = () => openProfile();
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalStack.length) closeModal(); });
 
 /* First paint waits on the initial read. Without this the app would render an
