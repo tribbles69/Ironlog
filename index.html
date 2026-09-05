@@ -289,6 +289,11 @@ h3{font-size:13.5px;margin:0 0 8px}
 .settable .c-reps,.settable .c-rpe{width:46px}
 /* A timed set spans the columns weight/plates/reps/RPE would have used, so the
    duration gets the room a hold deserves instead of a 46px reps box. */
+/* measured sets, under the set table */
+.vbtstrip{margin:6px 10px 0;padding:7px 9px;border-radius:9px;
+  background:rgba(139,124,246,.07);border:1px solid rgba(139,124,246,.20)}
+.vbtstrip .row{padding:2px 0;font-size:12px}
+.vbtstrip .mono{font-size:12px}
 .settable .c-time{width:auto}
 .settable .c-time input{font-variant-numeric:tabular-nums;letter-spacing:.02em}
 .delset{width:24px;height:24px;border:0;background:transparent;color:var(--dim2,#5e6c7a);
@@ -522,6 +527,12 @@ svg.chart{display:block;width:100%;height:auto;overflow:visible}
 
 <div id="modalRoot"></div>
 <div id="toastRoot"></div>
+<!-- Slew's velocity engine, bundled from its own source by tools/build-slew.cjs.
+     28 kB, sensor mode only, precached by the service worker so a set can be
+     measured in a basement with no signal. Kept as its own file rather than
+     inlined because it is generated: a build artefact in the middle of
+     index.html makes every diff of this file unreadable. -->
+<script src="slew-core.js"></script>
 <script>/* Auto-generated from Hunchback_Hercules_PPLUL_77wk.pdf — do not hand-edit.
    Loaded by index.html; installed from Settings → Training program. */
 /* The program itself lives in program.json — 334 KB that only someone who
@@ -560,6 +571,9 @@ const DEFAULT_STATE = {
     platformPct: 96,        // gym max -> platform estimate
     bars: [{ name: 'Barbell', kg: 20 }],
     plates: null,           // null = DEFAULT_PLATES
+    // Slew velocity profiles, keyed by its lift id. Population defaults until a
+    // set taken to failure measures this lifter's own 0-RIR velocity.
+    slewProfiles: {},
     // nutrition targets. kcal null = derive nothing, just log.
     kcalTarget: null, proteinTarget: null, carbTarget: null, fatTarget: null,
   },
@@ -865,7 +879,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.15.0';
+const APP_VERSION = '0.16.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -2984,6 +2998,22 @@ function activeWorkout() {
   `;
 }
 
+/* Measured sets, listed under the table. Kept out of the set row itself: that
+   table is already eight columns on a phone, and velocity belongs to the set as
+   a whole rather than to a cell. */
+function vbtStrip(e) {
+  const rows = e.sets.map((s, i) => ({ s, i })).filter(x => x.s.vbt);
+  if (!rows.length) return '';
+  return `<div class="vbtstrip">${rows.map(({ s, i }) => {
+    const v = s.vbt;
+    return `<div class="row between">
+      <span class="sub">Set ${i + 1}</span>
+      <span class="mono grow">${v.best.toFixed(2)} m/s${v.loss >= 5 ? ` <span class="dimmer">▾${v.loss.toFixed(0)}%</span>` : ''}</span>
+      ${v.est ? `<span class="mono sub" style="color:var(--purple)">RPE ${v.est.rpe}</span>` : ''}
+    </div>`;
+  }).join('')}</div>`;
+}
+
 function exerciseCard(e, ei) {
   const st = statsFor(exKey(e));
   const prev = lastSession(exKey(e));
@@ -3061,9 +3091,11 @@ function exerciseCard(e, ei) {
       : `<th class="c-kg">${U()}</th><th class="c-pl"></th><th class="c-reps">Reps</th><th class="c-rpe">RPE</th>`}<th class="c-chk"></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
+    ${vbtStrip(e)}
     <div class="ex-foot">
       <button class="btn sm ghost grow" data-addset="${ei}">+ Set</button>
       <button class="btn sm ghost" data-rmset="${ei}">− Set</button>
+      ${vbtAvailable() && !timed ? `<button class="btn sm ghost" data-vbt="${ei}" title="Measure bar speed">◉ Measure</button>` : ''}
     </div>
   </div>`;
 }
@@ -3727,7 +3759,8 @@ function viewCompleted(id) {
           ${e.sets.map((s, i) => `<div class="exline"><span class="dimmer">${isWarm(s) ? 'W' : 'Set ' + (i + 1)}</span>
             <span class="mono">${isTimed(e.leaf)
     ? fmtSec(s.sec) || '—'
-    : `${wt(s.w)} × ${s.r}${s.rpe ? ` @ ${s.rpe}` : ''} <span class="dimmer">· e1RM ${wt(e1rm(s.w, s.r))}</span>`}</span></div>`).join('')}
+    : `${wt(s.w)} × ${s.r}${s.rpe ? ` @ ${s.rpe}` : ''} <span class="dimmer">· e1RM ${wt(e1rm(s.w, s.r))}</span>`}${s.vbt
+      ? ` <span class="dimmer">· ${s.vbt.best.toFixed(2)} m/s${s.vbt.loss >= 5 ? ` ▾${s.vbt.loss.toFixed(0)}%` : ''}</span>` : ''}</span></div>`).join('')}
         </div>`).join('')}
     `,
     foot: `<button class="btn danger" id="delWo">Delete</button><button class="btn sm ghost" id="editWo">✎ Edit</button><button class="btn sm ghost" id="woShare">↗ Share</button><button class="btn primary" data-close>Close</button>`,
@@ -5408,6 +5441,245 @@ function confirmLiftoffImport(p, mapping, unit, auto, merged) {
    Bodyweight is shown, not owned. It comes from the latest check-in, and the
    box edits the fallback used until you check in — the same rule bodyweightKg()
    has always applied, said out loud. */
+/* ---------------- velocity (Slew) ----------------
+   Slew measures bar speed from the phone strapped to the bar: acceleration is
+   double-integrated to displacement, reps are segmented from that signal, and
+   effort is read from how much the bar SLOWS DOWN across the set rather than
+   from absolute speed against a population table. Its engine ships here whole
+   (slew-core.js) rather than reimplemented, so the numbers are the ones its
+   65 tests cover.
+
+   Ironlog's job is the join: which velocity profile a leaf uses, where the
+   result is stored, and what is shown. */
+
+/* Slew's nine profiles are VELOCITY-PROFILE BUCKETS, not exercises — "Row /
+   pulldown" and "Machine (stack)" each cover a great many Ironlog leaves. So
+   the mapping only ever runs leaf -> profile, never back, and anything with no
+   sensible bucket gets measured without an effort estimate rather than being
+   forced into the nearest profile. A wrong velocity profile produces a
+   confident wrong RPE, which is worse than no RPE. */
+const SLEW_LIFT = [
+  [l => l.movement === 'goblet-squat', 'Goblet squat'],
+  [l => /squat/.test(l.movement) && l.equipment === 'smith', 'Squat (Smith)'],
+  [l => /^(back-squat|front-squat|box-squat|pause-squat|safety-bar-squat)$/.test(l.movement), 'Squat (free bar)'],
+  [l => /bench-press/.test(l.movement), 'Bench press'],
+  [l => /deadlift/.test(l.movement) && l.equipment === 'trap_bar', 'Deadlift (trap)'],
+  [l => /deadlift|rack-pull/.test(l.movement), 'Deadlift (conv.)'],
+  [l => /overhead-press|push-press|shoulder-press/.test(l.movement), 'Overhead press'],
+  [l => /row|pulldown|pull-up|chin-up/.test(l.movement), 'Row / pulldown'],
+  [l => l.equipment === 'machine' || l.equipment === 'plate_loaded_machine' || l.equipment === 'cable', 'Machine (stack)'],
+];
+function slewLiftFor(leaf) {
+  if (!leaf || !window.Slew) return null;
+  for (const [test, id] of SLEW_LIFT) { try { if (test(leaf)) return id; } catch (e) { /* keep looking */ } }
+  return null;
+}
+
+/* Per-lift profiles live in settings so calibration survives. They start as
+   Slew's population defaults and are replaced by measured ones: when a set is
+   taken to failure the lifter's true 0-RIR velocity is observed, and from then
+   on their RIR stops depending on any assumed constant. */
+function slewProfile(liftId) {
+  const stored = (S.settings.slewProfiles || {})[liftId];
+  const base = Slew.defaultProfile(liftId);
+  return stored ? { ...base, ...stored } : base;
+}
+function saveSlewProfile(liftId, patch) {
+  S.settings.slewProfiles = S.settings.slewProfiles || {};
+  S.settings.slewProfiles[liftId] = { ...(S.settings.slewProfiles[liftId] || {}), ...patch };
+  save();
+}
+
+function vbtAvailable() {
+  return !!window.Slew && typeof DeviceMotionEvent !== 'undefined';
+}
+
+/* What gets stored on the set. Scalars only — never the samples. A three
+   minute set at 60 Hz is ~10,800 of them, and the whole of Ironlog lives in one
+   IndexedDB blob that is rewritten on every save. */
+function packVbt(rec, est, liftId) {
+  return {
+    at: rec.timestamp,
+    lift: liftId,
+    mode: rec.provenance.mode,
+    rate: Math.round(rec.provenance.sourceRate || 0),
+    best: +rec.summary.bestMeanVelocity.toFixed(3),
+    loss: +rec.summary.velocityLoss.toFixed(1),
+    conf: +rec.summary.confidence.toFixed(2),
+    reps: rec.reps.map(r => ({
+      v: +r.concentric.meanVelocity.toFixed(3),
+      peak: +r.concentric.peakVelocity.toFixed(3),
+      rom: +r.rom.toFixed(3),
+      rpe: r.rpe == null ? null : +r.rpe.toFixed(1),
+      conf: +r.quality.confidence.toFixed(2),
+      flags: r.quality.flags || [],
+    })),
+    est: est ? {
+      rpe: +est.rpe.toFixed(1), rir: +est.rir.toFixed(1), method: est.method,
+      spread: +est.spread.toFixed(1), because: est.because, romCut: !!est.romCut,
+    } : null,
+  };
+}
+
+/* Recording a set. Live readout while it runs, because the one thing that
+   ruins a sensor set is finding out afterwards that the phone was not reporting
+   — the sample counter and the still/moving light make that visible in the
+   first second rather than at the end. */
+let vbtCapture = null;
+
+function openVbtRecord(ei) {
+  const a = S.active;
+  const ex = a && a.exercises[ei];
+  if (!ex) return;
+  if (!vbtAvailable()) return toast('This device exposes no motion sensor');
+
+  const liftId = slewLiftFor(ex.leaf);
+  /* No bucket: still measure, but say plainly that effort will not be
+     estimated. Segmentation needs a minimum travel, so borrow the shallowest
+     one rather than inventing a velocity model. */
+  const profile = liftId ? slewProfile(liftId) : { ...Slew.defaultProfile('Machine (stack)'), v0: 0 };
+  const load = ex.sets.filter(s => s.w > 0).slice(-1)[0];
+  const loadKg = load ? load.w : 0;
+
+  modal({
+    title: `Measure — ${esc(exName(ex))}`,
+    body: `<div class="sub" style="margin-top:0">Strap the phone to the bar, or put it in a pocket for a machine. Start it, do the set, stop it.</div>
+      ${liftId
+      ? `<div class="chip" style="margin:10px 0">${esc(liftId)}${(S.settings.slewProfiles || {})[liftId] && (S.settings.slewProfiles || {})[liftId].v0Observed ? ' · calibrated' : ' · population profile'}</div>`
+      : `<div class="chip" style="margin:10px 0">No velocity profile for this movement — speed and reps only, no effort estimate</div>`}
+      <div class="stats grid3" style="margin:10px 0">
+        <div class="stat"><div class="k">Samples</div><div class="v" id="vbN">0</div></div>
+        <div class="stat"><div class="k">Rate</div><div class="v" id="vbHz">—<small>Hz</small></div></div>
+        <div class="stat"><div class="k">Bar</div><div class="v" id="vbStill" style="font-size:15px">—</div></div>
+      </div>
+      <div class="sub" id="vbMsg">Not started.</div>`,
+    foot: `<button class="btn ghost" id="vbCancel">Cancel</button><button class="btn primary" id="vbGo">Start</button>`,
+    onOpen(bg) {
+      let running = false;
+      const setMsg = t => { const el = $('#vbMsg', bg); if (el) el.textContent = t; };
+      const stopCapture = () => { if (vbtCapture) { try { vbtCapture.stop(); } catch (e) {} } running = false; };
+
+      $('#vbCancel', bg).onclick = () => { stopCapture(); vbtCapture = null; closeModal(); };
+
+      $('#vbGo', bg).onclick = async () => {
+        const btn = $('#vbGo', bg);
+        if (!running) {
+          const perm = await Slew.MotionCapture.requestPermission();
+          if (!perm.granted) { setMsg(perm.reason || 'Motion access denied.'); return; }
+          vbtCapture = new Slew.MotionCapture(
+            { ...Slew.DEFAULT_MOTION_CONFIG },
+            st => {
+              const n = $('#vbN', bg), h = $('#vbHz', bg), s = $('#vbStill', bg);
+              if (!n) return;                       // modal closed mid-set
+              n.textContent = st.samples;
+              h.innerHTML = `${st.hz.toFixed(0)}<small>Hz</small>`;
+              s.textContent = st.still ? 'still' : 'moving';
+              s.style.color = st.still ? 'var(--dim2)' : 'var(--gold)';
+            },
+            msg => { setMsg(msg); running = false; btn.textContent = 'Start'; },
+          );
+          vbtCapture.start();
+          running = true;
+          btn.textContent = 'Stop';
+          btn.classList.add('danger');
+          setMsg('Recording. Do the set, then stop.');
+          return;
+        }
+
+        stopCapture();
+        btn.textContent = 'Start';
+        btn.classList.remove('danger');
+        const motion = vbtCapture ? vbtCapture.samples.slice() : [];
+        if (motion.length < 40) { setMsg(`Only ${motion.length} samples — the sensor reported almost nothing.`); return; }
+
+        /* Follows sensorPipeline exactly, but keeps the failure evidence so the
+           set estimate can use an observed failure rather than extrapolating. */
+        const samples = Slew.integrateMotion(motion);
+        const scaled = samples.map(s => ({ ...s, x: s.x * (profile.scale || 1) }));
+        const out = Slew.analyse(scaled, {
+          targetHz: 60, minRom: profile.minRom,
+          ...(loadKg > 0 ? { loadKg } : {}),
+        });
+        const reps = liftId ? Slew.withRpe(out.reps, profile) : out.reps;
+        const est = liftId ? Slew.estimateSet(reps, profile, out.failure) : null;
+        const rate = motion.length > 1
+          ? (motion.length - 1) / ((motion[motion.length - 1].t - motion[0].t) / 1000 || 1) : 0;
+        const rec = {
+          timestamp: Date.now(), reps, summary: out.summary,
+          provenance: { mode: 'sensor', sampleRate: 60, sourceRate: rate },
+        };
+        vbtCapture = null;
+        closeModal();
+        vbtReviewDlg(ei, packVbt(rec, est, liftId), est, out.failure);
+      };
+    },
+  });
+}
+
+/* Review before it is attached to anything. The rep table is the whole point:
+   a number you cannot see the reps behind is one you cannot sanity-check. */
+function vbtReviewDlg(ei, v, est, failure) {
+  const ex = S.active && S.active.exercises[ei];
+  if (!ex) return;
+  const rows = v.reps.map((r, i) => `<div class="row between" style="padding:3px 0;font-size:13px">
+      <span class="sub" style="width:44px">Set rep ${i + 1}</span>
+      <span class="mono grow">${r.v.toFixed(2)} m/s <span class="dimmer">peak ${r.peak.toFixed(2)} · ${(r.rom * 100).toFixed(0)} cm</span></span>
+      <span class="mono sub">${r.rpe == null ? '' : 'RPE ' + r.rpe}</span>
+    </div>`).join('');
+
+  modal({
+    title: v.reps.length ? `${v.reps.length} rep${v.reps.length === 1 ? '' : 's'} measured` : 'No reps found',
+    body: v.reps.length ? `
+      <div class="stats grid3" style="margin-bottom:10px">
+        <div class="stat"><div class="k">Best</div><div class="v">${v.best.toFixed(2)}<small>m/s</small></div></div>
+        <div class="stat"><div class="k">Velocity loss</div><div class="v" style="color:${v.loss >= 25 ? 'var(--gold)' : 'var(--text)'}">${v.loss.toFixed(0)}<small>%</small></div></div>
+        <div class="stat"><div class="k">Effort</div><div class="v" style="color:var(--purple)">${v.est ? 'RPE ' + v.est.rpe : '—'}</div></div>
+      </div>
+      ${rows}
+      ${v.est ? `<div class="sub" style="margin-top:9px">${esc(v.est.because)}${v.est.spread ? ` <span class="dimmer">±${v.est.spread} RIR</span>` : ''}</div>` : `<div class="sub" style="margin-top:9px">Speed and reps only — this movement has no velocity profile, so effort is not estimated.</div>`}
+      ${failure && failure.failedAttempt ? `<div class="chip gold" style="margin-top:9px">A missed rep was detected and left out of the count</div>` : ''}
+      <div class="sub" style="margin-top:9px">${v.rate} Hz · confidence ${(v.conf * 100).toFixed(0)}%${v.reps.some(r => r.flags.length) ? ' · ' + [...new Set(v.reps.flatMap(r => r.flags))].join(', ') : ''}</div>`
+      : `<div class="empty">No reps came out of that recording. The bar has to travel at least ${Math.round((Slew.defaultProfile('Machine (stack)').minRom) * 100)} cm and come to rest between reps.</div>`,
+    foot: `<button class="btn ghost" data-close>Discard</button>${v.reps.length ? `<button class="btn primary" id="vbAttach">Attach to this exercise</button>` : ''}`,
+    onOpen(bg) {
+      const at = $('#vbAttach', bg);
+      if (!at) return;
+      at.onclick = () => {
+        attachVbt(ei, v, est);
+        closeModal();
+      };
+    },
+  });
+}
+
+/* Attach measured reps to the exercise. The sensor counted the reps, so it
+   fills any set that has none rather than making the lifter retype what was
+   just measured — but it never overwrites a rep count already entered. */
+function attachVbt(ei, v, est) {
+  const ex = S.active.exercises[ei];
+  let target = ex.sets.findIndex(s => !s.done && !s.vbt);
+  if (target < 0) {
+    const last = ex.sets[ex.sets.length - 1] || { w: 0, r: 0 };
+    ex.sets.push({ w: last.w, r: 0, sec: null, rpe: null, done: false, setType: 'working' });
+    target = ex.sets.length - 1;
+  }
+  const s = ex.sets[target];
+  s.vbt = v;
+  if (!s.r) s.r = v.reps.length;
+  if (s.rpe == null && v.est) s.rpe = Math.round(v.est.rpe * 2) / 2;
+
+  /* Calibration by observation: a set taken to failure measures this lifter's
+     own 0-RIR velocity, and every later estimate stops leaning on a population
+     constant. This is the reason the profile is stored at all. */
+  if (est && est.measuredV0 && v.lift) {
+    saveSlewProfile(v.lift, { v0Observed: est.measuredV0, v0ObservedAt: Date.now() });
+    toast(`Calibrated ${v.lift} — 0-RIR velocity ${est.measuredV0.toFixed(2)} m/s`, 'gold');
+  } else {
+    toast(`Set ${target + 1} measured — ${v.best.toFixed(2)} m/s`, 'green');
+  }
+  save(); bust(); render();
+}
+
 const PROFILE_FIELDS = ['handle', 'sex', 'dob', 'heightCm', 'bodyweight', 'activity', 'nutritionGoal'];
 
 function openProfile(snap) {
@@ -6633,6 +6905,8 @@ function wireActive(v) {
     s.setType = isWarm(s) ? 'working' : 'warmup';
     save(); bust(); render();
   });
+
+  v.querySelectorAll('[data-vbt]').forEach(b => b.onclick = () => openVbtRecord(+b.dataset.vbt));
 
   v.querySelectorAll('[data-addset]').forEach(b => b.onclick = () => {
     const ex = a.exercises[+b.dataset.addset];

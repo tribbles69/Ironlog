@@ -27,6 +27,20 @@ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const blocks = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map(m => m[1]);
 const src = blocks.join('\n;\n');
 
+/* Scripts index.html loads by src share the same global scope, so their
+   top-level declarations are declarations as far as this app is concerned.
+   Without this, `Slew` reads as undeclared everywhere it is used — and a linter
+   that cries wolf on a real global is one nobody reads. Only the names are
+   taken; the generated body is not analysed. */
+const externalGlobals = new Set();
+for (const m of html.matchAll(/<script[^>]*\ssrc=["']([^"']+)["']/g)) {
+  const f = path.join(ROOT, m[1]);
+  if (!fs.existsSync(f)) continue;
+  const text = fs.readFileSync(f, 'utf8');
+  for (const d of text.matchAll(/^(?:const|let|var)\s+([A-Za-z_$][\w$]*)/gm)) externalGlobals.add(d[1]);
+  for (const d of text.matchAll(/^(?:async\s+)?function\s*\*?\s*([A-Za-z_$][\w$]*)/gm)) externalGlobals.add(d[1]);
+}
+
 /* Blank out comments and string bodies, but keep the code inside `${ }` — most
    of this app's logic lives inside template literals. */
 function stripNonCode(s) {
@@ -195,7 +209,7 @@ while ((m = fnRe.exec(code))) {
   const seen = new Set();
   for (const idm of body.matchAll(/(?:^|[^\w$.'"`])([A-Za-z_$][\w$]*)\s*(?![\w$]*\s*:)/g)) {
     const id = idm[1];
-    if (seen.has(id) || declared.has(id) || appGlobals.has(id) || BUILTINS.has(id)) continue;
+    if (seen.has(id) || declared.has(id) || appGlobals.has(id) || externalGlobals.has(id) || BUILTINS.has(id)) continue;
     if (id === name) continue;
     seen.add(id);
     findings.push({ fn: name, id, line: lineOf(m.index + idm.index) });
