@@ -546,6 +546,10 @@ html[data-skin="win98"]{
   --w-navy2:#1084d0;
   --w-lcd:#00ff41;    /* the green readout */
   --w-amber:#ffb000;
+  /* A swatch, not ink. --gold is surface-aware and darkens on a grey dialog
+     face, which is right for text and wrong for something painted gold with
+     black written on it — that would darken the paint and keep the ink. */
+  --w-gold:#ffe000;
 
   --w-raise:inset 1px 1px 0 var(--w-hi), inset -1px -1px 0 var(--w-dk),
             inset 2px 2px 0 var(--w-face), inset -2px -2px 0 var(--w-sh);
@@ -725,12 +729,40 @@ html[data-skin="win98"] #view{
      doesn't leave the frame hanging in mid-air */
   min-height:calc(100dvh - var(--w-title-h) - var(--w-menu-h) - var(--w-lcd-h) - var(--nav-h) - 22px);
 }
+/* A dark panel is its own client area — it has to look the same dropped into a
+   grey dialog as it does on the page. Anything the skin gives a dark background
+   restates the dark palette here, and anything nested inside then resolves
+   light again however deep it sits.
+
+   Without this a panel only inherited: white from body on the page, black from
+   the dialog face inside a dialog. That second case is what made the session
+   summary and the planner unreadable — a stat's unit survived because
+   .stat .v small sets its own colour, while the number beside it did not.
+
+   The list is every background:var(--w-dk) and #0b0b0b rule in this sheet, and
+   it has to stay that way: an element given a dark background below without a
+   line here goes dark-on-black inside a dialog. The ones that already set their
+   own colour (.seg, .chip, .leafchip, .ex-note, .bar, the fields) still need
+   the tokens back — .seg button reads var(--dim), .chip.gold reads var(--gold). */
+html[data-skin="win98"] :is(.card,.ex-card,.chartbox,.stat,.att,.vbtstrip,
+                            .hero,.bigtotal,.timerbar,.ci-tile,.lift3 .l,.totrow > div,
+                            .seg,.chip,.leafchip,.ex-note,.bar,
+                            input,select,textarea){
+  --txt:#ffffff; --dim:#c0c0c0; --dim2:#8a8a8a;
+  --accent:#ff2020; --accent2:#ff6b6b; --red:#ff2020;
+  --gold:#ffe000; --green:#00ff41; --blue:#4fc3ff; --purple:#c8a2ff;
+}
+/* .settable, .exline, .vartable, .picklist, .axrow and .summary-hero are
+   deliberately absent: they have no background of their own, so they should
+   follow whatever surface contains them — which, with the tokens above, they
+   now do without a rule. */
 html[data-skin="win98"] .card,
 html[data-skin="win98"] .ex-card,
 html[data-skin="win98"] .chartbox,
 html[data-skin="win98"] .stat,
 html[data-skin="win98"] .att,
 html[data-skin="win98"] .vbtstrip{
+  color:var(--txt);
   background:var(--w-dk);
   border:0;
   box-shadow:var(--w-sink);
@@ -743,7 +775,11 @@ html[data-skin="win98"] .hero,
 html[data-skin="win98"] .bigtotal,
 html[data-skin="win98"] .timerbar{
   background:var(--w-dk);border:0;box-shadow:var(--w-sink);padding:12px;
+  color:var(--txt);
 }
+html[data-skin="win98"] .ci-tile,
+html[data-skin="win98"] .lift3 .l,
+html[data-skin="win98"] .totrow > div{color:var(--txt)}
 html[data-skin="win98"] .timerbar{
   top:calc(var(--w-title-h) + var(--w-menu-h) + var(--w-lcd-h) + 4px);
 }
@@ -837,7 +873,7 @@ html[data-skin="win98"] .settable .c-prev{color:var(--dim2)}
 html[data-skin="win98"] .setno{
   background:var(--w-face);color:var(--w-dk);border:0;box-shadow:var(--w-raise);font-weight:800;
 }
-html[data-skin="win98"] .setno.warm{background:var(--gold);color:var(--w-dk);box-shadow:var(--w-raise)}
+html[data-skin="win98"] .setno.warm{background:var(--w-gold);color:var(--w-dk);box-shadow:var(--w-raise)}
 html[data-skin="win98"] tr.done td input{background:#001a08;border:0;box-shadow:var(--w-sink);color:var(--w-lcd)}
 html[data-skin="win98"] tr.pr td input{background:#1a1600;border:0;box-shadow:var(--w-sink);color:var(--gold)}
 /* A 98 checkbox is a sunken white square that either holds a tick or doesn't —
@@ -871,7 +907,7 @@ html[data-skin="win98"] .ex-row:hover{background:var(--w-navy)}
 html[data-skin="win98"] .iconrow .ic{background:var(--w-face);color:var(--w-dk);border:0;box-shadow:var(--w-raise)}
 html[data-skin="win98"] .iconrow .ic.on{background:var(--w-navy);color:#fff;box-shadow:var(--w-sink)}
 html[data-skin="win98"] .eqi{border-color:var(--w-sh);color:var(--dim2)}
-html[data-skin="win98"] .eqi.on{background:var(--gold);border-color:var(--w-dk);color:var(--w-dk)}
+html[data-skin="win98"] .eqi.on{background:var(--w-gold);border-color:var(--w-dk);color:var(--w-dk)}
 html[data-skin="win98"] .eqi:active{background:var(--w-face);color:var(--w-dk)}
 html[data-skin="win98"] .axrow.on .rad{border-color:var(--w-lcd);background:radial-gradient(circle,var(--w-lcd) 0 5px,transparent 6px)}
 
@@ -958,24 +994,24 @@ html[data-skin="win98"] .modal-head h2{
 }
 html[data-skin="win98"] .modal-head .icon-btn{width:24px;height:22px;font-size:11px}
 html[data-skin="win98"] .modal-body{
-  background:var(--w-face);color:var(--w-dk);padding:14px;
+  background:var(--w-face);padding:14px;
 }
-/* A dialog is a grey face, so every "dim" token inside one has to darken rather
-   than lighten or it disappears — the footer's version string included. */
-html[data-skin="win98"] .modal-body .sub,
-html[data-skin="win98"] .modal-body .muted,
-html[data-skin="win98"] .modal-body .dimmer,
-html[data-skin="win98"] .modal-body label,
-html[data-skin="win98"] .modal-body .eyebrow,
-html[data-skin="win98"] .modal-foot .sub,
-html[data-skin="win98"] .modal-foot .muted,
-html[data-skin="win98"] .modal-foot .dimmer{color:#2b2b2b}
-html[data-skin="win98"] .modal-body h1,
-html[data-skin="win98"] .modal-body h2,
-html[data-skin="win98"] .modal-body h3{color:var(--w-dk)}
-html[data-skin="win98"] .modal-body .pickitem,
-html[data-skin="win98"] .modal-body .axrow,
-html[data-skin="win98"] .modal-body .row{color:var(--w-dk)}
+/* A dialog is a grey face, and the page behind it is black — two surfaces, one
+   set of rules written against tokens. So rather than repaint each element that
+   lands on the grey, restate the palette for it here. The tokens inherit, so
+   all 45 rules in the base sheet that read one resolve for this surface on
+   their own, at any depth, in dialogs not yet written.
+
+   The accents matter as much as the greys: they were chosen to glow on black,
+   and on a #c0c0c0 face they have to come down or a gold PR figure is a smear.
+   Everything here clears 5.5:1 against the face. */
+html[data-skin="win98"] .modal-body,
+html[data-skin="win98"] .modal-foot{
+  --txt:#000000; --dim:#2b2b2b; --dim2:#4a4a4a;
+  --accent:#a00000; --accent2:#a00000; --red:#a00000;
+  --gold:#6b5200; --green:#005a1e; --blue:#00437a; --purple:#4b2a8a;
+  color:var(--txt);
+}
 html[data-skin="win98"] .modal-foot{
   background:var(--w-face);border:0;box-shadow:inset 0 1px 0 var(--w-hi);
 }
@@ -1394,7 +1430,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.16.1';
+const APP_VERSION = '0.16.2';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
