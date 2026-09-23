@@ -73,9 +73,23 @@ RIR 0 automatically.
   single `kg × sec` hold-volume figure. Build the default unless Aaron says
   otherwise.
 - The audio module built here (beeps, gesture unlock, sound/vibration settings)
-  is reused by the cardio session below — build it as a shared helper.
+  is reused by the rest timer and the cardio session below — build it as a
+  shared helper.
 
-### 2. Cardio session — HR-zone treadmill coaching
+### 2. Rest timer upgrade
+A rest timer exists (grep `restDefault`) but is silent. Upgrade it using the
+shared audio helper from item 1.
+- **Auto-start** when a set is ticked done.
+- **End alert:** beep + vibration, respecting the Sound/Vibration settings.
+  Optional short warning a few seconds before the end.
+- **Per-exercise defaults** — longer for main compound lifts, shorter for
+  accessories — overridable per session with quick +/− 15 s buttons.
+- Timestamp-based, so it stays correct when the phone is locked or the app is
+  backgrounded; keep a visible countdown on the active workout.
+- If the platform allows, a notification when rest ends while the app isn't in
+  the foreground. Don't block the feature on it.
+
+### 3. Cardio session — HR-zone treadmill coaching
 New session type. The treadmill (Technogym) has no control API, so **Aaron is
 the actuator**: Ironlog reads heart rate live and tells him when to change
 speed. No spec yet — write one in `docs/cardio-spec.md` before building.
@@ -118,7 +132,7 @@ trace as a chart on the session card.
 *trend* rather than the instant reading — pre-empting drift out of zone and
 varying the coaching language. Only once the plain loop works.
 
-### 3. Autoregulated programming (RIR-driven)
+### 4. Autoregulated programming (RIR-driven)
 - Programs carry **one flat mid-point working weight per exercise**, not a
   week-by-week progression; RIR decides what the day's load does.
 - RIR is whole numbers only, no half steps.
@@ -126,8 +140,10 @@ varying the coaching language. Only once the plain loop works.
 - **"Off week" / nope button** on a session: excludes it from progression
   calculations but does *not* reset the rolling stall counter. For days when
   work (custodian job) has flattened him.
+- Design this so the VBT daily e1RM (item 7) can plug in later as a second
+  input for the day's working weight.
 
-### 4. PR detection against history
+### 5. PR detection against history
 PRs are being flagged that aren't PRs (e.g. Smith calf raise 135 kg × 10 on
 12 Aug 2026, well under his real best — imported Liftoff history isn't being
 consulted). Check whether the composed exercise model migration already fixed
@@ -137,7 +153,7 @@ this; if not, fix it. Test against the full imported history.
 
 ## Next
 
-### 5. Workout page: finish the exercise-model UI
+### 6. Workout page: finish the exercise-model UI
 Make the workout page clearly better than the competition. Depends on the
 composed model being in place.
 - Equipment picker shows invalid equipment **greyed, not hidden**.
@@ -149,23 +165,46 @@ composed model being in place.
 - Run the migration dry-run against all logged sessions and the Liftoff CSV:
   every entry must resolve to a leaf, no orphans, no PRs moving that shouldn't.
 
-### 6. VBT calibration
-- Opt-in **"Calibrate — 8 min"** flow per variant: incremental load ramp to
-  build the individual load-velocity profile and fatigue-rate scalar.
-- Don't test MVT directly — use a population prior table, blended with personal
-  data as sets accumulate (shrinkage).
-- Silently harvest calibration data from near-failure sets.
+### 7. VBT overhaul — two modes plus calibration
+Write `docs/vbt-overhaul-spec.md` before building. Two modes, chosen per
+exercise in a session:
+
+**Per-set mode** (what Measure does now): velocity loss within a set →
+estimated RIR for that set.
+
+**Profile mode (new):** the warm-up ramp *is* the measurement.
+- Log 3–5 warm-up sets at rising load, 1–2 fast reps each; use mean concentric
+  velocity of the best rep per set.
+- Fit a straight line of velocity against load (the load-velocity profile) and
+  extrapolate to the lift's **minimum velocity threshold (MVT)**. The load where
+  the line hits MVT is the **day's e1RM**.
+- Show e1RM as a **range, not a single number** — phone sensors are noisier than
+  a linear position transducer. Widen the range when the heaviest warm-up is far
+  from max (roughly below 80%), since the line is extrapolating further.
+- **Readiness:** compare today's warm-up velocities to the stored profile, so a
+  fast day or a flat day is visible before the first working set, and suggest
+  the day's working weight from the day's e1RM. Feeds item 4.
+- Chart it: today's points and line over the stored profile, MVT line marked.
+
+**Calibration (underpins both modes):**
+- MVT differs by lift and by person (lower on bench and deadlift than squat).
+  Start from a **population prior table** per lift; don't test MVT directly.
+  Blend in personal data as it accumulates (shrinkage).
+- Opt-in **"Calibrate — 8 min"** flow per variant: an incremental load ramp to
+  build the personal load-velocity profile and fatigue-rate scalar.
+- Silently harvest calibration data from near-failure sets and profile-mode
+  warm-ups.
 - Cross-lift transfer only for the fatigue scalar, not the full profile.
-- Flag pocket-mode sets as lower confidence and exclude them from MVT
-  calibration.
+- **Pocket-mode sets are lower confidence** — flag them, and exclude them from
+  MVT calibration and profile fits.
 - Never gate first run on calibration. Personal calibration matters more than
   usual here — adaptive lifters won't match population norms.
 
-### 7. Welcome / first-run screen
+### 8. Welcome / first-run screen
 More important than login. Sets units, lifts, event goals; explains data stays
 on the device.
 
-### 8. Events page (replaces Meets)
+### 9. Events page (replaces Meets)
 Pick the event type (powerlifting meet, strongman, other) and queue several
 events at once. Keep the focus on strength sports.
 
@@ -173,38 +212,38 @@ events at once. Keep the focus on strength sports.
 
 ## Later
 
-### 9. Cloud sync (premium)
+### 10. Cloud sync (premium)
 Local-first with sync so data survives losing or changing a phone.
 - Supabase, anonymous auth first; Google login deferred.
 - Schema versioning, tombstone deletes.
 - **First sign-in pushes local data up — never overwrites it.**
 
-### 10. Server-side AI for all users (premium)
+### 11. Server-side AI for all users (premium)
 Aaron's own Anthropic key used server-side for everyone (e.g. Supabase Edge
 Function), not a key per user. Non-negotiable: per-user budgets, rate limits,
 abuse controls. Meter AI usage carefully at £5/month.
 
-### 11. AI coaching
+### 12. AI coaching
 - Logging stays tightly scoped structured calls, separate from any chat.
 - Hard system-prompt boundaries so the coach can't drift off-topic.
 - Cap or summarise conversation history; use prompt caching. No unbounded
   history re-sent every turn.
 
-### 12. Chat front door
+### 13. Chat front door
 Log and get coaching through a messaging app (WhatsApp or similar — **not
 Telegram**) plus voice input. Builds on the existing voice logging.
 
-### 13. Fix `prKey` / `splitsPR`
+### 14. Fix `prKey` / `splitsPR`
 `prKey()` is dead code, so chains, bands, slingshot and equipped currently share
 a PR pool with the raw lift. Real bug, but fixing it **changes existing PR
 numbers** — do it on its own, deliberately, and tell Aaron what moved.
 
-### 14. Supplements and blood work
+### 15. Supplements and blood work
 Supplement schedule, reminders and adherence history inside Ironlog (not a
 separate app), with the option to see it alongside training. Blood work results
 tracking over time. No drug dosing or cycle-planning features.
 
-### 15. Fatigue heat map
+### 16. Fatigue heat map
 Extend the existing body heatmap to show which muscle groups are fresh vs
 fatigued before planning a session. Only trust it once muscle shares for
 commonly trained lifts have been checked — derived shares are placeholders.
