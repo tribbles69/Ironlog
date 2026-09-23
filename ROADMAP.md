@@ -248,6 +248,26 @@ Extend the existing body heatmap to show which muscle groups are fresh vs
 fatigued before planning a session. Only trust it once muscle shares for
 commonly trained lifts have been checked — derived shares are placeholders.
 
+### 17. Mobility training
+New session type alongside lifting and cardio. Aaron is treating flexibility
+with the same seriousness as the lifts because it feeds them (squat depth,
+overhead position, deadlift setup). Write `docs/mobility-spec.md` before
+building.
+- **Routines:** saved mobility routines (daily evening routine, pre-lift
+  dynamic warm-up, "strength at length" accessory block) made of timed holds
+  and rep-based drills, per side where relevant.
+- **Guided player:** step-by-step with hold countdowns, side switches and
+  contract-relax cues. Reuse the shared audio helper and the timestamp-based
+  timing from isometric holds (item 1); Wake Lock throughout.
+- **Hypermobility-aware:** exercises tagged by target area so a user can mark
+  joints to leave alone (e.g. wrists) and have routines skip or swap them.
+  Emphasis on loaded end-range work over passive stretching.
+- **ROM tests over time:** monthly measurements — knee-to-wall (cm),
+  straight-leg raise (degrees, optionally from the phone's inclinometer),
+  Thomas test, wall shoulder flexion — charted per test and per side.
+- Adherence streak alongside training; loaded-stretch drills (paused goblet
+  squat, Cossack, paused RDL) log as normal lifting sets so PRs still work.
+
 ---
 
 ## Parked
