@@ -297,6 +297,46 @@ with a chart. Write `r&d/specs/body-comp-spec.md` before building.
   together. Everything lives in IndexedDB and goes through JSON export/import
   (schema bump + migration).
 
+### 19. Tools page (calculators)
+A **Tools** page — the 98 skin's menu bar already has a Tools menu, so that's
+the way in. Every calculator **prefills from stored data** (bodyweight, height,
+age, sex, BF% and measurements once item 18 exists), stays editable for
+what-ifs, and saves nothing unless asked. Write `docs/calculators-spec.md`
+before building. Reuse the maths that's already in the app — `bmrKcal` /
+`suggestedTargets`, `e1rm`, `dots` — don't write second copies.
+
+**Energy**
+- **TDEE:** Mifflin-St Jeor (exists), plus Katch-McArdle when a BF% is known.
+- **Adaptive TDEE:** back-calculated from logged Food intake and the bodyweight
+  trend over the last 2–4 weeks (intake minus the energy in the weight change).
+  Show it next to the formula figure — "formula says X, your data says Y" — and
+  only once there are enough logged days to mean anything. This is the one no
+  formula can give, and the app already has both inputs.
+
+**Physique**
+- **Max muscular potential (Casey Butt):** from height, wrist and ankle
+  circumference → maximum lean body mass, and a table of the maximum bodyweight
+  at each body-fat % (roughly 5–20%). Commonly given as
+  `LBM_max(lb) = H^1.5 × (√W / 22.667 + √A / 17.0104) × (1 + BF% / 224)`
+  with H, W, A in inches — **verify the constants against Butt's published
+  formula before shipping**, then convert to kg / cm.
+- **FFMI** and height-normalised FFMI from current weight and BF%, with where
+  that sits against the potential figure.
+- Label all of it as an estimate: these formulas come from drug-free elite
+  bodybuilders of typical proportions, so for adaptive or short-stature lifters
+  they're a rough ceiling, not a verdict.
+
+**Strength**
+- e1RM and a rep-max table from any set (existing `e1rm`), and a %1RM ↔ RIR
+  chart.
+- **Plate loader:** target kg → plates per side for the bar in use (20 kg bar,
+  15 kg, custom), available plates and collars as a setting.
+- DOTS / IPF GL points calculator (existing `dots`), and a warm-up ramp
+  generator (reuse `openRamp`).
+
+Can ship before item 18 using typed-in inputs; wire the prefills when body
+comp lands.
+
 ---
 
 ## Parked
