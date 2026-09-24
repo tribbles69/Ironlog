@@ -159,9 +159,11 @@ ok(calfLast === 100, 'Smith Calf Raise zero-rep sets that are the last set = 100
 ok(mcpZeros === 43 && mcpAllZero === 12, 'Machine Chest Press = 43 zeros across 12 entirely-zero entries');
 ok(amrapNote === 355, 'entries mentioning AMRAP in notes = 355');
 ok(amrapReal === 243, 'of those, storing a real rep count = 243');
-ok(M.length === 104, 'catalogue movements = 104');
+// 104 in phase 1, + 12 strongman movements in B1 (r&d/specs/strongman-spec.md)
+ok(M.length === 116, 'catalogue movements = 116 (104 + 12 strongman)');
 ok(M.filter(m => m.attachments).length === 29, 'movements with attachments = 29');
-ok(M.filter(m => m.metric === 'time').length === 10, 'movements with metric:time = 10');
+// 10 in phase 1; farmers carry and sled push became metric:carry in B1
+ok(M.filter(m => m.metric === 'time').length === 8, 'movements with metric:time = 8 (10 less farmers + sled push, now carry)');
 ok(M.filter(m => m.singleImplement).length === 8, 'movements with singleImplement = 8');
 ok(M.filter(m => m.verified === true).length === 32, 'verified:true = 32');
 ok(names.every(n => resolve(n).m.verified === true), 'all program names map to verified:true movements');
