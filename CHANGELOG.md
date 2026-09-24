@@ -13,6 +13,20 @@ rather than guessed.
 
 ---
 
+## 0.36.0 — 24 Sep 2026
+- **A welcome for new users.** Three short steps the first time Ironlog
+  opens:
+  - how your data is handled (on your phone, backed up to your own Drive if
+    you want, AI only with your own key) and a short safety note;
+  - your units, sex and bodyweight;
+  - what you're training for and your main lifts.
+
+  Picking a meet type goes straight on to adding the event.
+- **Already use Ironlog?** The welcome can restore your log from Google Drive
+  or a backup file before anything else.
+- **Help & FAQ**, from Settings or the 98 Help menu: short answers on backups,
+  RIR, e1RM, PRs, set roles, fast logging, importing and the AI.
+
 ## 0.35.0 — 24 Sep 2026
 - **Import from Strong, Hevy and FitNotes**, as well as Liftoff and any CSV
   with a date, exercise and weight or reps column. Settings → Data → Import

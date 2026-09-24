@@ -297,7 +297,7 @@ show a dry-run report before anything is written.
 
 ## C. Competition — the edge nobody else has
 
-### [ ] C1. Welcome / first-run screen
+### [x] C1. Welcome / first-run screen — shipped 0.36.0 (strongman has no event type until C2)
 - Sets units, lifts, event goals.
 - Explains: data stays on the device, backs up to your own drive, AI is optional
   and uses your own key.
