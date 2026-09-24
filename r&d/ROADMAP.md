@@ -252,7 +252,7 @@ Without these, volume and PR figures are wrong (Blast #70; research).
 - Warm-ups stay out of volume and PRs.
 - Related: supersets in `r&d/notes/backlog.md`.
 
-### [ ] B4. Plate loader and warm-up ramp from the set
+### [x] B4. Plate loader and warm-up ramp from the set — shipped 0.31.0 (Tools page entry waits for D11)
 (Blast #101; research.) Reachable by tapping a set's weight on the workout page,
 and from the Tools page (D11).
 - Target kg → plates per side.

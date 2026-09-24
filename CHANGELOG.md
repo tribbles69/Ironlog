@@ -13,6 +13,22 @@ rather than guessed.
 
 ---
 
+## 0.31.0 — 24 Sep 2026
+- **The right bar, automatically.** The plate loader and warm-up ramp use
+  the bar that matches the lift: trap bar, safety squat bar, axle or log. In
+  Settings → Bars, add one from the presets (women's bar, deadlift bar, SSB,
+  trap bar, axle, log) and set what it's for.
+- **Collars.** Set your collar weight in Settings and it counts as part of
+  the bar.
+- **Warm-up ramps you can load.** Each step is rounded to a weight your
+  plates can make, shows the plates per side, and sticks to 2.5 kg plates
+  and up. "▲ Ramp to this" on the plate sheet builds a ramp to that set in
+  one tap.
+- **Fixed:** the plate loader can now make weights it used to call "not
+  loadable", like 15 + 15 when there's only one 20.
+- **Fixed:** saving Settings turned 1.25 kg plates into 1.3 kg, and in pounds
+  the plate list was saved in the wrong unit.
+
 ## 0.30.0 — 24 Sep 2026
 - **Set roles.** Tap a set's number to mark it as a warm-up, working set,
   top set, back-off, AMRAP or drop set. The number shows the role: T1, B2,
