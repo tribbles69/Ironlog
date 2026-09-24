@@ -72,7 +72,8 @@ ok(badAlias.length === 0, 'every alias axis is legal for its movement', badAlias
 
 ok(!V.metric.some(v => /[()]/.test(v)), 'metric vocabulary has no parenthetical values (E3)');
 ok(!!V.load.order && !V.load.bilateral, 'load is the ordered rule, not the flat table (E4)');
-ok(Array.isArray(V.setType) && V.setType.length === 4, 'setType vocabulary present (E5)');
+// E5's four, plus top and back-off (roadmap B3)
+ok(Array.isArray(V.setType) && V.setType.length === 6, 'setType vocabulary present (E5, B3)');
 ok(Array.isArray(V.modifier) && V.modifier.some(x => x.splitsPR), 'modifier vocabulary with splitsPR (E6)');
 ok(!!V.attachmentKind && !!V.attachmentApplies, 'attachmentKind + attachmentApplies present (E7)');
 ok(M.every(m => (m.aliases || []).every(a => typeof a === 'object' && a.name)), 'aliases are leaf-bearing (E8)');
