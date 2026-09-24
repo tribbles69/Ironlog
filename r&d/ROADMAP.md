@@ -238,7 +238,7 @@ The biggest documented strongman gap (Blast #96, #109; research).
   a weight; most reps in a cap. PRs show up as PRs everywhere loads do.
 - Feeds strongman events in C2.
 
-### [ ] B2. Last session inline and fast entry
+### [x] B2. Last session inline and fast entry — shipped 0.29.0
 The single most-requested general feature (Blast #113, #42, #43; research).
 - Show last time's weight × reps @ RIR beside each set.
 - Tap to fill; copy a value down to the remaining sets.

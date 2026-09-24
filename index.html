@@ -350,6 +350,18 @@ tr.pr td input{background:rgba(255,197,66,.1);border-color:rgba(255,197,66,.35)}
 }
 .chk.on{background:var(--green);border-color:var(--green);color:#07240f;font-weight:800}
 .ex-foot{display:flex;gap:8px;padding:9px 11px 11px}
+/* fast entry: last time's set is a button, the selected row is marked, and
+   the step bar sits under the table */
+.prevbtn{border:0;background:transparent;color:inherit;font:inherit;padding:4px 0;width:100%;line-height:1.25;cursor:pointer;border-radius:6px}
+.prevbtn:active{background:rgba(255,255,255,.06)}
+.prir{display:block;font-size:9.5px;opacity:.8}
+tr.sel .setno{border-color:var(--accent);color:var(--accent)}
+tr.sel td{background:rgba(255,92,53,.045)}
+.fastbar{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 11px 0;flex-wrap:wrap}
+.fb-grp{display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--dim)}
+.fb-grp span{min-width:34px;text-align:center}
+.fbtn{width:36px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--bg2);color:var(--txt);font-size:18px;font-weight:700;line-height:1;padding:0;cursor:pointer}
+.fbtn:active{background:var(--card2)}
 /* Equipment + execution, the two axes you change most often, as one pill.
    Tapping either half opens the picker on that tab. */
 .leafchip{display:inline-flex;align-items:center;border-radius:9px;overflow:hidden;
@@ -891,6 +903,9 @@ html[data-skin="win98"] .settable td{
 }
 html[data-skin="win98"] .settable td input{font-weight:700;color:#fff}
 html[data-skin="win98"] .settable .c-prev{color:var(--dim2)}
+html[data-skin="win98"] .fbtn{background:var(--w-face);color:var(--w-dk);border:0;border-radius:0;box-shadow:var(--w-raise)}
+html[data-skin="win98"] .fbtn:active{box-shadow:var(--w-sink)}
+html[data-skin="win98"] tr.sel td{background:#101830}
 html[data-skin="win98"] .setno{
   background:var(--w-face);color:var(--w-dk);border:0;box-shadow:var(--w-raise);font-weight:800;
 }
@@ -1549,7 +1564,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.28.0';
+const APP_VERSION = '0.29.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4199,6 +4214,55 @@ function lastSession(key) {
   return { date: prev.date, sets: ex.sets.filter(s => s.done && isWorking(s)) };
 }
 
+/* ---------------- fast entry (roadmap B2) ----------------
+   Last time's numbers sit beside each set and in its empty fields. Ticking an
+   empty row logs them; tapping Prev fills them in to edit; the bar under the
+   table steps the selected set's weight and reps and copies it down. RIR is
+   never carried over: it's how today felt. */
+/* Last session's set in the same working position — warm-ups don't shift it. */
+function prevSetFor(e, si, prev) {
+  const s = e.sets[si];
+  if (!prev || !s || isWarm(s)) return null;
+  return prev.sets[si - e.sets.slice(0, si).filter(x => isWarm(x)).length] || null;
+}
+const FILL_FIELDS = { reps: ['w', 'r'], cap: ['w', 'r'], series: ['w'], time: ['w', 'sec'],
+  carry: ['w', 'm', 'sec'], capcarry: ['w', 'm'], race: ['w', 'n', 'm', 'sec'] };
+function fillFields(e) { return FILL_FIELDS[kindOf(e)] || FILL_FIELDS.reps; }
+/* Copy a set's numbers into another. `onlyEmpty` leaves anything typed alone,
+   and fills the weight only into a row with nothing in it at all — reps typed
+   without a weight may be a bodyweight set today. */
+function fillSet(e, s, from, onlyEmpty) {
+  const blank = !(s.w > 0) && fillFields(e).every(f => f === 'w' || !(s[f] > 0));
+  fillFields(e).forEach(f => {
+    if (!(from[f] > 0)) return;
+    if (onlyEmpty && (s[f] > 0 || (f === 'w' && !blank))) return;
+    s[f] = from[f];
+    if (f === 'w') delete s.auto;   // chosen, not computed: autoregulation leaves it be
+  });
+}
+/* The set the step bar acts on: the one last touched while it's still open,
+   otherwise the first one not yet ticked. */
+let fastSel = {};
+function fastReset() { fastSel = { _id: S.active && S.active.id }; }
+function curSet(e, ei) {
+  if (fastSel._id !== (S.active && S.active.id)) fastReset();   // a new session starts unselected
+  const k = fastSel[ei];
+  if (k != null && e.sets[k] && !e.sets[k].done) return k;
+  const i = e.sets.findIndex(s => !s.done);
+  return i < 0 ? e.sets.length - 1 : i;
+}
+function wStep() { return U() === 'lb' ? 5 : 2.5; }
+function fastBar(e, ei) {
+  const k = kindOf(e);
+  if (!['reps', 'cap', 'series'].includes(k)) return '';
+  const st = `${nice(wStep())} ${U()}`;
+  return `<div class="fastbar">
+    <div class="fb-grp"><button class="fbtn" data-step="${ei}.w.-1" aria-label="Weight down ${st}">−</button><span>${st}</span><button class="fbtn" data-step="${ei}.w.1" aria-label="Weight up ${st}">+</button></div>
+    ${k === 'series' ? '' : `<div class="fb-grp"><button class="fbtn" data-step="${ei}.r.-1" aria-label="One rep fewer">−</button><span>rep</span><button class="fbtn" data-step="${ei}.r.1" aria-label="One rep more">+</button></div>`}
+    <button class="btn xs ghost" data-copydown="${ei}" title="Copy the selected set to the sets below it">⇣ Copy down</button>
+  </div>`;
+}
+
 /* Sets done, sets planned and volume for the live session. Pulled out of
    activeWorkout() because the 98 skin's status readout wants the same three
    numbers, and two places counting sets is two places to get it wrong.
@@ -4370,18 +4434,21 @@ function exerciseCard(e, ei) {
     </div>` : '';
   const rirPh = e.auto ? String(e.auto.t) : '—';
 
+  const cur = curSet(e, ei);
   const rows = e.sets.map((s, si) => {
     const isPR = s.done && isWorking(s) && s.r > 0 && beatsBest(st, s.w, s.r, s.rpe);
     const isFirstPR = s.done && isWorking(s) && s.r > 0 && !st;
-    const p = prev && prev.sets[si];
+    const p = prevSetFor(e, si, prev);
+    const sel = !s.done && si === cur ? ' sel' : '';
+    const prevCell = inner => p ? `<td class="c-prev mono"><button class="prevbtn" data-prev="${ei}.${si}" aria-label="Fill with last time's set">${inner}</button></td>` : `<td class="c-prev mono">—</td>`;
     const setNo = `<td class="c-set"><div class="setno ${isWarm(s) ? 'warm' : ''}" data-warm="${ei}.${si}" title="Toggle warm-up">${isWarm(s) ? 'W' : si + 1 - e.sets.slice(0, si).filter(x => isWarm(x)).length}</div></td>
       <td class="c-del"><button class="delset" data-delset="${ei}.${si}" title="Delete set">×</button></td>`;
     const chk = `<td class="c-chk"><button class="chk ${s.done ? 'on' : ''}" data-done="${ei}.${si}">✓</button></td>`;
     const holdBtn = `<button class="plbtn" data-hold="${ei}.${si}" title="Hold timer">⏱</button>`;
     if (special) {
-      return `<tr class="${s.done ? 'done' : ''}">
+      return `<tr class="${s.done ? 'done' : ''}${sel}" data-row="${ei}.${si}">
       ${setNo}
-      <td class="c-prev mono">${esc(prevText(e, p))}</td>
+      ${prevCell(esc(prevText(e, p)))}
       ${shapeRow(e, ei, si, s)}
       ${chk}
     </tr>`;
@@ -4390,9 +4457,9 @@ function exerciseCard(e, ei) {
        Held to failure (test mode) means RIR 0 by definition, so it's shown
        rather than asked. */
     if (isoE) {
-      return `<tr class="${s.done ? 'done' : ''}">
+      return `<tr class="${s.done ? 'done' : ''}${sel}" data-row="${ei}.${si}">
       ${setNo}
-      <td class="c-prev mono">${p && p.sec ? `${p.w > 0 ? nice(dw(p.w)) + '·' : ''}${fmtSec(p.sec)}` : '—'}</td>
+      ${p && p.sec ? prevCell(`${p.w > 0 ? nice(dw(p.w)) + '·' : ''}${fmtSec(p.sec)}`) : '<td class="c-prev mono">—</td>'}
       <td class="c-wt"><input type="number" step="0.5" inputmode="decimal" data-f="w" data-k="${ei}.${si}" value="${s.w ? dw(s.w) : ''}" placeholder="0"></td>
       <td class="c-pl">${holdBtn}</td>
       <td class="c-time"><input type="text" inputmode="numeric" data-f="sec" data-k="${ei}.${si}" value="${fmtSec(s.sec)}" placeholder="m:ss"></td>
@@ -4405,20 +4472,20 @@ function exerciseCard(e, ei) {
     /* A timed movement has no reps or weight input (spec §6) — one duration
        field, and the plate button goes with the weight it belonged to. */
     if (timed) {
-      return `<tr class="${s.done ? 'done' : ''}">
+      return `<tr class="${s.done ? 'done' : ''}${sel}" data-row="${ei}.${si}">
       ${setNo}
-      <td class="c-prev mono">${p && p.sec ? fmtSec(p.sec) : '—'}</td>
+      ${p && p.sec ? prevCell(fmtSec(p.sec)) : '<td class="c-prev mono">—</td>'}
       <td class="c-time" colspan="3"><input type="text" inputmode="numeric" data-f="sec" data-k="${ei}.${si}" value="${fmtSec(s.sec)}" placeholder="m:ss"></td>
       <td class="c-pl">${holdBtn}</td>
       ${chk}
     </tr>`;
     }
-    return `<tr class="${s.done ? 'done' : ''} ${isPR || isFirstPR ? 'pr' : ''}">
+    return `<tr class="${s.done ? 'done' : ''} ${isPR || isFirstPR ? 'pr' : ''}${sel}" data-row="${ei}.${si}">
       ${setNo}
-      <td class="c-prev mono">${p ? `${wt(p.w)}×${p.r}` : '—'}</td>
-      <td class="c-wt"><input type="number" step="0.5" inputmode="decimal" data-f="w" data-k="${ei}.${si}" value="${s.w ? dw(s.w) : ''}" placeholder="0"></td>
+      ${prevCell(`${p && p.w > 0 ? `${nice(dw(p.w))}×` : ''}${p ? p.r : ''}${p && p.rpe ? `<span class="prir">@${rpeToRir(p.rpe)} RIR</span>` : ''}`)}
+      <td class="c-wt"><input type="number" step="0.5" inputmode="decimal" data-f="w" data-k="${ei}.${si}" value="${s.w ? dw(s.w) : ''}" placeholder="${p && p.w > 0 ? nice(dw(p.w)) : '0'}"></td>
       <td class="c-pl">${s.w > 0 ? `<button class="plbtn" data-plates="${ei}.${si}" title="Plates">▤</button>` : ''}</td>
-      <td><input type="number" inputmode="numeric" data-f="r" data-k="${ei}.${si}" value="${s.r || ''}" placeholder="0"></td>
+      <td><input type="number" inputmode="numeric" data-f="r" data-k="${ei}.${si}" value="${s.r || ''}" placeholder="${p && p.r > 0 ? p.r : '0'}"></td>
       <td><input type="number" step="1" inputmode="numeric" data-f="rpe" data-k="${ei}.${si}" value="${s.rpe == null ? '' : rpeToRir(s.rpe)}" placeholder="${rirPh}"></td>
       ${chk}
     </tr>`;
@@ -4445,6 +4512,7 @@ function exerciseCard(e, ei) {
       : `<th class="c-kg">${U()}</th><th class="c-pl"></th><th class="c-reps">Reps</th><th class="c-rpe">RIR</th>`}<th class="c-chk"></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
+    ${fastBar(e, ei)}
     ${vbtStrip(e)}
     ${e.series ? `<div class="row" style="gap:8px;align-items:center;padding:8px 12px 0">
       <label class="sub grow" for="ss${ei}">Series time</label>
@@ -7874,6 +7942,9 @@ function toggleSetDone(ei, si) {
   const s = ex && ex.sets[si];
   if (!s) return;
   if (s.done) { s.done = false; save(); bust(); render(); return; }
+  // an empty field takes last time's number: a routine set is one tap
+  const was = lastSession(exKey(ex)), from = prevSetFor(ex, si, was);
+  if (from) fillSet(ex, s, from, true);
   /* A timed set is finished by its duration, not its reps — the reps guard
      made every plank and every treadmill session impossible to tick off. */
   const timed = isTimed(ex);
@@ -9118,6 +9189,7 @@ function wireActive(v) {
   const key = k => k.split('.').map(Number);
 
   $('#woName').onchange = e => { a.name = e.target.value.trim() || 'Workout'; save(); };
+  if (fastSel._id !== a.id) fastReset();
 
   // typing updates the model silently so focus is never stolen
   v.querySelectorAll('[data-f]').forEach(inp => {
@@ -9157,6 +9229,56 @@ function wireActive(v) {
   });
 
   v.querySelectorAll('[data-done]').forEach(b => b.onclick = () => toggleSetDone(...key(b.dataset.done)));
+
+  // fast entry (B2): select a row by touching it; Prev fills it; the bar steps and copies
+  v.querySelectorAll('tr[data-row]').forEach(tr => tr.addEventListener('pointerdown', () => {
+    const [ei, si] = key(tr.dataset.row);
+    if (a.exercises[ei].sets[si].done) return;
+    fastSel[ei] = si;
+    tr.closest('tbody').querySelectorAll('tr.sel').forEach(x => x.classList.remove('sel'));
+    tr.classList.add('sel');
+  }));
+  v.querySelectorAll('[data-prev]').forEach(b => b.onclick = () => {
+    const [ei, si] = key(b.dataset.prev);
+    const ex = a.exercises[ei], s = ex.sets[si];
+    const p = prevSetFor(ex, si, lastSession(exKey(ex)));
+    if (!p || s.done) return;
+    fillSet(ex, s, p, false);
+    fastSel[ei] = si;
+    save(); render();
+  });
+  v.querySelectorAll('[data-step]').forEach(b => b.onclick = () => {
+    const [eis, f, dir] = b.dataset.step.split('.');
+    const ei = +eis, ex = a.exercises[ei], si = curSet(ex, ei), s = ex.sets[si];
+    if (!s) return;
+    const p = prevSetFor(ex, si, lastSession(exKey(ex))) || {};
+    if (f === 'w') {
+      // from what's in the box, or last time's number showing in it
+      const base = s.w > 0 ? dw(s.w) : p.w > 0 ? dw(p.w) : 0;
+      const nv = Math.max(0, Math.round((base + (+dir) * wStep()) * 100) / 100);
+      s.w = nv > 0 ? toKg(nv) : 0;
+      delete s.auto;
+    } else {
+      const base = s.r > 0 ? s.r : p.r > 0 ? p.r : 0;
+      s.r = Math.max(0, base + (+dir));
+    }
+    fastSel[ei] = si;
+    save(); render();
+  });
+  v.querySelectorAll('[data-copydown]').forEach(b => b.onclick = () => {
+    const ei = +b.dataset.copydown, ex = a.exercises[ei], si = curSet(ex, ei), src = ex.sets[si];
+    if (!src || !(src.w > 0 || fillFields(ex).some(f => src[f] > 0))) return toast('Fill in the selected set first');
+    let n = 0;
+    ex.sets.forEach((s, i) => {
+      if (i <= si || s.done || isWarm(s) !== isWarm(src)) return;
+      fillFields(ex).forEach(f => { s[f] = src[f] > 0 ? src[f] : (f === 'w' ? 0 : null); });
+      delete s.auto;
+      n++;
+    });
+    if (!n) return toast('No open sets below this one');
+    save(); render();
+    toast(`Copied to ${n} set${n === 1 ? '' : 's'}`);
+  });
   // stone series: made / missed
   v.querySelectorAll('[data-made]').forEach(b => b.onclick = () => {
     const [ei, si] = key(b.dataset.made);
@@ -9286,9 +9408,9 @@ function wireActive(v) {
           else { ex.series = true; ex.sets.forEach(s => { if (!s.done) { s.r = 1; s.rpe = null; delete s.miss; } }); }
           save(); bust(); closeModal(); render();
         };
-        $('#exUp', bg).onclick = () => { if (ei > 0) { const [x] = a.exercises.splice(ei, 1); a.exercises.splice(ei - 1, 0, x); save(); closeModal(); render(); } };
-        $('#exDown', bg).onclick = () => { if (ei < a.exercises.length - 1) { const [x] = a.exercises.splice(ei, 1); a.exercises.splice(ei + 1, 0, x); save(); closeModal(); render(); } };
-        $('#exDel', bg).onclick = () => { a.exercises.splice(ei, 1); save(); closeModal(); render(); };
+        $('#exUp', bg).onclick = () => { fastReset(); if (ei > 0) { const [x] = a.exercises.splice(ei, 1); a.exercises.splice(ei - 1, 0, x); save(); closeModal(); render(); } };
+        $('#exDown', bg).onclick = () => { fastReset(); if (ei < a.exercises.length - 1) { const [x] = a.exercises.splice(ei, 1); a.exercises.splice(ei + 1, 0, x); save(); closeModal(); render(); } };
+        $('#exDel', bg).onclick = () => { fastReset(); a.exercises.splice(ei, 1); save(); closeModal(); render(); };
         $('#exOk', bg).onclick = () => {
           ex.notes = $('#exNote', bg).value.trim();
           const by = S.settings.restBy = S.settings.restBy || {};
