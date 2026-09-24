@@ -13,6 +13,26 @@ rather than guessed.
 
 ---
 
+## 0.37.0 — 24 Sep 2026
+- **Meet day.** Each event has a Meet day screen:
+  - **Warm-ups:** enter when your flight starts and where you are in the
+    order, and get your warm-ups with clock times and the plates for each
+    step, timed to your opener.
+  - **Attempts:** your three attempts per lift with the referees' lights,
+    tapped white or red. Your best lifts, subtotal and total update as you
+    go, with DOTS and IPF GL from your weigh-in.
+  - **Checklist:** rack heights, and a packing list you can add to.
+- **Save meet results as tested singles**, so your next event's openers
+  follow what you actually hit.
+- **Attempt strategies:** conservative, standard or aggressive. A lift with
+  no tested single now plans from your best recent training (e1RM) instead
+  of leaving the plan blank.
+- **Bodyweight against your class:** the event card shows how far over or
+  under you are, your two-week trend, and what you need per week to make it.
+- **Strongman shows:** add a show with its events (max weight, max reps, a
+  carry or medley for time, furthest distance, longest hold), see your best
+  at each from training, and enter results and placings for points.
+
 ## 0.36.0 — 24 Sep 2026
 - **A welcome for new users.** Three short steps the first time Ironlog
   opens:
