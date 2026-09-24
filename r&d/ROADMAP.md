@@ -12,14 +12,22 @@ for the community, not a money-maker.
 - **Everything is free, forever.** No paid tier, no paywalled features.
 - **Local-only.** No Ironlog account and no Ironlog server holding user data.
   Backup/sync goes to the **user's own cloud drive** (Google Drive first), so
-  their data sits in their storage, not ours (see item 10).
+  their data sits in their storage, not ours (see B6).
 - **AI runs on the user's own API key** (bring-your-own-key), entered on the
   device and used only from the device. Aaron doesn't pay for other people's AI
   usage. Every AI feature must be optional — the app is complete without a key.
 - Optional support: donations (Ko-fi / GitHub Sponsors) and cosmetic
   muscle-map skin packs. Never gate a feature behind either.
-- **Food logging is leaving Ironlog** for its own separate app — removing the
-  Food tab is the top item under "Now".
+- **Food logging is leaving Ironlog** for its own separate app (A1).
+
+**Where the priorities come from (2026-09-24):** Aaron's own plans, the open
+issues of a competing app (<https://github.com/madmustachecompany/Blast-Workout-App/issues>
+— "Blast #n" below is the issue number), and desk research on what lifters ask
+for in training apps. The research's main finding: people stay or leave over
+the **basics** (fast logging, reliable timers, never losing data, no paywalls);
+**competition tools** (meet day, strongman events, para powerlifting) are
+where no other app does well. Hence the order: protect → basics → competition →
+extras.
 
 ---
 
@@ -28,13 +36,14 @@ for the community, not a money-maker.
 Paths here are from the repo root. The folder is `r&d` — **quote it in the
 shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
 
-1. Take the **first unchecked item under "Now"** unless Aaron says otherwise.
-   If everything under "Now" is done, carry on down the file in order: "Next",
-   then the ranked Blast section, then "Later".
+1. Take the **first unchecked item, top to bottom** — section A, then B, C, D,
+   E — unless Aaron says otherwise.
 2. **Check the code before trusting a status here.** Some items were marked from
    memory of planning chats, not from the code. If something is already built,
    tick it, note the version, and move on.
 3. If an item links a spec in `r&d/specs/`, the spec wins over the summary here.
+   Items marked "write a spec first" need the spec written and agreed before
+   building.
 4. One feature per commit. Every shipped change bumps `version.json` **and**
    the `VERSION` / cache name in `sw.js`, or installed PWAs keep serving the old
    shell.
@@ -45,6 +54,8 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    ```
 6. When an item ships, tick it here with the version number. Don't reorder
    priorities without asking Aaron.
+7. Items marked **(check on phone)** can't be finished from here — do what can
+   be done in code, then leave a short checklist for Aaron and move on.
 
 **Standing rules (don't break these):**
 - RIR is what's shown and typed; **RPE is what's stored** and what all effort
@@ -54,7 +65,8 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
   a backup/sync target. No Ironlog server stores user data.
 - AI is a fallback, never the first path. Local tables/databases answer first.
   AI only ever uses the user's own key.
-- Never fix `prKey` / `splitsPR` as a side effect of another feature (see Later).
+- Never fix `prKey` / `splitsPR` as a side effect of another feature (see D10).
+- Every free-text or icon-only control gets an accessible label (see C4).
 
 ---
 
@@ -62,182 +74,231 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
 
 - [x] Installable PWA with offline cache and safe mid-workout updates
 - [x] IndexedDB storage, JSON export/import
-- [x] Food tab: CoFID + curated local tables first, Haiku fallback via server-side
-      function. **Being removed** — see item F under "Now".
+- [x] Food tab: CoFID + curated local tables first, Haiku fallback via
+      server-side function. **Being removed — A1.**
 - [x] Exercise database (`EX_DB`, 736 movements) with muscle shares; body heatmap
 - [x] RPE → RIR switch across display, inputs and voice logging
-- [x] Muscle map skins (0.23.0): the body is painted from a skin sheet, one cell per
-      muscle per tier, so any art works. Only the placeholder `skins/template.png`
-      ships (darker orange per tier) until proper art is made; custom sheets
-      importable. Guide and paint files in `r&d/skins/`
+- [x] Muscle map skins (0.23.0): the body is painted from a skin sheet, one cell
+      per muscle per tier, so any art works. Only the placeholder
+      `skins/template.png` ships (darker orange per tier) until proper art is
+      made; custom sheets importable. Guide and paint files in `r&d/skins/`
 - [x] Slew VBT built in: per-exercise **Measure** flow (phone motion sensor →
       per-rep velocity, velocity loss, estimated RIR) — `slew-core.js`
+- [x] "Log a test" fix (0.16.3): `openTestLog` logs the big three only, pinned to
+      the priority-lift variants, entries sent with `leaf`.
+- [x] Isometric holds (0.17.0) — spec `r&d/specs/isometrics-spec.md`. Per-entry
+      `iso: true`, own PR pool via an `exKey` suffix, `sec` field, manual /
+      planned countdown / test-to-failure modes, best hold per weight. Built the
+      shared `Cue` (Web Audio beeps + vibration, Sound/Vibration settings) and
+      `Awake` (refcounted Wake Lock) helpers — reuse them.
+- [x] Rest timer (0.18.0): auto-starts on set done, beep + vibration, per-exercise
+      rest in `settings.restBy` (main vs accessory via `isMainLift`), ±15 s,
+      timestamp-based, opt-in background notification. Real-phone check is A3.
+- [x] Cardio session — HR-zone treadmill coaching (0.19.0) — spec
+      `r&d/specs/cardio-spec.md`. Web Bluetooth Heart Rate Service, settle
+      period, smoothed HR, hysteresis, speed/incline cues with voice, hard HR
+      ceiling, HR trace saved. Real-gym check is A3. Optional AI trend coach →
+      D9.
+- [x] Autoregulated programming (0.21.0) — spec `r&d/specs/autoreg-spec.md`.
+      One flat working weight per exercise, loads from a per-exercise working
+      e1RM at the session's reps and target RIR, whole-number RIR, stall
+      detection over the last 5 sessions, "off day" toggle that doesn't reset the
+      stall counter. `autoE1()` is where D1's VBT e1RM plugs in.
+- [x] Workout page on the composed exercise model (0.22.0): greyed-not-hidden
+      equipment picker, equipment icons, movement page with variant strip and
+      per-variant stats, **modifier chips** that annotate a set without
+      splitting the PR leaf, Settings → **Check exercise data** report. Running
+      that report on the real log is part of A3.
 - [ ] Composed exercise model (movement + equipment + laterality, PRs per variant,
-      parent page rolls up variants) — specs in `r&d/specs/exercise-system.md` and
+      parent page rolls up variants) — specs `r&d/specs/exercise-system.md` and
       `r&d/specs/exercise-system-phase1.md`. **Status unconfirmed — check how far
       phase 1 got before building anything that depends on it.**
+- ~~PR detection against history~~ — not a bug (Aaron's logging error, 2026-09-24).
 
 ---
 
-## Now
+## A. Do now — quick and protective
 
-### F. Remove the Food tab — **do this first**
+### [ ] A1. Remove the Food tab — **do this first**
 Decided 2026-09-24: food logging leaves Ironlog for its own separate app.
-Prioritised by Aaron to the top of the list.
-1. **Export first, in its own shipped version:** add a one-tap **Export food
-   log** (JSON, plus CSV for spreadsheets) covering every logged food entry,
+1. **Export first, in its own shipped version:** a one-tap **Export food log**
+   (JSON, plus CSV for spreadsheets) covering every logged food entry,
    saved/custom foods and daily targets, so nobody loses data. The future food
    app will import this file.
 2. **Then remove** in a following version: the Food tab and its bottom-nav slot
    (nav goes back to five tabs), `parse-food.js` and the server-side food
-   function, the food lookup tables (CoFID + curated), and any food settings.
+   function, the food lookup tables (CoFID + curated), and food settings.
    Schema bump + migration that drops food stores **only after** step 1 has
-   shipped. Keep `bmrKcal` / `suggestedTargets` — item 19 still uses them.
+   shipped. Keep `bmrKcal` / `suggestedTargets` — D11 still uses them.
 3. Check nothing else reads food data (e.g. the check-in or Home summary). If
    something does, remove that view rather than leave it broken.
-4. The full JSON export/import for training data must keep working; old export
-   files that still contain food data must import without errors (ignore the
-   food part).
+4. Training data JSON export/import must keep working; old export files that
+   still contain food data must import without errors (ignore the food part).
 
-### 0. ~~Fix: "Log a test" can't save anything~~ — [x] shipped 0.16.3
-`openTestLog` now logs the big three only (squat, bench, deadlift, pinned to
-the priority-lift variants, no picker, no ramp ▲ button) and sends entries with
-`leaf`, so `logTest` keeps them. Applied from the 0.16.3 patch (now deleted).
+### [ ] A2. Persistent storage and backup nudge
+Chrome can clear a PWA's IndexedDB when the phone is short on space.
+- Call `navigator.storage.persist()` (after the first logged session is a good
+  moment) and show the result in Settings.
+- Until B6 ships: a gentle reminder to export a backup if the last export is
+  older than ~2 weeks, dismissable, never blocking a workout.
 
-### 1. ~~Isometric holds~~ — [x] shipped 0.17.0
-Spec: **`r&d/specs/isometrics-spec.md`**. Built with option A (best hold per
-weight). Shared helpers for item 2 and the cardio session: `Cue` (Web Audio
-beeps + vibration, gated by the new Sound / Vibration settings) and `Awake`
-(refcounted Wake Lock). Old "1 rep + note" holds are deliberately not migrated.
+### [ ] A3. Real-phone checks (check on phone)
+Everything shipped but never tested on Aaron's actual kit (Oppo Reno 8,
+Galaxy Watch 7, Chrome):
+- Rest timer: alert still fires with the screen locked and the app in the
+  background; background notification forwards to the watch and buzzes it
+  (Blast #17, #64, #101). If it's unreliable, say so in the setting.
+- Cardio: HR strap/watch pairing, cue audio and voice, disconnect/reconnect.
+  (A third-party Wear OS "heart rate broadcast" app may let the Galaxy Watch
+  act as the HR source with no code changes — worth trying.)
+- Run Settings → Check exercise data against the real log and the Liftoff CSV.
 
-Per-entry `iso: true` flag (not a new movement or leaf axis), own PR pool via an
-`exKey` suffix, reuse the set's `sec` field, three hold modes (manual / planned
-countdown / test-to-failure count-up), Web Audio count-in beeps, Wake Lock,
-timestamp-based timing so backgrounding doesn't break it. Test-mode holds get
-RIR 0 automatically.
+### [ ] A4. Checks against Blast's bugs
+Blast shipped these; make sure Ironlog doesn't have them. Tick each.
+- [ ] Every exercise in a superset/circuit gets its PRs (Blast #87) — once
+  supersets exist.
+- [ ] Max-weight and max-reps PRs agree at the same weight (#51).
+- [ ] Nothing is ever stored as lbs; imported or synced weights are converted to
+  kg (#60, #61).
+- [ ] A started session can be discarded without logging it (#46).
+- [ ] Several sessions on the same day all show in history and the calendar
+  (#47).
+- [ ] Number inputs lose focus when the keyboard is dismissed or you tap
+  elsewhere (#49).
 
-- **Open decision:** best hold *per weight* (default, mirrors `byRep`) vs a
-  single `kg × sec` hold-volume figure. Build the default unless Aaron says
-  otherwise.
-- The audio module built here (beeps, gesture unlock, sound/vibration settings)
-  is reused by the rest timer and the cardio session below — build it as a
-  shared helper.
-
-### 2. ~~Rest timer upgrade~~ — [x] shipped 0.18.0
-There was no rest timer at all, only the `restDefault` setting — built from
-scratch on `Cue` / the shared audio helper from item 1. Main vs accessory is a
-heuristic (`isMainLift`: priority lifts + heavy-bar compounds); per-exercise
-rest lives in `settings.restBy` from the exercise's ⋯ menu. Background
-notification is opt-in from Settings and best effort.
-- **Auto-start** when a set is ticked done.
-- **End alert:** beep + vibration, respecting the Sound/Vibration settings.
-  Optional short warning a few seconds before the end.
-- **Per-exercise defaults** — longer for main compound lifts, shorter for
-  accessories — overridable per session with quick +/− 15 s buttons.
-- Timestamp-based, so it stays correct when the phone is locked or the app is
-  backgrounded; keep a visible countdown on the active workout.
-- If the platform allows, a notification when rest ends while the app isn't in
-  the foreground. Don't block the feature on it.
-
-### 3. ~~Cardio session — HR-zone treadmill coaching~~ — [x] shipped 0.19.0
-Spec: **`r&d/specs/cardio-spec.md`** (wins over the notes below). The plain
-loop is built; the optional AI trend coach below is still to do. Needs a
-real-gym check: strap pairing, cue audio/voice, disconnect/reconnect.
-
-New session type. The treadmill (Technogym) has no control API, so **Aaron is
-the actuator**: Ironlog reads heart rate live and tells him when to change
-speed.
-
-**Heart rate in:**
-- Web Bluetooth (Chrome on Android) to the standard **Heart Rate Service**
-  (`0x180D`, measurement characteristic `0x2A37`). Works with chest straps
-  (Polar, Garmin HRM) and watches that broadcast HR. Apple Watch won't.
-- Connection must be started by a tap (Web Bluetooth needs a user gesture).
-  Handle disconnects mid-session: pause cues, show it clearly, offer reconnect.
-- No HR device → the session still works as a plain manual cardio log.
-
-**Setup screen:** starting speed (km/h), incline (%), target zone, cue interval.
-Zone can be entered as bpm directly or as a preset (e.g. fat loss) from max HR —
-let Aaron enter a measured max and resting HR rather than relying on 220-age.
-
-**Control loop (plain JS, no AI needed):**
-- **Settle period** — no cues for the first ~2–3 minutes while HR climbs.
-- Every ~30 s, compare smoothed HR (rolling average, not a single reading) to
-  the zone.
-- **Hysteresis** — a few bpm of buffer outside each zone edge, so HR sitting on
-  the boundary doesn't cause a cue every check.
-- Below zone → "increase speed", above → "decrease speed", inside → **silent**.
-- Say the actual target: "set speed to 5.5". Step size scales with how far out
-  of zone HR is, capped (e.g. 0.5 km/h max per cue). After a change, wait for HR
-  to respond before cueing again.
-- **Hard ceiling:** above a max-HR cap, cue "slow down" immediately regardless
-  of interval.
-- Option to cue incline instead of speed (useful for incline walking).
-
-**Cues:** Web Audio beep + `SpeechSynthesis` voice line. Big on-screen
-+/− buttons so Aaron confirms each change — the app needs to know the real
-speed, since it can't read the treadmill. Wake Lock for the whole session.
-
-**Saved to the session:** HR trace, speed/incline changes with timestamps,
-time-in-zone, average HR, duration, distance (from speed × time). Show the HR
-trace as a chart on the session card.
-
-**Later (optional AI, user's own key):** a Haiku call about once a minute
-looking at HR *trend* rather than the instant reading — pre-empting drift out
-of zone and varying the coaching language. Only once the plain loop works.
-
-### 4. ~~Autoregulated programming (RIR-driven)~~ — [x] shipped 0.21.0
-Spec: **`r&d/specs/autoreg-spec.md`**. Normal program blocks get loads from a
-per-exercise working e1RM (derived from RIR-logged history) at the session's
-reps and target RIR; deload/prep/peak/test/meet weeks keep the plan. Set-to-set
-adjustment, stall flag, off-day toggle. `autoE1()` is where item 7's VBT e1RM
-plugs in.
-- Programs carry **one flat mid-point working weight per exercise**, not a
-  week-by-week progression; RIR decides what the day's load does.
-- RIR is whole numbers only, no half steps.
-- **Stall detection** from the last 5 sessions of an exercise.
-- **"Off week" / nope button** on a session: excludes it from progression
-  calculations but does *not* reset the rolling stall counter. For days when
-  work (custodian job) has flattened him.
-- Design this so the VBT daily e1RM (item 7) can plug in later as a second
-  input for the day's working weight.
-
-### 5. ~~PR detection against history~~ — not a bug
-Dropped 2026-09-24: Aaron confirmed the Smith calf raise PR was a logging
-error on his side, not the app. Nothing to fix. Kept below for the record.
-PRs are being flagged that aren't PRs (e.g. Smith calf raise 135 kg × 10 on
-12 Aug 2026, well under his real best — imported Liftoff history isn't being
-consulted). Check whether the composed exercise model migration already fixed
-this; if not, fix it. Test against the full imported history.
+### [ ] A5. Name check (Aaron, not code)
+Search the UK trademark register (UKIPO) and the app stores for "Ironlog" before
+promoting it. A rename is cheap now and expensive later.
 
 ---
 
-## Next
+## B. Core logging — what keeps people using it
 
-**Order (approved by Aaron 2026-09-24):** build **B1 (loaded carries, sleds and
-medleys)** and then **B3 (last session inline and fast entry)** first — full
-detail in the Blast section below — then carry on with item 7.
+### [ ] B1. Loaded carries, sleds, medleys and strongman events
+The biggest documented strongman gap (Blast #96, #109; research).
+- A set shape with **weight + distance + time** together: farmers, yoke,
+  sandbag carry, sled push/pull, rucking.
+- **Time-to-complete** mode for medleys and loading races (n implements over a
+  distance, time).
+- **Stone series:** ascending implements, each made or missed, total time.
+- **Max reps in a time cap** (e.g. log for 60 s) and max distance in a time cap.
+- Implement types as equipment: log, axle, yoke, keg, sandbag, stones, farmers
+  handles, sled, Conan's wheel (fits the movement + equipment model; see D2).
+- Own PR pools: best time for a given weight and distance; furthest distance at
+  a weight; most reps in a cap. PRs show up as PRs everywhere loads do.
+- Feeds strongman events in C2.
 
-### 6. ~~Workout page: finish the exercise-model UI~~ — [x] shipped 0.22.0
-Greyed-not-hidden picker, equipment icons in the list and the movement page
-(tabs, variant strip, primary headline, one line per variant) were already
-built. Added: modifier chips (live + edit; splitsPR ones greyed until item 14),
-per-variant stats for the variant picked in the strip, exercise name → its
-movement page, and Settings → **Check exercise data** (read-only report over
-every session plus an optional Liftoff CSV; Copy report). **Still to do:** run
-that check on the phone against the real log and CSV — it can't be run here.
-Make the workout page clearly better than the competition. Depends on the
-composed model being in place.
-- Equipment picker shows invalid equipment **greyed, not hidden**.
-- Per-variant stats strip; parent exercise page rolling up variants.
-- **Modifiers layer** — technique, tempo, stance/grip, range of motion (e.g.
-  "comp pause", "slow eccentric", "comp stance") as structured modifiers that
-  annotate a set **without** splitting the PR leaf. These currently live as free
-  text in notes.
-- Run the migration dry-run against all logged sessions and the Liftoff CSV:
-  every entry must resolve to a leaf, no orphans, no PRs moving that shouldn't.
+### [ ] B2. Last session inline and fast entry
+The single most-requested general feature (Blast #113, #42, #43; research).
+- Show last time's weight × reps @ RIR beside each set.
+- Tap to fill; copy a value down to the remaining sets.
+- +/− steppers (2.5 kg, 1 rep) so the system keyboard is rarely needed.
+- Target: a routine set logged in 1–2 taps.
 
-### 7. VBT overhaul — two modes plus calibration
+### [ ] B3. Set roles and linked sets
+Without these, volume and PR figures are wrong (Blast #70; research).
+- Tag sets warm-up / top set / back-off / AMRAP / drop.
+- Group a drop-set chain so it reads as one.
+- Warm-ups stay out of volume and PRs.
+- Related: supersets in `r&d/notes/backlog.md`.
+
+### [ ] B4. Plate loader and warm-up ramp from the set
+(Blast #101; research.) Reachable by tapping a set's weight on the workout page,
+and from the Tools page (D11).
+- Target kg → plates per side.
+- Per-bar weights: 20 kg bar, 15 kg, SSB, trap bar, axle, log, deadlift bar,
+  custom.
+- The user's own plate inventory, including change plates (0.25–2.5 kg) and
+  collars.
+- One tap for a ramp to today's working weight (reuse `openRamp`), rounded to
+  loadable plates.
+
+### [ ] B5. Session summary and PR history
+(Blast #22, #19, #18.)
+- End-of-session screen: PRs hit (load, reps, **time and distance** PRs from
+  B1), tonnage, e1RM change.
+- Per-variant PR timeline on the movement page.
+- An **e1RM trend chart** per main lift as a headline chart.
+
+### [ ] B6. Backup and sync to the user's own cloud drive
+Losing data is a top reason people quit apps. Local-only: no Ironlog server or
+account holds user data. Backup/sync writes to a file in the **user's own
+Google Drive** (Dropbox etc. later), so data survives losing or changing a
+phone.
+- Sign-in is only to reach their own Drive. Use the narrowest scope that works
+  (app-created files only), and say so plainly in the UI.
+- Schema versioning, tombstone deletes; merging between two devices must never
+  lose local data.
+- **First connect pushes local data up — never overwrites it.** Restoring on a
+  new phone pulls it down.
+- The AI key (D8) is never included unless the user opts in.
+
+### [ ] B7. CSV export and exact round-trip import
+- CSV export of training history for spreadsheet users (one row per set).
+- Whatever Ironlog exports, Ironlog must import back with nothing lost — test
+  export → wipe → import → compare.
+
+### [ ] B8. Import from other apps
+(Blast #13; research.) Strong, Hevy, FitNotes and a generic CSV, by
+generalising the Liftoff importer. Map to leaves via the exercise data check and
+show a dry-run report before anything is written.
+
+---
+
+## C. Competition — the edge nobody else has
+
+### [ ] C1. Welcome / first-run screen
+- Sets units, lifts, event goals.
+- Explains: data stays on the device, backs up to your own drive, AI is optional
+  and uses your own key.
+- A short **disclaimer**: general training information, not medical advice; the
+  lifter is responsible for what they lift.
+- Links to a short in-app help / FAQ (Blast #27).
+
+### [ ] C2. Events page — a real meet-day companion
+Replaces Meets. Write `r&d/specs/events-spec.md` first.
+- Pick the event type (powerlifting meet, strongman show, para powerlifting —
+  C3, other) and queue several events at once.
+- **Powerlifting:** attempt planning with conservative / standard / aggressive
+  strategies from current e1RM; warm-up ladder to the opener, timed against the
+  flight; rack heights and gear checklist; red/white lights per attempt; live
+  subtotal, total and DOTS / IPF GL.
+- **Strongman:** the show's event list with its rules (weight, reps, distance or
+  time), prep peaking toward exactly those events, results entry and points.
+- Bodyweight against weight class on the run-in.
+
+### [ ] C3. Para powerlifting mode
+No app does this; Aaron's own niche. Check current WPPO rules before building.
+- Bench press only; WPPO bodyweight classes (men 49, 54, 59, 65, 72, 80, 88, 97,
+  107, 107+ kg; women 41, 45, 50, 55, 61, 67, 73, 79, 86, 86+ kg).
+- Three attempts, plus an optional record attempt that doesn't count toward
+  the result.
+- Minimum 1 kg increases (0.5 kg only for record attempts).
+- Results for best lift and for total of good lifts.
+- Uses the C2 meet-day tools with these rules swapped in.
+
+### [ ] C4. Accessibility pass
+Few competitors get this right; Hevy is rated near-unusable with a screen reader.
+- Test the whole workout flow with TalkBack; label every control.
+- Large touch targets on the active workout; no gesture-only actions.
+- Haptic cues for rest end and set logged (reuse `Cue`).
+- Voice logging (already built) stays a first-class input.
+
+### [ ] C5. Adaptation modifiers and pain / fatigue notes
+Extends the modifier chips. Structured modifiers such as **seated, strapped,
+assisted, one-sided set-up** that annotate a set **without** splitting the PR
+leaf, plus an optional quick pain/fatigue flag on a set or session. Validate the
+list with adaptive lifters (Aaron's community) before finalising.
+
+### [ ] C6. Training blocks counting down to a meet
+Block templates (e.g. accumulation → intensification → peak → taper) laid out
+backwards from an event date in C2, feeding the autoregulated programming.
+
+---
+
+## D. Strong additions
+
+### [ ] D1. VBT overhaul — two modes plus calibration
 Write `r&d/specs/vbt-overhaul-spec.md` before building. Two modes, chosen per
 exercise in a session:
 
@@ -255,7 +316,7 @@ estimated RIR for that set.
   from max (roughly below 80%), since the line is extrapolating further.
 - **Readiness:** compare today's warm-up velocities to the stored profile, so a
   fast day or a flat day is visible before the first working set, and suggest
-  the day's working weight from the day's e1RM. Feeds item 4.
+  the day's working weight from the day's e1RM. Plugs into `autoE1()`.
 - Chart it: today's points and line over the stored profile, MVT line marked.
 
 **Calibration (underpins both modes):**
@@ -272,278 +333,178 @@ estimated RIR for that set.
 - Never gate first run on calibration. Personal calibration matters more than
   usual here — adaptive lifters won't match population norms.
 
-### 8. Welcome / first-run screen
-More important than login. Sets units, lifts, event goals; explains data stays
-on the device and backs up to the user's own drive, and that AI features are
-optional and use their own key.
+**Validation (from the research — phone/camera VBT accuracy is contested):**
+before presenting velocity-estimated RIR as more than a guide, compare against a
+known device (linear transducer or a validated app) on a batch of real sets and
+record the error in `r&d/notes/`.
 
-### 9. Events page (replaces Meets)
-Pick the event type (powerlifting meet, strongman, other) and queue several
-events at once. Keep the focus on strength sports.
+### [ ] D2. Strength library seeding
+(Blast #38.) Larsen press, TruSquat, SSB, trap bar, belt squat, pendulum squat,
+plus the strongman implements from B1 — as movement + equipment leaves. Check
+`EX_DB` for what's already there. Can be done alongside B1.
 
----
+### [ ] D3. Structured tempo
+(Blast #110.) Extends the modifier chips: a four-digit tempo (eccentric–pause–
+concentric–pause, e.g. 3-1-1-0) rather than a text chip; shown on the active
+set; doesn't split the PR leaf. VBT Measure can fill in the real concentric
+time.
 
-## From Blast's issue tracker (ranked 2026-09-24)
+### [ ] D4. Per-side logging for unilateral lifts
+(Blast #79.) Left and right reps (and weight if different) on one set for
+unilateral leaves; imbalance trend on the variant page. **Open decision:** which
+side counts for PRs (default: the weaker side).
 
-Ideas taken from the open issues of a competing app,
-<https://github.com/madmustachecompany/Blast-Workout-App/issues>, ranked from
-"would be amazing" down to "only if there's nothing else to do". `#n` is the
-Blast issue number, for the original request.
+### [ ] D5. Rep range + RIR suggestion
+(Blast #99.) Optional rep range per exercise in a program; hitting the top of
+the range at the target RIR suggests more load next time. Works alongside the
+autoregulated programming, doesn't replace it.
 
-- **Priority approved by Aaron (2026-09-24):** B1 and B3 go first in "Next".
-  The rest of this section comes after "Next" and before "Later", worked top to
-  bottom in the order below.
-- Where an idea overlaps a numbered item elsewhere, it **extends that item** —
-  build it there, don't make a second copy. If that item is in "Later", this
-  ranking pulls the overlapping part forward; leave the rest of the item where
-  it is.
-- Check the code first: some of these may already partly exist.
+### [ ] D6. Equipment profiles
+(Blast #41, #107.) Named places ("Home", "Gym") with their kit and plate
+inventory (shared with B4); the picker greys what isn't available there, and
+any program or AI suggestion respects it.
 
-### Tier 1 — would be amazing
+### [ ] D7. Recovery / fatigue heatmap on the skins
+(Blast #117 — Blast users call it the feature they miss most.) Extend the body
+heatmap to show which muscle groups are fresh vs fatigued. Also show it where
+exercises are picked when building a session or program. Only trust it once
+muscle shares for commonly trained lifts have been checked — derived shares are
+placeholders.
 
-- [ ] **B1. Loaded carries, sleds and medleys** (#96, #109). A set shape with
-  **weight + distance + time** together: farmers, yoke, sandbag carry, sled
-  push/pull, rucking. Plus a **time-to-complete** mode for medleys and loading
-  events (n implements, time). Own PR pools (best time for a given weight and
-  distance; furthest distance at a weight). Feeds strongman in the Events page
-  (item 9). **First in "Next".**
-- [ ] **B2. Plate loader and warm-up ramp from the set** — extends item 19.
-  Reachable by tapping a set's weight on the workout page, not only from Tools.
-  Per-bar weights: SSB, trap bar, axle, log, deadlift bar, custom. kg plates
-  including change plates and collars. One tap for a ramp to today's working
-  weight (reuse `openRamp`).
-- [ ] **B3. Last session inline and fast entry** (#113, #42, #43). Show last
-  time's weight × reps @ RIR beside each set. Tap to fill; copy a value down to
-  the remaining sets; +/− steppers (2.5 kg, 1 rep) so the system keyboard is
-  rarely needed. Biggest single step towards "workout page ahead of the
-  competition". **Second in "Next".**
-- [ ] **B4. Rest-end alert reaches the watch** (#17, #64, #101) — mostly done by
-  item 2. Remaining: confirm on Aaron's phone (Oppo Reno 8 + Galaxy Watch 7)
-  that the background notification forwards to the watch and buzzes; if it's
-  unreliable, say so in the setting.
-- [ ] **B5. Recovery heatmap on the skins** (#117) — this is item 16. Blast users
-  call it the feature they miss most. Also show it where exercises are picked
-  when building a session or program, not only on its own page. Same caveat
-  about muscle shares applies.
-- [ ] **B6. Import from other apps** (#13). Strong, Hevy, FitNotes and a generic
-  CSV, by generalising the Liftoff importer. Map to leaves via the exercise data
-  check (item 6) and show a dry-run report before anything is written.
-
-### Tier 2 — strong additions
-
-- [ ] **B7. Strength library seeding** (#38). Larsen press, TruSquat, SSB, trap
-  bar, belt squat, pendulum squat, sled, log, axle, yoke, stones, farmers
-  handles, Conan's wheel — as movement + equipment leaves. Check `EX_DB` for
-  what's already there.
-- [ ] **B8. Structured tempo** (#110) — extends the modifiers layer (item 6).
-  A four-digit tempo (eccentric–pause–concentric–pause, e.g. 3-1-1-0) rather
-  than a text chip; shown on the active set; doesn't split the PR leaf. VBT
-  Measure can fill in the real concentric time.
-- [ ] **B9. Per-side logging for unilateral lifts** (#79). Left and right reps
-  (and weight if different) on one set for unilateral leaves; imbalance trend on
-  the variant page. **Open decision:** which side counts for PRs (default: the
-  weaker side).
-- [ ] **B10. Set roles and linked sets** (#70). Tag sets warm-up / top set /
-  back-off / AMRAP / drop; group a drop-set chain so it reads as one. Warm-ups
-  stay out of volume and PRs. Related to supersets in `r&d/notes/backlog.md`.
-- [ ] **B11. Rep range + RIR suggestion** (#99). Optional rep range per exercise
-  in a program; hitting the top of the range at the target RIR suggests more
-  load next time. Works alongside item 4's autoregulation, doesn't replace it.
-- [ ] **B12. Session summary and PR history** (#22, #19, #18). End-of-session
-  screen: PRs hit, tonnage, e1RM change. Per-variant PR timeline on the movement
-  page.
-- [ ] **B13. Equipment profiles** (#41, #107). Named places ("Home", "Gym") with
-  their kit; the picker greys what isn't available there, and any program or AI
-  suggestion respects it.
-- [ ] **B14. Health Connect** (#58, #12). Bodyweight and HR in, sessions out.
-  Needs a native wrapper (Capacitor) — a PWA can't reach Health Connect. Only
-  if the app gets wrapped.
-
-### Tier 3 — nice when there's time
-
-- [ ] **B15.** Machine settings note or photo per variant, e.g. "seat 4, pad 6"
-  (#29). Stored locally.
-- [ ] **B16.** Band tension and chain weight fields — goes with item 14 (#112,
-  recast for accommodating resistance).
-- [ ] **B17.** Swap an exercise across past sessions, with a preview — useful
-  for cleaning up imports (#69).
-- [ ] **B18.** OLED true-black theme (#77).
-- [ ] **B19.** Setting for the workout timer at the top or bottom — machine
-  phone holders cover the bottom (#108).
-- [ ] **B20.** Custom trackers (unit + target: water, sleep, etc.) (#59, #15).
-  Bodyweight against weight class belongs with item 18 / Events.
-- [ ] **B21.** Progress photos, front/back/sides with side-by-side compare, kept
-  on the device — could live on the body comp page (item 18) (#95, #11).
-- [ ] **B22.** In-app help / FAQ, folded into the welcome screen (item 8) (#27).
-
-### Tier 4 — only if there's nothing else to do
-
-Strava (#115) · Whoop (#111) · translations (#116, #85) · reorder and sort
-routines (#80, #9) · separate muscle heads for arms (#63) · picture
-instructions (#21) · suspension trainer, rings and jump rope exercises (#105,
-#93, #40).
-
-### Checks against Blast's bugs
-
-Blast shipped these bugs; make sure Ironlog doesn't have them. Tick each once
-checked.
-
-- [ ] Every exercise in a superset/circuit gets its PRs (Blast #87) — once
-  supersets exist.
-- [ ] Max-weight and max-reps PRs agree at the same weight (#51).
-- [ ] Nothing is ever stored as lbs; imported or synced weights are converted to
-  kg (#60, #61).
-- [ ] A started session can be discarded without logging it (#46).
-- [ ] Several sessions on the same day all show in history and the calendar
-  (#47).
-- [ ] Number inputs lose focus when the keyboard is dismissed or you tap
-  elsewhere (#49).
-
----
-
-## Later
-
-### 10. Backup and sync to the user's own cloud drive
-Replaces the Supabase plan (decided 2026-09-24). Local-only: no Ironlog server
-or account holds user data. Backup/sync writes to a file in the **user's own
-Google Drive** (Dropbox etc. later), so data survives losing or changing a
-phone.
-- Sign-in is only to reach their own Drive. Use the narrowest scope that works
-  (app-created files only), and say so plainly in the UI.
-- Schema versioning, tombstone deletes; merging between two devices must never
-  lose local data.
-- **First connect pushes local data up — never overwrites it.** Restoring on a
-  new phone pulls it down.
-- Until this ships, nudge regular JSON exports.
-
-### 11. AI on the user's own key
-Replaces the paid/server-side AI plan (decided 2026-09-24). There is no Ironlog
-AI server and no paid tier.
+### [ ] D8. AI on the user's own key
+No Ironlog AI server and no paid tier.
 - A Settings field for the user's own Anthropic API key, stored only on the
-  device (never in exports or cloud backups unless the user opts in), with a
-  clear note on what it's used for and roughly what it costs them.
-- Calls go straight from the device to the API. Show a per-feature cost hint
-  and let the user set a monthly cap the app enforces locally.
-- Every AI feature is optional and hidden or greyed until a key is added; the
-  app must be fully usable without one.
-- Remove any server-side AI function that's left once the Food tab is gone
-  (item F).
+  device, with a clear note on what it's used for and roughly what it costs.
+- Calls go straight from the device to the API. Per-feature cost hint and a
+  monthly cap the app enforces locally.
+- Every AI feature is optional and hidden or greyed until a key is added.
+- Remove any server-side AI function left after A1.
 
-### 12. AI coaching
-Uses item 11 (user's own key).
+### [ ] D9. AI coaching
+Uses D8.
 - Logging stays tightly scoped structured calls, separate from any chat.
-- Hard system-prompt boundaries so the coach can't drift off-topic.
-- Cap or summarise conversation history; use prompt caching. No unbounded
-  history re-sent every turn — it's the user's money.
+- Hard system-prompt boundaries so the coach can't drift off-topic; no medical
+  or injury advice.
+- Cap or summarise conversation history; use prompt caching — it's the user's
+  money.
+- Optional cardio trend coach: a Haiku call about once a minute looking at HR
+  *trend*, pre-empting drift out of zone.
 
-### 13. Chat front door
-Log and get coaching through a messaging app (WhatsApp or similar — **not
-Telegram**) plus voice input. Builds on the existing voice logging. Note: a
-messaging bot needs a server to receive messages, which conflicts with the
-no-server model — rethink before building.
-
-### 14. Fix `prKey` / `splitsPR`
+### [ ] D10. Fix `prKey` / `splitsPR`, with band and chain fields
 `prKey()` is dead code, so chains, bands, slingshot and equipped currently share
 a PR pool with the raw lift. Real bug, but fixing it **changes existing PR
-numbers** — do it on its own, deliberately, and tell Aaron what moved.
+numbers** — do it on its own, deliberately, and tell Aaron what moved. Add band
+tension and chain weight fields at the same time (Blast #112, recast for
+accommodating resistance).
 
-### 15. Supplements and blood work
-Supplement schedule, reminders and adherence history inside Ironlog (not a
-separate app), with the option to see it alongside training. Blood work results
-tracking over time. No drug dosing or cycle-planning features.
-
-### 16. Fatigue heat map
-Extend the existing body heatmap to show which muscle groups are fresh vs
-fatigued before planning a session. Only trust it once muscle shares for
-commonly trained lifts have been checked — derived shares are placeholders.
-(Pulled forward as Blast item B5.)
-
-### 17. Mobility training
-New session type alongside lifting and cardio. Aaron is treating flexibility
-with the same seriousness as the lifts because it feeds them (squat depth,
-overhead position, deadlift setup). Write `r&d/specs/mobility-spec.md` before
-building.
-- **Routines:** saved mobility routines (daily evening routine, pre-lift
-  dynamic warm-up, "strength at length" accessory block) made of timed holds
-  and rep-based drills, per side where relevant.
-- **Guided player:** step-by-step with hold countdowns, side switches and
-  contract-relax cues. Reuse the shared audio helper and the timestamp-based
-  timing from isometric holds (item 1); Wake Lock throughout.
-- **Hypermobility-aware:** exercises tagged by target area so a user can mark
-  joints to leave alone (e.g. wrists) and have routines skip or swap them.
-  Emphasis on loaded end-range work over passive stretching.
-- **ROM tests over time:** monthly measurements — knee-to-wall (cm),
-  straight-leg raise (degrees, optionally from the phone's inclinometer),
-  Thomas test, wall shoulder flexion — charted per test and per side.
-- Adherence streak alongside training; loaded-stretch drills (paused goblet
-  squat, Cossack, paused RDL) log as normal lifting sets so PRs still work.
-
-### 18. Body composition page
-One page for bodyweight, tape measurements and skinfold (caliper) tests, each
-with a chart. Write `r&d/specs/body-comp-spec.md` before building.
-- **Bodyweight:** build on the existing check-in weight (`ci.weight`, read by
-  `bodyweightKg()` for DOTS) — don't create a second bodyweight store. Chart
-  with a 7-day rolling average over the raw points.
-- **Measurements:** cm, any subset per entry — neck, chest, waist, hips, upper
-  arm, forearm, thigh, calf — **left/right** where it applies, plus custom
-  sites. Each site gets its own trend.
-- **Caliper tests:** pick a protocol — Jackson-Pollock 3-site, JP 7-site,
-  Durnin-Womersley 4-site. Enter mm per site, optionally 2–3 readings per site
-  averaged. Body density from the protocol's equation (uses sex and age from
-  settings), then Siri for body-fat %; fat mass / lean mass from the same day's
-  weight.
-- Always show the **raw sum of skinfolds** next to the %. The equations were
-  built on typical populations, so for adaptive lifters the mm sum is the more
-  honest trend line — present the % as an estimate.
-- Charts via `chartMulti`: pick the metric, date range; same-day entries sit
-  together. Everything lives in IndexedDB and goes through JSON export/import
-  (schema bump + migration).
-
-### 19. Tools page (calculators)
-A **Tools** page — the 98 skin's menu bar already has a Tools menu, so that's
-the way in. Every calculator **prefills from stored data** (bodyweight, height,
-age, sex, BF% and measurements once item 18 exists), stays editable for
-what-ifs, and saves nothing unless asked. Write `r&d/specs/calculators-spec.md`
-before building. Reuse the maths that's already in the app — `bmrKcal` /
-`suggestedTargets`, `e1rm`, `dots` — don't write second copies.
-(The plate loader and warm-up ramp are pulled forward as Blast item B2.)
+### [ ] D11. Tools page (calculators)
+The 98 skin's menu bar already has a Tools menu, so that's the way in. Every
+calculator **prefills from stored data** (bodyweight, height, age, sex, BF% and
+measurements once E4 exists), stays editable for what-ifs, and saves nothing
+unless asked. Write `r&d/specs/calculators-spec.md` before building. Reuse the
+maths that's already in the app — `bmrKcal` / `suggestedTargets`, `e1rm`,
+`dots`, `openRamp` — don't write second copies. The plate loader lives here too
+(B4).
 
 **Energy**
 - **TDEE:** Mifflin-St Jeor (exists), plus Katch-McArdle when a BF% is known.
 - **Adaptive TDEE:** back-calculated from daily food intake and the bodyweight
-  trend over the last 2–4 weeks (intake minus the energy in the weight change).
-  Show it next to the formula figure — "formula says X, your data says Y" — and
-  only once there are enough logged days to mean anything. **Food logging now
-  lives in a separate app (item F), so this needs daily intake imported from
-  that app** (a simple shared export file); if that link doesn't exist, leave
-  this one out.
+  trend over 2–4 weeks. Food logging now lives in a separate app (A1), so this
+  needs daily intake imported from that app; if that link doesn't exist, leave
+  it out.
 
 **Physique**
 - **Max muscular potential (Casey Butt):** from height, wrist and ankle
-  circumference → maximum lean body mass, and a table of the maximum bodyweight
-  at each body-fat % (roughly 5–20%). Commonly given as
+  circumference → maximum lean body mass, and a table of maximum bodyweight at
+  each body-fat % (roughly 5–20%). Commonly given as
   `LBM_max(lb) = H^1.5 × (√W / 22.667 + √A / 17.0104) × (1 + BF% / 224)`
   with H, W, A in inches — **verify the constants against Butt's published
   formula before shipping**, then convert to kg / cm.
-- **FFMI** and height-normalised FFMI from current weight and BF%, with where
-  that sits against the potential figure.
+- **FFMI** and height-normalised FFMI, with where that sits against the
+  potential figure.
 - Label all of it as an estimate: these formulas come from drug-free elite
   bodybuilders of typical proportions, so for adaptive or short-stature lifters
   they're a rough ceiling, not a verdict.
 
 **Strength**
-- e1RM and a rep-max table from any set (existing `e1rm`), and a %1RM ↔ RIR
-  chart.
-- **Plate loader:** target kg → plates per side for the bar in use (20 kg bar,
-  15 kg, custom), available plates and collars as a setting.
-- DOTS / IPF GL points calculator (existing `dots`), and a warm-up ramp
-  generator (reuse `openRamp`).
+- e1RM and a rep-max table from any set, and a %1RM ↔ RIR chart.
+- DOTS / IPF GL points calculator.
+- RPE ↔ RIR mapping table for coaches who think in RPE.
 
-Can ship before item 18 using typed-in inputs; wire the prefills when body
-comp lands.
+---
+
+## E. Later — little demand found
+
+### [ ] E1. Coach share report
+A read-only report (JSON / text / PDF) of a training block for a coach. No
+accounts, no server.
+
+### [ ] E2. Share cards
+A PR or session summary as an image to post (hunchback_hercules-friendly).
+Optional; no social feed.
+
+### [ ] E3. Native wrapper project
+One project, only if Aaron decides to go native: Capacitor wrapper for the Play
+Store, **Health Connect** (bodyweight, HR, body-comp scans in; sessions out —
+Blast #58, #12), and a **Wear OS companion** (current set and rest countdown on
+the watch, tick sets from the wrist). A PWA can't do any of these.
+
+### [ ] E4. Body composition page
+Write `r&d/specs/body-comp-spec.md` before building.
+- **Bodyweight:** build on the existing check-in weight (`ci.weight`, read by
+  `bodyweightKg()` for DOTS) — don't create a second store. 7-day rolling
+  average over the raw points.
+- **Measurements:** cm, any subset per entry — neck, chest, waist, hips, upper
+  arm, forearm, thigh, calf — **left/right** where it applies, plus custom
+  sites.
+- **Caliper tests:** Jackson-Pollock 3-site, JP 7-site, Durnin-Womersley 4-site;
+  mm per site (optionally 2–3 readings averaged); body density → Siri body-fat %;
+  fat / lean mass from the same day's weight. Always show the **raw sum of
+  skinfolds** next to the % — for adaptive lifters it's the more honest trend.
+- **Progress photos** (Blast #95, #11): front/back/sides, side-by-side compare,
+  kept on the device.
+- Charts via `chartMulti`; IndexedDB + JSON export/import (schema bump).
+
+### [ ] E5. Mobility training
+Write `r&d/specs/mobility-spec.md` before building.
+- Saved routines (evening routine, pre-lift warm-up, "strength at length"
+  block) of timed holds and rep-based drills, per side where relevant.
+- Guided player with hold countdowns, side switches, contract-relax cues —
+  reuse `Cue`, isometric timing and `Awake`.
+- Hypermobility-aware: mark joints to leave alone (e.g. wrists) and have
+  routines skip or swap them. Loaded end-range work over passive stretching.
+- ROM tests over time: knee-to-wall (cm), straight-leg raise (degrees,
+  optionally via the phone's inclinometer), Thomas test, wall shoulder flexion —
+  charted per test and side.
+- Loaded-stretch drills log as normal lifting sets so PRs still work.
+
+### [ ] E6. Supplements and blood work
+Supplement schedule, reminders and adherence history, viewable alongside
+training. Blood work results over time. No drug dosing or cycle-planning
+features.
+
+### [ ] E7. Small extras
+- Machine settings note or photo per variant, e.g. "seat 4, pad 6" (Blast #29).
+- Swap an exercise across past sessions, with a preview (Blast #69).
+- OLED true-black theme (Blast #77).
+- Setting for the workout timer at the top or bottom — machine phone holders
+  cover the bottom (Blast #108).
+- Custom trackers: unit + target, e.g. water, sleep (Blast #59, #15).
+
+### [ ] E8. Chat front door (rethink first)
+Log and get coaching through a messaging app (WhatsApp or similar — **not
+Telegram**) plus voice. **Conflicts with the no-server model** — a messaging bot
+needs a server to receive messages. Rethink before building.
+
+### [ ] E9. Only if there's nothing else to do
+Strava (Blast #115) · Whoop (#111) · translations (#116, #85) · reorder and sort
+routines (#80, #9) · separate muscle heads for arms (#63) · picture
+instructions (#21) · suspension trainer, rings and jump rope exercises (#105,
+#93, #40).
 
 ---
 
 ## Parked
-See **`r&d/notes/backlog.md`** — sleep/recovery strip on sessions, sleeves/wraps/belt
-as gear, supersets and circuits. Each has its reasoning written down.
+See **`r&d/notes/backlog.md`** — sleep/recovery strip on sessions,
+sleeves/wraps/belt as gear, supersets and circuits. Each has its reasoning
+written down.
