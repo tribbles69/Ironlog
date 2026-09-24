@@ -1830,7 +1830,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.34.1';
+const APP_VERSION = '0.35.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -2569,7 +2569,7 @@ function clearTargets() {
   const usesCustom = e => e.leaf && customIds.has(e.leaf.movement);
   return [
     { id: 'imported', label: 'Imported sessions',
-      note: 'Everything brought in from a Liftoff CSV.',
+      note: 'Everything brought in from another app — Liftoff, Strong, Hevy, FitNotes or a CSV.',
       n: wos.filter(w => w.source === 'imported').length,
       run: () => { S.workouts = wos.filter(w => w.source !== 'imported'); } },
     { id: 'backfill', label: 'Backfilled sessions',
@@ -7093,6 +7093,10 @@ const LB_PER_KG = 2.2046226218;
    text, so parse properly rather than splitting on commas. */
 function parseCSV(text, raw) {   // raw: keep values exactly (Ironlog's own CSV round-trips)
   const t = text.replace(/^\uFEFF/, '');
+  // the delimiter is whichever of , ; or tab the header row uses most (Strong's newer export is ;-separated)
+  const head = t.slice(0, t.indexOf('\n') < 0 ? t.length : t.indexOf('\n'));
+  const cnt = ch => head.split(ch).length - 1;
+  const delim = [',', ';', '\t'].reduce((a, b) => cnt(b) > cnt(a) ? b : a, ',');
   const rows = [];
   let row = [], field = '', q = false;
   for (let i = 0; i < t.length; i++) {
@@ -7103,7 +7107,7 @@ function parseCSV(text, raw) {   // raw: keep values exactly (Ironlog's own CSV 
         else q = false;
       } else field += c;
     } else if (c === '"') q = true;
-    else if (c === ',') { row.push(field); field = ''; }
+    else if (c === delim) { row.push(field); field = ''; }
     else if (c === '\n') { row.push(field); rows.push(row); row = []; field = ''; }
     else if (c !== '\r') field += c;
   }
@@ -7141,7 +7145,7 @@ function toKgFrom(v, unit) {
   return Math.round(kg * 100) / 100;
 }
 
-const normEx = n => n.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+const normEx = n => n.toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
 
 /* Import name -> leaf. Returns { leaf, how }:
      alias  — you mapped this name before
@@ -7213,7 +7217,7 @@ function smartMatch(raw) {
     return { leaf, how };
   };
   return tryRest(rest, 'parsed')
-    || tryRest(rest.replace(/\b(seated|standing)\b/g, ' ').replace(/\s+/g, ' ').trim(), 'guess');
+    || tryRest(rest.replace(/\b(seated|standing|flat)\b/g, ' ').replace(/\s+/g, ' ').trim(), 'guess');
 }
 function matchExercise(name) {
   const alias = S.exAliases && S.exAliases[name];
@@ -7289,13 +7293,171 @@ function parseLiftoff(text) {
   return { sessions, skipped, unit, names, sets: good.length };
 }
 
+/* ---------------- other apps (roadmap B8) ----------------
+   Strong, Hevy, FitNotes and any CSV with a date, an exercise and a weight or
+   reps column, read by column name rather than position. Every format lands
+   in the same shape parseLiftoff produces, so the preview, the name review,
+   the dry-run report and the import itself are shared. Liftoff keeps its own
+   reader (and its "liftoff:<date>" ids, so an old file still de-duplicates).
+   Sessions are one per workout where the app records a start time, otherwise
+   one per day. */
+const IMPORT_SOURCES = { liftoff: 'Liftoff', strong: 'Strong', hevy: 'Hevy', fitnotes: 'FitNotes', csv: 'CSV' };
+const IMPORT_COLS = {
+  date: ['date', 'start_time', 'start time', 'workout date', 'day', 'date time', 'datetime'],
+  end: ['end_time', 'end time'],
+  session: ['workout name', 'workout_name', 'title', 'workout', 'session', 'routine', 'routine name'],
+  duration: ['duration', 'duration (sec)', 'duration (min)', 'workout duration'],
+  exercise: ['exercise name', 'exercise_name', 'exercise_title', 'exercise', 'movement', 'lift'],
+  setOrder: ['set order', 'set_order', 'set_index', 'set', 'set #', 'set number'],
+  setType: ['set_type', 'set type'],
+  weight: ['weight', 'weight_kg', 'weight_lbs', 'weight (kg)', 'weight (kgs)', 'weight (lbs)', 'weight (lb)', 'load', 'kg', 'lbs', 'lb'],
+  unit: ['weight unit', 'weight_unit', 'unit', 'units'],
+  reps: ['reps', 'repetitions', 'rep'],
+  rpe: ['rpe'], rir: ['rir'],
+  seconds: ['seconds', 'duration_seconds', 'time', 'duration (s)', 'secs'],
+  distance: ['distance', 'distance_km', 'distance_miles', 'distance (meters)', 'distance (m)', 'distance (km)', 'distance_meters'],
+  distUnit: ['distance unit', 'distance_unit'],
+  notes: ['notes', 'exercise_notes', 'set notes', 'comment', 'note'],
+  category: ['category'],
+};
+function importColumns(headers) {
+  const lc = headers.map(h => h.toLowerCase().trim());
+  const col = {};
+  Object.entries(IMPORT_COLS).forEach(([f, names]) => {
+    for (const n of names) { const i = lc.indexOf(n); if (i >= 0) { col[f] = headers[i]; break; } }
+  });
+  return col;
+}
+function importFormat(headers, rows) {
+  const lc = headers.map(h => h.toLowerCase().trim());
+  if (lc.includes('exercise name') && lc.includes('date') && lc.includes('duration')
+    && rows.some(r => /hour|minute/i.test(r[headers[lc.indexOf('duration')]] || ''))) return 'liftoff';
+  if (lc.includes('exercise_title') && lc.includes('start_time')) return 'hevy';
+  if (lc.includes('category') && lc.includes('exercise') && lc.some(h => /^weight \((kgs|lbs)\)$/.test(h))) return 'fitnotes';
+  if (lc.includes('exercise name') && lc.includes('set order')) return 'strong';
+  return 'csv';
+}
+const impNum = v => { const s = String(v == null ? '' : v).trim(); if (!s) return 0; const n = +(s.includes('.') ? s : s.replace(',', '.')); return Number.isFinite(n) ? n : 0; };
+/* A date cell to a day, and whether slashed dates could be either way round. */
+function importDay(s, dmy) {
+  const t = String(s || '').trim();
+  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})/.exec(t);
+  if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  m = /^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})/.exec(t);
+  if (m) {
+    const [a, b] = dmy ? [m[2], m[1]] : [m[1], m[2]];
+    const y = m[3].length === 2 ? '20' + m[3] : m[3];
+    return `${y}-${a.padStart(2, '0')}-${b.padStart(2, '0')}`;
+  }
+  const d = new Date(t.replace(/,/g, ''));
+  return isNaN(d) ? null : iso(d);
+}
+function importSetType(v, order) {
+  const s = String(v || '').toLowerCase().trim(), o = String(order || '').toLowerCase().trim();
+  if (/^warm|^w$/.test(s) || o === 'w') return 'warmup';
+  if (/^drop|^d$/.test(s) || o === 'd') return 'drop';
+  if (/amrap/.test(s)) return 'amrap';
+  if (/^fail|^f$/.test(s) || o === 'f') return 'failure';
+  return 'working';
+}
+function importMins(v, header) {
+  const s = String(v || '').trim();
+  if (!s) return 0;
+  if (/^\d+(\.\d+)?$/.test(s)) { const n = +s; return String(header).toLowerCase().includes('sec') || n >= 300 ? Math.round(n / 60) : Math.round(n); }
+  const h = /(\d+)\s*h/i.exec(s), m = /(\d+)\s*m(?!s)/i.exec(s);
+  if (h || m) return (h ? +h[1] * 60 : 0) + (m ? +m[1] : 0);
+  const p = parseTime(s); return p ? Math.round(p / 60) : 0;
+}
+function importMetres(v, header, unitCell) {
+  const n = impNum(v);
+  if (!(n > 0)) return 0;
+  const u = String(unitCell || header || '').toLowerCase();
+  if (/mile|\bmi\b/.test(u)) return n * 1609.344;
+  if (/km|kilomet/.test(u)) return n * 1000;
+  if (/yard|\byd/.test(u)) return n * 0.9144;
+  if (/feet|\bft\b/.test(u)) return n * 0.3048;
+  if (/met|\bm\b|\(m\)/.test(u)) return n;
+  return -n;   // no unit given: negative marks "decide by the exercise" (importLiftoff)
+}
+/* A distance with no unit in the file (Strong's older export): metres on a
+   carry, sled or race, where 40 means 40 m; kilometres on anything else,
+   where 5 means a 5 km run. */
+function importDist(m, metric) {
+  if (m > 0) return m;
+  const n = -m;
+  return metric === 'carry' || metric === 'race' ? n : n * 1000;
+}
+/* Parse any supported CSV. `opt.dmy` reads slashed dates day-first. */
+function parseImport(text, opt = {}) {
+  const rows = parseCSV(text);
+  if (!rows.length) throw new Error('empty');
+  const headers = Object.keys(rows[0]);
+  const fmt = importFormat(headers, rows);
+  if (fmt === 'liftoff') return { ...parseLiftoff(text), src: 'liftoff', label: 'Liftoff', unitFrom: 'guess' };
+  const c = importColumns(headers);
+  if (!c.date || !c.exercise || !(c.weight || c.reps || c.seconds || c.distance)) throw new Error('unknown CSV');
+  // slashed dates: day-first unless a value proves otherwise
+  const slashed = rows.map(r => /^(\d{1,2})[/.-](\d{1,2})[/.-]\d{2,4}/.exec(String(r[c.date]).trim())).filter(Boolean);
+  const provesMdy = slashed.some(m => +m[2] > 12), provesDmy = slashed.some(m => +m[1] > 12);
+  const dmy = opt.dmy != null ? opt.dmy : !provesMdy;
+  const dateAmbiguous = slashed.length > 0 && !provesMdy && !provesDmy;
+  // unit: the header says it, or a unit column per row, or it's a guess
+  const wh = (c.weight || '').toLowerCase();
+  let unit = /kg/.test(wh) ? 'kg' : /lb/.test(wh) ? 'lb' : null;
+  const unitFrom = unit ? 'header' : c.unit ? 'rows' : 'guess';
+  let skipped = 0;
+  const byKey = new Map();
+  const timed = fmt === 'hevy' || fmt === 'strong';
+  rows.forEach(r => {
+    const raw = String(r[c.exercise] || '').trim();
+    const order = c.setOrder ? r[c.setOrder] : '';
+    if (/rest/i.test(String(order))) { skipped++; return; }        // Strong's rest-timer rows
+    const day = importDay(r[c.date], dmy);
+    let w = impNum(r[c.weight]);
+    if (c.unit && !unit) { const u = String(r[c.unit] || '').toLowerCase(); if (/lb/.test(u)) w = w / LB_PER_KG; }
+    const reps = impNum(r[c.reps]);
+    const sec = c.seconds ? (/:/.test(String(r[c.seconds])) ? parseTime(String(r[c.seconds]).trim()) || 0 : impNum(r[c.seconds])) : 0;
+    const m = c.distance ? importMetres(r[c.distance], c.distance, c.distUnit ? r[c.distUnit] : '') : 0;
+    if (!raw || !day || !(w > 0 || reps > 0 || sec > 0 || m > 0)) { skipped++; return; }
+    const name = c.session ? String(r[c.session] || '').trim() : '';
+    const stamp = timed ? String(r[c.date]).trim() : day;
+    const key = `${stamp}|${name}`;
+    if (!byKey.has(key)) {
+      const endD = c.end ? new Date(String(r[c.end]).replace(/,/g, '')) : null, startD = new Date(String(r[c.date]).replace(/,/g, ''));
+      byKey.set(key, { date: day, key: timed ? `${day}T${stamp.replace(/^.*?(\d{1,2}:\d{2}).*$/, '$1')}${name ? ' ' + name : ''}` : day + (name ? ' ' + name : ''),
+        name, mins: c.duration ? importMins(r[c.duration], c.duration)
+          : endD && !isNaN(endD) && !isNaN(startD) ? Math.max(0, Math.round((endD - startD) / 60000)) : 0,
+        ex: new Map() });
+    }
+    const s = byKey.get(key);
+    if (!s.ex.has(raw)) s.ex.set(raw, { raw, sets: [], secs: 0, notes: [] });
+    const e = s.ex.get(raw);
+    if (sec > 0) e.secs = Math.max(e.secs, sec);
+    const note = c.notes ? String(r[c.notes] || '').trim() : '';
+    if (note && !e.notes.includes(note)) e.notes.push(note);
+    let st = importSetType(c.setType ? r[c.setType] : '', order);
+    let rpe = c.rpe && impNum(r[c.rpe]) > 0 ? impNum(r[c.rpe]) : c.rir && String(r[c.rir]).trim() !== '' ? 10 - impNum(r[c.rir]) : null;
+    if (st === 'failure') { st = 'working'; if (rpe == null) rpe = 10; }   // failure is RPE 10, not a role
+    e.sets.push({ lb: w, r: reps, sec: sec || null, rpe, st, m: m || null });
+  });
+  const sessions = [...byKey.values()]
+    .map(s => ({ date: s.date, key: s.key, name: s.name, mins: s.mins, exercises: [...s.ex.values()].map(e => ({ ...e, notes: e.notes.join(' · ') })) }))
+    .filter(s => s.exercises.length)
+    .sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.key < b.key ? -1 : 1);
+  const all = sessions.flatMap(s => s.exercises.flatMap(e => e.sets));
+  if (!unit) unit = c.unit ? 'kg' : guessUnit(all.map(x => x.lb));   // a unit column was converted to kg above
+  const names = [...new Set(sessions.flatMap(s => s.exercises.map(e => e.raw)))];
+  return { sessions, skipped, unit, unitFrom, names, sets: all.length, src: fmt, label: IMPORT_SOURCES[fmt], dmy, dateAmbiguous };
+}
+
 /* Which existing sessions an import would land on. A backfill is the plan's
    prescription and real data supersedes it; a logged session is real too, so
    that one is left alone and the import sits alongside it. */
-function importCollisions(sessions) {
+function importSrcId(src, s) { return `${src || 'liftoff'}:${s.key || s.date}`; }
+function importCollisions(sessions, src) {
   const out = { replace: [], alongside: [], already: [] };
   sessions.forEach(s => {
-    const srcId = 'liftoff:' + s.date;
+    const srcId = importSrcId(src, s);
     if (S.workouts.some(w => w.srcId === srcId)) { out.already.push(s.date); return; }
     const same = S.workouts.filter(w => w.status === 'completed' && w.date === s.date);
     if (same.some(w => w.source === 'backfill')) out.replace.push(s.date);
@@ -7309,14 +7471,14 @@ function importCollisions(sessions) {
    exercise. Every session carries the batch's importId, and the batch is
    recorded in S.imports with any backfills it replaced, so it can be taken
    back out whole (removeImport). */
-function importLiftoff(sessions, mapping, unit) {
+function importLiftoff(sessions, mapping, unit, src = 'liftoff') {
   let added = 0, replaced = 0, skipped = 0;
   const importId = 'imp-' + uid();
   const displaced = [];
   const leafOf = raw => (mapping[raw] && movementById(keyLeaf(mapping[raw]).movement))
     ? keyLeaf(mapping[raw]) : leafForName(raw);
   sessions.forEach(s => {
-    const srcId = 'liftoff:' + s.date;
+    const srcId = importSrcId(src, s);
     if (S.workouts.some(w => w.srcId === srcId)) { skipped++; return; }
 
     const built = s.exercises.map(e => {
@@ -7334,9 +7496,10 @@ function importLiftoff(sessions, mapping, unit) {
            the time on each set and no reps. Mixed sets keep the note — there
            the seconds may be a rest or a tempo rather than the set itself. */
         ...(asIso ? { iso: true } : {}),
-        notes: e.secs && metric === 'reps_weight' && !asIso ? `${e.secs} s hold` : '',
+        notes: [e.notes, e.secs && metric === 'reps_weight' && !asIso ? `${e.secs} s hold` : ''].filter(Boolean).join(' · '),
         sets: e.sets.map(x => ({
-          w: toKgFrom(x.lb, unit), r: asIso || metric === 'carry' || metric === 'race' ? null : x.r, sec: x.sec, rpe: x.rpe, done: true, setType: 'working',
+          w: toKgFrom(x.lb, unit), r: asIso || (metric !== 'reps_weight' && !(x.r > 0)) || metric === 'carry' || metric === 'race' ? null : x.r, sec: x.sec, rpe: x.rpe, done: true,
+          setType: x.st || 'working', ...(x.m ? { m: Math.round(importDist(x.m, metric) * 10) / 10 } : {}),
         })),
       };
     });
@@ -7358,7 +7521,7 @@ function importLiftoff(sessions, mapping, unit) {
     replaced += before - S.workouts.length;
 
     S.workouts.push({
-      id: uid(), date: s.date, name: 'Liftoff import', status: 'completed',
+      id: uid(), date: s.date, name: s.name || `${IMPORT_SOURCES[src] || 'CSV'} import`, status: 'completed',
       source: 'imported', srcId, importId,
       exercises: merged,
       start: null, end: parseISO(s.date).getTime(),
@@ -7376,7 +7539,7 @@ function importLiftoff(sessions, mapping, unit) {
   });
   if (added) {
     S.imports = S.imports || [];
-    S.imports.push({ id: importId, source: 'liftoff', at: Date.now(), sessions: added, replaced: displaced });
+    S.imports.push({ id: importId, source: src, at: Date.now(), sessions: added, replaced: displaced });
   }
   S.workouts.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
   save(); bust();
@@ -7389,8 +7552,9 @@ function importLiftoff(sessions, mapping, unit) {
    replaced are put back. Custom movements nothing uses any more go too, and so
    do aliases that would steer the next import wrong — including the
    "[object Object]" ones the 0.22 review screen saved. */
-function liftoffImported(id) {
-  return S.workouts.filter(w => w.source === 'imported' && String(w.srcId || '').startsWith('liftoff:') && (!id || w.importId === id));
+function liftoffImported(id) {   // every app's imports, not only Liftoff's (the name predates B8)
+  return S.workouts.filter(w => w.source === 'imported' && Object.keys(IMPORT_SOURCES).some(k => String(w.srcId || '').startsWith(k + ':'))
+    && (!id || w.importId === id));
 }
 function removeImports(id) {
   const gone = new Set(liftoffImported(id).map(w => w.id));
@@ -7422,13 +7586,13 @@ function pruneCustomMovements() {
 }
 function openRemoveImport() {
   const all = liftoffImported();
-  if (!all.length) return toast('No Liftoff sessions to remove');
+  if (!all.length) return toast('No imported sessions to remove');
   const last = (S.imports || []).slice(-1)[0];
   const lastN = last ? liftoffImported(last.id).length : 0;
   const span = `${all[0].date} → ${all[all.length - 1].date}`;
   modal({
     title: 'Remove imported sessions',
-    body: `<div class="sub" style="margin-bottom:10px">${all.length} Liftoff session${all.length === 1 ? '' : 's'} (${esc(span)}).
+    body: `<div class="sub" style="margin-bottom:10px">${all.length} imported session${all.length === 1 ? '' : 's'} (${esc(span)}).
       Sessions you logged in Ironlog are never touched. Backfills an import replaced come back.</div>
       ${last && lastN && lastN !== all.length ? `<button class="btn wide" id="riLast" style="margin-bottom:8px">Remove the last import (${lastN})</button>` : ''}
       <button class="btn wide danger" id="riAll">Remove all ${all.length} imported sessions</button>`,
@@ -7448,14 +7612,14 @@ function openRemoveImport() {
    on the review screen is the safe outcome — unmatched names come in under
    their own name rather than being folded into an existing lift. */
 
-function openLiftoffImport(text) {
+function openLiftoffImport(text, opt = {}) {   // any supported app's CSV (B8); the name predates it
   let p;
-  try { p = parseLiftoff(text); }
-  catch (e) { return toast('That does not look like a Liftoff CSV export'); }
+  try { p = parseImport(text, opt); }
+  catch (e) { return toast('That CSV isn\'t one Ironlog can read — it needs date, exercise and weight or reps columns'); }
   if (!p.sessions.length) return toast('No sessions found in that file');
 
   let unit = p.unit;
-  const col = importCollisions(p.sessions);
+  const col = importCollisions(p.sessions, p.src);
   const span = p.sessions.length === 1
     ? p.sessions[0].date
     : `${p.sessions[0].date} → ${p.sessions[p.sessions.length - 1].date}`;
@@ -7464,15 +7628,20 @@ function openLiftoffImport(text) {
   if (col.replace.length) notes.push(`${col.replace.length} date${col.replace.length === 1 ? '' : 's'} already hold a backfilled session — the imported data replaces it`);
   if (col.alongside.length) notes.push(`${col.alongside.length} date${col.alongside.length === 1 ? '' : 's'} already hold a logged session — the import lands alongside it`);
   if (col.already.length) notes.push(`${col.already.length} session${col.already.length === 1 ? '' : 's'} already imported from this file — skipped`);
-  if (p.skipped) notes.push(`${p.skipped} empty row${p.skipped === 1 ? '' : 's'} ignored`);
+  if (p.skipped) notes.push(`${p.skipped} empty or rest-timer row${p.skipped === 1 ? '' : 's'} ignored`);
 
   modal({
-    title: 'Import Liftoff CSV',
+    title: `Import from ${p.label}`,
     body: `
       <div class="sub" style="margin-bottom:10px">
         <b>${p.sessions.length}</b> session${p.sessions.length === 1 ? '' : 's'} ·
         <b>${p.sets}</b> sets · ${esc(span)}
       </div>
+      ${p.dateAmbiguous ? `<div class="field"><label>Dates in this file are</label>
+        <div class="seg" id="liDmy">
+          <button data-dmy="1" class="${p.dmy ? 'on' : ''}">Day / month</button>
+          <button data-dmy="0" class="${p.dmy ? '' : 'on'}">Month / day</button>
+        </div></div>` : ''}
       <div class="field"><label>Weights in this file are</label>
         <div class="seg" id="liUnit">
           <button data-lu="lb" class="${unit === 'lb' ? 'on' : ''}">Pounds</button>
@@ -7486,14 +7655,16 @@ function openLiftoffImport(text) {
            <button class="btn primary" id="liNext">Next</button>`,
     onOpen: bg => {
       const eg = $('#liUnitEg', bg);
-      const sample = p.sessions[0].exercises[0].sets[0].lb;
-      const showEg = () => { eg.textContent = `e.g. ${nice(sample)} reads as ${nice(toKgFrom(sample, unit))} kg`; };
+      const sample = (p.sessions.flatMap(s => s.exercises.flatMap(e => e.sets)).find(x => x.lb > 0) || { lb: 0 }).lb;
+      const from = p.unitFrom === 'header' ? ' — the file says so' : p.unitFrom === 'rows' ? ' — converted row by row from the file\'s unit column' : '';
+      const showEg = () => { eg.textContent = `e.g. ${nice(sample)} reads as ${nice(toKgFrom(sample, unit))} kg${unit === p.unit ? from : ''}`; };
       showEg();
       bg.querySelectorAll('#liUnit button').forEach(b => b.onclick = () => {
         unit = b.dataset.lu;
         bg.querySelectorAll('#liUnit button').forEach(x => x.classList.toggle('on', x === b));
         showEg();
       });
+      bg.querySelectorAll('#liDmy button').forEach(b => b.onclick = () => { closeModal(); openLiftoffImport(text, { dmy: b.dataset.dmy === '1' }); });
       $('#liNext', bg).onclick = () => { closeModal(); reviewLiftoffNames(p, unit); };
     },
   });
@@ -7564,24 +7735,57 @@ function reviewLiftoffNames(p, unit) {
   });
 }
 
+/* The dry run: everything the import would do, counted, before anything is
+   written. Nothing changes until Import is tapped, and the batch can be taken
+   back out whole from Settings. */
+function importPlan(p, mapping) {
+  const col = importCollisions(p.sessions, p.src);
+  const skip = new Set(col.already);
+  const add = p.sessions.filter(s => !S.workouts.some(w => w.srcId === importSrcId(p.src, s)));
+  const sets = add.flatMap(s => s.exercises.flatMap(e => e.sets));
+  const names = p.names;
+  return {
+    col, add, sets: sets.length, skip: skip.size,
+    warm: sets.filter(x => x.st === 'warmup').length, drop: sets.filter(x => x.st === 'drop').length,
+    dist: sets.filter(x => x.m).length,
+    matched: names.filter(n => mapping[n]).length, fresh: names.filter(n => !mapping[n]),
+  };
+}
 function confirmLiftoffImport(p, mapping, unit, auto, merged) {
-  const col = importCollisions(p.sessions);
-  const warn = col.replace.length
-    ? ` ${col.replace.length} backfilled session${col.replace.length === 1 ? '' : 's'} will be replaced.`
-    : '';
-  confirmDlg(
-    `Import ${p.sessions.length} session${p.sessions.length === 1 ? '' : 's'} as real training history.` +
-    ` They count toward your PRs.${warn}`,
-    () => {
-      const r = importLiftoff(p.sessions, mapping, unit);
-      closeAllModals(); render();
-      const bits = [`${r.added} session${r.added === 1 ? '' : 's'} imported`];
-      if (r.replaced) bits.push(`${r.replaced} backfill replaced`);
-      if (r.skipped) bits.push(`${r.skipped} already there`);
-      if (merged) bits.push(`${merged} name${merged === 1 ? '' : 's'} merged`);
-      toast(bits.join(' · '), 'green');
+  const P = importPlan(p, mapping);
+  if (!P.add.length) return toast('Everything in this file is already imported');
+  const span = `${P.add[0].date} → ${P.add[P.add.length - 1].date}`;
+  const li = (b, s) => `<div class="exline"><span>${b}</span><span class="mono">${s}</span></div>`;
+  modal({
+    title: 'Before importing',
+    body: `<div class="sub" style="margin-bottom:10px">Nothing has been written yet. This is what the import will do:</div>
+      <div class="card tight">
+        ${li('Sessions added', `${P.add.length} · ${esc(span)}`)}
+        ${li('Sets', P.sets)}
+        ${P.warm ? li('Warm-ups (kept out of PRs)', P.warm) : ''}
+        ${P.drop ? li('Drop sets', P.drop) : ''}
+        ${P.dist ? li('Sets with a distance', P.dist) : ''}
+        ${li('Weights read as', unit === 'lb' ? 'pounds → kg' : 'kilograms')}
+        ${P.col.replace.length ? li('Backfilled sessions replaced', P.col.replace.length) : ''}
+        ${P.col.alongside.length ? li('Days that already have a session', `${P.col.alongside.length} · added alongside`) : ''}
+        ${P.skip ? li('Already imported, skipped', P.skip) : ''}
+        ${li('Exercise names', `${P.matched} matched${merged ? ` (${merged} by you)` : ''} · ${P.fresh.length} new`)}
+      </div>
+      ${P.fresh.length ? `<div class="sub" style="margin-top:8px">New exercises: ${esc(P.fresh.slice(0, 8).join(', '))}${P.fresh.length > 8 ? ` and ${P.fresh.length - 8} more` : ''}.</div>` : ''}
+      <div class="sub" style="margin-top:8px">Imported sessions are real training history and count toward your PRs. Settings → Remove imported sessions takes this batch back out.</div>`,
+    foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="impGo">Import</button>`,
+    onOpen: bg => {
+      $('#impGo', bg).onclick = () => {
+        const r = importLiftoff(p.sessions, mapping, unit, p.src);
+        closeAllModals(); render();
+        const bits = [`${r.added} session${r.added === 1 ? '' : 's'} imported`];
+        if (r.replaced) bits.push(`${r.replaced} backfill replaced`);
+        if (r.skipped) bits.push(`${r.skipped} already there`);
+        toast(bits.join(' · '), 'green');
+        autoSync();
+      };
     },
-    'Import');
+  });
 }
 
 /* ---------------- profile ----------------
@@ -8079,7 +8283,7 @@ function openSettings() {
       <button class="btn sm wide" id="stExportCsv" style="margin-top:9px">Export sets as CSV</button>
       <div class="sub" style="margin-top:4px">One row per set, for spreadsheets. JSON is the full backup; either comes back in exactly.</div>
       ${hasFoodData() ? `<button class="btn sm wide" id="stFoodExport" style="margin-top:9px">Save old food log (${S.foods.length})…</button>` : ''}
-      <button class="btn sm wide" id="stLiftoff" style="margin-top:9px">Import CSV (Ironlog or Liftoff)</button>
+      <button class="btn sm wide" id="stLiftoff" style="margin-top:9px">Import CSV (Ironlog, Strong, Hevy, FitNotes, Liftoff…)</button>
       ${liftoffImported().length ? `<button class="btn sm wide ghost" id="stUnimport" style="margin-top:9px">Remove imported sessions (${liftoffImported().length})…</button>` : ''}
       <button class="btn sm wide ghost" id="stCheck" style="margin-top:9px">Check exercise data</button>
       <div class="sub" style="margin-top:6px">Real training history — imported sessions count toward your PRs.</div>
@@ -8785,14 +8989,14 @@ function exerciseCheck(st, csvText) {
   });
   if (csvText != null) {
     try {
-      const p = parseLiftoff(csvText);
+      const p = parseImport(csvText);   // any app's export (B8)
       const rows = p.names.map(raw => {
         const m = matchExercise(raw);
         return { raw, mapped: raw, how: m.how, leaf: m.leaf ? fullName(m.leaf) : null };
       });
       R.csv = { sessions: p.sessions.length, sets: p.sets, resolved: rows.filter(x => x.leaf), unresolved: rows.filter(x => !x.leaf),
                 guesses: rows.filter(x => x.how === 'guess') };
-    } catch (err) { R.csv = { error: 'That does not look like a Liftoff CSV export' }; }
+    } catch (err) { R.csv = { error: 'That CSV isn\'t one Ironlog can read' }; }
   }
   R.ok = !R.orphans.length && !(R.csv && (R.csv.error || R.csv.unresolved.length));
   return R;
@@ -8838,12 +9042,12 @@ function openExerciseCheck(csvText) {
       ${list(Object.entries(R.custom), ([n, c]) => `<div class="exline"><span>${esc(n)}</span><span class="dimmer">${c}×</span></div>`, 'None.')}
       ${R.drift.length ? `<div class="eyebrow" style="margin-top:12px">Stored movement ≠ what the name resolves to now</div>
         ${R.drift.slice(0, 20).map(d => `<div class="exline"><span>${esc(d.name)} <span class="dimmer">${esc(d.date)}</span></span><span class="dimmer">${esc(d.now)} · now ${esc(d.resolves)}</span></div>`).join('')}` : ''}
-      ${R.csv ? `<div class="eyebrow" style="margin-top:12px">Liftoff CSV</div>
+      ${R.csv ? `<div class="eyebrow" style="margin-top:12px">Import CSV</div>
         ${R.csv.error ? `<div class="sub" style="color:var(--red)">${esc(R.csv.error)}</div>` : `
         <div class="sub">${R.csv.sessions} sessions · ${R.csv.sets} sets · ${R.csv.resolved.length} names resolve · <b style="color:${R.csv.unresolved.length ? 'var(--red)' : 'var(--green)'}">${R.csv.unresolved.length} don't</b></div>
         ${R.csv.unresolved.map(u => `<div class="exline"><span>${esc(u.raw)}</span><span class="dimmer">would become a custom movement</span></div>`).join('')}`}` : ''}
       <input type="file" id="ckCsv" accept=".csv,text/csv" style="display:none">`,
-    foot: `<button class="btn sm ghost" id="ckCsvBtn">Check a Liftoff CSV</button><button class="btn sm ghost" id="ckCopy">Copy report</button><button class="btn primary" data-close>Close</button>`,
+    foot: `<button class="btn sm ghost" id="ckCsvBtn">Check an import CSV</button><button class="btn sm ghost" id="ckCopy">Copy report</button><button class="btn primary" data-close>Close</button>`,
     onOpen: bg => {
       $('#ckCsvBtn', bg).onclick = () => $('#ckCsv', bg).click();
       $('#ckCsv', bg).onchange = ev => {

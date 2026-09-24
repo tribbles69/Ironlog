@@ -13,6 +13,21 @@ rather than guessed.
 
 ---
 
+## 0.35.0 — 24 Sep 2026
+- **Import from Strong, Hevy and FitNotes**, as well as Liftoff and any CSV
+  with a date, exercise and weight or reps column. Settings → Data → Import
+  CSV works out which app the file came from.
+- Warm-ups, drop sets, failure sets, RPE or RIR, times, distances and notes
+  come across. Each workout becomes its own session, even two on one day.
+- Exercise names like "Bench Press (Barbell)" or "Farmer's Walk" match
+  Ironlog's exercises automatically. Anything it isn't sure of is shown for
+  you to check first.
+- **See it before it happens.** A summary shows exactly what the import will
+  add, skip or replace before anything is saved.
+  - Dates that could be day/month or month/day ask you which.
+  - Importing the same file twice skips what's already in.
+- "Remove imported sessions" now takes out imports from any app.
+
 ## 0.34.1 — 24 Sep 2026
 - **Google Drive backup is switched on.** Settings → Google Drive → Connect
   now works without any extra setup.
