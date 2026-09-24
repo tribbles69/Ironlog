@@ -263,7 +263,7 @@ and from the Tools page (D11).
 - One tap for a ramp to today's working weight (reuse `openRamp`), rounded to
   loadable plates.
 
-### [ ] B5. Session summary and PR history
+### [x] B5. Session summary and PR history — shipped 0.32.0
 (Blast #22, #19, #18.)
 - End-of-session screen: PRs hit (load, reps, **time and distance** PRs from
   B1), tonnage, e1RM change.
