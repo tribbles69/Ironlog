@@ -13,6 +13,10 @@ rather than guessed.
 
 ---
 
+## 0.34.1 — 24 Sep 2026
+- **Google Drive backup is switched on.** Settings → Google Drive → Connect
+  now works without any extra setup.
+
 ## 0.34.0 — 24 Sep 2026
 - **Export sets as CSV** (Settings → Data): one row per set, for
   spreadsheets. Each row has the date, session, exercise, set type, kg, reps,
