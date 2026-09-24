@@ -266,6 +266,11 @@ h3{font-size:13.5px;margin:0 0 8px}
   border:1px solid rgba(255,92,53,.3);border-radius:14px;padding:12px 14px;margin-bottom:13px;
 }
 .timer{font-size:26px;font-weight:750;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.restbar{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:6px}
+.restbar > .grow{min-width:0}
+.restbar .eyebrow{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.restbar .rc{font-size:22px;font-weight:750;letter-spacing:-.5px;font-variant-numeric:tabular-nums;min-width:62px}
+.restbar.over .rc{color:var(--green)}
 
 .ex-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:11px;overflow:hidden}
 .ex-head{padding:12px 13px 10px;border-bottom:1px solid var(--line)}
@@ -1107,7 +1112,11 @@ const DEFAULT_STATE = {
     activity: 'moderate',   // sedentary | light | moderate | high | athlete
     nutritionGoal: 'maintain',   // lose | maintain | gain
     priority: ['Back Squat', 'Bench Press', 'Deadlift'],
-    restDefault: 180,
+    restDefault: 180,       // rest after a main lift's working set, seconds
+    restAccessory: 90,      // rest after anything else
+    restWarn: 10,           // warning beep this many seconds before rest ends; 0 = off
+    restAuto: true,         // start the rest timer when a set is ticked
+    restBy: {},             // exKey -> seconds, a per-exercise default set from its menu
     sound: true,            // timer beeps (hold count-in, rest end)
     vibrate: true,          // timer haptics, where the phone supports them
     openerPct: 90,          // opener as a % of the latest tested single
@@ -1432,7 +1441,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.17.0';
+const APP_VERSION = '0.18.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -3691,6 +3700,7 @@ function activeWorkout() {
     <div class="row" style="margin-top:8px">
       <button class="btn sm wide" id="voiceBtn">🎤 Log a set</button>
     </div>
+    <div id="restHost">${restBarHtml()}</div>
   </div>
 
   ${a.exercises.map((e, ei) => exerciseCard(e, ei)).join('')}
@@ -4060,10 +4070,11 @@ function finishWorkout(force) {
      away every timed set at the moment of finishing: a session of nothing but
      planks refused to finish at all, and a mixed session dropped the planks
      from the saved record without saying so. */
-  const logged = a.exercises.map(e => ({
-    ...e,
-    sets: e.sets.filter(s => s.done && (isTimed(e) ? s.sec > 0 : s.r > 0)),
-  })).filter(e => e.sets.length);
+  const logged = a.exercises.map(e => {
+    const x = { ...e, sets: e.sets.filter(s => s.done && (isTimed(e) ? s.sec > 0 : s.r > 0)) };
+    delete x.rest;   // the session's ±15 s override; it isn't part of the record
+    return x;
+  }).filter(e => e.sets.length);
   if (!logged.length) return toast('Log at least one set first');
 
   // sets ticked and then retyped never met the single-set prompt
@@ -4103,6 +4114,7 @@ function finishWorkout(force) {
   if (a.plannedFrom) S.workouts = S.workouts.filter(w => w.id !== a.plannedFrom);
   S.workouts = S.workouts.filter(w => w.id !== done.id);
   S.workouts.push(done);
+  stopRest();
   S.active = null;
   save(); bust();
   showSummary(done);
@@ -6579,7 +6591,24 @@ function openSettings() {
             <button data-v="0" class="${S.settings.vibrate === false ? 'on' : ''}">Off</button>
           </div></div>
       </div>
-      <div class="sub" style="margin:-4px 0 10px">Beeps and buzzes from the hold timer. A phone on silent may still mute the beeps — the browser can't tell.</div>
+      <div class="sub" style="margin:-4px 0 10px">Beeps and buzzes from the hold and rest timers. A phone on silent may still mute the beeps — the browser can't tell.</div>
+      <div class="field"><label>Rest timer</label>
+        <div class="seg" id="restAutoSeg">
+          <button data-v="1" class="${S.settings.restAuto !== false ? 'on' : ''}">Start on tick</button>
+          <button data-v="0" class="${S.settings.restAuto === false ? 'on' : ''}">Off</button>
+        </div></div>
+      <div class="grid3">
+        <div class="field"><label>Main lifts</label>
+          <input type="text" inputmode="numeric" id="stRestMain" value="${fmtSec(S.settings.restDefault || 180)}"></div>
+        <div class="field"><label>Accessories</label>
+          <input type="text" inputmode="numeric" id="stRestAcc" value="${fmtSec(S.settings.restAccessory || 90)}"></div>
+        <div class="field"><label>Warn (s before)</label>
+          <input type="number" inputmode="numeric" id="stRestWarn" value="${+S.settings.restWarn || 0}" min="0" max="60"></div>
+      </div>
+      <div class="sub" style="margin:-4px 0 10px">Main lifts are your priority lifts and heavy barbell compounds. Warm-ups rest half as long. Any exercise can have its own rest from its ⋯ menu; ±15 s during a session sticks for that session.</div>
+      ${'Notification' in window ? `<button class="btn sm wide ghost" id="stRestNote" style="margin-bottom:6px" ${Notification.permission !== 'default' ? 'disabled' : ''}>${
+        Notification.permission === 'granted' ? 'Rest notifications on' : Notification.permission === 'denied' ? 'Notifications blocked in browser settings' : 'Notify me when rest ends in the background'}</button>
+      <div class="sub" style="margin-bottom:10px">Best effort — a phone may pause the app in the background before the rest is up.</div>` : ''}
       <div class="field"><label>Profile</label>
         <button class="btn sm wide ghost" id="stProfile">Sex, bodyweight, age and targets →</button>
         <div class="sub" style="margin-top:4px">Sex and bodyweight set your DOTS; they live in the profile now rather than here.</div>
@@ -6682,6 +6711,20 @@ function openSettings() {
         save();
       });
       // saved on the tap, like the skin: a toggle you can hear shouldn't wait for Save
+      bg.querySelectorAll('#restAutoSeg button').forEach(b => b.onclick = () => {
+        bg.querySelectorAll('#restAutoSeg button').forEach(x => x.classList.toggle('on', x === b));
+        S.settings.restAuto = b.dataset.v === '1';
+        save();
+      });
+      const rn = $('#stRestNote', bg);
+      if (rn) rn.onclick = () => {
+        try {
+          Promise.resolve(Notification.requestPermission()).then(p => {
+            rn.disabled = true;
+            rn.textContent = p === 'granted' ? 'Rest notifications on' : 'Notifications not allowed';
+          });
+        } catch (e) { /* old API shape */ }
+      };
       [['#sndSeg', 'sound'], ['#vibSeg', 'vibrate']].forEach(([sel, k]) => bg.querySelectorAll(sel + ' button').forEach(b => b.onclick = () => {
         bg.querySelectorAll(sel + ' button').forEach(x => x.classList.toggle('on', x === b));
         S.settings[k] = b.dataset.v === '1';
@@ -6757,6 +6800,11 @@ function openSettings() {
         setAiKey($('#stKey', bg).value.trim());
         const pp = +$('#stPlatform', bg).value;
         if (pp >= 80 && pp <= 100) S.settings.platformPct = pp;
+        const rm = parseTime($('#stRestMain', bg).value), ra = parseTime($('#stRestAcc', bg).value);
+        if (rm && rm <= 1800) S.settings.restDefault = rm;
+        if (ra && ra <= 1800) S.settings.restAccessory = ra;
+        const rw = +$('#stRestWarn', bg).value;
+        if (rw >= 0 && rw <= 60) S.settings.restWarn = Math.round(rw);
 
         // inventory: read the rows back, drop anything blank or nonsensical
         const nb = [...bg.querySelectorAll('[data-bn]')].map((el, i) => ({
@@ -7593,6 +7641,9 @@ function wire() {
     $('#editPriority').onclick = openPriority;
   }
 
+  // the rest loop runs on every page, so the end alert fires wherever you are
+  if (S.active && S.active.rest && !restIv) restLoop();
+
   // timer ticking only while a workout is live and visible
   clearInterval(tick);
   if (page === 'workout' && S.active) {
@@ -7625,6 +7676,7 @@ function toggleSetDone(ei, si) {
     } else if (isWorking(s) && (!st || beatsBest(st, s.w, s.r, s.rpe))) {
       toast(st ? `★ PR — ${exFull(ex)} ${s.w > 0 ? `${wt(s.w)}×${s.r}` : `${s.r} reps`}` : `★ First ${exFull(ex)} logged`, 'gold');
     }
+    startRest(ei, s);
     save(); bust(); render();
   };
   /* plausibility() reasons about load and reps against history; it has
@@ -7748,6 +7800,7 @@ function openHoldTimer(ei, si) {
         if (!run) {
           if (mode === 'planned' && !(target > 0)) return toast('Set a target first');
           Cue.unlock();            // this tap is the gesture the browser wants
+          if (S.active && S.active.rest) { stopRest(); save(); }   // the rest is over once the hold starts
           Cue.countIn();
           Awake.hold('hold');
           run = { goAt: Date.now() + 2000, warned: 4, iv: setInterval(frame, 100) };
@@ -7771,6 +7824,130 @@ function openHoldTimer(ei, si) {
       };
     },
   });
+}
+
+/* ---------------- rest timer ----------------
+   Starts itself when a set is ticked. Main lifts rest longer than accessories;
+   an exercise can carry its own default (its ⋯ menu), and ±15 s during a
+   session sticks for that exercise for the rest of the session.
+
+   The state is an end timestamp on the live session, so it survives the phone
+   locking, the app being backgrounded and even a reload: whatever the clock
+   says on return is right. The loop only paints and fires the alerts — it is
+   never the clock. */
+const HEAVY_BARS = ['barbell', 'trap_bar', 'safety_squat_bar'];
+/* No compound flag in the catalogue, so: a priority lift, or a heavy-bar
+   movement that is either multi-muscle or a squat/pull/press pattern. A
+   barbell curl is an accessory; a barbell row isn't. Holds rest like
+   accessories. */
+function isMainLift(e) {
+  if (!e || !e.leaf || isTimed(e)) return false;
+  if (priorityKeys().includes(leafKey(e.leaf))) return true;
+  const m = movementById(e.leaf.movement);
+  return !!m && HEAVY_BARS.includes(e.leaf.equipment)
+    && ((m.primary || []).length >= 2 || ['legs', 'back', 'chest'].includes(m.category));
+}
+function restDefaultFor(e) {
+  const own = (S.settings.restBy || {})[exKey(e)];
+  if (own > 0) return own;
+  return isMainLift(e) ? (S.settings.restDefault || 180) : (S.settings.restAccessory || 90);
+}
+/* Warm-ups get half, capped at 90 s — the ramp itself says longer only for
+   the last steps, and those are the lifter's call. */
+function restFor(e, s) {
+  const base = e.rest > 0 ? e.rest : restDefaultFor(e);
+  return s && isWarm(s) ? Math.min(90, Math.round(base / 2 / 5) * 5) : base;
+}
+
+let restIv = null;
+function startRest(ei, s) {
+  const a = S.active;
+  const e = a && a.exercises[ei];
+  if (!e || S.settings.restAuto === false) return;
+  const len = restFor(e, s);
+  a.rest = { endAt: Date.now() + len * 1000, len, ei, name: exFull(e) };
+  Cue.unlock();               // the tick is the gesture; the end beep needs the context awake
+  restLoop();
+}
+function stopRest() {
+  if (S.active) delete S.active.rest;
+  clearInterval(restIv); restIv = null;
+  const host = $('#restHost');
+  if (host) host.innerHTML = '';
+}
+function restLoop() {
+  clearInterval(restIv);
+  restIv = setInterval(restTick, 250);
+  restTick();
+}
+function restTick() {
+  const r = S.active && S.active.rest;
+  if (!r) { clearInterval(restIv); restIv = null; return; }
+  const left = (r.endAt - Date.now()) / 1000;
+  const warnAt = +S.settings.restWarn || 0;
+  // a warning only makes sense on a rest meaningfully longer than it
+  if (!r.warned && warnAt > 0 && r.len > warnAt + 5 && left <= warnAt && left > 0) {
+    r.warned = true;
+    Cue.beep(800, 90); Cue.beep(800, 90, 0.18); Cue.buzz(80);
+  }
+  if (left <= 0 && !r.alerted) {
+    r.alerted = true;
+    /* Coming back to the app long after rest ran out shouldn't set it off. */
+    if (left > -30) {
+      Cue.done();
+      if (document.visibilityState === 'hidden') restNotify(r);
+      else toast(`Rest over — ${r.name}`, 'green');
+    }
+    save();
+  }
+  if (left < -600) { stopRest(); save(); return; }    // ten minutes over: nobody is resting now
+  paintRest();
+}
+function restBarHtml() {
+  const r = S.active && S.active.rest;
+  if (!r) return '';
+  return `<div class="restbar" id="restBar">
+    <div class="grow"><div class="eyebrow">Rest · ${esc(r.name)}</div><div class="rc" id="restClock"></div></div>
+    <button class="btn xs ghost" data-rest="-15">−15</button>
+    <button class="btn xs ghost" data-rest="15">+15</button>
+    <button class="btn xs ghost" data-rest="skip">Skip</button>
+  </div>`;
+}
+/* Only the clock text changes per tick; the buttons are built once. */
+function paintRest() {
+  const r = S.active && S.active.rest;
+  const host = $('#restHost');
+  if (!host) return;
+  if (!r) { host.innerHTML = ''; return; }
+  if (!$('#restBar', host)) host.innerHTML = restBarHtml();
+  const left = (r.endAt - Date.now()) / 1000;
+  $('#restClock', host).textContent = left > 0 ? fmtSec(Math.ceil(left)) : `+${fmtSec(Math.floor(-left))}`;
+  $('#restBar', host).classList.toggle('over', left <= 0);
+}
+/* ±15 s moves this rest and becomes this exercise's rest for the session. */
+function adjustRest(d) {
+  const r = S.active && S.active.rest;
+  if (!r) return;
+  const now = Date.now();
+  r.endAt = Math.max(now, r.endAt + d * 1000);
+  r.len = Math.max(15, r.len + d);
+  const e = S.active.exercises[r.ei];
+  if (e) e.rest = r.len;
+  const left = (r.endAt - now) / 1000;
+  if (left > 0) r.alerted = false;
+  if (left > (+S.settings.restWarn || 0)) r.warned = false;
+  save(); paintRest();
+}
+/* Best effort, as the roadmap asks: a page in the background may be frozen
+   before the moment comes, and without permission there is nothing to show. */
+function restNotify(r) {
+  try {
+    if (!('Notification' in window) || Notification.permission !== 'granted' || !navigator.serviceWorker) return;
+    navigator.serviceWorker.ready.then(reg => reg.showNotification('Rest over', {
+      body: `Next set — ${r.name}`, tag: 'ironlog-rest', renotify: true, icon: 'icon-192.png',
+      ...(S.settings.vibrate !== false ? { vibrate: [220, 120, 220] } : {}),
+    })).catch(() => {});
+  } catch (e) { /* notifications unavailable */ }
 }
 
 function wireActive(v) {
@@ -7816,6 +7993,12 @@ function wireActive(v) {
 
   v.querySelectorAll('[data-done]').forEach(b => b.onclick = () => toggleSetDone(...key(b.dataset.done)));
   v.querySelectorAll('[data-hold]').forEach(b => b.onclick = () => openHoldTimer(...key(b.dataset.hold)));
+  $('#restHost').onclick = ev => {
+    const b = ev.target.closest('[data-rest]');
+    if (!b) return;
+    if (b.dataset.rest === 'skip') { stopRest(); save(); } else adjustRest(+b.dataset.rest);
+  };
+  paintRest();
 
   v.querySelectorAll('[data-warm]').forEach(b => b.onclick = () => {
     const [ei, si] = key(b.dataset.warm);
@@ -7875,6 +8058,10 @@ function wireActive(v) {
       title: exFull(ex),
       body: `<div class="field"><label>Exercise notes</label>
           <textarea id="exNote" rows="3" placeholder="Cues, belt, tempo…">${esc(ex.notes || '')}</textarea></div>
+        <div class="field"><label>Rest for this exercise (m:ss)</label>
+          <input type="text" inputmode="numeric" id="exRest" value="${(S.settings.restBy || {})[exKey(ex)] ? fmtSec(S.settings.restBy[exKey(ex)]) : ''}"
+            placeholder="${fmtSec(isMainLift(ex) ? (S.settings.restDefault || 180) : (S.settings.restAccessory || 90))} — ${isMainLift(ex) ? 'main lift' : 'accessory'} default">
+          <div class="sub" style="margin-top:4px">Kept for next time. Blank uses the default from Settings.</div></div>
         ${metricFor(ex.leaf) === 'time' ? '' : `<button class="btn wide ghost" id="exIso" style="margin-bottom:8px">${isIso(ex)
           ? 'Back to reps' : 'Log as isometric hold'}</button>
           <div class="sub" style="margin:-2px 0 10px">Holds keep their own records, separate from rep sets of the same lift.</div>`}
@@ -7891,7 +8078,13 @@ function wireActive(v) {
         $('#exUp', bg).onclick = () => { if (ei > 0) { const [x] = a.exercises.splice(ei, 1); a.exercises.splice(ei - 1, 0, x); save(); closeModal(); render(); } };
         $('#exDown', bg).onclick = () => { if (ei < a.exercises.length - 1) { const [x] = a.exercises.splice(ei, 1); a.exercises.splice(ei + 1, 0, x); save(); closeModal(); render(); } };
         $('#exDel', bg).onclick = () => { a.exercises.splice(ei, 1); save(); closeModal(); render(); };
-        $('#exOk', bg).onclick = () => { ex.notes = $('#exNote', bg).value.trim(); save(); closeModal(); render(); };
+        $('#exOk', bg).onclick = () => {
+          ex.notes = $('#exNote', bg).value.trim();
+          const by = S.settings.restBy = S.settings.restBy || {};
+          const sec = parseTime($('#exRest', bg).value);
+          if (sec) { by[exKey(ex)] = sec; delete ex.rest; } else delete by[exKey(ex)];
+          save(); closeModal(); render();
+        };
       },
     });
   });
@@ -7905,7 +8098,7 @@ function wireActive(v) {
   if ($('#voiceBtn')) $('#voiceBtn').onclick = dictateSet;
   $('#finishBtn').onclick = () => finishWorkout();   // no event object as `force`
   $('#discardBtn').onclick = () => confirmDlg('Discard this workout? Nothing will be saved.', () => {
-    S.active = null; save(); render(); toast('Workout discarded');
+    stopRest(); S.active = null; save(); render(); toast('Workout discarded');
   }, 'Discard');
 }
 

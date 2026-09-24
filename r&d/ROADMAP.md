@@ -87,9 +87,12 @@ RIR 0 automatically.
   is reused by the rest timer and the cardio session below — build it as a
   shared helper.
 
-### 2. Rest timer upgrade
-A rest timer exists (grep `restDefault`) but is silent. Upgrade it using the
-shared audio helper from item 1.
+### 2. ~~Rest timer upgrade~~ — [x] shipped 0.18.0
+There was no rest timer at all, only the `restDefault` setting — built from
+scratch on `Cue` / the shared audio helper from item 1. Main vs accessory is a
+heuristic (`isMainLift`: priority lifts + heavy-bar compounds); per-exercise
+rest lives in `settings.restBy` from the exercise's ⋯ menu. Background
+notification is opt-in from Settings and best effort.
 - **Auto-start** when a set is ticked done.
 - **End alert:** beep + vibration, respecting the Sound/Vibration settings.
   Optional short warning a few seconds before the end.

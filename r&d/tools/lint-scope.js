@@ -143,7 +143,7 @@ decodeURIComponent encodeURI decodeURI structuredClone queueMicrotask
 window document navigator location history localStorage sessionStorage indexedDB caches fetch console
 setTimeout setInterval clearTimeout clearInterval requestAnimationFrame cancelAnimationFrame
 Blob File FileReader FormData Headers Request Response URL URLSearchParams AbortController
-Image Audio Event CustomEvent MutationObserver IntersectionObserver ResizeObserver
+Image Audio Event CustomEvent MutationObserver IntersectionObserver ResizeObserver Notification
 HTMLElement Element Node NodeList DOMParser XMLSerializer TextEncoder TextDecoder
 SpeechRecognition webkitSpeechRecognition speechSynthesis SpeechSynthesisUtterance
 performance crypto alert confirm prompt self globalThis undefined NaN Infinity
