@@ -271,6 +271,14 @@ h3{font-size:13.5px;margin:0 0 8px}
 .restbar .eyebrow{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .restbar .rc{font-size:22px;font-weight:750;letter-spacing:-.5px;font-variant-numeric:tabular-nums;min-width:62px}
 .restbar.over .rc{color:var(--green)}
+.cd-big{font-size:54px;font-weight:800;letter-spacing:-2px;font-variant-numeric:tabular-nums;line-height:1}
+.cd-ctl{display:flex;align-items:center;gap:10px;margin:8px 0 12px}
+.cd-ctl .btn{width:68px;height:58px;font-size:28px;padding:0}
+.cd-ctl .v{flex:1;text-align:center;font-size:36px;font-weight:780;font-variant-numeric:tabular-nums}
+.cd-cue{border-color:var(--accent)}
+.cd-cue.ceil{border-color:var(--red)}
+.cd-cue-t{font-size:30px;font-weight:800;font-variant-numeric:tabular-nums}
+.cd-cue-t small{font-size:15px;font-weight:600;color:var(--dim)}
 
 .ex-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:11px;overflow:hidden}
 .ex-head{padding:12px 13px 10px;border-bottom:1px solid var(--line)}
@@ -1117,6 +1125,7 @@ const DEFAULT_STATE = {
     restWarn: 10,           // warning beep this many seconds before rest ends; 0 = off
     restAuto: true,         // start the rest timer when a set is ticked
     restBy: {},             // exKey -> seconds, a per-exercise default set from its menu
+    cardio: null,           // last cardio setup (see CARDIO_DEF); null = defaults
     sound: true,            // timer beeps (hold count-in, rest end)
     vibrate: true,          // timer haptics, where the phone supports them
     openerPct: 90,          // opener as a % of the latest tested single
@@ -1441,7 +1450,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.18.0';
+const APP_VERSION = '0.19.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -3372,10 +3381,11 @@ function completedCard(wo) {
   return `<div class="card">
     <div class="row between" style="margin-bottom:9px">
       <div class="grow"><div style="font-weight:700">${esc(wo.name)} <span class="chip green">COMPLETED</span>${srcChip(wo)}${wo.edited ? ' <span class="chip">EDITED</span>' : ''}</div>
-        <div class="sub">${sets} sets · ${wt(totalVolume(wo), 0)} volume${wo.summary && wo.summary.mins ? ` · ${wo.summary.mins} min` : ''}</div></div>
+        <div class="sub">${wo.kind === 'cardio' ? 'Cardio' : `${sets} sets · ${wt(totalVolume(wo), 0)} volume`}${wo.summary && wo.summary.mins ? ` · ${wo.summary.mins} min` : ''}</div></div>
       <div class="row" style="gap:6px"><button class="btn xs ghost" data-edit-workout="${wo.id}">Edit</button><button class="btn xs ghost" data-view-workout="${wo.id}">View</button></div>
     </div>
     ${prs.length ? `<div class="row wrap" style="gap:6px;margin-bottom:9px">${prs.map(p => `<span class="chip gold">★ ${esc(p.name)} ${p.w > 0 ? `${wt(p.w)}×${p.r}` : `${p.r} reps`}</span>`).join('')}</div>` : ''}
+    ${cardioBlock(wo)}
     ${wo.exercises.map(e => {
     const s = e.sets.filter(x => x.done && isWorking(x));
     // a timed entry's headline set is the longest hold, not the heaviest load
@@ -3579,6 +3589,7 @@ let tick = null;
 
 function viewWorkout() {
   if (!S.active) return workoutLanding();
+  if (S.active.kind === 'cardio') return cardioView();
   return activeWorkout();
 }
 
@@ -3591,7 +3602,8 @@ function workoutLanding() {
   <h1>Workout</h1>
   <div class="sub" style="margin-bottom:14px">Start fresh, or run a session you planned.</div>
 
-  <button class="btn primary big wide" id="startBlank" style="margin-bottom:16px">Start empty workout</button>
+  <button class="btn primary big wide" id="startBlank" style="margin-bottom:10px">Start empty workout</button>
+  <button class="btn big wide" id="startCardio" style="margin-bottom:16px">♥ Start cardio session</button>
 
   <div class="sechead"><h2>Planned</h2></div>
   ${upcoming.length ? upcoming.map(p => `
@@ -4496,6 +4508,7 @@ function viewCompleted(id) {
         <div class="stat"><div class="k">Sets</div><div class="v">${wo.exercises.reduce((n, e) => n + e.sets.filter(s => isWorking(s)).length, 0)}</div></div>
         <div class="stat"><div class="k">Time</div><div class="v">${wo.summary && wo.summary.mins ? wo.summary.mins : '—'}<small>min</small></div></div>
       </div>
+      ${wo.cardio ? `<div class="card tight" style="background:var(--card)">${cardioBlock(wo, true)}</div>` : ''}
       ${wo.exercises.map(e => `
         <div class="card tight" style="background:var(--card)">
           <div style="font-weight:700;margin-bottom:7px">${exNameHtml(e)}</div>
@@ -7599,6 +7612,9 @@ function wire() {
   if (page === 'workout') {
     if (!S.active) {
       $('#startBlank').onclick = newBlank;
+      $('#startCardio').onclick = openCardioSetup;
+    } else if (S.active.kind === 'cardio') {
+      wireCardio(v);
     } else {
       wireActive(v);
     }
@@ -7643,6 +7659,8 @@ function wire() {
 
   // the rest loop runs on every page, so the end alert fires wherever you are
   if (S.active && S.active.rest && !restIv) restLoop();
+  // a cardio session keeps coaching on every page, and keeps the screen on
+  if (S.active && S.active.kind === 'cardio' && !cardioIv) { Awake.hold('cardio'); cardioLoop(); }
 
   // timer ticking only while a workout is live and visible
   clearInterval(tick);
@@ -7948,6 +7966,565 @@ function restNotify(r) {
       ...(S.settings.vibrate !== false ? { vibrate: [220, 120, 220] } : {}),
     })).catch(() => {});
   } catch (e) { /* notifications unavailable */ }
+}
+
+/* ============================================================
+   CARDIO SESSION — HR-zone treadmill coaching
+   Spec: r&d/specs/cardio-spec.md. The treadmill can't be driven, so the app
+   reads heart rate and tells the lifter what speed to set; they confirm it,
+   because the app only ever knows the speed they told it.
+
+   A cardio session is an ordinary workout with kind 'cardio', one treadmill
+   entry holding one timed set, and a `cardio` object for the detail — so
+   history, the calendar, export and editing need no second path.
+   ============================================================ */
+const CARDIO_DEF = { speed: 5, incline: 1, cue: 'speed', preset: 'z2', maxHr: null, restHr: null,
+  lo: null, hi: null, ceiling: null, interval: 30, voice: true };
+const HR_ZONES = {
+  z2: { label: 'Zone 2 · easy / fat loss', lo: 0.6, hi: 0.7 },
+  z3: { label: 'Zone 3 · aerobic', lo: 0.7, hi: 0.8 },
+  z4: { label: 'Zone 4 · threshold', lo: 0.8, hi: 0.9 },
+};
+/* Constants, not settings: nobody should be tuning these on a treadmill. */
+const CARDIO = {
+  settle: 150,      // s before the first zone cue — HR is still climbing
+  hyst: 3,          // bpm of slack outside each zone edge
+  respond: 45,      // s to let HR answer a speed change before judging it
+  ceilGap: 15,      // s between repeated ceiling cues
+  sample: 5,        // s between stored HR points
+  fresh: 10,        // s before a silent strap counts as no HR
+  speed: [1, 20], incline: [0, 15],
+};
+
+function cardioCfg() { return { ...CARDIO_DEF, ...(S.settings.cardio || {}) }; }
+/* Tanaka, 208 − 0.7 × age: a better population fit than 220 − age, and still
+   only an estimate — a measured max always wins. */
+function estMaxHr() { const a = ageFrom(S.settings.dob); return a ? Math.round(208 - 0.7 * a) : null; }
+/* Heart-rate reserve (Karvonen) when resting HR is known, % of max otherwise. */
+function zoneBpm(preset, maxHr, restHr) {
+  const z = HR_ZONES[preset];
+  if (!z || !(maxHr > 0)) return null;
+  const f = p => Math.round(restHr > 0 && restHr < maxHr ? restHr + p * (maxHr - restHr) : p * maxHr);
+  return { lo: f(z.lo), hi: f(z.hi) };
+}
+function cardioZoneText(cfg) {
+  if (!(cfg.lo > 0 && cfg.hi > 0)) return 'no zone';
+  return `${HR_ZONES[cfg.preset] ? HR_ZONES[cfg.preset].label.split(' · ')[0] + ' ' : ''}${cfg.lo}–${cfg.hi}`;
+}
+
+/* The control loop, as one pure function so it can be tested on its own.
+   Returns null when nothing was due (the check clock doesn't move), {cue: null}
+   for a check that stays silent, or {cue} for something to say. */
+function cardioDecide(cfg, st) {
+  const r1 = x => Math.round(x * 10) / 10;
+  const since = t => (t == null ? Infinity : st.el - t);
+  // 1. the ceiling overrides everything: settle, interval and the response wait
+  if (st.hr5 != null && cfg.ceiling > 0 && st.hr5 > cfg.ceiling && since(st.lastCeil) >= CARDIO.ceilGap) {
+    const target = r1(Math.max(CARDIO.speed[0], st.speed - 0.5));
+    return { cue: { kind: 'ceiling', param: 'speed', target,
+      text: target < st.speed ? `Heart rate high. Slow down to ${target.toFixed(1)}` : 'Heart rate high. Slow down or stop' } };
+  }
+  if (!(cfg.lo > 0 && cfg.hi > cfg.lo)) return null;             // no zone: a manual log
+  if (st.el < CARDIO.settle) return null;                         // 2. settle
+  if (since(st.lastCheck) < cfg.interval) return null;            // 3. interval
+  if (since(st.lastChange) < CARDIO.respond) return null;         // 4. let HR answer the last change
+  if (st.hr20 == null) return { cue: null };                      // 5. no fresh HR: silent
+  const below = cfg.lo - st.hr20, above = st.hr20 - cfg.hi;       // 6. hysteresis
+  let dir = 0, miss = 0;
+  if (below > CARDIO.hyst) { dir = 1; miss = below; } else if (above > CARDIO.hyst) { dir = -1; miss = above; }
+  if (!dir) return { cue: null };
+  // 7. the step scales with the miss, measured from the zone edge
+  const param = cfg.cue === 'incline' ? 'incline' : 'speed';
+  const step = param === 'speed'
+    ? clamp(r1(miss * 0.05), 0.1, 0.5)
+    : clamp(Math.round(miss * 0.2 * 2) / 2, 0.5, 2);
+  const [lo, hi] = CARDIO[param];
+  const target = r1(clamp(st[param] + dir * step, lo, hi));
+  if (target === st[param]) return { cue: null };                // at a bound
+  return { cue: { kind: dir > 0 ? 'up' : 'down', param, target, text: `Set ${param} to ${target.toFixed(1)}` } };
+}
+
+/* ---- heart rate over Web Bluetooth (standard Heart Rate Service) ---- */
+function parseHr(dv) { const f = dv.getUint8(0); return f & 1 ? dv.getUint16(1, true) : dv.getUint8(1); }
+const HR = {
+  dev: null, ch: null, state: 'none', name: '', samples: [], tries: 0,
+  supported() { return !!(navigator.bluetooth && navigator.bluetooth.requestDevice); },
+  async pick() {
+    if (!this.supported()) return toast('Bluetooth heart rate needs Chrome on Android');
+    try {
+      const dev = await navigator.bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
+      this.forget();
+      this.dev = dev;
+      this.name = dev.name || 'HR strap';
+      dev.addEventListener('gattserverdisconnected', HR.lost);
+      await this.connect();
+    } catch (e) {
+      if (e && e.name !== 'NotFoundError') toast(`Couldn't connect — ${(e && e.message) || 'unknown error'}`);   // NotFound = picker cancelled
+      this.state = this.dev ? 'lost' : 'none';
+      paintCardio();
+    }
+  },
+  async connect() {
+    if (!this.dev) return;
+    this.state = 'connecting'; paintCardio();
+    const server = await this.dev.gatt.connect();
+    const ch = await (await server.getPrimaryService('heart_rate')).getCharacteristic('heart_rate_measurement');
+    ch.addEventListener('characteristicvaluechanged', HR.value);
+    await ch.startNotifications();
+    this.ch = ch; this.state = 'on'; this.tries = 0;
+    paintCardio();
+  },
+  value: ev => HR.feed(parseHr(ev.target.value)),
+  lost: () => {
+    if (HR.ch) HR.ch.removeEventListener('characteristicvaluechanged', HR.value);
+    HR.ch = null; HR.state = 'lost';
+    paintCardio();
+    HR.retry();
+  },
+  /* Three quiet retries on the same device, then it waits for the button. */
+  retry() {
+    if (!this.dev || this.tries >= 3 || !(S.active && S.active.kind === 'cardio')) return;
+    const wait = 2000 * 2 ** this.tries++;
+    setTimeout(() => {
+      if (this.state !== 'lost' || !this.dev) return;
+      this.connect().catch(() => { this.state = 'lost'; paintCardio(); this.retry(); });
+    }, wait);
+  },
+  reconnect() {
+    if (!this.dev) return this.pick();
+    this.tries = 0;
+    this.connect().catch(() => { this.state = 'lost'; paintCardio(); toast('Still no strap — check it is on and awake'); });
+  },
+  /* A zero is "no skin contact", not a heart rate. */
+  feed(bpm) {
+    if (!(bpm > 0 && bpm < 250)) return;
+    const now = Date.now();
+    this.samples.push([now, bpm]);
+    while (this.samples.length && this.samples[0][0] < now - 60000) this.samples.shift();
+  },
+  /* Mean over the last `sec` seconds; null when the newest reading is stale. */
+  avg(sec) {
+    const now = Date.now(), s = this.samples;
+    if (!s.length || now - s[s.length - 1][0] > CARDIO.fresh * 1000) return null;
+    const w = s.filter(x => x[0] >= now - sec * 1000);
+    return w.length ? w.reduce((a, x) => a + x[1], 0) / w.length : null;
+  },
+  forget() {
+    if (this.dev) {
+      this.dev.removeEventListener('gattserverdisconnected', HR.lost);
+      try { if (this.dev.gatt.connected) this.dev.gatt.disconnect(); } catch (e) { /* already gone */ }
+    }
+    this.dev = null; this.ch = null; this.state = 'none'; this.samples = []; this.tries = 0;
+  },
+};
+
+/* ---- the live session ---- */
+function cardioMoving(c, now) {
+  return Math.max(0, (now - c.t0 - c.pausedMs - (c.pausedAt ? now - c.pausedAt : 0)) / 1000);
+}
+/* Advance distance and time-in-zone up to now. Called before any speed change
+   so the old speed is charged for the time it was actually running. */
+function cardioAccount(c) {
+  const el = cardioMoving(c, Date.now());
+  const dt = el - c.el;
+  if (dt <= 0) return el;
+  c.distKm += c.speed * dt / 3600;
+  const hr20 = HR.avg(20);
+  if (hr20 != null) {
+    const d = Math.min(dt, 5);        // a long gap is not seconds of known HR
+    c.hrSec += d;
+    if (c.cfg.lo > 0 && hr20 >= c.cfg.lo && hr20 <= c.cfg.hi) c.inZoneSec += d;
+  }
+  c.el = el;
+  return el;
+}
+
+function say(text) {
+  const c = S.active && S.active.cardio;
+  if (!(c && c.cfg.voice) || !('speechSynthesis' in window)) return;
+  try {
+    speechSynthesis.cancel();                // a cue never waits behind an old one
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = 'en-GB';
+    speechSynthesis.speak(u);
+  } catch (e) { /* no voice: the beep and the banner still say it */ }
+}
+function cardioIssue(c, cue, el) {
+  c.pending = { ...cue, at: Math.round(el) };
+  if (cue.kind === 'ceiling') { Cue.beep(1200, 110, 0); Cue.beep(1200, 110, 0.16); Cue.beep(1200, 110, 0.32); Cue.buzz([150, 80, 150, 80, 150]); }
+  else if (cue.kind === 'up') { Cue.beep(700, 150, 0); Cue.beep(1000, 150, 0.2); Cue.buzz([120, 80, 120]); }
+  else { Cue.beep(1000, 150, 0); Cue.beep(700, 150, 0.2); Cue.buzz([120, 80, 120]); }
+  setTimeout(() => say(cue.text), 450);
+  save();
+}
+
+let cardioIv = null, cardioSavedAt = 0;
+function cardioLoop() {
+  clearInterval(cardioIv);
+  cardioIv = setInterval(cardioTick, 1000);
+  cardioTick();
+}
+function cardioTick() {
+  const a = S.active, c = a && a.kind === 'cardio' && a.cardio;
+  if (!c) { clearInterval(cardioIv); cardioIv = null; return; }
+  const el = cardioAccount(c);
+  const hr5 = HR.avg(5), hr20 = HR.avg(20);
+  if (!c.pausedAt) {
+    if (hr5 != null) {
+      c.hrMax = Math.max(c.hrMax || 0, Math.round(hr5));
+      if (el - c.lastSample >= CARDIO.sample) { c.hr.push([Math.round(el), Math.round(hr5)]); c.lastSample = el; }
+    }
+    const d = cardioDecide(c.cfg, { el, hr5, hr20, speed: c.speed, incline: c.incline,
+      lastCheck: c.lastCheck, lastChange: c.lastChange, lastCeil: c.lastCeil });
+    if (d) {
+      if (d.cue && d.cue.kind === 'ceiling') c.lastCeil = el; else c.lastCheck = el;
+      if (d.cue) cardioIssue(c, d.cue, el);
+    }
+  }
+  // the whole state is one write, so not every second
+  if (Date.now() - cardioSavedAt > 10000) { cardioSavedAt = Date.now(); save(); }
+  paintCardio();
+}
+
+/* A confirmed change: Done on a cue, or the −/+ buttons. Quick taps merge
+   into one logged change rather than five. */
+function cardioSet(param, value, cued) {
+  const c = S.active && S.active.cardio;
+  if (!c) return;
+  const el = cardioAccount(c);
+  const [lo, hi] = CARDIO[param];
+  c[param] = Math.round(clamp(value, lo, hi) * 10) / 10;
+  const last = c.changes[c.changes.length - 1];
+  const entry = { t: Math.round(el), speed: c.speed, incline: c.incline, cued: !!cued };
+  if (last && !cued && !last.cued && el - last.t < 5) Object.assign(last, entry);
+  else c.changes.push(entry);
+  c.lastChange = el;
+  c.pending = null;
+  save();
+  paintCardio(true);
+}
+function cardioPause() {
+  const c = S.active && S.active.cardio;
+  if (!c) return;
+  const now = Date.now();
+  if (c.pausedAt) { c.pausedMs += now - c.pausedAt; c.pausedAt = null; }
+  else { cardioAccount(c); c.pausedAt = now; c.pending = null; }
+  save(); render();
+}
+function cardioEnd() {
+  clearInterval(cardioIv); cardioIv = null;
+  Awake.release('cardio');
+  HR.forget();
+  try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) { /* nothing to cancel */ }
+}
+
+function openCardioSetup() {
+  if (S.active) { toast('Finish the active workout first'); return go('workout'); }
+  const cfg = cardioCfg();
+  const est = estMaxHr();
+  let preset = cfg.preset, cue = cfg.cue, voice = cfg.voice !== false;
+  let ceilEdited = false;
+  modal({
+    title: 'Cardio session',
+    body: `
+      <div class="sub" style="margin-bottom:10px">Treadmill. Ironlog watches your heart rate and tells you what speed to set — you set it and tap Done, so it always knows the real speed.</div>
+      <div class="grid2">
+        <div class="field"><label>Start speed (km/h)</label><input type="number" step="0.1" inputmode="decimal" id="cdSpeed0" value="${cfg.speed}"></div>
+        <div class="field"><label>Incline (%)</label><input type="number" step="0.5" inputmode="decimal" id="cdIncl0" value="${cfg.incline}"></div>
+      </div>
+      <div class="field"><label>Cues change</label>
+        <div class="seg" id="cdCueSeg">
+          <button data-v="speed" class="${cue !== 'incline' ? 'on' : ''}">Speed</button>
+          <button data-v="incline" class="${cue === 'incline' ? 'on' : ''}">Incline</button>
+        </div></div>
+      <div class="hr"></div>
+      <div class="eyebrow" style="margin-bottom:6px">Heart rate zone</div>
+      <div class="grid2">
+        <div class="field"><label>Max HR</label><input type="number" inputmode="numeric" id="cdMax" value="${cfg.maxHr || ''}" placeholder="${est ? `~${est} estimated` : 'measured max'}"></div>
+        <div class="field"><label>Resting HR</label><input type="number" inputmode="numeric" id="cdRest" value="${cfg.restHr || ''}" placeholder="optional"></div>
+      </div>
+      <div class="seg" id="cdZoneSeg" style="margin-bottom:10px">
+        ${Object.keys(HR_ZONES).map(k => `<button data-v="${k}" class="${preset === k ? 'on' : ''}">${HR_ZONES[k].label.split(' · ')[0]}</button>`).join('')}
+        <button data-v="custom" class="${preset === 'custom' ? 'on' : ''}">Custom</button>
+      </div>
+      <div class="grid3">
+        <div class="field"><label>Low (bpm)</label><input type="number" inputmode="numeric" id="cdLo" value="${cfg.lo || ''}"></div>
+        <div class="field"><label>High (bpm)</label><input type="number" inputmode="numeric" id="cdHi" value="${cfg.hi || ''}"></div>
+        <div class="field"><label>Ceiling</label><input type="number" inputmode="numeric" id="cdCeil" value="${cfg.ceiling || ''}"></div>
+      </div>
+      <div class="sub" id="cdZoneNote" style="margin:-4px 0 10px"></div>
+      <div class="grid2">
+        <div class="field"><label>Check every (s)</label><input type="number" inputmode="numeric" id="cdInt" value="${cfg.interval}" min="15" max="120"></div>
+        <div class="field"><label>Voice</label>
+          <div class="seg" id="cdVoiceSeg">
+            <button data-v="1" class="${voice ? 'on' : ''}">On</button>
+            <button data-v="0" class="${!voice ? 'on' : ''}">Off</button>
+          </div></div>
+      </div>
+      <div class="sub">No cues for the first 2½ minutes while your heart rate climbs. Without a strap it's a plain log: time, speed, distance.</div>`,
+    foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="cdGo">Start</button>`,
+    onOpen: bg => {
+      const num = id => { const v = +$(id, bg).value; return v > 0 ? v : null; };
+      const seg = (sel, fn) => bg.querySelectorAll(sel + ' button').forEach(b => b.onclick = () => {
+        bg.querySelectorAll(sel + ' button').forEach(x => x.classList.toggle('on', x === b));
+        fn(b.dataset.v);
+      });
+      const refill = () => {
+        const max = num('#cdMax') || est, rest = num('#cdRest');
+        const z = zoneBpm(preset, max, rest);
+        if (z) { $('#cdLo', bg).value = z.lo; $('#cdHi', bg).value = z.hi; }
+        if (!ceilEdited) {
+          const hi = num('#cdHi');
+          const c = max ? Math.round(max * 0.92) : hi ? hi + 20 : null;
+          $('#cdCeil', bg).value = c || '';
+        }
+        $('#cdZoneNote', bg).textContent = preset === 'custom' ? 'Your own numbers.'
+          : !max ? 'Enter a max HR (or a date of birth in your profile) to fill the zone, or type the numbers.'
+            : `${HR_ZONES[preset].label} — ${Math.round(HR_ZONES[preset].lo * 100)}–${Math.round(HR_ZONES[preset].hi * 100)}% of ${rest ? 'heart-rate reserve' : 'max'}${num('#cdMax') ? '' : ', from an estimated max'}.`;
+      };
+      seg('#cdCueSeg', v => { cue = v; });
+      seg('#cdVoiceSeg', v => { voice = v === '1'; });
+      seg('#cdZoneSeg', v => { preset = v; refill(); });
+      ['#cdMax', '#cdRest'].forEach(s => { $(s, bg).oninput = refill; });
+      ['#cdLo', '#cdHi'].forEach(s => { $(s, bg).oninput = () => {
+        preset = 'custom';
+        bg.querySelectorAll('#cdZoneSeg button').forEach(x => x.classList.toggle('on', x.dataset.v === 'custom'));
+        if (!ceilEdited && !(num('#cdMax') || est) && num('#cdHi')) $('#cdCeil', bg).value = num('#cdHi') + 20;
+      }; });
+      $('#cdCeil', bg).oninput = () => { ceilEdited = true; };
+      ceilEdited = cfg.ceiling > 0;     // a remembered ceiling stays unless changed
+      refill();
+      bg.querySelectorAll('input').forEach(selectOnFocus);
+
+      $('#cdGo', bg).onclick = () => {
+        const lo = num('#cdLo'), hi = num('#cdHi');
+        if ((lo || hi) && !(lo >= 40 && hi > lo && hi <= 230)) return toast('Zone needs a low below the high, 40–230 bpm');
+        const next = {
+          speed: clamp(num('#cdSpeed0') || 5, ...CARDIO.speed), incline: clamp(+$('#cdIncl0', bg).value || 0, ...CARDIO.incline),
+          cue, preset, voice, maxHr: num('#cdMax'), restHr: num('#cdRest'),
+          lo: lo || null, hi: hi || null, ceiling: num('#cdCeil'),
+          interval: clamp(num('#cdInt') || 30, 15, 120),
+        };
+        S.settings.cardio = next;
+        closeModal();
+        startCardio(next);
+      };
+    },
+  });
+}
+
+function startCardio(cfg) {
+  // this tap is the gesture: wake the audio and the voice now, not mid-run
+  Cue.unlock();
+  try { if ('speechSynthesis' in window) speechSynthesis.speak(new SpeechSynthesisUtterance('')); } catch (e) { /* no voice */ }
+  const m = movementById('treadmill');
+  const leaf = completeLeaf(m, null);
+  const now = Date.now();
+  HR.samples = [];
+  startWorkout({
+    id: uid(), date: today(), name: 'Treadmill', status: 'active', kind: 'cardio', start: now,
+    exercises: [{ leaf, legacyName: displayName(leaf), notes: '', mods: [],
+      sets: [{ w: 0, r: null, sec: null, rpe: null, done: false, setType: 'working' }] }],
+    cardio: {
+      cfg: { lo: cfg.lo, hi: cfg.hi, ceiling: cfg.ceiling, cue: cfg.cue, interval: cfg.interval,
+        maxHr: cfg.maxHr, restHr: cfg.restHr, preset: cfg.preset, voice: cfg.voice },
+      speed: cfg.speed, incline: cfg.incline, startSpeed: cfg.speed, startIncline: cfg.incline,
+      t0: now, pausedMs: 0, pausedAt: null, el: 0,
+      hr: [], changes: [], distKm: 0, inZoneSec: 0, hrSec: 0, hrMax: 0,
+      lastCheck: null, lastChange: null, lastCeil: null, lastSample: -Infinity, pending: null,
+    },
+  });
+}
+
+function finishCardio() {
+  const a = S.active, c = a && a.cardio;
+  if (!c) return;
+  const el = cardioAccount(c);
+  const sec = Math.round(el);
+  if (sec < 10) return toast('Nothing logged yet — discard it instead');
+  const bpm = c.hr.map(x => x[1]);
+  const summary = {
+    sec, distKm: Math.round(c.distKm * 100) / 100,
+    avgHr: bpm.length ? Math.round(bpm.reduce((x, y) => x + y, 0) / bpm.length) : null,
+    maxHr: c.hrMax || null, inZoneSec: Math.round(c.inZoneSec), hrSec: Math.round(c.hrSec),
+  };
+  const e = a.exercises[0];
+  const done = {
+    id: a.id, date: a.date, name: a.name, status: 'completed', source: 'logged', kind: 'cardio',
+    exercises: [{ leaf: e.leaf, legacyName: e.legacyName, notes: e.notes || '', mods: [],
+      sets: [{ w: 0, r: null, sec, rpe: null, done: true, setType: 'working' }] }],
+    start: a.start, end: Date.now(),
+    summary: { mins: Math.max(1, Math.round(sec / 60)), prs: [], volume: 0 },
+    cardio: { cfg: c.cfg, startSpeed: c.startSpeed, startIncline: c.startIncline, hr: c.hr, changes: c.changes, summary },
+  };
+  cardioEnd();
+  S.workouts = S.workouts.filter(w => w.id !== done.id);
+  S.workouts.push(done);
+  S.active = null;
+  save(); bust();
+  modal({
+    title: 'Session complete',
+    body: cardioBlock(done, true),
+    foot: `<button class="btn primary" id="cdSumDone">Done</button>`,
+    onOpen: bg => { $('#cdSumDone', bg).onclick = () => { closeAllModals(); go('home'); }; },
+  });
+}
+
+/* HR against moving time, zone shaded, ceiling dashed. Hand-drawn like chart()
+   so it needs no library and sits in the same card styles. */
+function hrChart(cd, h = 150) {
+  const pts = cd.hr || [];
+  if (pts.length < 2) return `<div class="empty">No heart rate recorded</div>`;
+  const cfg = cd.cfg || {};
+  const W = 320, H = h, padL = 30, padR = 8, padT = 10, padB = 18;
+  const bpm = pts.map(p => p[1]);
+  let min = Math.min(...bpm, cfg.lo || Infinity) - 8, max = Math.max(...bpm, cfg.hi || 0) + 8;
+  if (cfg.ceiling && cfg.ceiling < max + 15) max = Math.max(max, cfg.ceiling + 4);
+  const tMax = Math.max(pts[pts.length - 1][0], 60);
+  const x = t => padL + (t / tMax) * (W - padL - padR);
+  const y = v => padT + (1 - (v - min) / (max - min)) * (H - padT - padB);
+  const line = pts.map((p, i) => `${i ? 'L' : 'M'}${x(p[0]).toFixed(1)},${y(p[1]).toFixed(1)}`).join(' ');
+  const band = cfg.lo > 0 && cfg.hi > 0
+    ? `<rect x="${padL}" width="${W - padL - padR}" y="${y(cfg.hi).toFixed(1)}" height="${(y(cfg.lo) - y(cfg.hi)).toFixed(1)}" fill="var(--green)" opacity=".13"/>
+       <text class="axis" x="${padL - 4}" y="${(y(cfg.hi) + 3).toFixed(1)}" text-anchor="end">${cfg.hi}</text>
+       <text class="axis" x="${padL - 4}" y="${(y(cfg.lo) + 3).toFixed(1)}" text-anchor="end">${cfg.lo}</text>` : '';
+  const ceil = cfg.ceiling > 0 && cfg.ceiling <= max
+    ? `<line x1="${padL}" x2="${W - padR}" y1="${y(cfg.ceiling).toFixed(1)}" y2="${y(cfg.ceiling).toFixed(1)}" stroke="var(--red)" stroke-dasharray="4 3" opacity=".7"/>` : '';
+  const mins = t => `${Math.round(t / 60)}m`;
+  return `<div class="chartbox"><svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${H}px">
+    ${band}${ceil}
+    <path class="ln" d="${line}" stroke="var(--accent)" fill="none"/>
+    <text class="axis" x="${padL}" y="${H - 4}" text-anchor="start">0</text>
+    <text class="axis" x="${W - padR}" y="${H - 4}" text-anchor="end">${mins(tMax)}</text>
+  </svg></div>`;
+}
+
+/* The session's cardio detail: a line for the card, the lot for the view. */
+function cardioBlock(wo, full) {
+  const cd = wo && wo.cardio;
+  if (!cd) return '';
+  const s = cd.summary || {};
+  const pct = s.hrSec > 0 ? Math.round((s.inZoneSec / s.hrSec) * 100) : null;
+  const bits = [`${(s.distKm || 0).toFixed(2)} km`, s.avgHr ? `avg ${s.avgHr} bpm` : '', pct != null && cd.cfg && cd.cfg.lo ? `${pct}% in zone` : ''].filter(Boolean);
+  if (!full) return `<div class="sub" style="margin:-2px 0 8px">♥ ${bits.join(' · ')}</div>${cd.hr && cd.hr.length > 1 ? hrChart(cd, 80) : ''}`;
+  const avgKmh = s.sec > 0 ? (s.distKm / (s.sec / 3600)) : 0;
+  return `
+    <div class="stats grid3" style="margin-bottom:12px">
+      <div class="stat"><div class="k">Time</div><div class="v">${fmtSec(s.sec)}</div></div>
+      <div class="stat"><div class="k">Distance</div><div class="v">${(s.distKm || 0).toFixed(2)}<small>km</small></div></div>
+      <div class="stat"><div class="k">Avg speed</div><div class="v">${avgKmh.toFixed(1)}<small>km/h</small></div></div>
+      <div class="stat"><div class="k">Avg HR</div><div class="v">${s.avgHr || '—'}</div></div>
+      <div class="stat"><div class="k">Max HR</div><div class="v">${s.maxHr || '—'}</div></div>
+      <div class="stat"><div class="k">In zone</div><div class="v">${pct != null && cd.cfg && cd.cfg.lo ? pct + '<small>%</small>' : '—'}</div></div>
+    </div>
+    <div class="eyebrow" style="margin-bottom:6px">Heart rate · ${esc(cardioZoneText(cd.cfg || {}))}</div>
+    ${hrChart(cd, 160)}
+    <div class="eyebrow" style="margin:12px 0 6px">Speed and incline</div>
+    <div class="exline"><span class="dimmer">0:00</span><span class="mono">${nice(cd.startSpeed)} km/h · ${nice(cd.startIncline)}%</span></div>
+    ${(cd.changes || []).map(ch => `<div class="exline"><span class="dimmer">${fmtSec(ch.t)}</span>
+      <span class="mono">${nice(ch.speed)} km/h · ${nice(ch.incline)}%${ch.cued ? ' <span class="dimmer">cued</span>' : ''}</span></div>`).join('')}`;
+}
+
+function cardioView() {
+  const c = S.active.cardio, cfg = c.cfg;
+  const hasZone = cfg.lo > 0 && cfg.hi > 0;
+  return `
+  <div class="timerbar">
+    <div class="row between">
+      <div class="grow">
+        <div class="eyebrow">Cardio · ${esc(cardioZoneText(cfg))}</div>
+        <div class="timer" id="cdClock">${fmtSec(c.el)}</div>
+      </div>
+      <div class="right">
+        <div class="sub" id="cdDist">${c.distKm.toFixed(2)} km</div>
+        <button class="btn primary sm" id="cdFinish" style="margin-top:6px">Finish</button>
+      </div>
+    </div>
+    <div class="row" style="margin-top:10px;gap:8px">
+      <button class="btn sm grow" id="cdPause">${c.pausedAt ? '▶ Resume' : '❚❚ Pause'}</button>
+      <button class="btn sm danger" id="cdDiscard">Discard</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row between" style="align-items:flex-end">
+      <div><div class="cd-big" id="cdHr">—</div><div class="sub">bpm${hasZone ? ` · zone ${cfg.lo}–${cfg.hi}` : ''}</div></div>
+      <div class="right"><div class="sub" id="cdHrState"></div>
+        <button class="btn sm" id="cdConn" style="margin-top:6px"></button></div>
+    </div>
+    <div class="sub" id="cdNote" style="margin-top:8px"></div>
+  </div>
+
+  <div id="cdCueHost"></div>
+
+  <div class="card">
+    <div class="eyebrow">Speed · km/h</div>
+    <div class="cd-ctl"><button class="btn" data-cd="speed:-0.1">−</button><div class="v" id="cdSpeed">${c.speed.toFixed(1)}</div><button class="btn" data-cd="speed:0.1">+</button></div>
+    <div class="eyebrow">Incline · %</div>
+    <div class="cd-ctl"><button class="btn" data-cd="incline:-0.5">−</button><div class="v" id="cdIncl">${c.incline.toFixed(1)}</div><button class="btn" data-cd="incline:0.5">+</button></div>
+  </div>
+
+  <div class="card"><div class="eyebrow" style="margin-bottom:6px">Heart rate</div><div id="cdChart">${hrChart(c, 120)}</div></div>`;
+}
+
+let cdPendingKey = '', cdChartN = -1;
+function paintCardio(force) {
+  const a = S.active, c = a && a.kind === 'cardio' && a.cardio;
+  if (!c || !$('#cdClock')) return;
+  const cfg = c.cfg;
+  $('#cdClock').textContent = fmtSec(c.el);
+  $('#cdDist').textContent = `${c.distKm.toFixed(2)} km`;
+  const hr = HR.avg(5);
+  const hrEl = $('#cdHr');
+  hrEl.textContent = hr != null ? Math.round(hr) : '—';
+  hrEl.style.color = hr == null || !(cfg.lo > 0) ? '' : cfg.ceiling > 0 && hr > cfg.ceiling ? 'var(--red)'
+    : hr < cfg.lo ? 'var(--blue)' : hr > cfg.hi ? 'var(--gold)' : 'var(--green)';
+  const st = HR.state;
+  $('#cdHrState').textContent = !HR.supported() ? 'No Bluetooth here' : st === 'on' ? (hr != null ? HR.name : `${HR.name} · no signal`)
+    : st === 'connecting' ? 'Connecting…' : st === 'lost' ? 'Strap lost' : 'No strap';
+  const conn = $('#cdConn');
+  conn.style.display = !HR.supported() || st === 'on' || st === 'connecting' ? 'none' : '';
+  conn.textContent = st === 'lost' ? 'Reconnect' : 'Connect HR';
+  const left = CARDIO.settle - c.el;
+  $('#cdNote').textContent = c.pausedAt ? 'Paused — clock, distance and cues are stopped.'
+    : !(cfg.lo > 0) ? 'No zone set — logging only.'
+      : hr == null ? (HR.supported() ? 'No heart rate — cues are off until the strap is back.' : 'This browser has no Bluetooth — logging only.')
+        : left > 0 ? `Settling — cues start in ${fmtSec(Math.ceil(left))}` : 'Coaching — silent while you are in the zone.';
+  $('#cdSpeed').textContent = c.speed.toFixed(1);
+  $('#cdIncl').textContent = c.incline.toFixed(1);
+  const key = c.pending ? `${c.pending.param}${c.pending.target}${c.pending.at}` : '';
+  if (force || key !== cdPendingKey) {
+    cdPendingKey = key;
+    const p = c.pending;
+    $('#cdCueHost').innerHTML = p ? `<div class="card cd-cue ${p.kind === 'ceiling' ? 'ceil' : ''}">
+      <div class="eyebrow">${p.kind === 'ceiling' ? 'Heart rate too high' : p.kind === 'up' ? 'Below zone' : 'Above zone'}</div>
+      <div class="row between" style="align-items:center;gap:10px">
+        <div class="cd-cue-t">${p.param === 'speed' ? 'Speed' : 'Incline'} → ${p.target.toFixed(1)}<small>${p.param === 'speed' ? ' km/h' : '%'}</small></div>
+        <button class="btn primary" id="cdApply">Done</button>
+      </div>
+      <button class="btn xs ghost" id="cdIgnore" style="margin-top:6px">Ignore</button>
+    </div>` : '';
+    if (p) {
+      $('#cdApply').onclick = () => cardioSet(p.param, p.target, true);
+      $('#cdIgnore').onclick = () => { c.pending = null; save(); paintCardio(true); };
+    }
+  }
+  if (force || c.hr.length !== cdChartN) { cdChartN = c.hr.length; $('#cdChart').innerHTML = hrChart(c, 120); }
+}
+
+function wireCardio(v) {
+  const c = S.active.cardio;
+  $('#cdFinish').onclick = finishCardio;
+  $('#cdPause').onclick = cardioPause;
+  $('#cdDiscard').onclick = () => confirmDlg('Discard this cardio session? Nothing will be saved.', () => {
+    cardioEnd(); S.active = null; save(); render(); toast('Session discarded');
+  }, 'Discard');
+  $('#cdConn').onclick = () => HR.reconnect();
+  v.querySelectorAll('[data-cd]').forEach(b => b.onclick = () => {
+    const [param, d] = b.dataset.cd.split(':');
+    cardioSet(param, c[param] + +d, false);
+  });
+  paintCardio(true);
 }
 
 function wireActive(v) {

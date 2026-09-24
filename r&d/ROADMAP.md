@@ -103,10 +103,14 @@ notification is opt-in from Settings and best effort.
 - If the platform allows, a notification when rest ends while the app isn't in
   the foreground. Don't block the feature on it.
 
-### 3. Cardio session — HR-zone treadmill coaching
+### 3. ~~Cardio session — HR-zone treadmill coaching~~ — [x] shipped 0.19.0
+Spec: **`r&d/specs/cardio-spec.md`** (wins over the notes below). The plain
+loop is built; the premium Haiku trend coach below is still to do. Needs a
+real-gym check: strap pairing, cue audio/voice, disconnect/reconnect.
+
 New session type. The treadmill (Technogym) has no control API, so **Aaron is
 the actuator**: Ironlog reads heart rate live and tells him when to change
-speed. No spec yet — write one in `r&d/specs/cardio-spec.md` before building.
+speed.
 
 **Heart rate in:**
 - Web Bluetooth (Chrome on Android) to the standard **Heart Rate Service**
