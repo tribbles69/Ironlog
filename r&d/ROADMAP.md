@@ -288,7 +288,7 @@ phone.
 - Whatever Ironlog exports, Ironlog must import back with nothing lost — test
   export → wipe → import → compare.
 
-### [ ] B8. Import from other apps
+### [x] B8. Import from other apps — shipped 0.35.0
 (Blast #13; research.) Strong, Hevy, FitNotes and a generic CSV, by
 generalising the Liftoff importer. Map to leaves via the exercise data check and
 show a dry-run report before anything is written.
