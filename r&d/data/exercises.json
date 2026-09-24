@@ -62,7 +62,7 @@
       "ankle_strap",
       "dual_handle"
     ],
-    "setType": ["warmup", "working", "amrap", "drop"],
+    "setType": ["warmup", "working", "top", "backoff", "amrap", "drop"],
     "modifier": [
       {
         "id": "comp_pause",

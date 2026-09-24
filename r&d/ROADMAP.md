@@ -245,7 +245,7 @@ The single most-requested general feature (Blast #113, #42, #43; research).
 - +/− steppers (2.5 kg, 1 rep) so the system keyboard is rarely needed.
 - Target: a routine set logged in 1–2 taps.
 
-### [ ] B3. Set roles and linked sets
+### [x] B3. Set roles and linked sets — shipped 0.30.0 (supersets still in the backlog)
 Without these, volume and PR figures are wrong (Blast #70; research).
 - Tag sets warm-up / top set / back-off / AMRAP / drop.
 - Group a drop-set chain so it reads as one.

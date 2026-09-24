@@ -13,6 +13,20 @@ rather than guessed.
 
 ---
 
+## 0.30.0 — 24 Sep 2026
+- **Set roles.** Tap a set's number to mark it as a warm-up, working set,
+  top set, back-off, AMRAP or drop set. The number shows the role: T1, B2,
+  A3, W.
+- **Drop sets** hang off the set above them (↳) and read as one set. "Add a
+  drop set after this" in the same menu starts the next drop about 20%
+  lighter. Drop sets count toward volume but never toward a PR or e1RM.
+- **AMRAP sets** ask for today's reps. They're never filled in from last
+  time.
+- Warm-ups still stay out of volume and PRs. The summary, session view,
+  history and share image now show each set's role.
+- **Changed:** tapping the set number used to switch warm-up on and off. It
+  now opens the role menu.
+
 ## 0.29.0 — 24 Sep 2026
 - **Last time, beside every set.** The Prev column shows last session's
   weight × reps and RIR for the same set, and its numbers sit greyed in the

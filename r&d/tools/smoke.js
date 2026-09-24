@@ -202,20 +202,25 @@ window.smoke = async function smoke(opts) {
     return 'ticked and finished';
   });
 
-  await step('flow: warm-up toggle', async () => {
+  await step('flow: set role picker', async () => {
     close(); S.active = null; save();
     newBlank();
     S.active.exercises.push({ leaf: resolveName('Bench Press').leaf, legacyName: 'Bench Press', notes: '', mods: [], sets: [{ w: 60, r: 5, rpe: null, done: false, setType: 'working' }] });
     save(); render(); await wait(150);
-    const btn = document.querySelector('[data-warm="0.0"]');
-    if (!btn) throw new Error('no warm-up toggle rendered');
-    btn.click(); await wait(180);
-    const t = S.active.exercises[0].sets[0].setType;
-    if (t !== 'warmup') throw new Error(`setType is "${t}" after toggling, expected warmup`);
-    btn2: { const b2 = document.querySelector('[data-warm="0.0"]'); if (b2) { b2.click(); await wait(160); } }
-    if (S.active.exercises[0].sets[0].setType !== 'working') throw new Error('did not toggle back');
+    const pick = async role => {
+      const btn = document.querySelector('[data-warm="0.0"]');
+      if (!btn) throw new Error('no set-number button rendered');
+      btn.click(); await wait(160);
+      const opt = document.querySelector(`.modal [data-role="${role}"]`);
+      if (!opt) throw new Error(`no "${role}" option in the role picker`);
+      opt.click(); await wait(160);
+      const t = S.active.exercises[0].sets[0].setType;
+      if (t !== role) throw new Error(`setType is "${t}", expected ${role}`);
+    };
+    await pick('warmup');
+    await pick('working');
     S.active = null; save(); render();
-    return 'toggles both ways';
+    return 'warm-up and back via the picker';
   });
 
   /* Timed movements were unloggable: the tick refused without reps, and finish
