@@ -161,7 +161,7 @@ the app so Aaron (and users) can see what each update changed.
   (offline, first run), say so quietly; never block the app.
 - Works in both skins and with TalkBack (heading structure, labelled close).
 
-### [ ] A3. Persistent storage and backup nudge
+### [x] A3. Persistent storage and backup nudge — shipped 0.27.0
 Chrome can clear a PWA's IndexedDB when the phone is short on space.
 - Call `navigator.storage.persist()` (after the first logged session is a good
   moment) and show the result in Settings.

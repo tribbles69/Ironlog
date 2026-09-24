@@ -13,6 +13,14 @@ rather than guessed.
 
 ---
 
+## 0.27.0 — 24 Sep 2026
+- **Backup reminder.** If your last backup is more than two weeks old, Home
+  shows a card to save a copy. "Not now" hides it for a week; it never shows
+  during a workout.
+- **Storage protection.** Ironlog asks Chrome to protect its storage so it
+  isn't cleared when the phone runs low on space. Settings → Data shows whether
+  it's protected, how much space the log uses, and when you last backed up.
+
 ## 0.26.0 — 24 Sep 2026
 - **What's new.** After an update, Ironlog shows what changed since you last
   opened it — once, and never in the middle of a workout.
