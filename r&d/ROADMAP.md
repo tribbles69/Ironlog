@@ -123,11 +123,13 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
 
 ### [ ] A1. Remove the Food tab — **do this first**
 Decided 2026-09-24: food logging leaves Ironlog for its own separate app.
-1. **Export first, in its own shipped version:** a one-tap **Export food log**
+1. [x] **Shipped 0.24.0** (`openFoodExport`: JSON `format: 'ironlog-food-log'`
+   v1, plus CSV; Food-tab notice and Settings → Data). **Export first, in its own shipped version:** a one-tap **Export food log**
    (JSON, plus CSV for spreadsheets) covering every logged food entry,
    saved/custom foods and daily targets, so nobody loses data. The future food
    app will import this file.
-2. **Then remove** in a following version: the Food tab and its bottom-nav slot
+2. [ ] **Waiting on Aaron to export** his own log from 0.24.0 before this ships.
+   **Then remove** in a following version: the Food tab and its bottom-nav slot
    (nav goes back to five tabs), `parse-food.js` and the server-side food
    function, the food lookup tables (CoFID + curated), and food settings.
    Schema bump + migration that drops food stores **only after** step 1 has

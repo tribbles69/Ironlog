@@ -13,6 +13,13 @@ rather than guessed.
 
 ---
 
+## 0.24.0 — 24 Sep 2026
+- **Export food log.** Food logging is moving out of Ironlog into its own app.
+  A notice on the Food tab (and a button in Settings → Data) saves your whole
+  food log — every entry, your daily targets and goal — as a file the new app
+  will import, or as a spreadsheet (CSV).
+- Nothing is removed yet. The Food tab goes in a later update.
+
 ## 0.23.0 — 24 Sep 2026
 - **Muscle map skins.** The body map is now painted from an image sheet with
   every muscle at every rank, so any artwork can be used. Ships with a

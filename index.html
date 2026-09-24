@@ -1455,7 +1455,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.23.0';
+const APP_VERSION = '0.24.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -7024,6 +7024,7 @@ function openSettings() {
         <button class="btn sm grow" id="stExport">Export JSON</button>
         <button class="btn sm grow" id="stImport">Import JSON</button>
       </div>
+      <button class="btn sm wide" id="stFoodExport" style="margin-top:9px">Export food log (${(S.foods || []).length})…</button>
       <button class="btn sm wide" id="stLiftoff" style="margin-top:9px">Import Liftoff CSV</button>
       ${liftoffImported().length ? `<button class="btn sm wide ghost" id="stUnimport" style="margin-top:9px">Remove imported sessions (${liftoffImported().length})…</button>` : ''}
       <button class="btn sm wide ghost" id="stCheck" style="margin-top:9px">Check exercise data</button>
@@ -7110,6 +7111,7 @@ function openSettings() {
         }, 'Mark done');
       };
       $('#stExport', bg).onclick = exportJSON;
+      const sfx = $('#stFoodExport', bg); if (sfx) sfx.onclick = () => { closeModal(); openFoodExport(); };
       $('#stImport', bg).onclick = () => $('#stFile', bg).click();
       $('#stFile', bg).onchange = e => {
         const f = e.target.files[0]; if (!f) return;
@@ -7175,6 +7177,71 @@ let foodDate = null;                 // null = today
 const fDate = () => foodDate || today();
 
 function foodsOn(date) { return S.foods.filter(f => f.date === date); }
+/* ---------------- food log export (roadmap A1, step 1) ----------------
+   Food logging is leaving Ironlog for its own app. Before anything is removed,
+   everything food-related can be taken out: every entry, the daily targets
+   and the goal. JSON is the file the food app will import (so it's versioned
+   and self-describing); CSV is for a spreadsheet. There is no saved-foods
+   store — entries are all there is. */
+function saveBlob(text, type, name) {
+  const blob = new Blob([text], { type });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+function foodExportData() {
+  const st = S.settings;
+  const entries = [...(S.foods || [])].sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+  return {
+    format: 'ironlog-food-log', formatVersion: 1,
+    exportedAt: new Date().toISOString(), appVersion: APP_VERSION,
+    units: { energy: 'kcal', protein: 'g', carbs: 'g', fat: 'g', fibre: 'g' },
+    targets: { kcal: st.kcalTarget, protein: st.proteinTarget, carbs: st.carbTarget, fat: st.fatTarget },
+    goal: st.nutritionGoal || null,
+    // src: 'manual' typed in, 'ai' parsed by Claude, 'table'/'offline' from the built-in tables
+    entries: entries.map(f => ({ id: f.id, date: f.date, meal: f.meal || 'Snacks', name: f.name, serving: f.serving || '',
+      kcal: f.kcal || 0, protein: f.p || 0, carbs: f.c || 0, fat: f.f || 0, fibre: f.fib || 0, source: f.src || 'manual' })),
+  };
+}
+function foodExportCsv(data) {
+  const DQ = String.fromCharCode(34);   // the CSV quote, spelled out so no regex or literal needs escaping
+  const q = v => {
+    const s = v == null ? '' : String(v);
+    return [',', DQ, '\n', '\r'].some(c => s.includes(c)) ? DQ + s.split(DQ).join(DQ + DQ) + DQ : s;
+  };
+  const head = ['date', 'meal', 'name', 'serving', 'kcal', 'protein_g', 'carbs_g', 'fat_g', 'fibre_g', 'source'];
+  const rows = data.entries.map(e => [e.date, e.meal, e.name, e.serving, e.kcal, e.protein, e.carbs, e.fat, e.fibre, e.source].map(q).join(','));
+  return '﻿' + [head.join(','), ...rows].join('\r\n') + '\r\n';   // BOM so Excel reads the £ and accents right
+}
+function openFoodExport() {
+  const d = foodExportData();
+  const n = d.entries.length;
+  const days = new Set(d.entries.map(e => e.date)).size;
+  modal({
+    title: 'Export food log',
+    body: `<div class="sub" style="margin-bottom:10px">Food logging is moving out of Ironlog into its own app. Export it first —
+        nothing is removed until a later update, and your training data isn't affected.</div>
+      <div class="stats grid3" style="margin-bottom:12px">
+        <div class="stat"><div class="k">Entries</div><div class="v">${n}</div></div>
+        <div class="stat"><div class="k">Days</div><div class="v">${days}</div></div>
+        <div class="stat"><div class="k">Targets</div><div class="v" style="font-size:15px">${d.targets.kcal ? `${d.targets.kcal} kcal` : 'none'}</div></div>
+      </div>
+      <button class="btn primary wide" id="fxJson" style="margin-bottom:8px" ${n || d.targets.kcal ? '' : 'disabled'}>Save food log (JSON)</button>
+      <div class="sub" style="margin:-2px 0 10px">Everything — entries, targets and goal. This is the file the new food app will import.</div>
+      <button class="btn wide" id="fxCsv" ${n ? '' : 'disabled'}>Save as spreadsheet (CSV)</button>
+      <div class="sub" style="margin-top:4px">Entries only, one row each, for Excel or Google Sheets.</div>`,
+    foot: `<button class="btn ghost" data-close>Close</button>`,
+    onOpen: bg => {
+      $('#fxJson', bg).onclick = () => { saveBlob(JSON.stringify(foodExportData(), null, 2), 'application/json', `ironlog-food-${today()}.json`); toast('Food log saved', 'green'); };
+      $('#fxCsv', bg).onclick = () => { saveBlob(foodExportCsv(foodExportData()), 'text/csv', `ironlog-food-${today()}.csv`); toast('Spreadsheet saved', 'green'); };
+    },
+  });
+}
+
 
 function macroTotals(list) {
   return list.reduce((t, f) => ({
@@ -7242,6 +7309,13 @@ function viewFood() {
   }).join('');
 
   return `
+  <div class="card" style="border-color:var(--gold)">
+    <div class="row between" style="gap:10px;align-items:center">
+      <div class="grow"><div style="font-weight:700">Food is moving to its own app</div>
+        <div class="sub">Export your food log now — a later update removes it from Ironlog.</div></div>
+      <button class="btn sm primary" id="foodExport">Export</button>
+    </div>
+  </div>
   <div class="card">
     <div class="row between">
       <div>
@@ -7914,6 +7988,7 @@ function wire() {
   if ($('#foodMic', v)) $('#foodMic', v).onclick = dictateFood;
   if ($('#foodParse', v)) $('#foodParse', v).onclick = parseFood;
   if ($('#foodManual', v)) $('#foodManual', v).onclick = () => openFoodEntry(null);
+  if ($('#foodExport', v)) $('#foodExport', v).onclick = openFoodExport;
   v.querySelectorAll('[data-goal]').forEach(b => b.onclick = () => openGoal(b.dataset.goal));
 
   if (page === 'home') {
