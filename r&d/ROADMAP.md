@@ -283,7 +283,7 @@ phone.
   new phone pulls it down.
 - The AI key (D8) is never included unless the user opts in.
 
-### [ ] B7. CSV export and exact round-trip import
+### [x] B7. CSV export and exact round-trip import — shipped 0.34.0 (format: `r&d/specs/csv-format.md`)
 - CSV export of training history for spreadsheet users (one row per set).
 - Whatever Ironlog exports, Ironlog must import back with nothing lost — test
   export → wipe → import → compare.

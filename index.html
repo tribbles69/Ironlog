@@ -1830,7 +1830,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.33.0';
+const APP_VERSION = '0.34.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -7091,7 +7091,7 @@ const LB_PER_KG = 2.2046226218;
 
 /* Fields can be quoted and contain commas, quotes and newlines. Notes is free
    text, so parse properly rather than splitting on commas. */
-function parseCSV(text) {
+function parseCSV(text, raw) {   // raw: keep values exactly (Ironlog's own CSV round-trips)
   const t = text.replace(/^\uFEFF/, '');
   const rows = [];
   let row = [], field = '', q = false;
@@ -7112,7 +7112,7 @@ function parseCSV(text) {
   const hdr = rows[0].map(h => h.trim());
   return rows.slice(1)
     .filter(r => r.length && r.some(v => v.trim() !== ''))
-    .map(r => { const o = {}; hdr.forEach((h, i) => o[h] = (r[i] || '').trim()); return o; });
+    .map(r => { const o = {}; hdr.forEach((h, i) => o[h] = raw ? (r[i] || '') : (r[i] || '').trim()); return o; });
 }
 
 /* "00 hours 30 minutes 19 seconds" -> minutes. */
@@ -8076,8 +8076,10 @@ function openSettings() {
         <button class="btn sm grow" id="stExport">Export JSON</button>
         <button class="btn sm grow" id="stImport">Import JSON</button>
       </div>
+      <button class="btn sm wide" id="stExportCsv" style="margin-top:9px">Export sets as CSV</button>
+      <div class="sub" style="margin-top:4px">One row per set, for spreadsheets. JSON is the full backup; either comes back in exactly.</div>
       ${hasFoodData() ? `<button class="btn sm wide" id="stFoodExport" style="margin-top:9px">Save old food log (${S.foods.length})…</button>` : ''}
-      <button class="btn sm wide" id="stLiftoff" style="margin-top:9px">Import Liftoff CSV</button>
+      <button class="btn sm wide" id="stLiftoff" style="margin-top:9px">Import CSV (Ironlog or Liftoff)</button>
       ${liftoffImported().length ? `<button class="btn sm wide ghost" id="stUnimport" style="margin-top:9px">Remove imported sessions (${liftoffImported().length})…</button>` : ''}
       <button class="btn sm wide ghost" id="stCheck" style="margin-top:9px">Check exercise data</button>
       <div class="sub" style="margin-top:6px">Real training history — imported sessions count toward your PRs.</div>
@@ -8166,6 +8168,7 @@ function openSettings() {
         }, 'Mark done');
       };
       $('#stExport', bg).onclick = () => { exportJSON(); refreshStorageLine(bg); };
+      $('#stExportCsv', bg).onclick = () => { exportCSV(); refreshStorageLine(bg); };
       refreshSyncLine(bg);
       refreshStorageLine(bg);                                         // binds "Ask again"
       if (persist.state === 'unknown') storageStatus().then(() => refreshStorageLine(bg));
@@ -8179,7 +8182,17 @@ function openSettings() {
       $('#stCsvFile', bg).onchange = e => {
         const f = e.target.files[0]; if (!f) return;
         const rd = new FileReader();
-        rd.onload = () => { closeAllModals(); openLiftoffImport(rd.result); };
+        rd.onload = () => {
+          closeAllModals();
+          // Ironlog's own CSV comes back exactly; anything else is Liftoff's
+          if (/^\uFEFF?format,/.test(rd.result) && rd.result.includes(CSV_FORMAT)) {
+            try {
+              const r = importIronlogCSV(rd.result);
+              render();
+              toast(`Imported ${r.added} session${r.added === 1 ? '' : 's'}${r.skipped ? ` · ${r.skipped} already here` : ''}`, 'green');
+            } catch (err) { toast('Could not read that CSV'); }
+          } else openLiftoffImport(rd.result);
+        };
         rd.onerror = () => toast('Could not read that file');
         rd.readAsText(f);
         e.target.value = '';   // so picking the same file twice still fires
@@ -10435,8 +10448,11 @@ function importJSONFile(f) {
       /* Older backups still carry the food log (food left in 0.25.0).
          Keep a food log already on this device; ignore the file's. */
       const keepFood = S.foods && S.foods.length ? { foods: S.foods, t: ['kcalTarget', 'proteinTarget', 'carbTarget', 'fatTarget', 'foodExportedAt'].map(k => [k, S.settings[k]]) } : null;
-      delete data.foods;
-      if (data.settings) ['kcalTarget', 'proteinTarget', 'carbTarget', 'fatTarget', 'foodExportedAt'].forEach(k => { delete data.settings[k]; });
+      // with none here, the file's is kept as it was — an export must come back whole (B7)
+      if (keepFood) {
+        delete data.foods;
+        if (data.settings) ['kcalTarget', 'proteinTarget', 'carbTarget', 'fatTarget', 'foodExportedAt'].forEach(k => { delete data.settings[k]; });
+      }
       S = Object.assign(structuredClone(DEFAULT_STATE), data);
       S.settings = Object.assign(structuredClone(DEFAULT_STATE.settings), data.settings || {});
       if (keepFood) { S.foods = keepFood.foods; keepFood.t.forEach(([k, v]) => { if (v != null) S.settings[k] = v; }); }
@@ -10448,6 +10464,160 @@ function importJSONFile(f) {
     } catch (err) { toast('Could not read that file'); }
   };
   rd.readAsText(f);
+}
+
+/* ============================================================
+   CSV EXPORT AND ROUND-TRIP IMPORT — roadmap B7
+   One row per set, readable in a spreadsheet, and exact: importing it back
+   gives the same sessions, key for key. Plain values sit in named columns;
+   anything a column can't carry exactly (a summary, a cardio trace, a field
+   added later) rides along in that level's *_extra JSON cell, on the first
+   row of its session or exercise. A key that was null is listed in the
+   extra's "$null"; an empty cell with no listing means the key wasn't there.
+   Columns marked derived are for reading and are ignored on the way back in.
+   ============================================================ */
+const CSV_FORMAT = 'ironlog-csv-1';
+const CSV_SESSION = [['session_id', 'id', 'str'], ['date', 'date', 'str'], ['session', 'name', 'str'], ['status', 'status', 'str'],
+  ['source', 'source', 'str'], ['off_day', 'off', 'bool']];
+const CSV_ENTRY = [['legacy_name', 'legacyName', 'str'], ['exercise_notes', 'notes', 'str'], ['isometric', 'iso', 'bool'],
+  ['time_cap_s', 'cap', 'num'], ['stone_series', 'series', 'bool'], ['series_s', 'seriesSec', 'num']];
+const CSV_LEAF = ['movement', 'equipment', 'execution', 'attachment'];
+const CSV_SET = [['set_type', 'setType', 'str'], ['weight_kg', 'w', 'num'], ['reps', 'r', 'num'],
+  ['rir', 'rpe', 'num', v => 10 - v, v => 10 - v], ['seconds', 'sec', 'num'], ['metres', 'm', 'num'],
+  ['implements', 'n', 'num'], ['done', 'done', 'bool'], ['missed', 'miss', 'bool']];
+const CSV_HEAD = ['format', ...CSV_SESSION.map(c => c[0]), 'session_extra',
+  'exercise_no', 'exercise', ...CSV_LEAF, ...CSV_ENTRY.map(c => c[0]), 'modifiers', 'exercise_extra',
+  'set_no', ...CSV_SET.map(c => c[0]), 'e1rm_kg', 'set_extra'];
+const CSV_DERIVED = ['exercise', 'modifiers', 'set_no', 'e1rm_kg'];
+
+/* Split an object into column cells and an extra for the rest. A value goes
+   in its column only if reading the cell back gives exactly the same value. */
+function csvSplit(obj, cols, skip = []) {
+  const cells = {}, extra = {}, nulls = [];
+  const typeOk = (v, ty) => ty === 'num' ? typeof v === 'number' && Number.isFinite(v) : ty === 'bool' ? typeof v === 'boolean' : typeof v === 'string';
+  Object.keys(obj).forEach(k => {
+    if (skip.includes(k)) return;
+    const col = cols.find(c => c[1] === k), v = obj[k];
+    if (v === undefined) return;
+    if (col && v === null) { nulls.push(k); return; }
+    if (col && typeOk(v, col[2])) {
+      const [, , ty, enc = x => x, dec = x => x] = col;
+      const cell = ty === 'bool' ? (v ? 'yes' : 'no') : String(enc(v));
+      const back = ty === 'bool' ? cell === 'yes' : ty === 'num' ? dec(+cell) : cell;
+      if (back === v && !(ty === 'str' && v === '')) { cells[col[0]] = cell; return; }
+    }
+    extra[k] = v;   // anything else, exactly
+  });
+  if (nulls.length) extra.$null = nulls;
+  return { cells, extra: Object.keys(extra).length ? JSON.stringify(extra) : '' };
+}
+function csvJoin(cells, extraJson, cols) {
+  const o = extraJson ? JSON.parse(extraJson) : {};
+  const nulls = o.$null || []; delete o.$null;
+  cols.forEach(([name, key, ty, , dec = x => x]) => {
+    const c = cells[name];
+    if (c === undefined || c === '') return;
+    o[key] = ty === 'bool' ? c === 'yes' : ty === 'num' ? dec(+c) : c;
+  });
+  nulls.forEach(k => { o[k] = null; });
+  return o;
+}
+function csvCell(v) {
+  const s = v == null ? '' : String(v);
+  const q = String.fromCharCode(34);   // a double quote (spelt out: the scope lint misreads one inside a regex)
+  return s.includes(q) || /[,\r\n]/.test(s) || /^\s|\s$/.test(s) ? q + s.split(q).join(q + q) + q : s;
+}
+
+function workoutsToCSV(list) {
+  const rows = [CSV_HEAD];
+  list.forEach(wo => {
+    const ses = csvSplit(wo, CSV_SESSION, ['exercises']);
+    if (!('exercises' in wo)) {   // rare, but exact means exact
+      const x = ses.extra ? JSON.parse(ses.extra) : {};
+      x.$noExercises = true; ses.extra = JSON.stringify(x);
+    }
+    const exs = wo.exercises || [];
+    const put = (first, ex, ei, exSplit, s, si, setSplit) => {
+      const r = { format: CSV_FORMAT, ...ses.cells, session_extra: first ? ses.extra : '' };
+      if (ex) {
+        const leaf = ex.leaf && typeof ex.leaf === 'object' ? ex.leaf : null;
+        Object.assign(r, exSplit.cells, {
+          exercise_no: ei + 1, exercise: exFull(ex), modifiers: (ex.mods || []).map(modLabel).join('; '),
+          exercise_extra: si <= 0 ? exSplit.extra : '',
+        });
+        if (leaf) CSV_LEAF.forEach(k => { r[k] = leaf[k] || ''; });
+      }
+      if (s) Object.assign(r, setSplit.cells, {
+        set_no: setNumber(ex.sets, si), set_extra: setSplit.extra,
+        e1rm_kg: isPRSet(s) && s.w > 0 && s.r > 0 && kindOf(ex) === 'reps' ? Math.round(e1rm(s.w, s.r, s.rpe) * 10) / 10 : '',
+      });
+      rows.push(CSV_HEAD.map(h => r[h] === undefined ? '' : r[h]));
+    };
+    if (!exs.length) return put(true);
+    exs.forEach((ex, ei) => {
+      // the leaf goes in its four columns when it is exactly those four strings
+      const leafPlain = ex.leaf && typeof ex.leaf === 'object' && Object.keys(ex.leaf).every(k => CSV_LEAF.includes(k))
+        && CSV_LEAF.every(k => typeof ex.leaf[k] === 'string' && ex.leaf[k] !== '');
+      const exSplit = csvSplit(ex, CSV_ENTRY, ['sets', ...(leafPlain ? ['leaf'] : [])]);
+      if (!leafPlain) {   // no leaf, or an odd one: keep it whole in the extra
+        const x = exSplit.extra ? JSON.parse(exSplit.extra) : {};
+        if ('leaf' in ex && !('leaf' in x) && !(x.$null || []).includes('leaf')) x.leaf = ex.leaf;
+        exSplit.extra = Object.keys(x).length ? JSON.stringify(x) : '';
+      }
+      const sets = ex.sets || [];
+      if (!sets.length) return put(ei === 0, ex, ei, exSplit, null, -1);
+      sets.forEach((s, si) => put(ei === 0 && si === 0, { ...ex, leaf: leafPlain ? ex.leaf : null }, ei, exSplit, s, si, csvSplit(s, CSV_SET)));
+    });
+  });
+  return '﻿' + rows.map(r => r.map(csvCell).join(',')).join('\r\n') + '\r\n';
+}
+
+/* The reverse. Rows are grouped by session id, then exercise number, in
+   file order. Throws on a file that isn't Ironlog's own CSV. */
+function csvToWorkouts(text) {
+  const rows = parseCSV(text, true);
+  if (!rows.length || rows[0].format !== CSV_FORMAT) throw new Error('not an Ironlog CSV');
+  const byId = new Map();
+  rows.forEach(r => {
+    let wo = byId.get(r.session_id);
+    if (!wo) { wo = { w: csvJoin(r, r.session_extra, CSV_SESSION), ex: new Map() }; byId.set(r.session_id, wo); }
+    else if (r.session_extra) Object.assign(wo.w, csvJoin(r, r.session_extra, CSV_SESSION));
+    if (r.exercise_no === '') return;
+    let ex = wo.ex.get(r.exercise_no);
+    if (!ex) {
+      const e = csvJoin(r, r.exercise_extra, CSV_ENTRY);
+      if (CSV_LEAF.every(k => r[k] !== '')) e.leaf = Object.fromEntries(CSV_LEAF.map(k => [k, r[k]]));
+      ex = { e, sets: [] }; wo.ex.set(r.exercise_no, ex);
+    }
+    if (r.set_no !== '') ex.sets.push(csvJoin(r, r.set_extra, CSV_SET));
+  });
+  return [...byId.values()].map(({ w, ex }) => {
+    if (w.$noExercises) delete w.$noExercises;
+    else w.exercises = [...ex.values()].map(({ e, sets }) => ({ ...e, sets }));
+    return w;
+  });
+}
+
+function exportCSV() {
+  const list = [...S.workouts].sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+  if (!list.length) return toast('Nothing to export yet');
+  const blob = new Blob([workoutsToCSV(list)], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `ironlog-sets-${today()}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  S.settings.lastExportAt = Date.now(); delete S.settings.backupSnoozeUntil; save();
+  toast(`Exported ${list.length} session${list.length === 1 ? '' : 's'}`, 'green');
+}
+/* Sessions already on this device (same id) are left alone; the rest are added. */
+function importIronlogCSV(text) {
+  const list = csvToWorkouts(text);
+  const have = new Set(S.workouts.map(w => w.id));
+  const add = list.filter(w => !have.has(w.id));
+  S.workouts.push(...add);
+  save(); bust();
+  return { added: add.length, skipped: list.length - add.length };
 }
 
 /* A hidden file input that isn't tied to the Settings modal, so the File menu

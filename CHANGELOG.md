@@ -13,6 +13,17 @@ rather than guessed.
 
 ---
 
+## 0.34.0 — 24 Sep 2026
+- **Export sets as CSV** (Settings → Data): one row per set, for
+  spreadsheets. Each row has the date, session, exercise, set type, kg, reps,
+  RIR, time, distance and e1RM.
+- **Import it back exactly.** "Import CSV" takes Ironlog's own CSV as well as
+  Liftoff's. Nothing is lost on the way out and back in: notes, set roles,
+  carries, stone series, summaries and cardio traces all survive. Sessions
+  already on the phone are left alone.
+- **Fixed:** importing a JSON backup on a phone with no old food log dropped
+  the food log from the file. It's kept now.
+
 ## 0.33.0 — 24 Sep 2026
 - **Back up and sync to your own Google Drive.** Settings → Google Drive →
   Connect. Your log goes into one file, "Ironlog backup.json", in your own
