@@ -179,18 +179,42 @@ Galaxy Watch 7, Chrome):
   act as the HR source with no code changes — worth trying.)
 - Run Settings → Check exercise data against the real log and the Liftoff CSV.
 
-### [ ] A5. Checks against Blast's bugs
+**Checklist for Aaron** (written 0.27.1 — nothing left to do in code until
+these come back; report anything that fails):
+1. **Rest timer, locked:** tick a set, lock the phone, wait out the rest. Does
+   it beep/buzz? Repeat with Ironlog in the background (another app open).
+2. **Rest notification:** Settings → Rest timer → *Notify me when rest ends in
+   the background* → allow. Background the app during a rest: does a
+   notification appear, and does it reach the Galaxy Watch and buzz it?
+3. **Hold timer:** from a cold start, the count-in beeps on the first tap;
+   screen stays on through a 60 s planned hold.
+4. **Cardio:** pair the HR strap (or try a Wear OS "heart rate broadcast" app
+   on the watch); check cue beeps + voice over the treadmill; turn the strap
+   off mid-session and back on — does Reconnect work?
+5. **Storage:** after a logged session, Settings → Data should say *Storage
+   protected*.
+6. **Exercise data:** Settings → Check exercise data, then *Check a Liftoff
+   CSV*; Copy report and paste it to Claude.
+7. **Focus:** type a weight, dismiss the keyboard with Back, type again — no
+   stray digits in the field.
+
+### [x] A5. Checks against Blast's bugs — checked 0.27.1 (superset item waits for B3)
 Blast shipped these; make sure Ironlog doesn't have them. Tick each.
 - [ ] Every exercise in a superset/circuit gets its PRs (Blast #87) — once
   supersets exist.
-- [ ] Max-weight and max-reps PRs agree at the same weight (#51).
-- [ ] Nothing is ever stored as lbs; imported or synced weights are converted to
-  kg (#60, #61).
-- [ ] A started session can be discarded without logging it (#46).
-- [ ] Several sessions on the same day all show in history and the calendar
+- [x] Max-weight and max-reps PRs agree at the same weight (#51) — PRs are
+  derived at read time, so an edit can't leave a stale max; checked before and
+  after editing a set.
+- [x] Nothing is ever stored as lbs; imported or synced weights are converted to
+  kg (#60, #61) — every weight input, the Liftoff import and voice logging go
+  through `toKg` / `toKgFrom`; the unit setting is display-only.
+- [x] A started session can be discarded without logging it (#46) — Discard on
+  the live session (and cardio); a started plan stays planned.
+- [x] Several sessions on the same day all show in history and the calendar
   (#47).
-- [ ] Number inputs lose focus when the keyboard is dismissed or you tap
-  elsewhere (#49).
+- [x] Number inputs lose focus when the keyboard is dismissed or you tap
+  elsewhere (#49) — **fixed 0.27.1**: a tap on anything that isn't a form
+  control blurs the field, and so does the keyboard closing.
 
 ### [ ] A6. Name check (Aaron, not code)
 Search the UK trademark register (UKIPO) and the app stores for "Ironlog" before

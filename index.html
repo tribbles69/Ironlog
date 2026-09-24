@@ -1546,7 +1546,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.27.0';
+const APP_VERSION = '0.27.1';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -9645,6 +9645,30 @@ document.querySelectorAll('#nav button').forEach(b => b.onclick = () => go(b.dat
 $('#settingsBtn').onclick = openSettings;
 $('#profileBtn').onclick = () => openProfile();
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalStack.length) closeModal(); });
+
+/* Fields let go of focus when you're done with them (roadmap A5, Blast #49).
+   On Android, dismissing the keyboard with Back or Done leaves the field
+   focused, and tapping the background doesn't move focus either — so the
+   next stray keystroke lands in the last weight or reps box. Two fixes:
+   a tap on anything that isn't itself a form control blurs the field, and
+   the keyboard closing (the visual viewport growing back) blurs it too. */
+const isField = el => !!el && (el.matches('input:not([type=button]):not([type=submit]):not([type=checkbox]):not([type=radio]):not([type=file]), textarea, select') || el.isContentEditable);
+document.addEventListener('pointerdown', e => {
+  const a = document.activeElement;
+  if (!isField(a)) return;
+  const t = e.target;
+  if (t === a || isField(t) || (t.closest && t.closest('label'))) return;
+  a.blur();
+}, true);
+if (window.visualViewport) {
+  let vvh = window.visualViewport.height;
+  window.visualViewport.addEventListener('resize', () => {
+    const h2 = window.visualViewport.height;
+    // grew by a keyboard's worth: the keyboard went away
+    if (h2 - vvh > 120 && isField(document.activeElement)) document.activeElement.blur();
+    vvh = h2;
+  });
+}
 
 /* First paint waits on the initial read. Without this the app would render an
    empty log for a frame and then flash the real one in over the top. */
