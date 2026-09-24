@@ -1342,7 +1342,7 @@ function refreshStorageLine(bg) {
    connects. drive.file scope: Ironlog sees only the files it made. No server:
    the browser talks to Google directly, and the token lives in memory.
    ============================================================ */
-const GOOGLE_CLIENT_ID = '';   // for the deployed origin — see the spec's Setup; Settings can override
+const GOOGLE_CLIENT_ID = '321532083266-jg1rrna34dq5mcsd28h7g346u7sndl59.apps.googleusercontent.com';   // public by design; tied to the deployed origin (spec: Setup). Settings can override
 const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const SYNC_FILE = 'Ironlog backup.json', SYNC_FORMAT = 'ironlog-sync', SYNC_V = 1;
 // collection -> how a record is keyed
@@ -1830,7 +1830,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.34.0';
+const APP_VERSION = '0.34.1';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
