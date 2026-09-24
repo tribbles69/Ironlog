@@ -68,8 +68,11 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
 the priority-lift variants, no picker, no ramp ▲ button) and sends entries with
 `leaf`, so `logTest` keeps them. Applied from the 0.16.3 patch (now deleted).
 
-### 1. Isometric holds
-Spec: **`r&d/specs/isometrics-spec.md`** — ready to build.
+### 1. ~~Isometric holds~~ — [x] shipped 0.17.0
+Spec: **`r&d/specs/isometrics-spec.md`**. Built with option A (best hold per
+weight). Shared helpers for item 2 and the cardio session: `Cue` (Web Audio
+beeps + vibration, gated by the new Sound / Vibration settings) and `Awake`
+(refcounted Wake Lock). Old "1 rep + note" holds are deliberately not migrated.
 
 Per-entry `iso: true` flag (not a new movement or leaf axis), own PR pool via an
 `exKey` suffix, reuse the set's `sec` field, three hold modes (manual / planned
