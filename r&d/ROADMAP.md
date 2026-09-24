@@ -150,7 +150,12 @@ trace as a chart on the session card.
 *trend* rather than the instant reading — pre-empting drift out of zone and
 varying the coaching language. Only once the plain loop works.
 
-### 4. Autoregulated programming (RIR-driven)
+### 4. ~~Autoregulated programming (RIR-driven)~~ — [x] shipped 0.21.0
+Spec: **`r&d/specs/autoreg-spec.md`**. Normal program blocks get loads from a
+per-exercise working e1RM (derived from RIR-logged history) at the session's
+reps and target RIR; deload/prep/peak/test/meet weeks keep the plan. Set-to-set
+adjustment, stall flag, off-day toggle. `autoE1()` is where item 7's VBT e1RM
+plugs in.
 - Programs carry **one flat mid-point working weight per exercise**, not a
   week-by-week progression; RIR decides what the day's load does.
 - RIR is whole numbers only, no half steps.

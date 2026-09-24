@@ -1448,7 +1448,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.20.0';
+const APP_VERSION = '0.21.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -3056,7 +3056,7 @@ function viewHome() {
   } else if (planned.length) {
     scheduleHtml = planned.map(p => `
       <div class="row between" style="margin-bottom:8px">
-        <div class="grow"><div style="font-weight:700">${esc(p.name)}</div>
+        <div class="grow"><div style="font-weight:700">${esc(p.name)}${autoBlock(p) ? ' <span class="chip" title="Loads are set from your RIR when you start">⟳ AUTO</span>' : ''}</div>
         <div class="sub">${p.exercises.length} exercise${p.exercises.length === 1 ? '' : 's'} planned</div></div>
         <button class="btn primary sm" data-start-planned="${p.id}">Start</button>
       </div>
@@ -3378,7 +3378,7 @@ function completedCard(wo) {
   const sets = wo.exercises.reduce((a, e) => a + e.sets.filter(s => s.done && isWorking(s)).length, 0);
   return `<div class="card">
     <div class="row between" style="margin-bottom:9px">
-      <div class="grow"><div style="font-weight:700">${esc(wo.name)} <span class="chip green">COMPLETED</span>${srcChip(wo)}${wo.edited ? ' <span class="chip">EDITED</span>' : ''}</div>
+      <div class="grow"><div style="font-weight:700">${esc(wo.name)} <span class="chip green">COMPLETED</span>${srcChip(wo)}${wo.edited ? ' <span class="chip">EDITED</span>' : ''}${wo.off ? ' <span class="chip">OFF DAY</span>' : ''}</div>
         <div class="sub">${wo.kind === 'cardio' ? 'Cardio' : `${sets} sets · ${wt(totalVolume(wo), 0)} volume`}${wo.summary && wo.summary.mins ? ` · ${wo.summary.mins} min` : ''}</div></div>
       <div class="row" style="gap:6px"><button class="btn xs ghost" data-edit-workout="${wo.id}">Edit</button><button class="btn xs ghost" data-view-workout="${wo.id}">View</button></div>
     </div>
@@ -3399,8 +3399,8 @@ function completedCard(wo) {
 function plannedCard(wo) {
   return `<div class="card">
     <div class="row between" style="margin-bottom:9px">
-      <div class="grow"><div style="font-weight:700">${esc(wo.name)} <span class="chip blue">PLANNED</span></div>
-        <div class="sub">${wo.exercises.length} exercises</div></div>
+      <div class="grow"><div style="font-weight:700">${esc(wo.name)} <span class="chip blue">PLANNED</span>${autoBlock(wo) ? ' <span class="chip" title="Loads are set from your RIR when you start">⟳ AUTO</span>' : ''}</div>
+        <div class="sub">${wo.exercises.length} exercises${autoBlock(wo) ? ' · loads set from your RIR at start' : ''}</div></div>
       <div class="row" style="gap:6px">
         <button class="btn xs" data-edit-plan="${wo.id}">Edit</button>
         <button class="btn xs primary" data-start-planned="${wo.id}">Start</button>
@@ -3607,7 +3607,7 @@ function workoutLanding() {
   ${upcoming.length ? upcoming.map(p => `
     <div class="card tight">
       <div class="row between">
-        <div class="grow"><div style="font-weight:650">${esc(p.name)}</div>
+        <div class="grow"><div style="font-weight:650">${esc(p.name)}${autoBlock(p) ? ' <span class="chip" title="Loads are set from your RIR when you start">⟳ AUTO</span>' : ''}</div>
           <div class="sub">${fmtDate(p.date)} · ${relDay(p.date)} · ${p.exercises.length} exercises</div></div>
         <button class="btn sm primary" data-start-planned="${p.id}">Start</button>
       </div>
@@ -3642,6 +3642,7 @@ function startPlanned(id) {
   copy.plannedFrom = p.id;
   copy.date = today();
   copy.exercises.forEach(e => e.sets.forEach(s => { s.done = false; s.rpe = s.rpe ?? null; }));
+  if (!S.active) applyAuto(copy);   // normal-block program sessions: RIR sets the load
   startWorkout(copy);
 }
 function repeatWorkout(id) {
@@ -3705,6 +3706,7 @@ function activeWorkout() {
     </div>
     <div class="row" style="margin-top:11px;gap:8px">
       <input id="woName" value="${esc(a.name)}" style="font-weight:650">
+      <button class="btn sm ${a.off ? 'primary' : 'ghost'}" id="offBtn" title="Off day — kept out of progression and stall checks">${a.off ? '✓ Off day' : 'Off day'}</button>
       <button class="btn sm danger" id="discardBtn">Discard</button>
     </div>
     <div class="row" style="margin-top:8px">
@@ -3775,6 +3777,15 @@ function exerciseCard(e, ei) {
        ${beatE1 ? `<span class="chip green">▲ BEAT IT · ${wt(todayBest)}</span>` : ''}`
       : `<span class="chip">First time — everything is a PR</span>`;
 
+  /* Autoregulation and stall: one line under the banner. */
+  const stall = !timed ? stallFor(exKey(e)) : null;
+  const autoLine = e.auto || stall ? `<div class="row wrap" style="gap:6px;margin-top:6px">
+      ${e.auto ? `<span class="chip blue" title="Loads set from RIR">⟳ AUTO · target RIR ${e.auto.t}</span>
+        <span class="sub">${e.auto.day ? `today e1 ${wt(e.auto.day)}` : e.auto.e1 ? `working e1 ${wt(e.auto.e1)}` : 'plan weights until RIR is logged'}</span>` : ''}
+      ${stall ? `<span class="chip" style="color:var(--gold)" title="No e1RM gain over the last ${stall.n} sessions — consider a deload or a variation">⚠ Stalled · ${stall.n} sessions</span>` : ''}
+    </div>` : '';
+  const rirPh = e.auto ? String(e.auto.t) : '—';
+
   const rows = e.sets.map((s, si) => {
     const isPR = s.done && isWorking(s) && s.r > 0 && beatsBest(st, s.w, s.r, s.rpe);
     const isFirstPR = s.done && isWorking(s) && s.r > 0 && !st;
@@ -3816,7 +3827,7 @@ function exerciseCard(e, ei) {
       <td class="c-wt"><input type="number" step="0.5" inputmode="decimal" data-f="w" data-k="${ei}.${si}" value="${s.w ? dw(s.w) : ''}" placeholder="0"></td>
       <td class="c-pl">${s.w > 0 ? `<button class="plbtn" data-plates="${ei}.${si}" title="Plates">▤</button>` : ''}</td>
       <td><input type="number" inputmode="numeric" data-f="r" data-k="${ei}.${si}" value="${s.r || ''}" placeholder="0"></td>
-      <td><input type="number" step="1" inputmode="numeric" data-f="rpe" data-k="${ei}.${si}" value="${s.rpe == null ? '' : rpeToRir(s.rpe)}" placeholder="—"></td>
+      <td><input type="number" step="1" inputmode="numeric" data-f="rpe" data-k="${ei}.${si}" value="${s.rpe == null ? '' : rpeToRir(s.rpe)}" placeholder="${rirPh}"></td>
       ${chk}
     </tr>`;
   }).join('');
@@ -3830,6 +3841,7 @@ function exerciseCard(e, ei) {
       </div>
       ${leafChip(e.leaf, ei)}
       <div class="pr-banner">${prBanner}</div>
+      ${autoLine}
       ${e.notes ? `<div class="ex-note">${esc(e.notes)}</div>` : ''}
     </div>
     <table class="settable">
@@ -4081,7 +4093,8 @@ function finishWorkout(force) {
      planks refused to finish at all, and a mixed session dropped the planks
      from the saved record without saying so. */
   const logged = a.exercises.map(e => {
-    const x = { ...e, sets: e.sets.filter(s => s.done && (isTimed(e) ? s.sec > 0 : s.r > 0)) };
+    const x = { ...e, sets: e.sets.filter(s => s.done && (isTimed(e) ? s.sec > 0 : s.r > 0))
+      .map(s => { const y = { ...s }; delete y.auto; delete y.planW; return y; }) };   // live-only markers
     delete x.rest;   // the session's ±15 s override; it isn't part of the record
     return x;
   }).filter(e => e.sets.length);
@@ -4116,6 +4129,7 @@ function finishWorkout(force) {
   const mins = a.start ? Math.max(1, Math.round((Date.now() - a.start) / 60000)) : 0;
   const done = {
     id: a.id, date: a.date, name: a.name, status: 'completed', source: 'logged',
+    ...(a.off ? { off: true } : {}), ...(a.block ? { block: a.block, prog: a.prog } : {}),
     exercises: logged, start: a.start, end: Date.now(),
     summary: { mins, prs, volume: logged.reduce((t, e) => t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + s.w * s.r, 0), 0) },
   };
@@ -4591,7 +4605,10 @@ function renderEditWorkout() {
         <div class="field"><label>Name</label><input id="eName" value="${esc(d.name)}"></div>
         <div class="field"><label>Date</label><input type="date" id="eDate" value="${d.date}" max="${today()}"></div>
       </div>
-      <div class="sub" style="margin-bottom:10px">Untick a set to drop it. PRs and analytics follow the edit.</div>
+      <div class="row between" style="margin-bottom:10px;gap:8px">
+        <div class="sub grow">Untick a set to drop it. PRs and analytics follow the edit.</div>
+        <button class="btn xs ${d.off ? 'primary' : 'ghost'}" id="eOff" title="Off day — kept out of progression and stall checks">${d.off ? '✓ Off day' : 'Off day'}</button>
+      </div>
       ${d.exercises.length ? d.exercises.map(exCard).join('') : `<div class="empty" style="padding:14px">No exercises — add one below.</div>`}
       <button class="btn wide ghost" id="eAddEx">+ Add exercise</button>
     `,
@@ -4611,7 +4628,7 @@ function renderEditWorkout() {
         const val = inp.value === '' ? null : +inp.value;
         if (inp.dataset.ef === 'w') s.w = val ? toKg(val) : 0;
         if (inp.dataset.ef === 'r') s.r = val || 0;
-        if (inp.dataset.ef === 'rpe') s.rpe = rirToRpe(val);
+        if (inp.dataset.ef === 'rpe') s.rpe = rirToRpe(val == null ? null : Math.round(val));
         if (inp.dataset.ef === 'sec') { s.sec = parseTime(inp.value); if (s.holdMode) { s.holdMode = 'manual'; s.target = null; } }
         };
         if (inp.dataset.ef === 'sec') inp.onblur = () => {
@@ -4663,6 +4680,7 @@ function renderEditWorkout() {
           renderEditWorkout();
         });
       };
+      $('#eOff', bg).onclick = () => { d.off = !d.off; if (!d.off) delete d.off; re(); };
       $('#eSave', bg).onclick = () => { grab(); saveEdit(false); };
     },
   });
@@ -4692,7 +4710,7 @@ function saveEdit(force) {
 
   const orig = S.workouts.find(w => w.id === d.id) || {};
   const done = {
-    ...orig, name: d.name, date: d.date, exercises: logged, edited: Date.now(),
+    ...orig, name: d.name, date: d.date, exercises: logged, edited: Date.now(), off: d.off || undefined,
     summary: {
       ...(orig.summary || {}),
       volume: logged.reduce((t, e) => t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + s.w * s.r, 0), 0),
@@ -7692,6 +7710,8 @@ function toggleSetDone(ei, si) {
     } else if (isWorking(s) && (!st || beatsBest(st, s.w, s.r, s.rpe))) {
       toast(st ? `★ PR — ${exFull(ex)} ${s.w > 0 ? `${wt(s.w)}×${s.r}` : `${s.r} reps`}` : `★ First ${exFull(ex)} logged`, 'gold');
     }
+    const moved = autoAdjust(ex, s);
+    if (moved) toast(`Next sets → ${wt(moved.to)} · RIR ${rpeToRir(s.rpe)}, target ${ex.auto.t}`, moved.to > moved.from ? 'green' : '');
     startRest(ei, s);
     save(); bust(); render();
   };
@@ -7840,6 +7860,116 @@ function openHoldTimer(ei, si) {
       };
     },
   });
+}
+
+/* ============================================================
+   AUTOREGULATION — roadmap item 4, r&d/specs/autoreg-spec.md
+   The program says what to do; RIR decides the load. Each exercise has one
+   working number, an e1RM derived from RIR-logged history, and the day's
+   weights are read off it at the session's reps and target RIR. Derived at
+   read time like PRs, so nothing to keep in sync.
+   ============================================================ */
+const AUTO = { window: 3, stallN: 5, stepCap: 0.075, defaultRir: 2 };
+/* Blocks shaped on purpose keep the plan's weights. */
+const FIXED_BLOCK = /deload|prep|peak|test|meet|taper|opener|recovery|light|wedding|holiday|last heavy|speed|technique|re-entry|transition/i;
+function autoBlock(wo) { return !!(wo && wo.prog && wo.block && !FIXED_BLOCK.test(wo.block)); }
+
+/* Whole numbers only: "stop 1 shy", "RIR 2", "@2" in the program note, else 2. */
+function targetRirFor(e) {
+  const n = String((e && e.notes) || '').toLowerCase();
+  const m = n.match(/stop (\d) shy/) || n.match(/rir\s*(\d)/) || n.match(/@\s*(\d)\b/);
+  return m ? +m[1] : AUTO.defaultRir;
+}
+/* The inverse of e1rm(): the load that makes `reps` at `rir` worth `e1`. */
+function loadFor(e1, reps, rir) {
+  const eff = (reps || 0) + (rir || 0);
+  return eff <= 1 ? e1 : e1 / (1 + Math.min(eff, 12) / 30);
+}
+function roundLoadFor(kg, leaf) {
+  if (leaf && (leaf.equipment === 'dumbbells' || leaf.equipment === 'kettlebell')) return Math.round(kg / 2) * 2;
+  return roundBar(kg);
+}
+function median(xs) {
+  const s = [...xs].sort((a, b) => a - b), n = s.length;
+  return !n ? null : n % 2 ? s[(n - 1) / 2] : (s[n / 2 - 1] + s[n / 2]) / 2;
+}
+/* One session's estimate: median e1 of its RIR-logged working sets. A set with
+   no RIR reads as RIR 0 and would drag the number down, so it doesn't count. */
+function sessionE1(e) {
+  const v = e.sets.filter(s => s.done !== false && isWorking(s) && s.w > 0 && s.r > 0 && s.rpe >= 5 && s.rpe <= 10)
+    .map(s => e1rm(s.w, s.r, s.rpe));
+  return median(v);
+}
+/* Session estimates for a key, oldest first. Off days and backfills are left
+   out: an off day isn't progression and a backfill is the plan, not a report. */
+function autoHistory(key, before) {
+  const out = [];
+  S.workouts.filter(w => w.status === 'completed' && !w.off && w.source !== 'backfill' && (!before || w.date < before))
+    .forEach(w => w.exercises.forEach(e => {
+      if (exKey(e) !== key || isTimed(e)) return;
+      const v = sessionE1(e);
+      if (v) out.push({ date: w.date, e1: v });
+    }));
+  return out.sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+}
+/* The working number: last three sessions, newest weighted 3:2:1. */
+function historyE1(key, before) {
+  const h = autoHistory(key, before).slice(-AUTO.window).reverse();
+  if (!h.length) return null;
+  const wts = [3, 2, 1];
+  const tot = h.reduce((a, x, i) => a + wts[i], 0);
+  return h.reduce((a, x, i) => a + x.e1 * wts[i], 0) / tot;
+}
+/* The day's e1 for a key. History is the only input today; item 7's VBT
+   profile-mode e1RM for today blends in here and nowhere else. */
+function autoE1(key) { return historyE1(key); }
+
+/* Stalled: over the last five non-off sessions, none of the last four beat
+   the first by more than 1 %. Off days are invisible to it, so they neither
+   count nor reset it. Flag only. */
+function stallFor(key) {
+  const h = autoHistory(key).slice(-AUTO.stallN);
+  if (h.length < AUTO.stallN) return null;
+  const first = h[0].e1, best = Math.max(...h.slice(1).map(x => x.e1));
+  return best <= first * 1.01 ? { n: h.length, since: h[0].date, e1: first } : null;
+}
+
+/* Set a planned session's loads from the working number. Top set from the
+   e1 at its reps and target RIR; every other set keeps the plan's ratio. */
+function applyAuto(wo) {
+  if (!autoBlock(wo)) return;
+  wo.exercises.forEach(e => {
+    if (!e.leaf || isTimed(e)) return;
+    const work = e.sets.filter(s => isWorking(s) && s.w > 0 && s.r > 0);
+    if (!work.length) return;
+    const top = work.reduce((a, b) => b.w > a.w ? b : a);
+    const t = targetRirFor(e);
+    const e1 = autoE1(exKey(e));
+    e.auto = { t, e1: e1 ? Math.round(e1 * 10) / 10 : null, planTop: top.w, topR: top.r };
+    work.forEach(s => { s.planW = s.w; s.auto = true; });
+    if (!e1) return;                           // no history yet: the plan's weights stand
+    const dayTop = loadFor(e1, top.r, t);
+    work.forEach(s => { s.w = roundLoadFor(dayTop * s.planW / e.auto.planTop, e.leaf); });   // planTop: top.w is rewritten in this loop
+  });
+}
+
+/* After a working set is ticked with RIR: re-set the remaining auto sets
+   from today's own e1, capped per step. Returns what moved, for the toast. */
+function autoAdjust(e, s) {
+  if (!e || !e.auto || !isWorking(s) || !(s.rpe >= 5) || !(s.w > 0) || !(s.r > 0)) return null;
+  const day = median(e.sets.filter(x => x.done && isWorking(x) && x.w > 0 && x.r > 0 && x.rpe >= 5).map(x => e1rm(x.w, x.r, x.rpe)));
+  if (!day) return null;
+  e.auto.day = Math.round(day * 10) / 10;
+  const dayTop = loadFor(day, e.auto.topR, e.auto.t);
+  let moved = null;
+  e.sets.forEach(x => {
+    if (x.done || !x.auto || !(x.planW > 0)) return;
+    const want = dayTop * x.planW / e.auto.planTop;
+    const capped = clamp(want, x.w * (1 - AUTO.stepCap), x.w * (1 + AUTO.stepCap));
+    const next = roundLoadFor(capped, e.leaf);
+    if (next !== x.w) { moved = moved || { from: x.w, to: next }; x.w = next; }
+  });
+  return moved;
 }
 
 /* ---------------- rest timer ----------------
@@ -8604,9 +8734,9 @@ function wireActive(v) {
       const [ei, si] = key(inp.dataset.k);
       const s = a.exercises[ei].sets[si];
       const val = inp.value === '' ? null : +inp.value;
-      if (inp.dataset.f === 'w') s.w = val ? toKg(val) : 0;
+      if (inp.dataset.f === 'w') { s.w = val ? toKg(val) : 0; delete s.auto; }   // a typed weight is never overwritten
       if (inp.dataset.f === 'r') s.r = val || 0;
-      if (inp.dataset.f === 'rpe') s.rpe = rirToRpe(val);
+      if (inp.dataset.f === 'rpe') s.rpe = rirToRpe(val == null ? null : Math.round(val));   // RIR is whole numbers
       if (inp.dataset.f === 'sec') {
         s.sec = parseTime(inp.value);
         // typed over a timed hold: it's a manual entry now, and RIR is asked again
@@ -8737,6 +8867,11 @@ function wireActive(v) {
   });
 
   if ($('#voiceBtn')) $('#voiceBtn').onclick = dictateSet;
+  $('#offBtn').onclick = () => {
+    a.off = !a.off;
+    save(); render();
+    toast(a.off ? 'Off day — this session won\'t count toward progression' : 'Counts toward progression again');
+  };
   $('#finishBtn').onclick = () => finishWorkout();   // no event object as `force`
   $('#discardBtn').onclick = () => confirmDlg('Discard this workout? Nothing will be saved.', () => {
     stopRest(); S.active = null; save(); render(); toast('Workout discarded');
