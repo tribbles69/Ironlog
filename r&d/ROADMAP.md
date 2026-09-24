@@ -109,8 +109,8 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
       per-variant stats, **modifier chips** that annotate a set without
       splitting the PR leaf, Settings → **Check exercise data** report. Running
       that report on the real log is part of A4.
-- [x] Changelog (24 Sep 2026): `r&d/CHANGELOG.md`, backfilled from commit
-      history. Moves to the repo root in A2.
+- [x] Changelog (24 Sep 2026): `CHANGELOG.md` (repo root since A2), backfilled from commit
+      history.
 - [ ] Composed exercise model (movement + equipment + laterality, PRs per variant,
       parent page rolls up variants) — specs `r&d/specs/exercise-system.md` and
       `r&d/specs/exercise-system-phase1.md`. **Status unconfirmed — check how far
@@ -144,7 +144,7 @@ Decided 2026-09-24: food logging leaves Ironlog for its own separate app.
 4. Training data JSON export/import must keep working; old export files that
    still contain food data must import without errors (ignore the food part).
 
-### [ ] A2. "What's new" screen
+### [x] A2. "What's new" screen — shipped 0.26.0
 Added 2026-09-24 at Aaron's request, straight after A1. Shows the changelog in
 the app so Aaron (and users) can see what each update changed.
 - **Move the changelog to the repo root** as `CHANGELOG.md` (the app loads it,

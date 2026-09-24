@@ -16,6 +16,7 @@ const TYPES = {
   '.webmanifest': 'application/manifest+json; charset=utf-8',
   '.png': 'image/png',
   '.csv': 'text/csv; charset=utf-8',
+  '.md': 'text/markdown; charset=utf-8',
 };
 
 http.createServer((req, res) => {

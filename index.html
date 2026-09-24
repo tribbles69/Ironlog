@@ -268,6 +268,11 @@ h3{font-size:13.5px;margin:0 0 8px}
 .timer{font-size:26px;font-weight:750;letter-spacing:-1px;font-variant-numeric:tabular-nums}
 .restbar{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:6px}
 .restbar > .grow{min-width:0}
+.wn-entry{margin-bottom:14px}
+.wn-entry h3{font-size:15px;margin:0 0 6px}
+.wn-entry p{margin:0 0 6px;color:var(--dim)}
+.wn-list{margin:0;padding-left:18px}
+.wn-list li{margin-bottom:5px;line-height:1.4}
 .modchips .modadd{cursor:pointer;background:transparent;border-style:dashed}
 .ex-name[data-exdetail]{cursor:pointer}
 .restbar .eyebrow{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -1220,9 +1225,18 @@ function requestPersistence() {
 
 let S = structuredClone(DEFAULT_STATE);   // replaced by the real state in boot()
 
+let freshInstall = false;   // no stored state at boot: What's new has nothing to tell
 async function load() {
   const raw = await storeGet(KEY);
-  if (!raw) return structuredClone(DEFAULT_STATE);
+  if (!raw) {
+    /* A fresh install has nothing to catch up on. Marked here, on the state
+       itself, rather than at the end of boot: the first launch reloads when
+       the service worker takes over, and a debounced save can be lost to it. */
+    freshInstall = true;
+    const st = structuredClone(DEFAULT_STATE);
+    st.settings.lastSeenVersion = APP_VERSION;
+    return st;
+  }
   try {
     const parsed = JSON.parse(raw);
     const st = Object.assign(structuredClone(DEFAULT_STATE), parsed);
@@ -1454,7 +1468,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.25.0';
+const APP_VERSION = '0.26.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -3017,7 +3031,7 @@ function modal({ title, body, foot, onOpen, wide, sticky, onClose }) {
   bg.className = 'modal-bg';
   bg.innerHTML = `
     <div class="modal">
-      <div class="modal-head"><h2>${esc(title)}</h2><button class="icon-btn" data-close>✕</button></div>
+      <div class="modal-head"><h2>${esc(title)}</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
       <div class="modal-body">${body}</div>
       ${foot ? `<div class="modal-foot">${foot}</div>` : ''}
     </div>`;
@@ -3170,6 +3184,107 @@ function render() {
   else if (page === 'analytics') v.innerHTML = viewAnalytics();
   else if (page === 'meets') v.innerHTML = viewMeets();
   wire();
+  maybeWhatsNew();
+}
+
+
+/* ============================================================
+   WHAT'S NEW — roadmap A2
+   CHANGELOG.md sits at the root (the app loads it) and is precached with the
+   shell. After an update, the entries newer than the last version seen are
+   shown once. Never mid-workout — it waits for the session to end — and never
+   on a fresh install. If the file can't be loaded, it says nothing and tries
+   again next launch; it never blocks the app.
+   ============================================================ */
+function verCmp(a, b) {
+  const pa = String(a).split('.').map(Number), pb = String(b).split('.').map(Number);
+  for (let i = 0; i < 3; i++) { const d = (pa[i] || 0) - (pb[i] || 0); if (d) return d; }
+  return 0;
+}
+let _changelog = null;
+function loadChangelog() {
+  if (!_changelog) {
+    _changelog = fetch('CHANGELOG.md').then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.text(); })
+      .catch(e => { _changelog = null; throw e; });
+  }
+  return _changelog;
+}
+/* Entries start at "## "; everything above the first one (the note on how to
+   keep the file) is for whoever edits it, not for the app. */
+function parseChangelog(text) {
+  const out = [];
+  String(text).replace(/\r\n?/g, '\n').split('\n').forEach(line => {
+    if (line.startsWith('## ')) {
+      const head = line.slice(3).trim();
+      const m = head.match(/^(\d+\.\d+\.\d+)/);
+      out.push({ head, version: m ? m[1] : null, lines: [] });
+    } else if (out.length) out[out.length - 1].lines.push(line);
+  });
+  return out;
+}
+/* The small subset the changelog uses: "- " bullets (indented lines carry
+   on the bullet), paragraphs, **bold**, `code`, [links](url). Escaped first,
+   so nothing in the file can become markup it didn't ask for. */
+function mdInline(s) {
+  return esc(s)
+    .replace(/\*\*(.+?)\*\*/g, '<b>$1</b>')
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+}
+function mdBlock(lines) {
+  const blocks = [];
+  let cur = null;
+  lines.forEach(l => {
+    if (!l.trim() || /^-{3,}\s*$/.test(l)) { cur = null; return; }
+    if (/^- /.test(l)) { cur = { li: true, text: l.slice(2) }; blocks.push(cur); return; }
+    if (cur) cur.text += ' ' + l.trim();
+    else { cur = { li: false, text: l.trim() }; blocks.push(cur); }
+  });
+  let html = '', inList = false;
+  blocks.forEach(b => {
+    if (b.li && !inList) { html += '<ul class="wn-list">'; inList = true; }
+    if (!b.li && inList) { html += '</ul>'; inList = false; }
+    html += b.li ? `<li>${mdInline(b.text)}</li>` : `<p>${mdInline(b.text)}</p>`;
+  });
+  return html + (inList ? '</ul>' : '');
+}
+function changelogHtml(entries) {
+  return entries.map(e => `<section class="wn-entry"><h3>${mdInline(e.head)}</h3>${mdBlock(e.lines)}</section>`).join('');
+}
+function showChangelog(title, entries, note) {
+  modal({
+    title,
+    body: `${note ? `<div class="sub" style="margin-bottom:8px">${esc(note)}</div>` : ''}${changelogHtml(entries)}`,
+    foot: `<button class="btn primary wide" data-close>Got it</button>`,
+  });
+}
+/* Settings / Help menu: the whole thing, any time. */
+function openWhatsNew() {
+  loadChangelog()
+    .then(t => showChangelog("What's new", parseChangelog(t), `You're on ${APP_VERSION}.`))
+    .catch(() => toast("Couldn't load the changelog — try again when you're online"));
+}
+/* The after-update sheet. Armed after first paint; re-checked on each render,
+   so a sheet held back by a live session appears once it's finished. */
+let whatsNewArmed = false, whatsNewBusy = false;
+function maybeWhatsNew() {
+  if (!whatsNewArmed || whatsNewBusy || S.active || modalStack.length) return;
+  const seen = S.settings.lastSeenVersion;
+  if (seen === APP_VERSION) { whatsNewArmed = false; return; }
+  whatsNewBusy = true;
+  loadChangelog().then(text => {
+    whatsNewBusy = false;
+    if (S.active || modalStack.length) return;          // try again on a later render
+    const all = parseChangelog(text);
+    /* No record at all means the app predates this screen: show this
+       version's entry rather than the whole history. */
+    const newer = all.filter(e => e.version && verCmp(e.version, APP_VERSION) <= 0
+      && (seen ? verCmp(e.version, seen) > 0 : e.version === APP_VERSION));
+    S.settings.lastSeenVersion = APP_VERSION;
+    save();
+    whatsNewArmed = false;
+    if (newer.length) showChangelog(`What's new in ${APP_VERSION}`, newer);
+  }).catch(() => { whatsNewBusy = false; whatsNewArmed = false; });   // offline: next launch
 }
 
 /* ============================================================
@@ -7026,6 +7141,7 @@ function openSettings() {
       <input type="file" id="stCsvFile" accept=".csv,text/csv" style="display:none">
     `,
     foot: `<span class="muted mono" style="font-size:11px;margin-right:auto">v${APP_VERSION}</span>
+      <button class="btn sm ghost" id="stNews">What's new</button>
       <button class="btn sm ghost" id="stUpdate">Check for update</button>
            <button class="btn primary" id="stSave">Save</button>`,
     onOpen: bg => {
@@ -7121,6 +7237,7 @@ function openSettings() {
       $('#stCheck', bg).onclick = () => { closeModal(); openExerciseCheck(); };
       const ui = $('#stUnimport', bg); if (ui) ui.onclick = () => { closeModal(); openRemoveImport(); };
       $('#stUpdate', bg).onclick = () => checkForUpdate(false);
+      $('#stNews', bg).onclick = () => { closeModal(); openWhatsNew(); };
       $('#stProfile', bg).onclick = () => { closeModal(); openProfile(); };
       $('#stWipe', bg).onclick = () => confirmDlg('This erases every workout, check-in, goal and meet. It cannot be undone.', () => {
         S = structuredClone(DEFAULT_STATE); save(); applySkin(S.settings.skin); closeAllModals(); go('home'); toast('All data erased');
@@ -9353,6 +9470,7 @@ const W98_MENUS = [
     ['Check for update', () => checkForUpdate(false)],
   ] },
   { label: 'Help', items: [
+    ["What's new…", () => openWhatsNew()],
     ['About Ironlog 98', () => aboutDlg()],
     '-',
     ['Back to the Ironlog skin', () => { S.settings.skin = 'ironlog'; save(); applySkin('ironlog'); }],
@@ -9480,6 +9598,9 @@ async function boot() {
   /* After first paint, never before it — an update prompt must not delay the
      app opening, and it must not decide for you. */
   setTimeout(() => checkForUpdate(true), 1200);
+  /* What's new, after the update check so the two never open on top of each
+     other. A fresh install is already marked as seen by load(). */
+  if (!freshInstall) setTimeout(() => { whatsNewArmed = true; maybeWhatsNew(); }, 1800);
   veil.remove();
   requestPersistence();
 }
