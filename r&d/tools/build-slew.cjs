@@ -17,13 +17,13 @@
    it, and the deployed app must not depend on a directory on one laptop. Run
    this only when Slew's engine changes.
 
-   Usage:  node tools/build-slew.cjs [path-to-slew-v2]
+   Usage:  node "r&d/tools/build-slew.cjs" [path-to-slew-v2]
 */
 const fs = require('fs');
 const path = require('path');
 const cp = require('child_process');
 
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = path.resolve(__dirname, '..', '..');
 const OUT = path.join(ROOT, 'slew-core.js');
 
 const candidates = [
@@ -36,7 +36,7 @@ const candidates = [
 const slew = candidates.find(p => fs.existsSync(path.join(p, 'src', 'core', 'index.ts')));
 if (!slew) {
   console.error('Could not find slew-v2. Tried:\n  ' + candidates.join('\n  '));
-  console.error('\nPass the path: node tools/build-slew.cjs ../slew-v2');
+  console.error('\nPass the path: node "r&d/tools/build-slew.cjs" ../slew-v2');
   process.exit(1);
 }
 
@@ -80,7 +80,7 @@ if (/mediapipe|pose_landmarker|\.task\b/i.test(js)) {
   throw new Error('the bundle reached the video pipeline — check the entry point');
 }
 
-const header = `/* GENERATED — do not edit. Regenerate with: node tools/build-slew.cjs
+const header = `/* GENERATED — do not edit. Regenerate with: node "r&d/tools/build-slew.cjs"
  *
  * Slew's velocity-based training engine, sensor mode only, bundled from
  * ${path.basename(slew)}/src/{core,capture/sensor}. 65 tests pass in Slew's repo

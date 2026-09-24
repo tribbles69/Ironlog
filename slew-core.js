@@ -1,4 +1,4 @@
-/* GENERATED — do not edit. Regenerate with: node tools/build-slew.cjs
+/* GENERATED — do not edit. Regenerate with: node "r&d/tools/build-slew.cjs"
  *
  * Slew's velocity-based training engine, sensor mode only, bundled from
  * slew-v2/src/{core,capture/sensor}. 65 tests pass in Slew's repo

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-/* Validates docs/exercises.json and reproduces every figure quoted in
-   docs/exercise-system-phase1.md.
+/* Validates r&d/data/exercises.json and reproduces every figure quoted in
+   r&d/specs/exercise-system-phase1.md.
 
    Three passes:
      1. catalogue integrity — ids, alias uniqueness, vocabulary references
@@ -8,13 +8,13 @@
      3. the numbers the Phase 1 document quotes
 
    Exits non-zero on any failure. Run from the repo root:
-       node tools/validate-exercises.js
+       node "r&d/tools/validate-exercises.js"
 */
 const fs = require('fs');
 const path = require('path');
 
-const ROOT = path.resolve(__dirname, '..');
-const J = JSON.parse(fs.readFileSync(path.join(ROOT, 'docs/exercises.json'), 'utf8'));
+const ROOT = path.resolve(__dirname, '..', '..');
+const J = JSON.parse(fs.readFileSync(path.join(ROOT, 'r&d/data/exercises.json'), 'utf8'));
 const V = J.vocabularies;
 const M = J.movements;
 

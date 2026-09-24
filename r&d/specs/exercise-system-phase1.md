@@ -658,9 +658,9 @@ checks catalogue integrity, runs the leaf-level dry run, and asserts each
 quoted number:
 
 ```bash
-node tools/validate-exercises.js
+node "r&d/tools/validate-exercises.js"
 ```
 
 It exits non-zero on any failure and prints `ALL CHECKS PASSED` otherwise. The
 program figures are read directly from `window.IRONLOG_PROGRAM` in
-`index.html`; the catalogue figures from `docs/exercises.json`.
+`index.html`; the catalogue figures from `r&d/data/exercises.json`.

@@ -8,7 +8,7 @@
 
    Run it in the page:
 
-     fetch('tools/smoke.js').then(r => r.text()).then(eval).then(smoke)
+     fetch('r&d/tools/smoke.js').then(r => r.text()).then(eval).then(smoke)
 
    smoke() seeds nothing. smoke({ seed: 'program' | 'migrated' | 'empty' })
    builds the state first. Returns { pass, fail, results }.

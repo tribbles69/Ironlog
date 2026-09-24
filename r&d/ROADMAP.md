@@ -15,11 +15,14 @@ Premium (~£5/month) is AI features and cloud sync. Things that cost nothing per
 
 ## How to work from this file
 
+Paths here are from the repo root. The folder is `r&d` — **quote it in the
+shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
+
 1. Take the **first unchecked item under "Now"** unless Aaron says otherwise.
 2. **Check the code before trusting a status here.** Some items were marked from
    memory of planning chats, not from the code. If something is already built,
    tick it, note the version, and move on.
-3. If an item links a spec in `docs/`, the spec wins over the summary here.
+3. If an item links a spec in `r&d/specs/`, the spec wins over the summary here.
 4. One feature per commit. Every shipped change bumps `version.json` **and**
    the `VERSION` / cache name in `sw.js`, or installed PWAs keep serving the old
    shell.
@@ -52,8 +55,8 @@ Premium (~£5/month) is AI features and cloud sync. Things that cost nothing per
 - [x] Slew VBT built in: per-exercise **Measure** flow (phone motion sensor →
       per-rep velocity, velocity loss, estimated RIR) — `slew-core.js`
 - [ ] Composed exercise model (movement + equipment + laterality, PRs per variant,
-      parent page rolls up variants) — specs in `docs/exercise-system.md` and
-      `docs/exercise-system-phase1.md`. **Status unconfirmed — check how far
+      parent page rolls up variants) — specs in `r&d/specs/exercise-system.md` and
+      `r&d/specs/exercise-system-phase1.md`. **Status unconfirmed — check how far
       phase 1 got before building anything that depends on it.**
 
 ---
@@ -73,12 +76,12 @@ bench, deadlift — pinned to the priority-lift variants, no picker) and **no
 warm-up ramp ▲ button** in the test modal (`openRamp` stays for the workout
 page).
 
-Patch: **`docs/patches/0.16.3-test-log.patch`** — `git apply` it, run the
+Patch: **`r&d/patches/0.16.3-test-log.patch`** — `git apply` it, run the
 script check, commit, tick this. It bumps to 0.16.3 / `ironlog-v30`; if other
 work has bumped since, rebase the version lines rather than going backwards.
 
 ### 1. Isometric holds
-Spec: **`docs/isometrics-spec.md`** — ready to build.
+Spec: **`r&d/specs/isometrics-spec.md`** — ready to build.
 
 Per-entry `iso: true` flag (not a new movement or leaf axis), own PR pool via an
 `exKey` suffix, reuse the set's `sec` field, three hold modes (manual / planned
@@ -109,7 +112,7 @@ shared audio helper from item 1.
 ### 3. Cardio session — HR-zone treadmill coaching
 New session type. The treadmill (Technogym) has no control API, so **Aaron is
 the actuator**: Ironlog reads heart rate live and tells him when to change
-speed. No spec yet — write one in `docs/cardio-spec.md` before building.
+speed. No spec yet — write one in `r&d/specs/cardio-spec.md` before building.
 
 **Heart rate in:**
 - Web Bluetooth (Chrome on Android) to the standard **Heart Rate Service**
@@ -183,7 +186,7 @@ composed model being in place.
   every entry must resolve to a leaf, no orphans, no PRs moving that shouldn't.
 
 ### 7. VBT overhaul — two modes plus calibration
-Write `docs/vbt-overhaul-spec.md` before building. Two modes, chosen per
+Write `r&d/specs/vbt-overhaul-spec.md` before building. Two modes, chosen per
 exercise in a session:
 
 **Per-set mode** (what Measure does now): velocity loss within a set →
@@ -268,7 +271,7 @@ commonly trained lifts have been checked — derived shares are placeholders.
 ### 17. Mobility training
 New session type alongside lifting and cardio. Aaron is treating flexibility
 with the same seriousness as the lifts because it feeds them (squat depth,
-overhead position, deadlift setup). Write `docs/mobility-spec.md` before
+overhead position, deadlift setup). Write `r&d/specs/mobility-spec.md` before
 building.
 - **Routines:** saved mobility routines (daily evening routine, pre-lift
   dynamic warm-up, "strength at length" accessory block) made of timed holds
@@ -287,7 +290,7 @@ building.
 
 ### 18. Body composition page
 One page for bodyweight, tape measurements and skinfold (caliper) tests, each
-with a chart. Write `docs/body-comp-spec.md` before building.
+with a chart. Write `r&d/specs/body-comp-spec.md` before building.
 - **Bodyweight:** build on the existing check-in weight (`ci.weight`, read by
   `bodyweightKg()` for DOTS) — don't create a second bodyweight store. Chart
   with a 7-day rolling average over the raw points.
@@ -309,5 +312,5 @@ with a chart. Write `docs/body-comp-spec.md` before building.
 ---
 
 ## Parked
-See **`docs/backlog.md`** — sleep/recovery strip on sessions, sleeves/wraps/belt
+See **`r&d/notes/backlog.md`** — sleep/recovery strip on sessions, sleeves/wraps/belt
 as gear, supersets and circuits. Each has its reasoning written down.
