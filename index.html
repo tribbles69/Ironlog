@@ -349,6 +349,25 @@ button.setno{padding:0;color:inherit;font-family:inherit;cursor:pointer;display:
 tr.droprow td{border-top-color:transparent}
 .rolelist .roleopt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;margin-bottom:6px;text-align:left}
 .rolelist .roleopt .sub{white-space:normal}
+/* events: run-in, meet day, strongman */
+.bwrun{border-left:3px solid;border-radius:0 10px 10px 0;background:rgba(255,255,255,.03);padding:8px 12px;margin-bottom:12px;font-size:13px}
+.md-lift{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}
+.md-atts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.md-att{text-align:center;border-radius:10px;padding:6px 4px;border:1px solid transparent}
+.md-att .k{font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:var(--dim2)}
+.md-att input{text-align:center;font-weight:700;margin:4px 0}
+.md-att .res{font-size:11px;font-weight:700;min-height:14px}
+.md-att.good{border-color:rgba(61,220,132,.5);background:rgba(61,220,132,.07)} .md-att.good .res{color:var(--green)}
+.md-att.miss{border-color:rgba(224,72,61,.5);background:rgba(224,72,61,.07)} .md-att.miss .res{color:var(--red)}
+.lights{display:flex;gap:6px;justify-content:center}
+.light{width:22px;height:22px;border-radius:50%;border:2px solid var(--line2,#3a4452);background:transparent;padding:0;cursor:pointer}
+.light.l1{background:#f4f6fb;border-color:#f4f6fb}
+.light.l2{background:#e0483d;border-color:#e0483d}
+html[data-skin="win98"] .light{border:2px solid #000;border-radius:50%;box-shadow:none}
+html[data-skin="win98"] .light.l1{background:#fff}
+html[data-skin="win98"] .light.l2{background:#e00000}
+.sm-ev{border-top:1px solid var(--line);padding:8px 0}
+.sm-edit{border:1px solid var(--line);border-radius:10px;padding:8px;margin-bottom:8px}
 .wl-list{display:flex;flex-direction:column;gap:10px;font-size:14px;line-height:1.45}
 .wl-note{margin-top:12px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);font-size:12px;color:var(--dim);line-height:1.45}
 .faq details{border-bottom:1px solid var(--line);padding:10px 0}
@@ -1835,7 +1854,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.36.0';
+const APP_VERSION = '0.37.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -6454,6 +6473,18 @@ const EVENT_TYPES = {
     scored: 'total',
     wclass: true,
   },
+  /* A show is its own list of events, each with its rules (events spec §4). */
+  strongman: {
+    id: 'strongman',
+    label: 'Strongman',
+    blurb: 'The show\'s events — max lifts, reps, carries, medleys, holds — with results and points.',
+    icon: '⛓',
+    lifts: [],
+    attempts: false,
+    scored: 'points',
+    wclass: true,
+    events: true,
+  },
 };
 const DEFAULT_EVENT_TYPE = 'powerlifting';
 /* Events saved before types existed are powerlifting meets — no migration
@@ -6651,16 +6682,35 @@ function attemptsFor(m, lift) {
       ? (() => { const p = m.pct || { o: 90, s: 95 }; return { o: roundBar(goal * (p.o / 100)), s: roundBar(goal * (p.s / 100)) }; })()
       : { o: 0, s: 0 };
 
-  const t = typeof lift === 'string' ? latestTest(priorityKey(lift)) : liftBest(lift);
-  if (!t || m.attemptsLocked) {
+  const key = typeof lift === 'string' ? priorityKey(lift) : liftKey(lift);
+  const t = typeof lift === 'string' ? latestTest(key) : liftBest(lift);
+  // no test: the best recent e1RM, cut to a platform figure (C2)
+  const e1 = !t && key ? recentE1(key) : null;
+  const base = t ? t.kg : e1 ? roundBar(e1.kg * (platformPct() / 100)) : 0;
+  if (!base || m.attemptsLocked) {
     return { ...planned, third: goal, from: 'planned', tested: t || null, planned };
   }
-
-  const third = Math.max(goal, t.kg);
-  const o = roundBar(t.kg * (openerPct() / 100));
+  /* Strategy (events spec §1). Standard is the rule from before strategies. */
+  const st = ATTEMPT_STRATEGY[m.strategy] || ATTEMPT_STRATEGY.standard;
+  const third = roundBar(st.third(goal, base));
+  const o = roundBar(base * ((openerPct() + st.o) / 100));
   // second sits proportionally between opener and third rather than at a fixed %
-  const s = roundBar(o + (third - o) * 0.55);
-  return { o, s, third, from: 'tested', tested: t, planned };
+  const s = roundBar(o + (third - o) * st.s);
+  return { o, s, third, from: t ? 'tested' : 'e1rm', tested: t || null, e1, base, planned };
+}
+const ATTEMPT_STRATEGY = {
+  conservative: { label: 'Conservative', o: -3, s: 0.50, third: (goal, b) => goal ? Math.min(goal, b) : b },
+  standard: { label: 'Standard', o: 0, s: 0.55, third: (goal, b) => Math.max(goal, b) },
+  aggressive: { label: 'Aggressive', o: 2, s: 0.60, third: (goal, b) => Math.max(goal, b * 1.025) },
+};
+/* Best e1RM over the last twelve weeks, for a lift with no tested single. */
+function recentE1(key) {
+  const st = statsFor(key);
+  if (!st) return null;
+  const d = new Date(); d.setDate(d.getDate() - 84);
+  const since = iso(d);
+  const best = st.series.filter(p => p.date >= since).reduce((a, p) => p.e1 > (a ? a.e1 : 0) ? p : a, null);
+  return best ? { kg: best.e1, date: best.date } : null;
 }
 function pctOf(v, goal) { return v && goal ? Math.round((v / goal) * 100) + '%' : '—'; }
 
@@ -6673,6 +6723,7 @@ function shortLift(n) {
 }
 
 function meetCard(m, ps) {
+  if (eventType(m).events) return strongmanCard(m);
   const days = daysBetween(today(), m.date);
   const weeks = Math.floor(days / 7);
   const lifts = eventLifts(m);
@@ -6718,7 +6769,8 @@ function meetCard(m, ps) {
               ${pl.o ? ` · plan said ${wt(pl.o)}<b style="color:${d > 0 ? 'var(--green)' : d < 0 ? 'var(--gold)' : 'var(--dim)'}">${d ? ` (${d > 0 ? '+' : ''}${wt(d)})` : ''}</b>` : ''}
             </div>`;
           }
-          return `<div class="sub" style="margin-top:5px">Planned opener · no tested single for this lift yet</div>`;
+          if (att.from === 'e1rm') return `<div class="sub" style="margin-top:5px">No tested single — from your best recent e1RM, ${wt(att.e1.kg)} (${relDay(att.e1.date)}), at ${platformPct()}% for the platform. Log a test to firm it up.</div>`;
+          return `<div class="sub" style="margin-top:5px">Planned opener · no tested single or recent training for this lift yet</div>`;
         })()}
     </div>`;
   }).join('');
@@ -6736,6 +6788,8 @@ function meetCard(m, ps) {
       <div class="countdown"><span class="n">${days}</span><span class="sub">days out${weeks ? ` · ${weeks} week${weeks === 1 ? '' : 's'}` : ''}</span></div>
       ${m.wclass ? `<span class="chip">${esc(m.wclass)}${m.bwTarget ? ` · target ${wt(m.bwTarget)}` : ''}</span>` : ''}
     </div>
+    ${bwRunInLine(m)}
+    <button class="btn wide" data-meetday="${m.id}" style="margin-bottom:14px">${days <= 7 ? '▶ ' : ''}Meet day — warm-ups, attempts, checklist</button>
 
     <div class="stats grid3" style="margin-bottom:14px">
       <div class="stat"><div class="k">Goal total</div><div class="v">${goalTotal ? w(goalTotal, 0) : '—'}</div>
@@ -6759,6 +6813,8 @@ function meetCard(m, ps) {
       <span class="eyebrow">Attempt plan</span>
       <button class="btn xs ghost" data-lockmeet="${m.id}">${m.attemptsLocked ? '🔒 Pinned to plan' : '↻ Following tests'}</button>
     </div>
+    ${m.attemptsLocked ? '' : `<div class="seg" style="margin-bottom:12px" role="group" aria-label="Attempt strategy">${Object.entries(ATTEMPT_STRATEGY)
+      .map(([k, v]) => `<button data-strat="${m.id}:${k}" class="${(m.strategy || 'standard') === k ? 'on' : ''}">${v.label}</button>`).join('')}</div>`}
     ${rows}
 
     ${m.notes ? `<div class="sub" style="margin-top:4px">“${esc(m.notes)}”</div>` : ''}
@@ -6814,9 +6870,402 @@ function meetCard(m, ps) {
   </div>`;
 }
 
+/* ---------------- run-in bodyweight (events spec §2) ----------------
+   "83kg", "83" and "83 kg" are a limit of 83 kg; "181lb" is in pounds; "120+"
+   has no limit. The target wins when one is set. */
+function classLimitKg(wc) {
+  const s = String(wc || '').trim().toLowerCase();
+  if (!s || s.endsWith('+')) return null;
+  const n = parseFloat(s.replace(',', '.'));
+  if (!(n > 0)) return null;
+  return s.includes('lb') ? n / LB_PER_KG : n;
+}
+function bwRunIn(m) {
+  const target = m.bwTarget > 0 ? m.bwTarget : classLimitKg(m.wclass);
+  if (!target) return null;
+  const now = bodyweightKg();
+  const days = daysBetween(today(), m.date), weeks = Math.max(days / 7, 1 / 7);
+  const cis = S.checkins.filter(c => c.weight > 0).sort((a, b) => a.date < b.date ? -1 : 1);
+  const d = new Date(); d.setDate(d.getDate() - 14);
+  const recent = cis.filter(c => c.date >= iso(d));
+  const span = recent.length >= 2 ? Math.max(1, daysBetween(recent[0].date, recent[recent.length - 1].date)) : 0;
+  const trend = span ? (recent[recent.length - 1].weight - recent[0].weight) / span * 7 : null;   // kg / week
+  if (!now) return { target, now: 0 };
+  const over = now - target;
+  const need = over > 0 ? over / weeks : 0;
+  const onTrack = over <= 0 || (trend != null && trend < 0 && now + trend * weeks <= target);
+  return { target, now, over, need, trend, onTrack, limitFrom: m.bwTarget > 0 ? 'target' : 'class' };
+}
+function bwRunInLine(m) {
+  const r = bwRunIn(m);
+  if (!r) return '';
+  if (!r.now) return `<div class="sub" style="margin-bottom:12px">Log a check-in with your bodyweight to track it against ${wt(r.target)}.</div>`;
+  const col = r.onTrack ? 'var(--green)' : 'var(--gold)';
+  return `<div class="bwrun" style="border-color:${col}">
+    <div class="row between"><span>Bodyweight <b>${wt(r.now)}</b> · ${r.limitFrom === 'target' ? 'target' : 'class'} ${wt(r.target)}</span>
+      <b style="color:${col}">${r.over > 0 ? `${wt(r.over)} over` : `${wt(-r.over)} under`}</b></div>
+    <div class="sub">${r.trend != null ? `Last two weeks ${r.trend > 0 ? '+' : ''}${wt(r.trend)}/week. ` : 'Log check-ins to see the trend. '}${r.over > 0 ? `Needs ${wt(r.need)}/week to make it.` : 'On weight.'}</div>
+  </div>`;
+}
+
+/* ---------------- scoring ---------------- */
+/* IPF GL points (2020, classic): total × 100 / (A − B·e^(−C·bw)). Bench-only
+   has its own coefficients. */
+function glPoints(total, bw, sex, benchOnly) {
+  if (!total || !bw) return 0;
+  const k = benchOnly
+    ? (sex === 'female' ? [142.40398, 442.52671, 0.04724] : [320.98041, 281.40258, 0.01008])
+    : (sex === 'female' ? [610.32796, 1045.59282, 0.03048] : [1199.72839, 1025.18162, 0.00921]);
+  const den = k[0] - k[1] * Math.exp(-k[2] * bw);
+  return den > 0 ? total * 100 / den : 0;
+}
+/* Three referees: two whites is a good lift, two reds is not. */
+function lightsResult(l) {
+  const w = (l || []).filter(x => x === 1).length, r = (l || []).filter(x => x === 2).length;
+  return w >= 2 ? 'good' : r >= 2 ? 'miss' : null;
+}
+
+/* ---------------- meet day (events spec §3) ---------------- */
+const GEAR_DEFAULT = ['Singlet', 'Belt', 'Knee sleeves', 'Wrist wraps', 'Squat shoes', 'Deadlift shoes or socks', 'Chalk', 'ID / membership card', 'Food and drink'];
+const RACK_FIELDS = [['squatRack', 'Squat rack'], ['squatSafety', 'Squat safeties'], ['benchRack', 'Bench uprights'], ['benchSafety', 'Bench safeties']];
+function meetDay(m) {
+  const d = m.day = m.day || {};
+  d.att = d.att || {}; d.rack = d.rack || {}; d.start = d.start || {}; d.sm = d.sm || {};
+  if (!d.gear) d.gear = GEAR_DEFAULT.map(n => ({ n, ok: false }));
+  return d;
+}
+/* The weights for a lift's three attempts: typed on the day, else the plan. */
+function mdWeights(m, lift) {
+  const plan = attemptsFor(m, lift), arr = meetDay(m).att[lift.slot] || [];
+  return [plan.o, plan.s, plan.third].map((p, i) => arr[i] && arr[i].w != null ? arr[i].w : p);
+}
+function mdTotals(m) {
+  const d = meetDay(m), lifts = eventLifts(m), type = eventType(m);
+  const per = lifts.map(lift => {
+    const ws = mdWeights(m, lift), arr = d.att[lift.slot] || [];
+    const res = [0, 1, 2].map(i => lightsResult(arr[i] && arr[i].l));
+    const good = ws.filter((w, i) => res[i] === 'good' && w > 0);
+    return { lift, best: good.length ? Math.max(...good) : 0, bomb: res.every(r => r === 'miss'), done: res.filter(Boolean).length };
+  });
+  const total = per.reduce((a, p) => a + p.best, 0);
+  const complete = per.every(p => p.best > 0);
+  const bw = d.bw || bodyweightKg();
+  const bench = lifts.length === 1 && /bench/.test(lifts[0].movement);
+  return {
+    per, total, complete, bw,
+    dots: type.scored === 'dots' && complete ? dots(total, bw, S.settings.sex) : 0,
+    gl: complete && (type.id === 'powerlifting' || bench) ? glPoints(total, bw, S.settings.sex, bench) : 0,
+  };
+}
+const hhmm = mins => { const x = ((Math.round(mins) % 1440) + 1440) % 1440; return `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`; };
+let mdTab = 'attempts', mdLift = 0, mdFor = null;
+function openMeetDay(id) {
+  const m = S.meets.find(x => x.id === id);
+  if (!m) return;
+  const type = eventType(m), pts = !!type.events, d = meetDay(m);
+  const tabs = pts ? [['attempts', 'Results'], ['check', 'Checklist']] : [['warm', 'Warm-ups'], ['attempts', 'Attempts'], ['check', 'Checklist']];
+  if (mdFor !== id) { mdFor = id; mdTab = 'attempts'; mdLift = 0; }   // another event opens on its main tab
+  if (!tabs.some(x => x[0] === mdTab)) mdTab = 'attempts';
+  const lifts = eventLifts(m);
+
+  const warmTab = () => {
+    const li = clamp(mdLift, 0, Math.max(0, lifts.length - 1)), lift = lifts[li];
+    if (!lift) return '<div class="sub">This event has no lifts.</div>';
+    const opener = mdWeights(m, lift)[0];
+    const key = liftKey(lift), leaf = key ? keyLeaf(key) : null, bar = barFor(leaf);
+    const inv = inventory(), eff = bar.kg + collarPair(), plain = inv.filter(p => p.kg >= 2.5 - 1e-9);
+    const steps = opener ? warmupRamp(opener, 1, bar.kg, kg => loadableNear(kg, eff, plain.length ? plain : inv), kg => loadableNear(kg, eff, inv)) : [];
+    const st = d.start[lift.slot] || '', flight = d.flight || 12, order = d.order || 6, per = d.perMin || 1;
+    let times = null;
+    if (st && /^\d{1,2}:\d{2}/.test(st) && steps.length) {
+      const [h, mi] = st.split(':').map(Number);
+      const at = h * 60 + mi + (order - 1) * per;
+      times = new Array(steps.length);
+      times[steps.length - 1] = at;
+      for (let i = steps.length - 2; i >= 0; i--) times[i] = times[i + 1] - steps[i].rest / 60 - 1;   // a minute to do the set
+    }
+    return `${lifts.length > 1 ? `<div class="seg" style="margin-bottom:10px">${lifts.map((l, i) => `<button data-mdlift="${i}" class="${i === li ? 'on' : ''}">${esc(l.label)}</button>`).join('')}</div>` : ''}
+      <div class="grid2">
+        <div class="field"><label for="mdStart">Flight starts</label><input id="mdStart" type="time" value="${esc(st)}"></div>
+        <div class="field"><label for="mdPer">Minutes per attempt</label><input id="mdPer" type="number" inputmode="decimal" step="0.5" value="${per}"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label for="mdFlight">Lifters in flight</label><input id="mdFlight" type="number" inputmode="numeric" value="${flight}"></div>
+        <div class="field"><label for="mdOrder">You lift</label><input id="mdOrder" type="number" inputmode="numeric" value="${order}"></div>
+      </div>
+      <div class="sub" style="margin-bottom:8px">${esc(bar.name)} ${wt(bar.kg)}${collarPair() ? ` + collars` : ''} · opener ${opener ? wt(opener) : '— (set it on Attempts)'}${times ? ` at <b>${hhmm(times[times.length - 1])}</b>` : ' · add the flight start for clock times'}</div>
+      ${steps.length ? `<table class="settable"><thead><tr><th style="width:56px">Time</th><th>${U()}</th><th style="width:44px">Reps</th><th>Plates a side</th></tr></thead><tbody>
+        ${steps.map((s, i) => `<tr class="${s.work ? 'pr' : ''}"><td class="mono">${times ? hhmm(times[i]) : '—'}</td><td class="mono"><b>${nice(dw(s.kg))}</b>${s.work ? ' ★' : ''}</td>
+          <td class="mono">${s.reps}</td><td class="mono dimmer" style="font-size:11px">${s.bar ? 'empty bar' : esc(plateLine(s.kg, eff, inv))}</td></tr>`).join('')}
+      </tbody></table>` : ''}`;
+  };
+
+  const attTab = () => {
+    const T = mdTotals(m);
+    return `<div class="row" style="gap:10px;align-items:flex-end;margin-bottom:10px">
+        <div class="field grow" style="margin:0"><label for="mdBw">Weigh-in (${U()})</label>
+          <input id="mdBw" type="number" step="0.01" inputmode="decimal" value="${d.bw ? dw(d.bw, 2) : ''}" placeholder="${T.bw ? nice(dw(T.bw)) : '—'}"></div>
+      </div>
+      <div class="stats grid3" style="margin-bottom:12px">
+        <div class="stat"><div class="k">${T.complete ? 'Total' : 'Subtotal'}</div><div class="v">${T.total ? nice(dw(T.total)) : '—'}</div></div>
+        ${eventType(m).scored === 'dots' ? `<div class="stat"><div class="k">DOTS</div><div class="v" style="color:var(--purple)">${T.dots ? T.dots.toFixed(1) : '—'}</div></div>` : ''}
+        <div class="stat"><div class="k">IPF GL</div><div class="v">${T.gl ? T.gl.toFixed(1) : '—'}</div></div>
+      </div>
+      ${T.per.map(p => {
+        const ws = mdWeights(m, p.lift), arr = d.att[p.lift.slot] || [];
+        return `<div class="md-lift">
+          <div class="row between"><b>${esc(p.lift.label)}</b><span class="mono">${p.best ? `best ${wt(p.best)}` : p.bomb ? '<b style="color:var(--red)">no total — bombed</b>' : p.done ? '<span style="color:var(--gold)">no good lift yet</span>' : ''}</span></div>
+          <div class="md-atts">${[0, 1, 2].map(i => {
+            const l = (arr[i] && arr[i].l) || [0, 0, 0], res = lightsResult(l);
+            return `<div class="md-att ${res || ''}"><div class="k">${['Opener', 'Second', 'Third'][i]}</div>
+              <input type="number" step="0.5" inputmode="decimal" data-mdw="${esc(p.lift.slot)}.${i}" value="${ws[i] ? dw(ws[i]) : ''}" aria-label="${esc(p.lift.label)} attempt ${i + 1} (${U()})">
+              <div class="lights">${l.map((x, j) => `<button class="light l${x}" data-mdl="${esc(p.lift.slot)}.${i}.${j}" aria-label="Referee ${j + 1}: ${['no light', 'white', 'red'][x]}"></button>`).join('')}</div>
+              <div class="res">${res === 'good' ? 'Good lift' : res === 'miss' ? 'No lift' : '&nbsp;'}</div></div>`;
+          }).join('')}</div></div>`;
+      }).join('')}
+      <div class="sub" style="margin:4px 0 10px">Tap a light for white, again for red. Two of either decides it.</div>
+      <button class="btn wide" id="mdTests" ${T.per.some(p => p.best) ? '' : 'disabled'}>${d.saved ? '✓ Saved as tested singles' : 'Save results as tested singles'}</button>`;
+  };
+
+  const smTab = () => {
+    const evs = m.events || [];
+    const field = d.field || 0;
+    const tot = evs.reduce((a, ev) => { const r = d.sm[ev.id] || {}; return a + (field && r.place > 0 ? Math.max(0, field + 1 - r.place) : 0); }, 0);
+    return `<div class="grid2" style="margin-bottom:10px">
+        <div class="field" style="margin:0"><label for="mdField">Competitors</label><input id="mdField" type="number" inputmode="numeric" value="${field || ''}" placeholder="e.g. 10"></div>
+        <div class="stat"><div class="k">Points</div><div class="v">${field ? tot : '—'}</div></div>
+      </div>
+      ${evs.length ? evs.map(ev => {
+        const r = d.sm[ev.id] || {};
+        const ph = { max: U(), reps: 'reps', time: 'm:ss', distance: 'metres', hold: 'm:ss' }[ev.rule] || '';
+        return `<div class="md-lift"><div class="row between"><b>${esc(ev.name || 'Event')}</b><span class="sub">${esc(smRuleText(ev))}</span></div>
+          <div class="grid3" style="margin-top:6px">
+            <input data-smres="${ev.id}" value="${esc(r.res || '')}" placeholder="${ph}" aria-label="${esc(ev.name)} result" inputmode="${ph.includes(':') ? 'numeric' : 'decimal'}">
+            <input data-smplace="${ev.id}" type="number" inputmode="numeric" value="${r.place || ''}" placeholder="place" aria-label="${esc(ev.name)} placing">
+            <div class="mono" style="align-self:center">${field && r.place > 0 ? `${Math.max(0, field + 1 - r.place)} pts` : ''}</div>
+          </div></div>`;
+      }).join('') : '<div class="sub">No events yet — add them with Edit on the event card.</div>'}
+      <div class="sub" style="margin-top:6px">Points: the winner of an event scores as many as there are competitors, then one fewer per place.</div>`;
+  };
+
+  const checkTab = () => `
+    <div class="eyebrow" style="margin-bottom:6px">Rack heights</div>
+    <div class="grid2">${(pts ? [] : RACK_FIELDS).map(([k, l]) => `<div class="field"><label for="mdr-${k}">${l}</label><input id="mdr-${k}" data-mdrack="${k}" value="${esc(d.rack[k] || '')}" placeholder="e.g. 7 / in 2"></div>`).join('')}</div>
+    ${pts ? '<div class="field"><label for="mdr-notes">Implement notes</label><input id="mdr-notes" data-mdrack="notes" value="' + esc(d.rack.notes || '') + '" placeholder="yoke height, stone sizes…"></div>' : ''}
+    <div class="eyebrow" style="margin:10px 0 6px">Gear · ${d.gear.filter(g => g.ok).length}/${d.gear.length} packed</div>
+    ${d.gear.map((g, i) => `<label class="row" style="gap:10px;align-items:center;padding:6px 0;border-bottom:1px solid var(--line)">
+      <input type="checkbox" data-mdgear="${i}" ${g.ok ? 'checked' : ''} style="width:auto"><span class="grow">${esc(g.n)}</span>
+      <button class="btn xs ghost" data-mdgearrm="${i}" aria-label="Remove ${esc(g.n)}">×</button></label>`).join('')}
+    <div class="row" style="gap:8px;margin-top:8px"><input id="mdGearNew" class="grow" placeholder="Add an item"><button class="btn sm" id="mdGearAdd">Add</button></div>`;
+
+  const body = () => `<div class="seg" id="mdTabs" style="margin-bottom:12px">${tabs.map(([k, l]) => `<button data-mdtab="${k}" class="${mdTab === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+    ${mdTab === 'warm' ? warmTab() : mdTab === 'attempts' ? (pts ? smTab() : attTab()) : checkTab()}`;
+
+  modal({
+    title: `Meet day · ${m.name}`, wide: true, body: body(),
+    foot: `<button class="btn primary wide" data-close>Close</button>`,
+    onOpen: bg => {
+      const keep = () => save();
+      const redraw = () => { const b = $('.modal-body', bg); const y = b.scrollTop; b.innerHTML = body(); wire(); b.scrollTop = y; };
+      const wire = () => {
+        bg.querySelectorAll('[data-mdtab]').forEach(b => b.onclick = () => { mdTab = b.dataset.mdtab; redraw(); });
+        bg.querySelectorAll('[data-mdlift]').forEach(b => b.onclick = () => { mdLift = +b.dataset.mdlift; redraw(); });
+        const num = (sel, f) => { const el = $(sel, bg); if (el) el.onchange = () => { f(el.value); keep(); redraw(); }; };
+        num('#mdStart', v => { d.start[(lifts[clamp(mdLift, 0, lifts.length - 1)] || {}).slot] = v; });
+        num('#mdPer', v => { d.perMin = +v > 0 ? +v : 1; });
+        num('#mdFlight', v => { d.flight = Math.max(1, Math.round(+v || 1)); });
+        num('#mdOrder', v => { d.order = Math.max(1, Math.round(+v || 1)); });
+        num('#mdBw', v => { d.bw = +v > 0 ? toKg(+v) : 0; });
+        num('#mdField', v => { d.field = Math.max(0, Math.round(+v || 0)); });
+        bg.querySelectorAll('[data-mdw]').forEach(el => { selectOnFocus(el); el.onchange = () => {
+          const [slot, i] = el.dataset.mdw.split('.'); const arr = d.att[slot] = d.att[slot] || [];
+          arr[+i] = { ...(arr[+i] || {}), w: el.value === '' ? null : toKg(+el.value) }; keep(); redraw();
+        }; });
+        bg.querySelectorAll('[data-mdl]').forEach(b => b.onclick = () => {
+          const [slot, i, j] = b.dataset.mdl.split('.'); const arr = d.att[slot] = d.att[slot] || [];
+          const a = arr[+i] = { ...(arr[+i] || {}) }; a.l = [...(a.l || [0, 0, 0])]; a.l[+j] = (a.l[+j] + 1) % 3;
+          keep(); redraw();
+        });
+        const tb = $('#mdTests', bg);
+        if (tb) tb.onclick = () => {
+          const T = mdTotals(m);
+          const entries = T.per.filter(p => p.best > 0).map(p => ({ leaf: keyLeaf(liftKey(p.lift)), kg: p.best, legacyName: p.lift.label }));
+          const n = logTest(m.date <= today() ? m.date : today(), entries, `${m.name} — meet results`);
+          if (n) { d.saved = true; keep(); toast(`${n} result${n === 1 ? '' : 's'} saved as tested singles`, 'green'); redraw(); }
+        };
+        bg.querySelectorAll('[data-smres]').forEach(el => el.onchange = () => { const r = d.sm[el.dataset.smres] = d.sm[el.dataset.smres] || {}; r.res = el.value.trim(); keep(); });
+        bg.querySelectorAll('[data-smplace]').forEach(el => el.onchange = () => { const r = d.sm[el.dataset.smplace] = d.sm[el.dataset.smplace] || {}; r.place = Math.max(0, Math.round(+el.value || 0)); keep(); redraw(); });
+        bg.querySelectorAll('[data-mdrack]').forEach(el => el.oninput = () => { d.rack[el.dataset.mdrack] = el.value; keep(); });
+        bg.querySelectorAll('[data-mdgear]').forEach(el => el.onchange = () => { d.gear[+el.dataset.mdgear].ok = el.checked; keep(); redraw(); });
+        bg.querySelectorAll('[data-mdgearrm]').forEach(b => b.onclick = ev => { ev.preventDefault(); d.gear.splice(+b.dataset.mdgearrm, 1); keep(); redraw(); });
+        const add = $('#mdGearAdd', bg);
+        if (add) add.onclick = () => { const v = $('#mdGearNew', bg).value.trim(); if (!v) return; d.gear.push({ n: v, ok: false }); keep(); redraw(); };
+      };
+      wire();
+    },
+    onClose: () => render(),
+  });
+}
+
+/* ---------------- strongman shows (events spec §4) ---------------- */
+const SM_RULES = [['max', 'Max weight'], ['reps', 'Max reps'], ['time', 'Fastest time'], ['distance', 'Furthest distance'], ['hold', 'Longest hold']];
+function smRuleText(ev) {
+  const W = ev.w > 0 ? wt(ev.w) : '';
+  switch (ev.rule) {
+    case 'max': return 'max weight';
+    case 'reps': return `${W ? W + ' · ' : ''}max reps${ev.cap ? ` in ${capLabel(ev.cap)}` : ''}`;
+    case 'time': return `${W ? W + ' · ' : ''}${ev.target ? fmtM(ev.target) + ' ' : ''}for time${ev.cap ? `, ${capLabel(ev.cap)} cap` : ''}`;
+    case 'distance': return `${W ? W + ' · ' : ''}furthest${ev.cap ? ` in ${capLabel(ev.cap)}` : ''}`;
+    case 'hold': return `${W ? W + ' · ' : ''}longest hold`;
+    default: return '';
+  }
+}
+/* Your best at exactly this event, from history — the prep question. */
+function smBest(ev) {
+  if (!ev.key) return null;
+  const k = ev.key, w0 = ev.w > 0 ? ev.w : 0, leaf = keyLeaf(k), metric = metricFor(leaf);
+  if (ev.rule === 'max') { const st = statsFor(k); return st ? `${wt(st.bestW.w)} × ${st.bestW.r}` : null; }
+  if (ev.rule === 'reps') {
+    if (ev.cap) { const R = shapeRecords(`${k}|cap${ev.cap}`, 'cap'); const n = R.most[w0]; return n ? `${n} reps in ${capLabel(ev.cap)}` : null; }
+    const n = Math.max(0, ...historyFor(k).filter(s => s.w >= w0).map(s => s.r));
+    return n ? `${n} reps at ${w0 ? wt(w0) + '+' : 'any weight'}` : null;
+  }
+  if (ev.rule === 'time') {
+    if (metric === 'race') {
+      const R = shapeRecords(k, 'race');
+      const hits = Object.entries(R.fast).filter(([key]) => key.startsWith(`${w0}|`) && (!ev.target || key.endsWith(`|${ev.target}`))).map(([, v]) => v);
+      return hits.length ? fmtSec(Math.min(...hits)) : null;
+    }
+    const f = shapeRecords(k, 'carry').fast[`${w0}|${ev.target || 0}`];
+    return f ? `${fmtSec(f)} for ${fmtM(ev.target)}` : null;
+  }
+  if (ev.rule === 'distance') {
+    const far = ev.cap ? shapeRecords(`${k}|cap${ev.cap}`, 'capcarry').far[w0] : shapeRecords(k, 'carry').far[w0];
+    return far ? fmtM(far) : null;
+  }
+  if (ev.rule === 'hold') {
+    const r = holdRecords(metric === 'time' ? k : `${k}|iso`).byWeight[w0];
+    return r ? fmtSec(r) : null;
+  }
+  return null;
+}
+function smLastTrained(ev) {
+  if (!ev.key) return null;
+  const mv = keyLeaf(ev.key).movement;
+  const w = S.workouts.filter(x => x.status === 'completed' && (x.exercises || []).some(e => e.leaf && e.leaf.movement === mv))
+    .sort((a, b) => a.date < b.date ? 1 : -1)[0];
+  return w ? w.date : null;
+}
+function strongmanCard(m) {
+  const days = daysBetween(today(), m.date), weeks = Math.floor(days / 7);
+  const d = m.day || {}, evs = m.events || [];
+  const field = d.field || 0;
+  const pts = field ? evs.reduce((a, ev) => { const r = (d.sm || {})[ev.id] || {}; return a + (r.place > 0 ? Math.max(0, field + 1 - r.place) : 0); }, 0) : 0;
+  return `<div class="card">
+    <div class="row between" style="margin-bottom:12px">
+      <div class="grow"><div style="font-weight:750;font-size:16px">${esc(m.name)}</div>
+        <div class="sub">Strongman · ${fmtDate(m.date, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })}${m.loc ? ' · ' + esc(m.loc) : ''}${m.fed ? ' · ' + esc(m.fed) : ''}</div></div>
+      <button class="btn xs ghost" data-edit-meet="${m.id}">Edit</button>
+    </div>
+    <div class="row between" style="margin-bottom:12px">
+      <div class="countdown"><span class="n">${days}</span><span class="sub">days out${weeks ? ` · ${weeks} week${weeks === 1 ? '' : 's'}` : ''}</span></div>
+      ${m.wclass ? `<span class="chip">${esc(m.wclass)}${m.bwTarget ? ` · target ${wt(m.bwTarget)}` : ''}</span>` : ''}
+    </div>
+    ${bwRunInLine(m)}
+    <button class="btn wide" data-meetday="${m.id}" style="margin-bottom:14px">${days <= 7 ? '▶ ' : ''}Meet day — results, checklist</button>
+    <div class="eyebrow" style="margin-bottom:6px">Events${pts ? ` · ${pts} points` : ''}</div>
+    ${evs.length ? evs.map(ev => {
+      const best = smBest(ev), last = smLastTrained(ev);
+      return `<div class="sm-ev">
+        <div class="row between"><b>${esc(ev.name || 'Event')}</b><span class="sub">${esc(smRuleText(ev))}</span></div>
+        <div class="sub">${ev.key ? `${esc(leafName(ev.key))} · best ${best ? `<b>${esc(best)}</b>` : 'not logged yet'}${last ? ` · last trained ${relDay(last).toLowerCase()}` : ''}` : 'Link it to an exercise (Edit) to see your best for it.'}</div>
+      </div>`;
+    }).join('') : `<div class="sub">No events yet — tap Edit to add the show's events.</div>`}
+    ${m.notes ? `<div class="sub" style="margin-top:8px">“${esc(m.notes)}”</div>` : ''}
+  </div>`;
+}
+function openStrongmanMeet(id) {
+  const ex = S.meets.find(x => x.id === id);
+  const m = ex ? structuredClone(ex) : { id: uid(), type: 'strongman', name: '', date: '', fed: '', loc: '', wclass: '', bwTarget: 0, notes: '', lifts: {}, events: [] };
+  m.events = m.events || [];
+  const dflt = new Date(); dflt.setDate(dflt.getDate() + 84);
+  const evRow = (ev, i) => `<div class="sm-edit">
+      <div class="row" style="gap:6px"><input class="grow" data-sme="${i}.name" value="${esc(ev.name || '')}" placeholder="Event name (e.g. Yoke)" aria-label="Event name">
+        <button class="btn xs ghost" data-smrm="${i}" aria-label="Remove event">×</button></div>
+      <div class="grid2" style="margin-top:6px">
+        <select data-sme="${i}.rule" aria-label="Rule">${SM_RULES.map(([k, l]) => `<option value="${k}" ${ev.rule === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+        <button class="btn sm ghost" data-smpick="${i}" style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.key ? esc(leafName(ev.key)) : 'Link exercise…'}</button>
+      </div>
+      <div class="grid3" style="margin-top:6px">
+        ${ev.rule === 'max' ? '<span></span>' : `<input type="number" step="0.5" inputmode="decimal" data-sme="${i}.w" value="${ev.w ? dw(ev.w) : ''}" placeholder="${U()}" aria-label="Weight">`}
+        ${ev.rule === 'time' ? `<input type="number" inputmode="numeric" data-sme="${i}.target" value="${ev.target || ''}" placeholder="metres" aria-label="Course length (metres)">` : '<span></span>'}
+        ${['reps', 'distance', 'time'].includes(ev.rule) ? `<input inputmode="numeric" data-sme="${i}.cap" value="${ev.cap ? fmtSec(ev.cap) : ''}" placeholder="cap m:ss" aria-label="Time cap">` : '<span></span>'}
+      </div></div>`;
+  modal({
+    title: ex ? 'Edit strongman show' : 'New strongman show',
+    body: `
+      <div class="field"><label>Show name</label><input id="smName" value="${esc(m.name)}" placeholder="e.g. Novice Strongman Qualifier"></div>
+      <div class="grid2">
+        <div class="field"><label>Date</label><input type="date" id="smDate" value="${m.date || iso(dflt)}"></div>
+        <div class="field"><label>Federation</label><input id="smFed" value="${esc(m.fed)}" placeholder="optional"></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label>Location</label><input id="smLoc" value="${esc(m.loc)}" placeholder="optional"></div>
+        <div class="field"><label>Weight class</label><input id="smWc" value="${esc(m.wclass)}" placeholder="e.g. u105kg"></div>
+      </div>
+      <div class="field"><label>Bodyweight target (${U()})</label>
+        <input type="number" step="0.1" inputmode="decimal" id="smBw" value="${m.bwTarget ? dw(m.bwTarget) : ''}" placeholder="optional"></div>
+      <div class="eyebrow" style="margin:14px 0 8px">Events</div>
+      <div id="smEvents">${m.events.map(evRow).join('')}</div>
+      <button class="btn sm wide ghost" id="smAdd" style="margin-top:6px">+ Add an event</button>
+      <div class="field" style="margin-top:12px"><label>Notes</label><textarea id="smNotes" rows="2">${esc(m.notes || '')}</textarea></div>`,
+    foot: `${ex ? '<button class="btn danger" id="smDel">Delete</button>' : ''}<button class="btn primary" id="smSave">Save show</button>`,
+    onOpen: bg => {
+      const draw = () => { $('#smEvents', bg).innerHTML = m.events.map(evRow).join(''); wire(); };
+      const wire = () => {
+        bg.querySelectorAll('[data-sme]').forEach(el => {
+          const upd = () => {
+            const [i, f] = el.dataset.sme.split('.'), ev = m.events[+i];
+            if (f === 'name') ev.name = el.value;
+            else if (f === 'rule') { ev.rule = el.value; draw(); }
+            else if (f === 'w') ev.w = el.value === '' ? 0 : toKg(+el.value);
+            else if (f === 'target') ev.target = Math.max(0, +el.value || 0);
+            else if (f === 'cap') ev.cap = parseTime(el.value) || 0;
+          };
+          el.oninput = el.dataset.sme.endsWith('.rule') ? null : upd;
+          el.onchange = upd;
+        });
+        bg.querySelectorAll('[data-smrm]').forEach(b => b.onclick = () => { m.events.splice(+b.dataset.smrm, 1); draw(); });
+        bg.querySelectorAll('[data-smpick]').forEach(b => b.onclick = () => {
+          const ev = m.events[+b.dataset.smpick];
+          pickExercise(leaf => { ev.key = leafKey(leaf); if (!ev.name) ev.name = displayName(leaf); draw(); });
+        });
+      };
+      wire();
+      $('#smAdd', bg).onclick = () => { m.events.push({ id: uid(), name: '', rule: 'max', w: 0 }); draw(); };
+      const del = $('#smDel', bg);
+      if (del) del.onclick = () => confirmDlg('Delete this show?', () => { S.meets = S.meets.filter(x => x.id !== m.id); save(); closeAllModals(); render(); });
+      $('#smSave', bg).onclick = () => {
+        m.name = $('#smName', bg).value.trim();
+        m.date = $('#smDate', bg).value;
+        if (!m.name) return toast('Give the show a name');
+        if (!m.date) return toast('Pick a date');
+        m.fed = $('#smFed', bg).value.trim(); m.loc = $('#smLoc', bg).value.trim(); m.wclass = $('#smWc', bg).value.trim();
+        m.bwTarget = $('#smBw', bg).value ? toKg(+$('#smBw', bg).value) : 0;
+        m.notes = $('#smNotes', bg).value.trim();
+        m.events = m.events.filter(ev => ev.name || ev.key);
+        S.meets = S.meets.filter(x => x.id !== m.id);
+        S.meets.push(m);
+        save(); closeAllModals(); render(); toast('Show saved', 'green');
+      };
+    },
+  });
+}
+
 function openMeet(id, typeId, ownLifts) {
-  const ps = priorityStats();
   const existing = S.meets.find(x => x.id === id);
+  if ((EVENT_TYPES[typeId] || eventType(existing)).events) return openStrongmanMeet(id);
+  const ps = priorityStats();
   const type = EVENT_TYPES[typeId] || eventType(existing);
   const lifts = (ownLifts && ownLifts.length) ? ownLifts
     : (existing ? eventLifts(existing) : type.lifts);
@@ -6907,6 +7356,7 @@ function openMeet(id, typeId, ownLifts) {
           }, {}),
           pct: m.pct || { o: 90, s: 95 },
           prog: m.prog,
+          ...(m.strategy ? { strategy: m.strategy } : {}), ...(m.attemptsLocked ? { attemptsLocked: true } : {}), ...(m.day ? { day: m.day } : {}),
         };
         S.meets = S.meets.filter(x => x.id !== m.id);
         S.meets.push(rec);
@@ -6935,7 +7385,7 @@ function openAddEvent() {
       const t = EVENT_TYPES[b.dataset.etype];
       closeModal();
       if (t && t.chooseLift) openChooseLift(t);
-      else openMeet(null, b.dataset.etype);
+      else openMeet(null, b.dataset.etype);   // a strongman show goes to its own editor from there
     }),
   });
 }
@@ -8819,6 +9269,14 @@ function wire() {
     toast(mt.attemptsLocked ? 'Attempts pinned to the plan' : 'Attempts following your tests', 'green');
   });
     $('#editPriority').onclick = openPriority;
+    v.querySelectorAll('[data-meetday]').forEach(b => b.onclick = () => openMeetDay(b.dataset.meetday));
+    v.querySelectorAll('[data-strat]').forEach(b => b.onclick = () => {
+      const [id, k] = b.dataset.strat.split(':');
+      const mt = S.meets.find(x => x.id === id);
+      if (!mt) return;
+      if (k === 'standard') delete mt.strategy; else mt.strategy = k;
+      save(); render();
+    });
   }
 
   // the rest loop runs on every page, so the end alert fires wherever you are

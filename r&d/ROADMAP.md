@@ -305,7 +305,7 @@ show a dry-run report before anything is written.
   lifter is responsible for what they lift.
 - Links to a short in-app help / FAQ (Blast #27).
 
-### [ ] C2. Events page — a real meet-day companion
+### [x] C2. Events page — a real meet-day companion — shipped 0.37.0 (spec: `r&d/specs/events-spec.md`)
 Builds on the existing Events page. Write `r&d/specs/events-spec.md` first.
 - Pick the event type (powerlifting meet, strongman show, para powerlifting —
   C3, other) and queue several events at once.
