@@ -1454,7 +1454,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.22.2';
+const APP_VERSION = '0.22.3';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -3016,6 +3016,7 @@ let page = 'home';
 let calCursor = new Date();          // month shown
 let calSelected = today();
 let analyticsSort = 'sessions';
+let analyticsTab = 'exercises';   // exercises | rankings | muscles — one screen each, not one long scroll
 let analyticsQuery = '';
 
 function go(p) {
@@ -4768,13 +4769,18 @@ function viewAnalytics() {
     <div class="stat"><div class="k">PRs</div><div class="v">${totalPRs}</div><div class="d">all time</div></div>
   </div>
 
-  ${(() => {
+  <div class="seg" id="anTabs" style="margin-bottom:13px">
+    ${[['exercises', 'Exercises'], ['rankings', 'Rankings'], ['muscles', 'Muscles']]
+      .map(([k, l]) => `<button data-antab="${k}" class="${analyticsTab === k ? 'on' : ''}">${l}</button>`).join('')}
+  </div>
+
+  ${analyticsTab === 'exercises' ? '' : (() => {
       const ranks = allRanks(), ms = muscleScores(), bw = bodyweightKg();
       if (!bw) return `<div class="card"><div class="eyebrow" style="margin-bottom:6px">Rankings</div>
       <div class="sub">Log a check-in with your bodyweight — every standard is a multiple of it.</div></div>`;
-      if (!ranks.length) return '';
+      if (!ranks.length) return `<div class="card"><div class="empty">Nothing ranked yet — rankings cover the lifts with a strength standard.</div></div>`;
       const bar = (score, color) => `<div class="bar"><i style="width:${Math.max(2, score).toFixed(1)}%;background:${color}"></i></div>`;
-      return `
+      if (analyticsTab === 'rankings') return `
   <div class="card flush" style="margin-bottom:13px">
     <div class="row between" style="padding:11px 13px 8px">
       <div class="eyebrow">Rankings · per lift</div>
@@ -4793,8 +4799,8 @@ function viewAnalytics() {
     <div class="sub" style="padding:9px 13px 11px;border-top:1px solid var(--line)">
       Scored against general able-bodied strength tables, 20 points per tier. A reference point, not a verdict — your leverages aren't what those tables assume.
     </div>
-  </div>
-
+  </div>`;
+      return `
   ${viewMuscleMap()}
   ${ms.length ? `
   <div class="card flush" style="margin-bottom:13px">
@@ -4817,7 +4823,7 @@ function viewAnalytics() {
   </div>` : ''}`;
     })()}
 
-  ${stats.length ? `
+  ${analyticsTab !== 'exercises' ? '' : stats.length ? `
   <input id="anQ" placeholder="Search exercises…" value="${esc(analyticsQuery)}" autocomplete="off" style="margin-bottom:10px">
   <div class="seg" style="margin-bottom:13px">
     ${[['sessions', 'Sessions'], ['pr', 'PR'], ['progress', 'Progress'], ['recent', 'Recent']]
@@ -4864,7 +4870,6 @@ function primaryVariantKey(movementId) {
 }
 
 let _mvTab = 'info';
-let _mvStat = 'summary';   // Statistics sub-tab: summary | graph | records
 /* The movement page. A parent rolls its leaves up for presentation and stores
    nothing (section 4.3); the headline is the primary variant's or nothing at
    all (4.4), never the maximum across variants. */
@@ -4940,19 +4945,11 @@ function openMovementPage(movementId, focusKey) {
           <div class="stat"><div class="k">Top set</div><div class="v">${w(fs.bestW.w)}</div><div class="d">× ${fs.bestW.r}</div></div>
           <div class="stat"><div class="k">Last</div><div class="v" style="font-size:15px">${esc(relDay(fs.lastDate))}</div><div class="d">${fs.sessions} sessions</div></div>
         </div>` : `<div class="sub">This variant hasn't been logged yet.</div>`}` : '';
-    /* Sub-tabs, so the graph and the records aren't a scroll away. */
-    const sub = `<div class="seg" id="mvStatTabs" style="margin-bottom:12px">
-      <button data-mvstat="summary" class="${_mvStat === 'summary' ? 'on' : ''}">Summary</button>
-      <button data-mvstat="graph" class="${_mvStat === 'graph' ? 'on' : ''}">Graph</button>
-      <button data-mvstat="records" class="${_mvStat === 'records' ? 'on' : ''}">Records</button>
-    </div>`;
-    const body = _mvStat === 'graph'
-      ? `<div class="eyebrow" style="margin-bottom:6px">Estimated 1RM by variant</div>
-         ${chartMulti(series, { fmt: v => nice(Math.round(v)) })}`
-      : _mvStat === 'records'
-        ? `<table class="vartable"><tbody>${rows || '<tr><td class="sub">Nothing logged yet</td></tr>'}</tbody></table>`
-        : `${headline}${focusStrip}`;
-    return sub + body;
+    return `${headline}${focusStrip}
+      <div class="eyebrow" style="margin:14px 0 6px">Estimated 1RM by variant</div>
+      ${chartMulti(series, { fmt: v => nice(Math.round(v)) })}
+      <div class="eyebrow" style="margin:16px 0 4px">Records per variant</div>
+      <table class="vartable"><tbody>${rows || '<tr><td class="sub">Nothing logged yet</td></tr>'}</tbody></table>`;
   };
 
   const historyTab = () => {
@@ -4994,7 +4991,6 @@ function openMovementPage(movementId, focusKey) {
     onOpen: bg => {
       const bind = () => {
         bg.querySelectorAll('[data-mvtab]').forEach(b => b.onclick = () => { _mvTab = b.dataset.mvtab; redraw(); });
-        bg.querySelectorAll('[data-mvstat]').forEach(b => b.onclick = () => { _mvStat = b.dataset.mvstat; redraw(); });
         bg.querySelectorAll('[data-var]').forEach(b => b.onclick = () => { focus = b.dataset.var; redraw(); });
         bg.querySelectorAll('[data-hist-wo]').forEach(b => b.onclick = () => { closeAllModals(); viewCompleted(b.dataset.histWo); });
       };
@@ -7831,6 +7827,7 @@ function wire() {
       };
     }
     v.querySelectorAll('[data-sort]').forEach(b => b.onclick = () => { analyticsSort = b.dataset.sort; render(); });
+    v.querySelectorAll('[data-antab]').forEach(b => b.onclick = () => { analyticsTab = b.dataset.antab; render(); window.scrollTo(0, 0); });
     v.querySelectorAll('[data-muscle]').forEach(g => {
       const key = g.dataset.muscle;
       if (!key) return;
