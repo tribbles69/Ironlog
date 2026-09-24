@@ -10,7 +10,6 @@ manifest.webmanifest    name, icon, "open full screen"
 version.json            how a running app notices a new build
 program.json            bundled training program
 slew-core.js            VBT velocity engine (generated — see r&d/tools)
-parse-food.js           Netlify function: AI food parsing, keeps the API key server-side
 icon-*.png              app icons
 r&d/                    roadmap, specs, notes, data sources, build tools — not used by the app
 CLAUDE.md               entry point for coding agents
@@ -64,111 +63,20 @@ restores it. Worth doing after a meet, or any time you'd be annoyed to lose it.
 
 ---
 
-# Food tab — setup
+# Food logging (removed)
 
-The Food tab needs no setup and, for ordinary food, no network. Press
-Parse and every item is looked up in the built-in tables first: 2,848 UK
-foods from CoFID plus the curated rows. Those are tagged TABLE, cost
-nothing and work in aeroplane mode and basement gyms.
+Food logging left Ironlog in 0.25.0 for its own app. The Food tab, the CoFID
+and curated food tables, `parse-food.js` (the Netlify food function) and
+`r&d/tools/build-foods.cjs` are out of the app. The function, the tables and
+the build tool are kept for the food app in `r&d/food-handover/`.
 
-Only what the tables cannot name is sent to Claude — and only that part
-of the sentence, not the whole thing. Those items are tagged EST. A
-normal day of food usually makes no API call at all, so the key below is
-worth having but is rarely used.
+A food log logged before then isn't lost: it stays on the device, unshown,
+until it's saved from Settings → Data → **Save old food log** (JSON for the
+food app, or CSV) and removed from Settings → **Clear data**.
 
-Without a key, unrecognised items are listed by name and you add them by
-hand rather than the app inventing a number.
-
-## 1. Get an API key
-
-console.anthropic.com → API Keys → Create Key. It starts with `sk-ant-`
-and is shown once. Add a payment method and set a spend cap while you're
-there — Settings → Limits.
-
-Haiku costs $1 per million input tokens and $5 per million output. A meal
-parse is roughly a third of a penny, so five a day is well under 50p a
-month.
-
-## 2. Deploy
-
-Drag this whole folder onto app.netlify.com/drop, or connect the repo.
-`netlify.toml` already points at the function.
-
-Then: Site configuration → Environment variables → add
-
-    ANTHROPIC_API_KEY = sk-ant-...
-
-Redeploy after adding it. The key stays on Netlify and is never sent to
-the phone.
-
-## 3. Install
-
-Open the Netlify URL in Chrome → ⋮ → Install app.
-
-Your existing log does not come with you — IndexedDB is per-origin, so
-the netlify.app address starts empty. Before you switch: open the old
-install, Settings ⚙ → Export, then Import on the new one.
-
-## Files
-
-    netlify.toml                     publish + functions config
-    netlify/functions/parse-food.js  the only server-side code
-
-## If parsing fails
-
-The app falls back to manual entry and says why. Common causes:
-
-- `ANTHROPIC_API_KEY is not set` — added but not redeployed
-- `upstream 401` — key wrong or revoked
-- `upstream 400` — usually no credit on the account
-- offline — expected; use *Enter manually*
-
-Netlify → Logs → Functions shows the real error.
-
-## Using a local model instead
-
-The function's contract is: POST `{ "text": "..." }`, get back a JSON
-array of `{name, serving, meal, kcal, protein, carbs, fats, fiber}`.
-Anything that speaks that shape works — Ollama behind a small shim, a
-different provider, your own box.
-
-The catch with Ollama specifically: a page served over https cannot
-call `http://localhost:11434`. Chrome blocks it as mixed content. To
-get round it you need an https address for Ollama, e.g.
-
-    OLLAMA_ORIGINS=* ollama serve
-    cloudflared tunnel --url http://localhost:11434
-
-and your machine has to be awake whenever you log a meal. For a phone
-app the table is usually the better trade until the key is sorted.
-
-## The two food tables
-
-**`LOCAL_FOODS`** — the curated rows, hand-edited, one per food:
-
-    ['Display name', 'keyword|other keyword', kcal, protein, carbs, fat, fibre, eachGrams]
-
-Values are per 100 g. The last field is optional and only for things
-counted rather than weighed — an egg, a slice of bread, a pint. The
-longest matching keyword wins, so "chicken breast" beats "chicken".
-
-**`FOOD_DB`** — CoFID 2021 (McCance & Widdowson's), Crown copyright,
-Open Government Licence v3. 2,848 UK foods as one generated line of
-`name<TAB>kcal<TAB>protein<TAB>carbs<TAB>fat<TAB>fibre`. Don't hand-edit
-it; regenerate when a new CoFID edition is published:
-
-    node "r&d/tools/build-foods.cjs"
-
-That downloads the current spreadsheet from gov.uk and rewrites the one
-`FOOD_DB` line, leaving the rest of index.html alone. Pass a path to use
-a local .xlsx instead. Bump APP_VERSION and sw.js VERSION afterwards.
-
-**Which one answers.** The curated row wins when its *name* accounts for
-what you typed, because it is tuned to how food is actually logged —
-rice and pasta cooked, mince at 5%, a whole egg — where CoFID leads with
-raw weights. Otherwise the database answers, which is what makes
-"hummus" houmous at 307 kcal rather than chickpeas at 164, and
-"orange juice" juice rather than an orange.
+The optional Anthropic API key in Settings is now only used by voice set
+logging, as a fallback when the built-in grammar can't read what was said.
+It's held on the device and sent nowhere but Anthropic.
 
 ---
 

@@ -404,6 +404,8 @@ Migrated sets keep `legacyName` for one release.
 - Weights in kg throughout.
 - `parse-food.js` is unreferenced and unreachable but **must not be
   deleted** — it is the parser contract for the future server-side move.
+  (0.25.0: food left Ironlog; it now lives in `r&d/food-handover/` for the
+  food app, out of the deployed root.)
 
 ## 10. Out of scope
 
