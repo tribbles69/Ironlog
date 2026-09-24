@@ -63,22 +63,10 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
 
 ## Now
 
-### 0. Fix: "Log a test" can't save anything — patch ready
-Bug (reported 23 Sep 2026): every combination of entries fails with "Enter a
-weight for at least one lift", and all three rows show Back Squat.
-- `openTestLog` preselected `sel(r.name, …)` against options valued by **key**,
-  so nothing matched and every row fell back to the first barbell lift.
-- The save built entries as `{ name, kg }`, but `logTest` filters on
-  `e.leaf` — so every entry was dropped and it always returned 0.
-
-Also requested in the same report: **tests are the big three only** (squat,
-bench, deadlift — pinned to the priority-lift variants, no picker) and **no
-warm-up ramp ▲ button** in the test modal (`openRamp` stays for the workout
-page).
-
-Patch: **`r&d/patches/0.16.3-test-log.patch`** — `git apply` it, run the
-script check, commit, tick this. It bumps to 0.16.3 / `ironlog-v30`; if other
-work has bumped since, rebase the version lines rather than going backwards.
+### 0. ~~Fix: "Log a test" can't save anything~~ — [x] shipped 0.16.3
+`openTestLog` now logs the big three only (squat, bench, deadlift, pinned to
+the priority-lift variants, no picker, no ramp ▲ button) and sends entries with
+`leaf`, so `logTest` keeps them. Applied from the 0.16.3 patch (now deleted).
 
 ### 1. Isometric holds
 Spec: **`r&d/specs/isometrics-spec.md`** — ready to build.

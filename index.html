@@ -1430,7 +1430,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.16.2';
+const APP_VERSION = '0.16.3';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4763,38 +4763,37 @@ function openExDetail(key) {
    ============================================================ */
 /* Log one lift or several — whatever actually got tested. Blank rows are
    skipped, so a squat-only day is a first-class entry, not a partial one. */
-let testDraft = null;
+/* Tests are the big three only — squat, bench, deadlift — pinned to the
+   priority-lift variants, so the rows are fixed rather than picked. (0.16.3:
+   the old picker preselected by name against key-valued options, so every row
+   fell back to the first barbell lift, and the entries it sent carried no leaf,
+   so logTest filtered all of them out and nothing could ever save.) */
+const TEST_FALLBACK = { squat: 'Back Squat', bench: 'Bench Press', deadlift: 'Deadlift' };
+function testRows() {
+  return EVENT_TYPES[DEFAULT_EVENT_TYPE].lifts.map(l => {
+    const leaf = priorityLeaf(l.slot) || leafForName(TEST_FALLBACK[l.slot] || l.label);
+    return { slot: l.slot, label: l.label, leaf, name: displayName(leaf) };
+  });
+}
 function openTestLog() {
-  const ex = allExercises().filter(x => x.leaf.equipment === 'barbell');
-  const rows = priorityKeys().slice(0, 3);
-  testDraft = rows.map(k => ({ key: k, leaf: keyLeaf(k), name: leafName(k), kg: 0 }));
-  const sel = (v, id) => `<select id="${id}">${ex.map(x => `<option value="${esc(x.key)}"${x.key === v ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select>`;
-
+  const rows = testRows();
   modal({
     title: 'Log a test',
     body: `
       <p class="sub" style="margin-top:0">Enter what you actually tested and leave the rest blank. Each one logs as a true single, so it replaces the estimate for that lift.</p>
       <div class="field"><label>Date</label><input type="date" id="tDate" value="${today()}"></div>
-      ${testDraft.map((r, i) => `
-        <div class="field"><label>Lift ${i + 1}</label>
-          <div class="row" style="gap:8px">
-            <div class="grow">${sel(r.name, `tEx${i}`)}</div>
-            <input type="number" step="0.5" inputmode="decimal" id="tKg${i}" placeholder="${U()}" style="width:96px">
-            <button class="btn sm ghost" data-tramp="${i}" title="Warm-up ramp">▲</button>
-          </div></div>`).join('')}
+      ${rows.map((r, i) => `
+        <div class="field"><label>${esc(r.label)} <span class="dimmer">${esc(r.name)}</span></label>
+          <input type="number" step="0.5" min="0" inputmode="decimal" id="tKg${i}" placeholder="${U()}"></div>`).join('')}
       <div class="field"><label>Notes (optional)</label><input id="tNote" placeholder="kit, commands, how it moved"></div>
     `,
     foot: `<button class="btn primary" id="tSave">Save test</button>`,
     onOpen: bg => {
-      bg.querySelectorAll('[data-tramp]').forEach(b => b.onclick = () => {
-        const i = +b.dataset.tramp;
-        openRamp($(`#tEx${i}`, bg).value, toKg(+$(`#tKg${i}`, bg).value || 0) || null);
-      });
       $('#tSave', bg).onclick = () => {
         const date = $('#tDate', bg).value || today();
-        const entries = testDraft.map((_, i) => ({
-          name: $(`#tEx${i}`, bg).value,
-          kg: toKg(+$(`#tKg${i}`, bg).value || 0),
+        const entries = rows.map((r, i) => ({
+          leaf: r.leaf,
+          kg: toKg(parseFloat(String($(`#tKg${i}`, bg).value).replace(',', '.')) || 0),
         }));
         const n = logTest(date, entries, $('#tNote', bg).value.trim());
         if (!n) return toast('Enter a weight for at least one lift');
