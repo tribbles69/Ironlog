@@ -52,6 +52,10 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
       function (key never on the phone)
 - [x] Exercise database (`EX_DB`, 736 movements) with muscle shares; body heatmap
 - [x] RPE → RIR switch across display, inputs and voice logging
+- [x] Muscle map skins (0.23.0): the body is painted from a skin sheet, one cell per
+      muscle per tier, so any art works. Only the placeholder `skins/template.png`
+      ships (darker orange per tier) until proper art is made; custom sheets
+      importable. Guide and paint files in `r&d/skins/`
 - [x] Slew VBT built in: per-exercise **Measure** flow (phone motion sensor →
       per-rep velocity, velocity loss, estimated RIR) — `slew-core.js`
 - [ ] Composed exercise model (movement + equipment + laterality, PRs per variant,
