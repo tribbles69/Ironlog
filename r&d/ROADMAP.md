@@ -7,19 +7,19 @@ any agent (Claude Code etc.) picking up work cold.
 especially. Ironlog has to earn its keep for one user first — Aaron — before it
 competes with anything.
 
-**Model (decided 2026-09-24, replaces the earlier ~£5/month premium plan):**
-- Everything that runs on the phone is **free, forever** — logging, comp prep,
-  VBT, cardio, calculators, export. Never paywall a feature.
+**Model (decided 2026-09-24): Ironlog is completely free.** A passion project
+for the community, not a money-maker.
+- **Everything is free, forever.** No paid tier, no paywalled features.
 - **Local-only.** No Ironlog account and no Ironlog server holding user data.
   Backup/sync goes to the **user's own cloud drive** (Google Drive first), so
   their data sits in their storage, not ours (see item 10).
-- **AI is the only thing that costs per use**, so it's the only paid part:
-  a paid tier roughly at cost, plus **bring-your-own API key** as a free route.
-- Funding: donations (Ko-fi / GitHub Sponsors, supporter badge) and cosmetic
-  **muscle-map skin packs**.
-- **Food logging is moving out of Ironlog into its own app** (decided
-  2026-09-24). Don't build new food features here; see "Food tab — moving out"
-  under Later.
+- **AI runs on the user's own API key** (bring-your-own-key), entered on the
+  device and used only from the device. Aaron doesn't pay for other people's AI
+  usage. Every AI feature must be optional — the app is complete without a key.
+- Optional support: donations (Ko-fi / GitHub Sponsors) and cosmetic
+  muscle-map skin packs. Never gate a feature behind either.
+- **Food logging is leaving Ironlog** for its own separate app — removing the
+  Food tab is the top item under "Now".
 
 ---
 
@@ -51,8 +51,9 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
   maths uses, via `rirToRpe` / `rpeToRir`. Don't store RIR.
 - Weights are kg.
 - Local-only: the device is the source of truth; the user's own cloud drive is
-  a backup/sync target. No Ironlog server stores user training data.
+  a backup/sync target. No Ironlog server stores user data.
 - AI is a fallback, never the first path. Local tables/databases answer first.
+  AI only ever uses the user's own key.
 - Never fix `prKey` / `splitsPR` as a side effect of another feature (see Later).
 
 ---
@@ -62,8 +63,7 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
 - [x] Installable PWA with offline cache and safe mid-workout updates
 - [x] IndexedDB storage, JSON export/import
 - [x] Food tab: CoFID + curated local tables first, Haiku fallback via server-side
-      function (key never on the phone). **Moving out to its own app** — see
-      "Food tab — moving out" under Later.
+      function. **Being removed** — see item F under "Now".
 - [x] Exercise database (`EX_DB`, 736 movements) with muscle shares; body heatmap
 - [x] RPE → RIR switch across display, inputs and voice logging
 - [x] Muscle map skins (0.23.0): the body is painted from a skin sheet, one cell per
@@ -80,6 +80,24 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
 ---
 
 ## Now
+
+### F. Remove the Food tab — **do this first**
+Decided 2026-09-24: food logging leaves Ironlog for its own separate app.
+Prioritised by Aaron to the top of the list.
+1. **Export first, in its own shipped version:** add a one-tap **Export food
+   log** (JSON, plus CSV for spreadsheets) covering every logged food entry,
+   saved/custom foods and daily targets, so nobody loses data. The future food
+   app will import this file.
+2. **Then remove** in a following version: the Food tab and its bottom-nav slot
+   (nav goes back to five tabs), `parse-food.js` and the server-side food
+   function, the food lookup tables (CoFID + curated), and any food settings.
+   Schema bump + migration that drops food stores **only after** step 1 has
+   shipped. Keep `bmrKcal` / `suggestedTargets` — item 19 still uses them.
+3. Check nothing else reads food data (e.g. the check-in or Home summary). If
+   something does, remove that view rather than leave it broken.
+4. The full JSON export/import for training data must keep working; old export
+   files that still contain food data must import without errors (ignore the
+   food part).
 
 ### 0. ~~Fix: "Log a test" can't save anything~~ — [x] shipped 0.16.3
 `openTestLog` now logs the big three only (squat, bench, deadlift, pinned to
@@ -123,7 +141,7 @@ notification is opt-in from Settings and best effort.
 
 ### 3. ~~Cardio session — HR-zone treadmill coaching~~ — [x] shipped 0.19.0
 Spec: **`r&d/specs/cardio-spec.md`** (wins over the notes below). The plain
-loop is built; the premium Haiku trend coach below is still to do. Needs a
+loop is built; the optional AI trend coach below is still to do. Needs a
 real-gym check: strap pairing, cue audio/voice, disconnect/reconnect.
 
 New session type. The treadmill (Technogym) has no control API, so **Aaron is
@@ -164,9 +182,9 @@ speed, since it can't read the treadmill. Wake Lock for the whole session.
 time-in-zone, average HR, duration, distance (from speed × time). Show the HR
 trace as a chart on the session card.
 
-**Later (paid AI, optional):** a Haiku call about once a minute looking at HR
-*trend* rather than the instant reading — pre-empting drift out of zone and
-varying the coaching language. Only once the plain loop works.
+**Later (optional AI, user's own key):** a Haiku call about once a minute
+looking at HR *trend* rather than the instant reading — pre-empting drift out
+of zone and varying the coaching language. Only once the plain loop works.
 
 ### 4. ~~Autoregulated programming (RIR-driven)~~ — [x] shipped 0.21.0
 Spec: **`r&d/specs/autoreg-spec.md`**. Normal program blocks get loads from a
@@ -256,7 +274,8 @@ estimated RIR for that set.
 
 ### 8. Welcome / first-run screen
 More important than login. Sets units, lifts, event goals; explains data stays
-on the device and backs up to the user's own drive.
+on the device and backs up to the user's own drive, and that AI features are
+optional and use their own key.
 
 ### 9. Events page (replaces Meets)
 Pick the event type (powerlifting meet, strongman, other) and queue several
@@ -361,9 +380,8 @@ Blast issue number, for the original request.
 
 Strava (#115) · Whoop (#111) · translations (#116, #85) · reorder and sort
 routines (#80, #9) · separate muscle heads for arms (#63) · picture
-instructions (#21) · subscription status in Settings once the paid AI tier
-exists (#20) · suspension trainer, rings and jump rope exercises (#105, #93,
-#40).
+instructions (#21) · suspension trainer, rings and jump rope exercises (#105,
+#93, #40).
 
 ### Checks against Blast's bugs
 
@@ -385,7 +403,7 @@ checked.
 
 ## Later
 
-### 10. Backup and sync to the user's own cloud drive (free)
+### 10. Backup and sync to the user's own cloud drive
 Replaces the Supabase plan (decided 2026-09-24). Local-only: no Ironlog server
 or account holds user data. Backup/sync writes to a file in the **user's own
 Google Drive** (Dropbox etc. later), so data survives losing or changing a
@@ -398,24 +416,31 @@ phone.
   new phone pulls it down.
 - Until this ships, nudge regular JSON exports.
 
-### 11. Server-side AI (paid)
-The only paid part of Ironlog, because every call costs money.
-- Paying users: Aaron's own Anthropic key used server-side (e.g. a serverless
-  function), never on the phone. Priced roughly at cost plus a bit.
-- Free route: **bring your own API key**, entered on the device and used only
-  from the device.
-- Non-negotiable for the paid route: per-user budgets, rate limits, abuse
-  controls. The server handles AI requests only and stores no training data.
+### 11. AI on the user's own key
+Replaces the paid/server-side AI plan (decided 2026-09-24). There is no Ironlog
+AI server and no paid tier.
+- A Settings field for the user's own Anthropic API key, stored only on the
+  device (never in exports or cloud backups unless the user opts in), with a
+  clear note on what it's used for and roughly what it costs them.
+- Calls go straight from the device to the API. Show a per-feature cost hint
+  and let the user set a monthly cap the app enforces locally.
+- Every AI feature is optional and hidden or greyed until a key is added; the
+  app must be fully usable without one.
+- Remove any server-side AI function that's left once the Food tab is gone
+  (item F).
 
 ### 12. AI coaching
+Uses item 11 (user's own key).
 - Logging stays tightly scoped structured calls, separate from any chat.
 - Hard system-prompt boundaries so the coach can't drift off-topic.
 - Cap or summarise conversation history; use prompt caching. No unbounded
-  history re-sent every turn.
+  history re-sent every turn — it's the user's money.
 
 ### 13. Chat front door
 Log and get coaching through a messaging app (WhatsApp or similar — **not
-Telegram**) plus voice input. Builds on the existing voice logging.
+Telegram**) plus voice input. Builds on the existing voice logging. Note: a
+messaging bot needs a server to receive messages, which conflicts with the
+no-server model — rethink before building.
 
 ### 14. Fix `prKey` / `splitsPR`
 `prKey()` is dead code, so chains, bands, slingshot and equipped currently share
@@ -485,12 +510,13 @@ before building. Reuse the maths that's already in the app — `bmrKcal` /
 
 **Energy**
 - **TDEE:** Mifflin-St Jeor (exists), plus Katch-McArdle when a BF% is known.
-- **Adaptive TDEE:** back-calculated from logged food intake and the bodyweight
+- **Adaptive TDEE:** back-calculated from daily food intake and the bodyweight
   trend over the last 2–4 weeks (intake minus the energy in the weight change).
   Show it next to the formula figure — "formula says X, your data says Y" — and
-  only once there are enough logged days to mean anything. **With food moving
-  to its own app, this needs daily intake imported from that app** (a simple
-  shared export file); if that link doesn't exist, leave this one out.
+  only once there are enough logged days to mean anything. **Food logging now
+  lives in a separate app (item F), so this needs daily intake imported from
+  that app** (a simple shared export file); if that link doesn't exist, leave
+  this one out.
 
 **Physique**
 - **Max muscular potential (Casey Butt):** from height, wrist and ankle
@@ -515,16 +541,6 @@ before building. Reuse the maths that's already in the app — `bmrKcal` /
 
 Can ship before item 18 using typed-in inputs; wire the prefills when body
 comp lands.
-
-### 20. Food tab — moving out
-Decided 2026-09-24: food logging moves out of Ironlog into its own separate
-app. **Don't delete anything until Aaron says the new app is ready.**
-- Keep the Food tab working as-is until then; no new food features here.
-- When the new app is ready: give users a one-tap export of their food log
-  (and saved foods) in a format the new app imports, then remove the Food tab
-  and its bottom-nav slot, `parse-food.js` and the food tables, with a schema
-  bump. Existing food data must be exportable before it's dropped.
-- Once removed, Ironlog's AI costs are coaching only.
 
 ---
 
