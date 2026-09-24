@@ -1292,8 +1292,10 @@ function backupDue() {
   const now = Date.now(), st = S.settings;
   if (st.backupSnoozeUntil && now < st.backupSnoozeUntil) return null;
   const first = Math.min(...done.map(w => parseISO(w.date).getTime()));
-  const since = st.lastExportAt || first;
-  return now - since > BACKUP_EVERY ? { last: st.lastExportAt || null, days: Math.floor((now - since) / 864e5) } : null;
+  // a Drive sync is a backup too (B6)
+  const last = Math.max(st.lastExportAt || 0, syncMeta().lastSyncAt || 0) || null;
+  const since = last || first;
+  return now - since > BACKUP_EVERY ? { last, days: Math.floor((now - since) / 864e5), drive: !!syncMeta().connected } : null;
 }
 function backupCard() {
   if (S.active) return '';           // never during a workout
@@ -1302,9 +1304,9 @@ function backupCard() {
   return `<div class="card" id="backupCard" style="border-color:var(--gold)">
     <div class="row between" style="gap:10px;align-items:center">
       <div class="grow"><div style="font-weight:700">Back up your log</div>
-        <div class="sub">${due.last ? `Last backup ${due.days} days ago.` : 'No backup yet.'} Your log lives only on this phone — save a copy to Drive or your files.</div></div>
+        <div class="sub">${due.last ? `Last backup ${due.days} days ago.` : 'No backup yet.'} ${due.drive ? 'Sync to your Google Drive to keep it safe.' : 'Your log lives only on this phone — save a copy to Drive or your files.'}</div></div>
       <div class="row" style="gap:6px;flex-direction:column">
-        <button class="btn sm primary" id="backupNow">Back up</button>
+        <button class="btn sm primary" id="backupNow">${due.drive ? 'Sync' : 'Back up'}</button>
         <button class="btn xs ghost" id="backupLater">Not now</button>
       </div>
     </div>
@@ -1332,6 +1334,253 @@ function refreshStorageLine(bg) {
     await storageStatus();
     toast(r === 'granted' ? 'Storage is now protected' : 'Chrome said no for now — it decides by how much the app is used', r === 'granted' ? 'green' : '');
     refreshStorageLine(bg);
+  };
+}
+/* ============================================================
+   DRIVE SYNC — roadmap B6, r&d/specs/drive-sync-spec.md
+   One file in the user's own Google Drive, merged by every device that
+   connects. drive.file scope: Ironlog sees only the files it made. No server:
+   the browser talks to Google directly, and the token lives in memory.
+   ============================================================ */
+const GOOGLE_CLIENT_ID = '';   // for the deployed origin — see the spec's Setup; Settings can override
+const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
+const SYNC_FILE = 'Ironlog backup.json', SYNC_FORMAT = 'ironlog-sync', SYNC_V = 1;
+// collection -> how a record is keyed
+const SYNC_SETS = {
+  workouts: x => x.id, goals: x => x.id, meets: x => x.id, imports: x => x.id,
+  checkins: x => x.date,
+  customEx: x => (typeof x === 'string' ? x : JSON.stringify(x)), programs: x => String(x),
+};
+const SYNC_MAPS = ['exAliases', 'programStarts'];
+const SYNC_LOCAL_SETTINGS = ['lastSeenVersion', 'backupSnoozeUntil', 'lastExportAt'];
+
+/* Device-only bookkeeping, outside S so it never syncs itself:
+   { connected, fileId, lastSyncAt, known: { collection: [keys] }, includeKey, clientId } */
+function syncMeta() { try { return JSON.parse(localStorage.getItem('ironlog.sync') || '{}') || {}; } catch (e) { return {}; } }
+function setSyncMeta(m) { try { localStorage.setItem('ironlog.sync', JSON.stringify(m)); } catch (e) { /* storage blocked: sync still works, just forgets */ } }
+function driveClientId() { return syncMeta().clientId || GOOGLE_CLIENT_ID; }
+function stampOf(x) { return (x && typeof x === 'object' && (x.mt || x.edited || x.end || x.start)) || 0; }
+
+function syncLocalData() {
+  const d = {};
+  Object.keys(SYNC_SETS).forEach(k => { d[k] = S[k] || []; });
+  SYNC_MAPS.forEach(k => { d[k] = S[k] || {}; });
+  return d;
+}
+function syncKnown(d) {
+  const k = {};
+  Object.entries(SYNC_SETS).forEach(([c, key]) => { k[c] = (d[c] || []).map(key); });
+  SYNC_MAPS.forEach(c => { k[c] = Object.keys(d[c] || {}); });
+  return k;
+}
+
+/* The merge. Pure: local and remote data, the remote tombstones, the keys this
+   device knew at its last sync. Returns the merged data, the tombstones to
+   write, and what this device deleted (for the safety valve). Local wins
+   ties; nothing that exists only here is ever dropped unless this device
+   deleted it or another device deleted it later than it was last changed. */
+function mergeSync(local, remote, remoteTomb, known, now, opts = {}) {
+  const tomb = structuredClone(remoteTomb || {});
+  const mark = (c, id, t) => { const m = tomb[c] = tomb[c] || {}; if (!(m[id] >= t)) m[id] = t; };
+  const localDeletes = [];
+  const restore = !(local.workouts || []).length;   // an empty device is restoring, not deleting
+  const colls = [...Object.keys(SYNC_SETS), ...SYNC_MAPS];
+  if (!restore && !opts.keepMissing) colls.forEach(c => {
+    const have = new Set(SYNC_MAPS.includes(c) ? Object.keys(local[c] || {}) : (local[c] || []).map(SYNC_SETS[c]));
+    ((known || {})[c] || []).forEach(id => { if (!have.has(id)) { mark(c, id, now); localDeletes.push([c, id]); } });
+  });
+  const out = {};
+  const pick = (c, id, l, r) => {
+    const t = tomb[c] && tomb[c][id];
+    const v = l !== undefined && r !== undefined ? (stampOf(r) > stampOf(l) ? r : l) : l !== undefined ? l : r;
+    if (t != null && !(stampOf(v) > t)) return undefined;   // deleted, and not changed since
+    if (t != null) delete tomb[c][id];                       // changed after the delete: it's back
+    return v;
+  };
+  Object.entries(SYNC_SETS).forEach(([c, key]) => {
+    const L = new Map((local[c] || []).map(x => [key(x), x]));
+    const R = new Map(((remote || {})[c] || []).map(x => [key(x), x]));
+    const ids = [...new Set([...L.keys(), ...R.keys()])];
+    out[c] = ids.map(id => pick(c, id, L.get(id), R.get(id))).filter(x => x !== undefined);
+  });
+  SYNC_MAPS.forEach(c => {
+    const L = local[c] || {}, R = (remote || {})[c] || {};
+    out[c] = {};
+    [...new Set([...Object.keys(L), ...Object.keys(R)])].forEach(id => {
+      const v = pick(c, id, L[id], R[id]);
+      if (v !== undefined) out[c][id] = v;
+    });
+  });
+  return { data: out, tomb, localDeletes };
+}
+
+/* ---- Google sign-in and Drive, loaded only when asked for ---- */
+let driveTok = null;   // { token, exp } — memory only
+function loadGis() {
+  return new Promise((res, rej) => {
+    if (window.google && window.google.accounts && window.google.accounts.oauth2) return res();
+    const s = document.createElement('script');
+    s.src = 'https://accounts.google.com/gsi/client'; s.async = true;
+    s.onload = () => res(); s.onerror = () => rej(new Error('Couldn\'t reach Google — are you online?'));
+    document.head.appendChild(s);
+  });
+}
+function driveTokenValid() { return !!(driveTok && driveTok.exp > Date.now() + 60e3); }
+async function driveToken(interactive) {
+  if (driveTokenValid()) return driveTok.token;
+  if (!interactive) return null;
+  const cid = driveClientId();
+  if (!cid) throw new Error('Drive backup isn\'t set up for this copy of Ironlog yet');
+  await loadGis();
+  return new Promise((res, rej) => {
+    const tc = window.google.accounts.oauth2.initTokenClient({
+      client_id: cid, scope: DRIVE_SCOPE,
+      callback: r => {
+        if (r.error) return rej(new Error(r.error_description || r.error));
+        if (!window.google.accounts.oauth2.hasGrantedAllScopes(r, DRIVE_SCOPE)) return rej(new Error('Drive access wasn\'t allowed'));
+        driveTok = { token: r.access_token, exp: Date.now() + (+r.expires_in || 3600) * 1000 };
+        res(driveTok.token);
+      },
+      error_callback: e => rej(new Error(e && e.type === 'popup_closed' ? 'Sign-in was closed' : 'Sign-in didn\'t finish')),
+    });
+    tc.requestAccessToken({ prompt: syncMeta().connected ? '' : 'consent' });
+  });
+}
+async function gdrive(token, url, opt = {}) {
+  const r = await fetch(url, { ...opt, headers: { Authorization: `Bearer ${token}`, ...(opt.headers || {}) } });
+  if (r.status === 401) { driveTok = null; throw new Error('Google sign-in expired — tap Sync again'); }
+  if (!r.ok && r.status !== 404) throw new Error(`Google Drive said ${r.status}`);
+  return r;
+}
+async function driveFind(token) {
+  const q = encodeURIComponent(`name='${SYNC_FILE}' and trashed=false`);
+  const r = await gdrive(token, `https://www.googleapis.com/drive/v3/files?q=${q}&spaces=drive&orderBy=modifiedTime%20desc&fields=files(id,modifiedTime)`);
+  const j = await r.json();
+  return (j.files && j.files[0] && j.files[0].id) || null;
+}
+async function driveRead(token, id) {
+  const r = await gdrive(token, `https://www.googleapis.com/drive/v3/files/${id}?alt=media`);
+  if (r.status === 404) return undefined;   // gone: make a new one
+  return r.json();
+}
+async function driveWrite(token, id, body) {
+  const json = JSON.stringify(body);
+  if (id) {
+    const r = await gdrive(token, `https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media`,
+      { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: json });
+    if (r.status !== 404) return id;
+  }
+  const b = 'ironlog' + uid();
+  const form = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({ name: SYNC_FILE, mimeType: 'application/json' })}\r\n`
+    + `--${b}\r\nContent-Type: application/json\r\n\r\n${json}\r\n--${b}--`;
+  const r = await gdrive(token, 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+    { method: 'POST', headers: { 'Content-Type': `multipart/related; boundary=${b}` }, body: form });
+  return (await r.json()).id;
+}
+
+/* One sync: read the file, merge, apply, write back. `interactive` may show
+   Google's sign-in; otherwise it only runs on a token this session already has. */
+let syncBusy = false;
+async function driveSync(interactive) {
+  if (syncBusy) return null;
+  syncBusy = true;
+  try {
+    const token = await driveToken(interactive);
+    if (!token) return null;
+    const meta = syncMeta();
+    let fileId = meta.fileId || await driveFind(token);
+    let remote = fileId ? await driveRead(token, fileId) : null;
+    if (remote === undefined) { fileId = await driveFind(token); remote = fileId ? await driveRead(token, fileId) : null; }
+    if (remote && remote.format !== SYNC_FORMAT) throw new Error(`"${SYNC_FILE}" in your Drive isn't an Ironlog sync file`);
+    if (remote && remote.v > SYNC_V) throw new Error('Your Drive backup was made by a newer Ironlog — update this one first');
+    const local = syncLocalData(), now = Date.now();
+    let m = mergeSync(local, remote && remote.data, remote && remote.tomb, meta.known, now);
+    // safety valve: a big deletion here is asked about, never assumed
+    const knownN = Object.values(meta.known || {}).reduce((n, a) => n + a.length, 0);
+    if (m.localDeletes.length > 5 && m.localDeletes.length > knownN / 4) {
+      const keep = await new Promise(res => {
+        let done = false;
+        const pickIt = v => { if (!done) { done = true; res(v); } };
+        modal({
+          title: 'Records missing on this phone',
+          body: `<p style="margin:0;color:var(--dim)">This phone has ${m.localDeletes.length} fewer records than at its last sync. If you deleted them here, remove them from your Drive backup too. If not, put them back.</p>`,
+          foot: `<button class="btn primary" id="svKeep">Put them back</button><button class="btn danger" id="svDrop">Remove from Drive</button>`,
+          onClose: () => pickIt(true),     // closed without choosing: the safe answer
+          onOpen: bg => {
+            $('#svKeep', bg).onclick = () => { pickIt(true); closeModal(); };
+            $('#svDrop', bg).onclick = () => { pickIt(false); closeModal(); };
+          },
+        });
+      });
+      if (keep) m = mergeSync(local, remote && remote.data, remote && remote.tomb, meta.known, now, { keepMissing: true });
+    }
+    const before = { w: S.workouts.length, c: S.checkins.length };
+    Object.assign(S, m.data);
+    const fresh = !local.workouts.length && !local.checkins.length;
+    if (remote && remote.data && remote.data.settings && fresh) {
+      const keep = {}; SYNC_LOCAL_SETTINGS.forEach(k => { if (k in S.settings) keep[k] = S.settings[k]; });
+      S.settings = Object.assign(structuredClone(DEFAULT_STATE.settings), remote.data.settings, keep);
+    }
+    if (remote && remote.data && remote.data.aiKey && !aiKey()) { try { localStorage.setItem('ironlog.anthropicKey', remote.data.aiKey); } catch (e) { /* no storage */ } }
+    const settings = { ...S.settings }; SYNC_LOCAL_SETTINGS.forEach(k => delete settings[k]);
+    const data = { ...syncLocalData(), settings, ...(meta.includeKey && aiKey() ? { aiKey: aiKey() } : {}) };
+    fileId = await driveWrite(token, fileId, { format: SYNC_FORMAT, v: SYNC_V, app: APP_VERSION, savedAt: now, data, tomb: m.tomb });
+    setSyncMeta({ ...syncMeta(), connected: true, fileId, lastSyncAt: now, known: syncKnown(data) });
+    save(); bust();
+    return { in: S.workouts.length - before.w + m.localDeletes.filter(d => d[0] === 'workouts').length, sessions: S.workouts.length, checkinsIn: S.checkins.length - before.c };
+  } finally { syncBusy = false; }
+}
+/* After finishing or editing a session: sync quietly if this session is
+   already signed in; never pops a sign-in by itself. */
+function autoSync() {
+  if (!syncMeta().connected || !driveTokenValid()) return;
+  driveSync(false).then(r => { if (r) refreshSyncLine(); }).catch(() => { /* next manual sync will say */ });
+}
+async function driveDisconnect() {
+  try { if (driveTok && window.google && window.google.accounts) window.google.accounts.oauth2.revoke(driveTok.token, () => {}); } catch (e) { /* offline */ }
+  driveTok = null;
+  const m = syncMeta();
+  setSyncMeta(m.clientId ? { clientId: m.clientId } : {});
+}
+function syncLine() {
+  const m = syncMeta(), cid = driveClientId();
+  return `<div id="stSync">
+    ${!cid ? `<div class="sub" style="margin-bottom:8px">Drive backup isn't set up for this copy of Ironlog yet — it needs a Google client ID for this web address (Advanced, below).</div>`
+      : m.connected ? `<div class="sub" style="margin-bottom:8px">✓ Connected. ${m.lastSyncAt ? `Last synced ${relTime(m.lastSyncAt)}.` : ''} Your log is in <b>${esc(SYNC_FILE)}</b> in your Drive.</div>
+        <div class="row" style="gap:8px;margin-bottom:8px"><button class="btn sm primary grow" id="stSyncNow">Sync now</button><button class="btn sm ghost" id="stSyncOff">Disconnect</button></div>`
+      : `<div class="sub" style="margin-bottom:8px">Keeps a copy of your log in your own Google Drive and merges it between phones. Ironlog can only see the one file it makes there — nothing else in your Drive — and nothing goes to any Ironlog server.</div>
+        <button class="btn sm primary wide" id="stSyncNow" style="margin-bottom:8px">Connect Google Drive</button>`}
+    ${cid ? `<label class="row" style="gap:8px;align-items:center;margin-bottom:8px"><input type="checkbox" id="stSyncKey" ${m.includeKey ? 'checked' : ''} style="width:auto">
+      <span class="sub">Include my AI key in the backup</span></label>` : ''}
+    <details style="margin-bottom:6px"><summary class="sub">Advanced: Google client ID</summary>
+      <input id="stClientId" value="${esc(m.clientId || '')}" placeholder="${esc(GOOGLE_CLIENT_ID || '….apps.googleusercontent.com')}" autocomplete="off" spellcheck="false" style="margin-top:6px">
+      <div class="sub" style="margin-top:4px">Only needed if this copy wasn't built with one. Setup: r&amp;d/specs/drive-sync-spec.md.</div></details>
+  </div>`;
+}
+function relTime(ms) {
+  const m = Math.round((Date.now() - ms) / 60000);
+  return m < 1 ? 'just now' : m < 60 ? `${m} min ago` : m < 1440 ? `${Math.round(m / 60)} h ago` : relDay(iso(new Date(ms))).toLowerCase();
+}
+let syncHost = null;
+function refreshSyncLine(bg) {
+  if (bg) syncHost = bg;
+  const host = syncHost && document.body.contains(syncHost) ? syncHost : null;
+  const el = host && $('#stSync', host);
+  if (!el) return;
+  el.outerHTML = syncLine();
+  const now = $('#stSyncNow', host), off = $('#stSyncOff', host), key = $('#stSyncKey', host), cid = $('#stClientId', host);
+  if (cid) cid.onchange = () => { const v = cid.value.trim(); const m = syncMeta(); if (v) m.clientId = v; else delete m.clientId; setSyncMeta(m); refreshSyncLine(); };
+  if (key) key.onchange = () => setSyncMeta({ ...syncMeta(), includeKey: key.checked });
+  if (off) off.onclick = () => confirmDlg('Disconnect Google Drive? The backup file stays in your Drive; this phone just stops syncing to it.',
+    async () => { await driveDisconnect(); refreshSyncLine(); toast('Disconnected'); }, 'Disconnect');
+  if (now) now.onclick = async () => {
+    now.disabled = true; now.textContent = 'Syncing…';
+    try {
+      const r = await driveSync(true);
+      if (r) toast(r.in > 0 ? `Synced · ${r.in} session${r.in === 1 ? '' : 's'} came in` : 'Synced', 'green');
+      render();
+    } catch (e) { toast(e.message || 'Sync failed'); }
+    refreshSyncLine();
   };
 }
 function fmtBytes(n) { return n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`; }
@@ -1581,7 +1830,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.32.0';
+const APP_VERSION = '0.33.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4984,6 +5233,7 @@ function finishWorkout(force) {
   S.active = null;
   save(); bust();
   showSummary(done);
+  autoSync();
   if (persist.state !== 'granted') requestPersistence();   // the first logged session is the moment worth protecting
 }
 
@@ -5624,6 +5874,7 @@ function saveEdit(force) {
   editDraft = null;
   save(); bust(); closeAllModals(); render();
   toast('Session updated', 'green');
+  autoSync();
 }
 
 /* ============================================================
@@ -7819,6 +8070,8 @@ function openSettings() {
       <div class="eyebrow" style="margin-bottom:8px">Data</div>
       <div class="sub" style="margin-bottom:10px">${S.workouts.length} workouts · ${S.checkins.length} check-ins · ${S.meets.length} meets · ${S.goals.length} goals</div>
       ${storageLine()}
+      <div class="eyebrow" style="margin:4px 0 6px">Google Drive</div>
+      ${syncLine()}
       <div class="row" style="gap:8px">
         <button class="btn sm grow" id="stExport">Export JSON</button>
         <button class="btn sm grow" id="stImport">Import JSON</button>
@@ -7913,6 +8166,7 @@ function openSettings() {
         }, 'Mark done');
       };
       $('#stExport', bg).onclick = () => { exportJSON(); refreshStorageLine(bg); };
+      refreshSyncLine(bg);
       refreshStorageLine(bg);                                         // binds "Ask again"
       if (persist.state === 'unknown') storageStatus().then(() => refreshStorageLine(bg));
       const sfx = $('#stFoodExport', bg); if (sfx) sfx.onclick = () => { closeModal(); openFoodExport(); };
@@ -8125,7 +8379,12 @@ function wire() {
   v.querySelectorAll('[data-goal]').forEach(b => b.onclick = () => openGoal(b.dataset.goal));
 
   if (page === 'home') {
-    const bn = $('#backupNow'); if (bn) bn.onclick = exportJSON;
+    const bn = $('#backupNow');
+    if (bn) bn.onclick = !syncMeta().connected ? exportJSON : async () => {
+      bn.disabled = true; bn.textContent = 'Syncing…';
+      try { await driveSync(true); toast('Synced', 'green'); } catch (e) { toast(e.message || 'Sync failed'); }
+      render();
+    };
     const bl = $('#backupLater'); if (bl) bl.onclick = () => { S.settings.backupSnoozeUntil = Date.now() + BACKUP_SNOOZE; save(); render(); };
     $('#checkinBtn').onclick = () => openCheckin();
     const qs = $('#quickStart'); if (qs) qs.onclick = newBlank;

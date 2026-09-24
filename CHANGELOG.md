@@ -13,6 +13,24 @@ rather than guessed.
 
 ---
 
+## 0.33.0 — 24 Sep 2026
+- **Back up and sync to your own Google Drive.** Settings → Google Drive →
+  Connect. Your log goes into one file, "Ironlog backup.json", in your own
+  Drive. Ironlog can only see that file, nothing else in your Drive, and
+  nothing goes to any Ironlog server.
+- **Two phones stay in step.** Each sync merges both ways. Sessions added,
+  edited or deleted on either phone carry across. Connecting never
+  overwrites what's already on the phone, and a new phone pulls everything
+  down.
+- **Protection against wipes.** If a phone suddenly has a lot fewer records
+  than last time, Ironlog asks before removing them from Drive, and "Put them
+  back" restores them.
+- Your AI key stays out of the backup unless you tick the box to include it.
+- A sync counts as a backup for the reminder card, and finishing a session
+  syncs by itself while you're signed in.
+- Needs a one-off Google setup for the web address the app runs from. Until
+  that's done, Settings says so.
+
 ## 0.32.0 — 24 Sep 2026
 - **e1RM vs last time.** The session summary shows today's best e1RM for
   each lift against last time: up, down or first.
