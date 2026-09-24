@@ -1454,7 +1454,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.22.1';
+const APP_VERSION = '0.22.2';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -2949,7 +2949,8 @@ function chartMulti(series, { h = 170, fmt = v => nice(v) } = {}) {
     const c = s.color || SERIES_COLORS[si % SERIES_COLORS.length];
     const pts = s.points.map(p => [x(p.date), y(p.v)]);
     const d = pts.map((p, i) => `${i ? 'L' : 'M'}${p[0].toFixed(1)},${p[1].toFixed(1)}`).join(' ');
-    return `<path class="ln" d="${d}" stroke="${c}" fill="none"/>` +
+    // inline style, not the stroke attribute: .chart .ln in the stylesheet outranks an attribute
+    return `<path class="ln" d="${d}" style="stroke:${c}" fill="none"/>` +
       pts.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.6" fill="${c}"/>`).join('');
   }).join('');
   const labIdx = dates.length <= 2 ? dates.map((_, i) => i) : [0, Math.floor((dates.length - 1) / 2), dates.length - 1];
@@ -2960,7 +2961,7 @@ function chartMulti(series, { h = 170, fmt = v => nice(v) } = {}) {
   const legend = live.length > 1 ? `<div class="legend">${live.map((s, si) =>
     `<span><i style="background:${s.color || SERIES_COLORS[si % SERIES_COLORS.length]}"></i>${esc(s.label)}</span>`).join('')}</div>` : '';
   return `<div class="chartbox"><svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${H}px">
-    ${grid}${lines}${xlabs}</svg></div>${legend}`;
+    ${grid}${lines}${xlabs}</svg>${legend}</div>`;   // legend inside the box: the 98 skin restates colours per surface, so outside it the swatches drift from the lines
 }
 
 function chart(data, { color = 'var(--accent)', h = 150, fmt = v => nice(v) } = {}) {
@@ -3002,7 +3003,7 @@ function chart(data, { color = 'var(--accent)', h = 150, fmt = v => nice(v) } = 
     </linearGradient></defs>
     ${grid}
     <path class="area" d="${area}"/>
-    <path class="ln" d="${line}" stroke="${color}"/>
+    <path class="ln" d="${line}" style="stroke:${color}"/>
     ${pts.map((p, i) => `<circle class="pt${i === bestIdx ? ' best' : ''}" cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${i === bestIdx ? 4 : 3}" fill="${i === bestIdx ? 'var(--gold)' : color}"/>`).join('')}
     ${xlabs}
   </svg></div>`;
@@ -4863,6 +4864,7 @@ function primaryVariantKey(movementId) {
 }
 
 let _mvTab = 'info';
+let _mvStat = 'summary';   // Statistics sub-tab: summary | graph | records
 /* The movement page. A parent rolls its leaves up for presentation and stores
    nothing (section 4.3); the headline is the primary variant's or nothing at
    all (4.4), never the maximum across variants. */
@@ -4938,11 +4940,19 @@ function openMovementPage(movementId, focusKey) {
           <div class="stat"><div class="k">Top set</div><div class="v">${w(fs.bestW.w)}</div><div class="d">× ${fs.bestW.r}</div></div>
           <div class="stat"><div class="k">Last</div><div class="v" style="font-size:15px">${esc(relDay(fs.lastDate))}</div><div class="d">${fs.sessions} sessions</div></div>
         </div>` : `<div class="sub">This variant hasn't been logged yet.</div>`}` : '';
-    return `${headline}${focusStrip}
-      <div class="eyebrow" style="margin:14px 0 6px">Estimated 1RM by variant</div>
-      ${chartMulti(series, { fmt: v => nice(Math.round(v)) })}
-      <div class="eyebrow" style="margin:16px 0 4px">Records per variant</div>
-      <table class="vartable"><tbody>${rows || '<tr><td class="sub">Nothing logged yet</td></tr>'}</tbody></table>`;
+    /* Sub-tabs, so the graph and the records aren't a scroll away. */
+    const sub = `<div class="seg" id="mvStatTabs" style="margin-bottom:12px">
+      <button data-mvstat="summary" class="${_mvStat === 'summary' ? 'on' : ''}">Summary</button>
+      <button data-mvstat="graph" class="${_mvStat === 'graph' ? 'on' : ''}">Graph</button>
+      <button data-mvstat="records" class="${_mvStat === 'records' ? 'on' : ''}">Records</button>
+    </div>`;
+    const body = _mvStat === 'graph'
+      ? `<div class="eyebrow" style="margin-bottom:6px">Estimated 1RM by variant</div>
+         ${chartMulti(series, { fmt: v => nice(Math.round(v)) })}`
+      : _mvStat === 'records'
+        ? `<table class="vartable"><tbody>${rows || '<tr><td class="sub">Nothing logged yet</td></tr>'}</tbody></table>`
+        : `${headline}${focusStrip}`;
+    return sub + body;
   };
 
   const historyTab = () => {
@@ -4984,6 +4994,7 @@ function openMovementPage(movementId, focusKey) {
     onOpen: bg => {
       const bind = () => {
         bg.querySelectorAll('[data-mvtab]').forEach(b => b.onclick = () => { _mvTab = b.dataset.mvtab; redraw(); });
+        bg.querySelectorAll('[data-mvstat]').forEach(b => b.onclick = () => { _mvStat = b.dataset.mvstat; redraw(); });
         bg.querySelectorAll('[data-var]').forEach(b => b.onclick = () => { focus = b.dataset.var; redraw(); });
         bg.querySelectorAll('[data-hist-wo]').forEach(b => b.onclick = () => { closeAllModals(); viewCompleted(b.dataset.histWo); });
       };
