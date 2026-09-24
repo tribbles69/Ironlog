@@ -274,6 +274,9 @@ h3{font-size:13.5px;margin:0 0 8px}
 .wn-list{margin:0;padding-left:18px}
 .wn-list li{margin-bottom:5px;line-height:1.4}
 .modchips .modadd{cursor:pointer;background:transparent;border-style:dashed}
+.multi{display:flex;gap:4px;align-items:center}
+.multi input{flex:1 1 0;min-width:0}
+.multi .plbtn{flex:0 0 auto}
 .ex-name[data-exdetail]{cursor:pointer}
 .restbar .eyebrow{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .restbar .rc{font-size:22px;font-weight:750;letter-spacing:-.5px;font-variant-numeric:tabular-nums;min-width:62px}
@@ -1546,7 +1549,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.27.1';
+const APP_VERSION = '0.28.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -1593,7 +1596,7 @@ function categoryOf(leafOrName) {
    ============================================================ */
 
 /* Generated from r&d/data/exercises.json by r&d/tools/build-catalogue.cjs — do not hand-edit. */
-const EXERCISE_CATALOGUE = {"schemaVersion":2,"note":"Movement catalogue for the Ironlog exercise system. A logged set references a LEAF — movement + equipment + execution + attachment — not a name string. Aliases are historical/colloquial names used for import resolution only, never for identity, and each may pin the axes its name implies (e.g. \"Smith Shrug\" pins equipment=smith). Axes an alias does not pin fall back to the movement defaults. `metric` omitted means reps_weight. `verified:true` means the leaf mapping was checked against real logged data; false means generated and provisional. See r&d/specs/exercise-system-phase1.md.","vocabularies":{"equipment":["bodyweight","barbell","dumbbells","kettlebell","trap_bar","smith","machine","plate_loaded_machine","cable","resistance_band","plate","safety_squat_bar","belt_squat"],"execution":["bilateral","alternating","unilateral"],"load":{"rule":"per_side when execution is unilateral or alternating; else per_side when equipment is dumbbells or kettlebell and the movement is not singleImplement; else total","order":[{"when":{"execution":["unilateral","alternating"]},"load":"per_side"},{"when":{"equipment":["dumbbells","kettlebell"],"singleImplement":false},"load":"per_side"},{"else":true,"load":"total"}],"note":"A bilateral dumbbell bench with two 40 kg dumbbells is logged as 40, not 80. singleImplement:true marks movements where both hands share one implement (goblet squat, pullover, Russian twist), which are total. A movement may override with loadOverride. Volume must account for this: a per_side set of 20 kg x 10 is 400 kg, not 200."},"category":["shoulders","chest","arms","back","legs","core","cardio"],"type":["strength","cardio"],"metric":["reps_weight","time","distance","time_distance"],"attachment":["none","rope","straight_bar","ez_bar","v_handle","wide_bar","lat_bar","single_handle","ankle_strap","dual_handle"],"setType":["warmup","working","amrap","drop"],"modifier":[{"id":"comp_pause","label":"Comp pause","splitsPR":false,"detect":["comp pause"],"evidence":{"programEntries":21}},{"id":"slow_eccentric","label":"Slow eccentric","splitsPR":false,"detect":["slow eccentric"],"evidence":{"programEntries":49}},{"id":"pause_stretch","label":"2s pause at stretch","splitsPR":false,"detect":["2 s pause at stretch","2s pause at stretch"],"evidence":{"programEntries":51}},{"id":"ipf_depth","label":"IPF depth","splitsPR":false,"detect":["ipf depth"],"evidence":{"programEntries":4}},{"id":"comp_stance","label":"Comp stance","splitsPR":false,"detect":["comp stance"],"evidence":{"programEntries":4}},{"id":"full_commands","label":"Full commands","splitsPR":false,"detect":["full commands"],"evidence":{"programEntries":2}},{"id":"heavy_single","label":"Heavy single","splitsPR":false,"detect":["heavy single"],"evidence":{"programEntries":4}},{"id":"opener","label":"Opener","splitsPR":false,"detect":["opener"],"evidence":{"programEntries":2}},{"id":"stop_1_shy","label":"Stop 1 shy","splitsPR":false,"detect":["stop 1 shy"],"evidence":{"programEntries":346}},{"id":"technique","label":"Technique","splitsPR":false,"detect":["technique"],"evidence":{"programEntries":1}},{"id":"chains","label":"Chains","splitsPR":true,"detect":["chains","chain"],"evidence":{"programEntries":0}},{"id":"bands","label":"Bands","splitsPR":true,"detect":["bands","banded"],"evidence":{"programEntries":0}},{"id":"slingshot","label":"Slingshot","splitsPR":true,"detect":["slingshot"],"evidence":{"programEntries":0}},{"id":"equipped","label":"Equipped (shirt/suit)","splitsPR":true,"detect":["equipped","shirted","suited"],"evidence":{"programEntries":0}}],"modifierNote":"splitsPR:false annotates a set without changing identity — same leaf, same PR pool. splitsPR:true is a materially different lift and forms its own leaf; it must never share a PR pool with the unmodified version. detect terms are matched case-insensitively on whole words against the entry note; matching is literal, never fuzzy. Modifiers are extracted from notes; notes are never rewritten. Deficit / block / rack pull / board press are deliberately NOT modifiers — see the movement-vs-modifier ruling in r&d/specs/exercise-system-phase1.md section 8.","attachmentKind":{"none":"none","rope":"handle","single_handle":"handle","dual_handle":"handle","v_handle":"handle","ankle_strap":"handle","wide_bar":"handle","lat_bar":"handle","straight_bar":"bar","ez_bar":"bar"},"attachmentApplies":{"cable":"any","barbell":"bar","_default":"none"},"attachmentNote":"attachments lists what a movement CAN take. What it may take on a given leaf is attachmentApplies[equipment]: \"any\" = every listed attachment, \"bar\" = only attachmentKind \"bar\" (a real weighted bar), \"none\" = attachment is always \"none\". Equipment absent from attachmentApplies uses _default. This is why attachment is the fourth axis of the leaf and not a movement-level field."},"movements":[{"id":"biceps-curl","name":"Biceps Curl","category":"arms","type":"strength","equipment":["barbell","dumbbells","cable","machine","resistance_band","kettlebell"],"defaultEquipment":"barbell","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["biceps"],"secondary":["forearms"],"aliases":[{"name":"Barbell Curl","equipment":"barbell"},{"name":"Biceps Curl"},{"name":"Curl"},{"name":"Dumbbell Curl","equipment":"dumbbells"}],"verified":true,"attachments":["straight_bar","ez_bar","rope","single_handle"],"defaultAttachment":"straight_bar"},{"id":"close-grip-bench","name":"Close Grip Bench Press","category":"arms","type":"strength","equipment":["barbell","smith"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["triceps"],"secondary":["pectorals","front deltoids"],"aliases":[{"name":"Close Grip Bench"},{"name":"CGBP"},{"name":"Triceps Press"}],"verified":true},{"id":"concentration-curl","name":"Concentration Curl","category":"arms","type":"strength","equipment":["dumbbells","cable","kettlebell"],"defaultEquipment":"dumbbells","execution":["unilateral"],"defaultExecution":"unilateral","primary":["biceps"],"secondary":[],"aliases":[{"name":"Concentration Curl"}],"verified":false},{"id":"dead-hang","name":"Dead Hang","category":"arms","type":"strength","equipment":["bodyweight","plate"],"defaultEquipment":"bodyweight","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["forearms","grip"],"secondary":["lats"],"aliases":[{"name":"Dead Hang"},{"name":"Bar Hang"}],"metric":"time","verified":false},{"id":"drag-curl","name":"Drag Curl","category":"arms","type":"strength","equipment":["barbell","dumbbells","smith","cable"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["biceps"],"secondary":[],"aliases":[{"name":"Drag Curl"}],"verified":false},{"id":"hammer-curl","name":"Hammer Curl","category":"arms","type":"strength","equipment":["dumbbells","cable","resistance_band","kettlebell"],"defaultEquipment":"dumbbells","execution":["bilateral","alternating","unilateral"],"defaultExecution":"alternating","primary":["biceps","brachialis"],"secondary":["forearms"],"aliases":[{"name":"DB Hammer Curl","equipment":"dumbbells"},{"name":"Cable Hammer Curl","equipment":"cable"},{"name":"Hammer Curl"}],"verified":true,"attachments":["rope","single_handle"],"defaultAttachment":"rope"},{"id":"incline-curl","name":"Incline Curl","category":"arms","type":"strength","equipment":["dumbbells","cable"],"defaultEquipment":"dumbbells","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["biceps"],"secondary":["brachialis"],"aliases":[{"name":"Incline Curl"},{"name":"Incline Biceps Curl"},{"name":"Incline DB Curl","equipment":"dumbbells"}],"verified":false},{"id":"overhead-triceps-extension","name":"Overhead Triceps Extension","category":"arms","type":"strength","equipment":["cable","dumbbells","barbell","resistance_band"],"defaultEquipment":"cable","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["triceps"],"secondary":[],"aliases":[{"name":"Overhead Tricep Extension"},{"name":"Overhead Extension"}],"verified":true,"attachments":["rope","straight_bar","ez_bar"],"defaultAttachment":"rope"},{"id":"preacher-curl","name":"Preacher Curl","category":"arms","type":"strength","equipment":["barbell","dumbbells","machine","cable"],"defaultEquipment":"barbell","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["biceps"],"secondary":["brachialis"],"aliases":[{"name":"Preacher Curl"},{"name":"EZ Preacher Curl","attachment":"ez_bar"}],"verified":false,"attachments":["ez_bar","straight_bar"],"defaultAttachment":"ez_bar"},{"id":"reverse-curl","name":"Reverse Curl","category":"arms","type":"strength","equipment":["barbell","dumbbells","cable","resistance_band"],"defaultEquipment":"barbell","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["brachioradialis","forearms"],"secondary":["biceps"],"aliases":[{"name":"Reverse Curl"}],"verified":true,"attachments":["straight_bar","ez_bar"],"defaultAttachment":"straight_bar"},{"id":"reverse-wrist-curl","name":"Reverse Wrist Curl","category":"arms","type":"strength","equipment":["barbell","dumbbells","cable"],"defaultEquipment":"barbell","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["forearms"],"secondary":[],"aliases":[{"name":"Reverse Wrist Curl"}],"verified":false},{"id":"skull-crusher","name":"Skull Crusher","category":"arms","type":"strength","equipment":["barbell","dumbbells","cable"],"defaultEquipment":"barbell","execution":["bilateral","alternating"],"defaultExecution":"bilateral","primary":["triceps"],"secondary":[],"aliases":[{"name":"Skull Crusher"},{"name":"Lying Triceps Extension"},{"name":"Skullcrusher"},{"name":"French Press"}],"verified":false},{"id":"spider-curl","name":"Spider Curl","category":"arms","type":"strength","equipment":["dumbbells","barbell","cable"],"defaultEquipment":"dumbbells","execution":["bilateral","alternating"],"defaultExecution":"bilateral","primary":["biceps"],"secondary":[],"aliases":[{"name":"Spider Curl"}],"verified":false},{"id":"triceps-dip","name":"Triceps Dip","category":"arms","type":"strength","equipment":["bodyweight","machine","plate"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["triceps"],"secondary":["pectorals","front deltoids"],"aliases":[{"name":"Triceps Dip"},{"name":"Tricep Dip"},{"name":"Bench Dip"},{"name":"Reverse Dip"},{"name":"Dips"}],"verified":false},{"id":"triceps-kickback","name":"Triceps Kickback","category":"arms","type":"strength","equipment":["dumbbells","cable","resistance_band"],"defaultEquipment":"dumbbells","execution":["unilateral","bilateral"],"defaultExecution":"unilateral","primary":["triceps"],"secondary":[],"aliases":[{"name":"Triceps Kickback"},{"name":"Tricep Kickback"}],"verified":false,"attachments":["rope","single_handle"],"defaultAttachment":"rope"},{"id":"triceps-pushdown","name":"Triceps Pushdown","category":"arms","type":"strength","equipment":["cable","machine","resistance_band"],"defaultEquipment":"cable","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["triceps"],"secondary":[],"aliases":[{"name":"Rope Pushdown","attachment":"rope"},{"name":"Tricep Bar Pushdown","attachment":"straight_bar"},{"name":"Triceps Pushdown"},{"name":"Pushdown"},{"name":"Tricep Pushdown","attachment":"straight_bar"}],"verified":true,"attachments":["rope","straight_bar","ez_bar","v_handle","single_handle"],"defaultAttachment":"rope"},{"id":"wrist-curl","name":"Wrist Curl","category":"arms","type":"strength","equipment":["barbell","dumbbells","cable"],"defaultEquipment":"barbell","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["forearms"],"secondary":[],"aliases":[{"name":"Wrist Curl"}],"verified":false},{"id":"zottman-curl","name":"Zottman Curl","category":"arms","type":"strength","equipment":["dumbbells"],"defaultEquipment":"dumbbells","execution":["bilateral","alternating"],"defaultExecution":"alternating","primary":["biceps","forearms"],"secondary":["brachialis"],"aliases":[{"name":"Zottman Curl"},{"name":"Biceps Zottman"}],"verified":false},{"id":"bent-over-row","name":"Bent Over Row","category":"back","type":"strength","equipment":["barbell","dumbbells","smith","trap_bar"],"defaultEquipment":"barbell","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["lats","mid-back"],"secondary":["biceps","rear deltoids","spinal erectors"],"aliases":[{"name":"Barbell Row","equipment":"barbell"},{"name":"Bent Over Row"},{"name":"BOR"},{"name":"Pendlay Row"}],"verified":false},{"id":"chest-supported-row","name":"Chest Supported Row","category":"back","type":"strength","equipment":["machine","plate_loaded_machine","dumbbells"],"defaultEquipment":"machine","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["mid-back","lats"],"secondary":["rear deltoids","biceps"],"aliases":[{"name":"Chest Supported Row"},{"name":"Seal Row"},{"name":"T-Bar Row"}],"verified":false},{"id":"chin-up","name":"Chin Up","category":"back","type":"strength","equipment":["bodyweight","plate","machine","resistance_band"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["lats","biceps"],"secondary":["mid-back"],"aliases":[{"name":"Chin Up"},{"name":"Chinup"},{"name":"Underhand Pull Up"}],"verified":false},{"id":"good-morning","name":"Good Morning","category":"back","type":"strength","equipment":["barbell","smith","resistance_band","safety_squat_bar"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["hamstrings","spinal erectors"],"secondary":["glutes"],"aliases":[{"name":"Good Morning"}],"verified":false},{"id":"inverted-row","name":"Inverted Row","category":"back","type":"strength","equipment":["bodyweight","plate"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["mid-back","lats"],"secondary":["biceps","rear deltoids"],"aliases":[{"name":"Inverted Row"},{"name":"Bodyweight Row","equipment":"bodyweight"},{"name":"Australian Pull Up"}],"verified":false},{"id":"lat-pulldown","name":"Lat Pulldown","category":"back","type":"strength","equipment":["cable","machine","plate_loaded_machine"],"defaultEquipment":"cable","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["lats"],"secondary":["biceps","rear deltoids"],"aliases":[{"name":"Lat Pulldown"},{"name":"Pulldown"}],"verified":true,"attachments":["wide_bar","lat_bar","v_handle","straight_bar","rope","single_handle"],"defaultAttachment":"wide_bar"},{"id":"pull-up","name":"Pull Up","category":"back","type":"strength","equipment":["bodyweight","plate","machine","resistance_band"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["lats"],"secondary":["biceps","mid-back"],"aliases":[{"name":"Pull Up"},{"name":"Pullup"},{"name":"Wide Grip Pull Up"},{"name":"Weighted Pull Up"},{"name":"Assisted Pull Up"}],"verified":false},{"id":"pullover","name":"Pullover","category":"back","type":"strength","equipment":["dumbbells","cable","barbell","machine"],"defaultEquipment":"dumbbells","execution":["bilateral"],"defaultExecution":"bilateral","primary":["lats","pectorals"],"secondary":["triceps"],"aliases":[{"name":"Pullover"},{"name":"DB Pullover","equipment":"dumbbells"}],"verified":false,"attachments":["rope","straight_bar","ez_bar"],"singleImplement":true,"defaultAttachment":"rope"},{"id":"rack-pull","name":"Rack Pull","category":"back","type":"strength","equipment":["barbell","trap_bar","smith"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["spinal erectors","traps","glutes"],"secondary":["lats","forearms"],"aliases":[{"name":"Rack Pull"},{"name":"Block Pull"},{"name":"Partial Deadlift"}],"verified":false},{"id":"reverse-hyperextension","name":"Reverse Hyperextension","category":"back","type":"strength","equipment":["machine","bodyweight"],"defaultEquipment":"machine","execution":["bilateral"],"defaultExecution":"bilateral","primary":["glutes","spinal erectors"],"secondary":["hamstrings"],"aliases":[{"name":"Reverse Hyper"},{"name":"Reverse Hyperextension"}],"verified":false},{"id":"seated-row","name":"Seated Row","category":"back","type":"strength","equipment":["cable","machine","plate_loaded_machine"],"defaultEquipment":"cable","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["lats","mid-back"],"secondary":["biceps","rear deltoids"],"aliases":[{"name":"Seated Cable Row","equipment":"cable"},{"name":"Cable Row","equipment":"cable"},{"name":"Seated Row"}],"verified":true,"attachments":["v_handle","wide_bar","straight_bar","rope","single_handle"],"defaultAttachment":"v_handle"},{"id":"shrug","name":"Shrug","category":"back","type":"strength","equipment":["barbell","dumbbells","smith","trap_bar","machine","cable"],"defaultEquipment":"barbell","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["traps"],"secondary":["forearms"],"aliases":[{"name":"Barbell Shrug","equipment":"barbell"},{"name":"Smith Shrug","equipment":"smith"}],"verified":true},{"id":"single-arm-row","name":"Single Arm Row","category":"back","type":"strength","equipment":["dumbbells","cable","kettlebell","machine"],"defaultEquipment":"dumbbells","execution":["unilateral"],"defaultExecution":"unilateral","primary":["lats","mid-back"],"secondary":["biceps","rear deltoids"],"aliases":[{"name":"DB Row","equipment":"dumbbells"},{"name":"One Arm Row","execution":"unilateral"},{"name":"Single Arm Row","execution":"unilateral"},{"name":"Kroc Row"},{"name":"Dumbbell Row","equipment":"dumbbells"}],"verified":false,"attachments":["single_handle"],"defaultAttachment":"single_handle"},{"id":"straight-arm-pulldown","name":"Straight Arm Pulldown","category":"back","type":"strength","equipment":["cable","resistance_band","machine"],"defaultEquipment":"cable","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["lats"],"secondary":["triceps","core"],"aliases":[{"name":"Straight Arm Pulldown"},{"name":"Lat Pushdown"}],"verified":false,"attachments":["straight_bar","rope","lat_bar"],"defaultAttachment":"straight_bar"},{"id":"elliptical","name":"Elliptical","category":"cardio","type":"cardio","equipment":["machine"],"defaultEquipment":"machine","execution":["bilateral"],"defaultExecution":"bilateral","primary":["quadriceps","glutes"],"secondary":["calves","hamstrings"],"aliases":[{"name":"Elliptical"},{"name":"Cross Trainer"},{"name":"Elliptical Cross Trainer"}],"metric":"time","verified":false},{"id":"rowing-machine","name":"Rowing Machine","category":"cardio","type":"cardio","equipment":["machine"],"defaultEquipment":"machine","execution":["bilateral"],"defaultExecution":"bilateral","primary":["lats","quadriceps"],"secondary":["mid-back","hamstrings","biceps"],"aliases":[{"name":"Rowing Machine","equipment":"machine"},{"name":"Rower"},{"name":"Erg"},{"name":"Concept 2"}],"metric":"time","verified":false},{"id":"sled-push","name":"Sled Push","category":"cardio","type":"strength","equipment":["plate_loaded_machine"],"defaultEquipment":"plate_loaded_machine","execution":["bilateral"],"defaultExecution":"bilateral","primary":["quadriceps","glutes"],"secondary":["calves","core"],"aliases":[{"name":"Sled Push","equipment":"plate_loaded_machine"},{"name":"Prowler"},{"name":"Sled Drag","equipment":"plate_loaded_machine"}],"metric":"time","verified":false},{"id":"stair-climber","name":"Stair Climber","category":"cardio","type":"cardio","equipment":["machine"],"defaultEquipment":"machine","execution":["bilateral"],"defaultExecution":"bilateral","primary":["glutes","quadriceps"],"secondary":["calves","hamstrings"],"aliases":[{"name":"Stair Climber"},{"name":"Stepmill"},{"name":"Stairmaster"}],"metric":"time","verified":false},{"id":"stationary-bike","name":"Stationary Bike","category":"cardio","type":"cardio","equipment":["machine"],"defaultEquipment":"machine","execution":["bilateral"],"defaultExecution":"bilateral","primary":["quadriceps"],"secondary":["glutes","calves"],"aliases":[{"name":"Stationary Bike"},{"name":"Upright Bike"},{"name":"Recumbent Bike"},{"name":"Spin Bike"},{"name":"Exercise Bike"}],"metric":"time","verified":false},{"id":"treadmill","name":"Treadmill","category":"cardio","type":"cardio","equipment":["machine"],"defaultEquipment":"machine","execution":["bilateral"],"defaultExecution":"bilateral","primary":["quadriceps","calves"],"secondary":["glutes","hamstrings"],"aliases":[{"name":"Treadmill"},{"name":"Running"},{"name":"Walking"}],"metric":"time","verified":false},{"id":"bench-press","name":"Bench Press","category":"chest","type":"strength","equipment":["barbell","dumbbells","smith","machine","plate_loaded_machine"],"defaultEquipment":"barbell","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["pectorals"],"secondary":["triceps","front deltoids"],"aliases":[{"name":"Bench Press"},{"name":"Machine Chest Press","equipment":"machine"},{"name":"Flat DB Press","equipment":"dumbbells"},{"name":"Chest Press","equipment":"machine"},{"name":"Flat Bench"},{"name":"Pause Bench"},{"name":"Spoto Press"},{"name":"Larsen Press"},{"name":"Dumbbell Bench","equipment":"dumbbells"}],"verified":true},{"id":"chest-dip","name":"Chest Dip","category":"chest","type":"strength","equipment":["bodyweight","machine","plate"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["lower pectorals"],"secondary":["triceps","front deltoids"],"aliases":[{"name":"Chest Dip"},{"name":"Dip"},{"name":"Weighted Dip"}],"verified":false},{"id":"chest-fly","name":"Chest Fly","category":"chest","type":"strength","equipment":["dumbbells","cable","machine","resistance_band"],"defaultEquipment":"dumbbells","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["pectorals"],"secondary":["front deltoids"],"aliases":[{"name":"Fly"},{"name":"Flye"},{"name":"Cable Crossover","equipment":"cable"},{"name":"Dumbbell Fly","equipment":"dumbbells"},{"name":"Low to High Cable Fly","equipment":"cable"},{"name":"High to Low Cable Fly","equipment":"cable"}],"verified":false,"attachments":["single_handle","dual_handle"],"defaultAttachment":"single_handle"},{"id":"decline-bench-press","name":"Decline Bench Press","category":"chest","type":"strength","equipment":["barbell","dumbbells","smith","machine"],"defaultEquipment":"barbell","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["lower pectorals"],"secondary":["triceps"],"aliases":[{"name":"Decline Bench"},{"name":"Decline Press"},{"name":"Decline Chest Press"}],"verified":false},{"id":"decline-push-up","name":"Decline Push Up","category":"chest","type":"strength","equipment":["bodyweight"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["upper pectorals"],"secondary":["front deltoids","triceps"],"aliases":[{"name":"Decline Push Up"},{"name":"Feet Elevated Push Up"}],"verified":false},{"id":"incline-bench-press","name":"Incline Bench Press","category":"chest","type":"strength","equipment":["barbell","dumbbells","smith","machine"],"defaultEquipment":"barbell","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["upper pectorals"],"secondary":["front deltoids","triceps"],"aliases":[{"name":"Incline Bench"},{"name":"Incline Press"},{"name":"Incline Chest Press"}],"verified":true},{"id":"incline-chest-fly","name":"Incline Chest Fly","category":"chest","type":"strength","equipment":["dumbbells","cable","machine"],"defaultEquipment":"dumbbells","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["upper pectorals"],"secondary":["front deltoids"],"aliases":[{"name":"Incline Fly"},{"name":"Incline Flye"}],"verified":false,"attachments":["single_handle","dual_handle"],"defaultAttachment":"single_handle"},{"id":"incline-push-up","name":"Incline Push Up","category":"chest","type":"strength","equipment":["bodyweight"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["lower pectorals"],"secondary":["triceps"],"aliases":[{"name":"Incline Push Up"}],"verified":false},{"id":"pec-deck","name":"Pec Deck","category":"chest","type":"strength","equipment":["machine"],"defaultEquipment":"machine","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["pectorals"],"secondary":["front deltoids"],"aliases":[{"name":"Pec Deck"},{"name":"Butterfly"},{"name":"Machine Fly","equipment":"machine"}],"verified":false},{"id":"pin-press","name":"Pin Press","category":"chest","type":"strength","equipment":["barbell","smith"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["pectorals","triceps"],"secondary":["front deltoids"],"aliases":[{"name":"Bench Pin Press"},{"name":"Dead Bench"}],"verified":true},{"id":"push-up","name":"Push Up","category":"chest","type":"strength","equipment":["bodyweight","plate","resistance_band"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["pectorals"],"secondary":["triceps","front deltoids","core"],"aliases":[{"name":"Push Up"},{"name":"Pushup"},{"name":"Press Up"}],"verified":false},{"id":"ab-wheel","name":"Ab Wheel Rollout","category":"core","type":"strength","equipment":["bodyweight","barbell"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["rectus abdominis"],"secondary":["lats","hip flexors"],"aliases":[{"name":"Ab Wheel"},{"name":"Ab Rollout"},{"name":"Rollout"}],"verified":false,"singleImplement":true},{"id":"cable-crunch","name":"Crunch","category":"core","type":"strength","equipment":["cable","machine","bodyweight"],"defaultEquipment":"cable","execution":["bilateral"],"defaultExecution":"bilateral","primary":["rectus abdominis"],"secondary":["obliques"],"aliases":[{"name":"Cable Crunch","equipment":"cable"},{"name":"Kneeling Crunch"},{"name":"Crunch"},{"name":"Machine Seated Crunch","equipment":"machine"},{"name":"Machine Crunch","equipment":"machine"},{"name":"Seated Crunch","equipment":"machine"}],"verified":true,"attachments":["rope","single_handle"],"defaultAttachment":"rope"},{"id":"farmers-carry","name":"Farmers Carry","category":"core","type":"strength","equipment":["dumbbells","kettlebell","trap_bar","barbell"],"defaultEquipment":"dumbbells","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["grip","traps","core"],"secondary":["forearms","glutes"],"aliases":[{"name":"Farmers Carry"},{"name":"Farmers Walk"},{"name":"Suitcase Carry"},{"name":"Loaded Carry"}],"metric":"time","verified":false},{"id":"hanging-knee-raise","name":"Hanging Knee Raise","category":"core","type":"strength","equipment":["bodyweight","dumbbells"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["hip flexors","lower abdominals"],"secondary":["obliques"],"aliases":[{"name":"Hanging Knee Raise"},{"name":"Knee Raise"}],"verified":true},{"id":"hanging-leg-raise","name":"Hanging Leg Raise","category":"core","type":"strength","equipment":["bodyweight","dumbbells"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["lower abdominals","hip flexors"],"secondary":["obliques","grip"],"aliases":[{"name":"Hanging Leg Raise"},{"name":"Straight Leg Raise"},{"name":"Toes To Bar"}],"verified":false},{"id":"pallof-press","name":"Pallof Press","category":"core","type":"strength","equipment":["cable","resistance_band"],"defaultEquipment":"cable","execution":["unilateral"],"defaultExecution":"unilateral","primary":["obliques","core"],"secondary":["front deltoids"],"aliases":[{"name":"Pallof Press"},{"name":"Anti Rotation Press"}],"verified":false,"attachments":["single_handle","rope"],"defaultAttachment":"single_handle"},{"id":"plank","name":"Plank","category":"core","type":"strength","equipment":["bodyweight","plate"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["rectus abdominis","core"],"secondary":["front deltoids","glutes"],"aliases":[{"name":"Plank"},{"name":"Front Plank"}],"metric":"time","verified":false},{"id":"russian-twist","name":"Russian Twist","category":"core","type":"strength","equipment":["bodyweight","plate","dumbbells","kettlebell"],"defaultEquipment":"plate","execution":["alternating"],"defaultExecution":"alternating","primary":["obliques"],"secondary":["rectus abdominis"],"aliases":[{"name":"Russian Twist"}],"verified":false,"singleImplement":true},{"id":"side-bend","name":"Side Bend","category":"core","type":"strength","equipment":["dumbbells","cable","kettlebell","plate"],"defaultEquipment":"dumbbells","execution":["unilateral"],"defaultExecution":"unilateral","primary":["obliques"],"secondary":["quadratus lumborum"],"aliases":[{"name":"DB Side Bend","equipment":"dumbbells"},{"name":"Side Bend"}],"verified":true},{"id":"side-plank","name":"Side Plank","category":"core","type":"strength","equipment":["bodyweight","plate"],"defaultEquipment":"bodyweight","execution":["unilateral"],"defaultExecution":"unilateral","primary":["obliques"],"secondary":["core","glutes"],"aliases":[{"name":"Side Plank"}],"metric":"time","verified":false},{"id":"sit-up","name":"Sit Up","category":"core","type":"strength","equipment":["bodyweight","plate","dumbbells"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["rectus abdominis"],"secondary":["hip flexors"],"aliases":[{"name":"Sit Up"},{"name":"Situp"},{"name":"Decline Sit Up"},{"name":"Weighted Sit Up"}],"verified":false,"singleImplement":true},{"id":"woodchopper","name":"Woodchopper","category":"core","type":"strength","equipment":["cable","resistance_band","dumbbells"],"defaultEquipment":"cable","execution":["unilateral"],"defaultExecution":"unilateral","primary":["obliques"],"secondary":["rectus abdominis","hip flexors"],"aliases":[{"name":"Cable Woodchopper","equipment":"cable"},{"name":"Woodchop"},{"name":"Woodchopper"}],"verified":true,"attachments":["rope","single_handle","dual_handle"],"defaultAttachment":"rope"},{"id":"back-extension","name":"Back Extension","category":"legs","type":"strength","equipment":["bodyweight","plate","barbell","dumbbells"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["spinal erectors"],"secondary":["glutes","hamstrings"],"aliases":[{"name":"Back Extension"},{"name":"Hyperextension"},{"name":"45 Degree Back Extension"}],"verified":true,"singleImplement":true},{"id":"back-squat","name":"Back Squat","category":"legs","type":"strength","equipment":["barbell","smith","safety_squat_bar","belt_squat"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["quadriceps","glutes"],"secondary":["adductors","spinal erectors"],"aliases":[{"name":"Back Squat"},{"name":"Squat"},{"name":"Comp Squat"},{"name":"Pause Squat"},{"name":"High Bar Squat"},{"name":"Low Bar Squat"},{"name":"Safety Bar Squat","equipment":"safety_squat_bar"}],"verified":true},{"id":"box-squat","name":"Box Squat","category":"legs","type":"strength","equipment":["barbell","smith","safety_squat_bar"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["glutes","quadriceps"],"secondary":["hamstrings"],"aliases":[{"name":"Box Squat"}],"verified":false},{"id":"bulgarian-split-squat","name":"Bulgarian Split Squat","category":"legs","type":"strength","equipment":["dumbbells","barbell","smith","kettlebell","bodyweight","safety_squat_bar","belt_squat"],"defaultEquipment":"dumbbells","execution":["unilateral"],"defaultExecution":"unilateral","primary":["quadriceps","glutes"],"secondary":["adductors","hamstrings"],"aliases":[{"name":"Bulgarian Split Squat"},{"name":"BSS"},{"name":"Rear Foot Elevated Split Squat"},{"name":"RFESS"}],"verified":false},{"id":"calf-raise-seated","name":"Calf Raise (seated)","category":"legs","type":"strength","equipment":["machine","plate_loaded_machine","dumbbells","barbell","plate"],"defaultEquipment":"machine","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["soleus"],"secondary":["gastrocnemius"],"aliases":[{"name":"Seated Calf Raise"},{"name":"Calf Raise Seated"},{"name":"Seated Calf Extension"}],"verified":false,"singleImplement":true},{"id":"calf-raise-standing","name":"Calf Raise (standing)","category":"legs","type":"strength","equipment":["smith","machine","barbell","bodyweight","plate_loaded_machine","dumbbells"],"defaultEquipment":"smith","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["gastrocnemius"],"secondary":["soleus"],"aliases":[{"name":"Smith Calf Raise","equipment":"smith"},{"name":"Standing Calf Raise"},{"name":"Calf Raise"},{"name":"Calf Extension"},{"name":"Sled Press Calf Raise","equipment":"plate_loaded_machine"},{"name":"Leg Press Calf Raise","equipment":"plate_loaded_machine"}],"verified":true},{"id":"deadlift","name":"Deadlift","category":"legs","type":"strength","equipment":["barbell","trap_bar","smith"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["glutes","hamstrings","spinal erectors"],"secondary":["lats","traps","forearms"],"aliases":[{"name":"Deadlift"},{"name":"Hex Deadlift","equipment":"trap_bar"},{"name":"Trap Bar Deadlift","equipment":"trap_bar"},{"name":"Conventional Deadlift"},{"name":"Deficit Deadlift"}],"verified":true},{"id":"donkey-calf-raise","name":"Donkey Calf Raise","category":"legs","type":"strength","equipment":["machine","bodyweight","plate_loaded_machine"],"defaultEquipment":"machine","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["gastrocnemius"],"secondary":["soleus"],"aliases":[{"name":"Donkey Calf Raise"},{"name":"Donkey Raise"}],"verified":false},{"id":"front-squat","name":"Front Squat","category":"legs","type":"strength","equipment":["barbell","smith","kettlebell","dumbbells","safety_squat_bar"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["quadriceps"],"secondary":["glutes","core","upper back"],"aliases":[{"name":"Front Squat"}],"verified":false},{"id":"glute-bridge","name":"Glute Bridge","category":"legs","type":"strength","equipment":["barbell","bodyweight","dumbbells","resistance_band"],"defaultEquipment":"bodyweight","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["glutes"],"secondary":["hamstrings"],"aliases":[{"name":"Glute Bridge"}],"verified":false,"singleImplement":true},{"id":"glute-ham-raise","name":"Glute Ham Raise","category":"legs","type":"strength","equipment":["bodyweight","machine","plate"],"defaultEquipment":"machine","execution":["bilateral"],"defaultExecution":"bilateral","primary":["hamstrings","glutes"],"secondary":["calves","spinal erectors"],"aliases":[{"name":"Glute Ham Raise"},{"name":"GHR"}],"verified":false},{"id":"glute-kickback","name":"Glute Kickback","category":"legs","type":"strength","equipment":["cable","machine","resistance_band"],"defaultEquipment":"cable","execution":["unilateral"],"defaultExecution":"unilateral","primary":["glutes"],"secondary":["hamstrings"],"aliases":[{"name":"Cable Kickback","equipment":"cable"},{"name":"Glute Kickback"}],"verified":true,"attachments":["ankle_strap"],"defaultAttachment":"ankle_strap"},{"id":"goblet-squat","name":"Goblet Squat","category":"legs","type":"strength","equipment":["dumbbells","kettlebell","plate"],"defaultEquipment":"kettlebell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["quadriceps","glutes"],"secondary":["core"],"aliases":[{"name":"Goblet Squat"}],"verified":false,"singleImplement":true},{"id":"hack-squat","name":"Hack Squat","category":"legs","type":"strength","equipment":["machine","plate_loaded_machine","barbell"],"defaultEquipment":"plate_loaded_machine","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["quadriceps"],"secondary":["glutes"],"aliases":[{"name":"Hack Squat"},{"name":"Hack Press"}],"verified":false},{"id":"hip-abduction","name":"Hip Abduction","category":"legs","type":"strength","equipment":["machine","cable","resistance_band"],"defaultEquipment":"machine","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["gluteus medius"],"secondary":["tensor fasciae latae"],"aliases":[{"name":"Hip Abduction"},{"name":"Abductor Machine","equipment":"machine"}],"verified":true,"attachments":["ankle_strap"],"defaultAttachment":"ankle_strap"},{"id":"hip-adduction","name":"Hip Adduction","category":"legs","type":"strength","equipment":["machine","cable","resistance_band"],"defaultEquipment":"machine","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["adductors"],"secondary":[],"aliases":[{"name":"Hip Adduction"},{"name":"Adductor Machine","equipment":"machine"}],"verified":true,"attachments":["ankle_strap"],"defaultAttachment":"ankle_strap"},{"id":"hip-thrust","name":"Hip Thrust","category":"legs","type":"strength","equipment":["barbell","machine","smith","plate_loaded_machine"],"defaultEquipment":"barbell","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["glutes"],"secondary":["hamstrings"],"aliases":[{"name":"Barbell Hip Thrust","equipment":"barbell"},{"name":"Hip Thrust"}],"verified":true},{"id":"leg-curl","name":"Leg Curl","category":"legs","type":"strength","equipment":["machine","plate_loaded_machine","resistance_band"],"defaultEquipment":"machine","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["hamstrings"],"secondary":["calves"],"aliases":[{"name":"Leg Curl"},{"name":"Hamstring Curl"},{"name":"Seated Leg Curl","equipment":"machine"},{"name":"Lying Leg Curl","equipment":"machine"}],"verified":true},{"id":"leg-extension","name":"Leg Extension","category":"legs","type":"strength","equipment":["machine","plate_loaded_machine"],"defaultEquipment":"machine","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["quadriceps"],"secondary":[],"aliases":[{"name":"Leg Extension"},{"name":"Quad Extension"}],"verified":true,"attachments":["ankle_strap"],"defaultAttachment":"ankle_strap"},{"id":"leg-press","name":"Leg Press","category":"legs","type":"strength","equipment":["plate_loaded_machine","machine"],"defaultEquipment":"plate_loaded_machine","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["quadriceps","glutes"],"secondary":["hamstrings"],"aliases":[{"name":"Sled Leg Press","equipment":"plate_loaded_machine"},{"name":"Leg Press"}],"verified":true},{"id":"lunge","name":"Lunge","category":"legs","type":"strength","equipment":["dumbbells","barbell","kettlebell","bodyweight","smith","safety_squat_bar","belt_squat"],"defaultEquipment":"dumbbells","execution":["alternating","unilateral"],"defaultExecution":"alternating","primary":["quadriceps","glutes"],"secondary":["hamstrings"],"aliases":[{"name":"Lunge"},{"name":"Forward Lunge"},{"name":"Walking Lunge"}],"verified":false},{"id":"nordic-curl","name":"Nordic Curl","category":"legs","type":"strength","equipment":["bodyweight","resistance_band"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["hamstrings"],"secondary":["glutes","calves"],"aliases":[{"name":"Nordic Curl"},{"name":"Inverse Leg Curl"},{"name":"Natural Glute Ham Raise"}],"verified":false},{"id":"pistol-squat","name":"Pistol Squat","category":"legs","type":"strength","equipment":["bodyweight","dumbbells","kettlebell"],"defaultEquipment":"bodyweight","execution":["unilateral"],"defaultExecution":"unilateral","primary":["quadriceps","glutes"],"secondary":["core"],"aliases":[{"name":"Pistol Squat"},{"name":"Single Leg Squat","execution":"unilateral"}],"verified":false},{"id":"reverse-lunge","name":"Reverse Lunge","category":"legs","type":"strength","equipment":["dumbbells","barbell","kettlebell","bodyweight","smith","safety_squat_bar"],"defaultEquipment":"dumbbells","execution":["alternating","unilateral"],"defaultExecution":"alternating","primary":["glutes","quadriceps"],"secondary":["hamstrings"],"aliases":[{"name":"Reverse Lunge"},{"name":"Rear Lunge"},{"name":"Backward Lunge"}],"verified":false},{"id":"romanian-deadlift","name":"Romanian Deadlift","category":"legs","type":"strength","equipment":["barbell","dumbbells","smith","trap_bar"],"defaultEquipment":"barbell","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["hamstrings","glutes"],"secondary":["spinal erectors"],"aliases":[{"name":"Romanian Deadlift"},{"name":"RDL"}],"verified":true},{"id":"side-lunge","name":"Side Lunge","category":"legs","type":"strength","equipment":["dumbbells","kettlebell","bodyweight","barbell"],"defaultEquipment":"dumbbells","execution":["alternating","unilateral"],"defaultExecution":"alternating","primary":["adductors","quadriceps"],"secondary":["glutes"],"aliases":[{"name":"Side Lunge"},{"name":"Lateral Lunge"},{"name":"Cossack Squat"}],"verified":false},{"id":"sissy-squat","name":"Sissy Squat","category":"legs","type":"strength","equipment":["bodyweight","machine","plate"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["quadriceps"],"secondary":[],"aliases":[{"name":"Sissy Squat"}],"verified":false},{"id":"split-squat","name":"Split Squat","category":"legs","type":"strength","equipment":["dumbbells","barbell","smith","kettlebell","bodyweight","safety_squat_bar","belt_squat"],"defaultEquipment":"dumbbells","execution":["unilateral"],"defaultExecution":"unilateral","primary":["quadriceps","glutes"],"secondary":["adductors"],"aliases":[{"name":"Split Squat"},{"name":"Static Lunge"}],"verified":false},{"id":"step-up","name":"Step Up","category":"legs","type":"strength","equipment":["dumbbells","barbell","kettlebell","bodyweight","safety_squat_bar"],"defaultEquipment":"dumbbells","execution":["alternating","unilateral"],"defaultExecution":"alternating","primary":["quadriceps","glutes"],"secondary":["hamstrings"],"aliases":[{"name":"Step Up"},{"name":"Box Step Up"},{"name":"Lateral Step Up"}],"verified":false},{"id":"stiff-leg-deadlift","name":"Stiff Leg Deadlift","category":"legs","type":"strength","equipment":["barbell","dumbbells","smith"],"defaultEquipment":"barbell","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["hamstrings"],"secondary":["glutes","spinal erectors"],"aliases":[{"name":"Stiff Leg Deadlift"},{"name":"SLDL"},{"name":"Straight Leg Deadlift"}],"verified":false},{"id":"sumo-deadlift","name":"Sumo Deadlift","category":"legs","type":"strength","equipment":["barbell","trap_bar"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["glutes","quadriceps","adductors"],"secondary":["spinal erectors","traps","forearms"],"aliases":[{"name":"Sumo Deadlift"},{"name":"Sumo Pull"}],"verified":false},{"id":"arnold-press","name":"Arnold Press","category":"shoulders","type":"strength","equipment":["dumbbells","kettlebell"],"defaultEquipment":"dumbbells","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["deltoids"],"secondary":["triceps"],"aliases":[{"name":"Arnold Press"}],"verified":false},{"id":"behind-neck-press","name":"Behind The Neck Press","category":"shoulders","type":"strength","equipment":["barbell","smith"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["deltoids"],"secondary":["triceps","traps"],"aliases":[{"name":"Behind The Neck Press"},{"name":"BTN Press"}],"verified":false},{"id":"external-rotation","name":"External Rotation","category":"shoulders","type":"strength","equipment":["cable","dumbbells","resistance_band"],"defaultEquipment":"cable","execution":["unilateral","bilateral"],"defaultExecution":"unilateral","primary":["rotator cuff"],"secondary":["rear deltoids"],"aliases":[{"name":"External Rotation"},{"name":"Cuban Rotation"},{"name":"Shoulder Rotation"},{"name":"Rotator Cuff"}],"verified":false,"attachments":["single_handle"],"defaultAttachment":"single_handle"},{"id":"face-pull","name":"Face Pull","category":"shoulders","type":"strength","equipment":["cable","resistance_band"],"defaultEquipment":"cable","execution":["bilateral"],"defaultExecution":"bilateral","primary":["rear deltoids"],"secondary":["traps","rotator cuff"],"aliases":[{"name":"Face Pull"}],"verified":true,"attachments":["rope","dual_handle"],"defaultAttachment":"rope"},{"id":"front-raise","name":"Front Raise","category":"shoulders","type":"strength","equipment":["dumbbells","cable","barbell","plate","resistance_band"],"defaultEquipment":"dumbbells","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["front deltoids"],"secondary":["upper pectorals"],"aliases":[{"name":"Front Raise"}],"verified":true,"attachments":["single_handle","straight_bar","rope"],"defaultAttachment":"single_handle"},{"id":"lateral-raise","name":"Lateral Raise","category":"shoulders","type":"strength","equipment":["dumbbells","cable","machine","resistance_band","plate"],"defaultEquipment":"dumbbells","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["side deltoids"],"secondary":["traps"],"aliases":[{"name":"DB Lat Raise","equipment":"dumbbells"},{"name":"Cable Lat Raise","equipment":"cable"},{"name":"Side Raise"},{"name":"Lat Raise"}],"verified":true,"attachments":["single_handle"],"executionDefaults":{"cable":"unilateral","dumbbells":"bilateral","machine":"bilateral","resistance_band":"bilateral","plate":"bilateral"},"defaultAttachment":"single_handle"},{"id":"overhead-press","name":"Overhead Press","category":"shoulders","type":"strength","equipment":["barbell","dumbbells","smith","machine"],"defaultEquipment":"barbell","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["deltoids"],"secondary":["triceps","upper pectorals"],"aliases":[{"name":"Strict Press"},{"name":"Smith Shoulder Press","equipment":"smith"},{"name":"Military Press"},{"name":"Shoulder Press"},{"name":"OHP"},{"name":"Dumbbell Shoulder Press","equipment":"dumbbells"}],"verified":true},{"id":"push-press","name":"Push Press","category":"shoulders","type":"strength","equipment":["barbell","dumbbells","kettlebell"],"defaultEquipment":"barbell","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["deltoids"],"secondary":["triceps","quadriceps","glutes"],"aliases":[{"name":"Push Press"}],"verified":false},{"id":"rear-delt-fly","name":"Rear Delt Fly","category":"shoulders","type":"strength","equipment":["dumbbells","cable","machine","resistance_band"],"defaultEquipment":"dumbbells","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["rear deltoids"],"secondary":["mid-back","traps"],"aliases":[{"name":"Reverse Fly"},{"name":"Rear Delt Fly"},{"name":"Reverse Pec Deck"},{"name":"Rear Delt Machine","equipment":"machine"}],"verified":false,"attachments":["single_handle","dual_handle"],"defaultAttachment":"single_handle"},{"id":"rear-delt-row","name":"Rear Delt Row","category":"shoulders","type":"strength","equipment":["barbell","dumbbells","cable","machine"],"defaultEquipment":"dumbbells","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["rear deltoids"],"secondary":["traps","mid-back"],"aliases":[{"name":"Rear Delt Row"},{"name":"High Row"}],"verified":false,"attachments":["rope","straight_bar"],"defaultAttachment":"rope"},{"id":"upright-row","name":"Upright Row","category":"shoulders","type":"strength","equipment":["barbell","dumbbells","cable","smith","resistance_band"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["side deltoids","traps"],"secondary":["biceps"],"aliases":[{"name":"Upright Row"}],"verified":false,"attachments":["straight_bar","ez_bar","rope"],"defaultAttachment":"straight_bar"},{"id":"y-raise","name":"Y Raise","category":"shoulders","type":"strength","equipment":["dumbbells","cable","resistance_band"],"defaultEquipment":"dumbbells","execution":["bilateral"],"defaultExecution":"bilateral","primary":["rear deltoids","lower traps"],"secondary":["rotator cuff"],"aliases":[{"name":"Y Raise"}],"verified":false,"attachments":["single_handle"],"defaultAttachment":"single_handle"}]};
+const EXERCISE_CATALOGUE = {"schemaVersion":2,"note":"Movement catalogue for the Ironlog exercise system. A logged set references a LEAF — movement + equipment + execution + attachment — not a name string. Aliases are historical/colloquial names used for import resolution only, never for identity, and each may pin the axes its name implies (e.g. \"Smith Shrug\" pins equipment=smith). Axes an alias does not pin fall back to the movement defaults. `metric` omitted means reps_weight. `verified:true` means the leaf mapping was checked against real logged data; false means generated and provisional. See r&d/specs/exercise-system-phase1.md.","vocabularies":{"equipment":["bodyweight","barbell","dumbbells","kettlebell","trap_bar","smith","machine","plate_loaded_machine","cable","resistance_band","plate","safety_squat_bar","belt_squat","log","axle","yoke","keg","sandbag","stone","farmers_handles","sled","conan_wheel"],"execution":["bilateral","alternating","unilateral"],"load":{"rule":"per_side when execution is unilateral or alternating; else per_side when equipment is dumbbells, kettlebell or farmers_handles and the movement is not singleImplement; else total","order":[{"when":{"execution":["unilateral","alternating"]},"load":"per_side"},{"when":{"equipment":["dumbbells","kettlebell","farmers_handles"],"singleImplement":false},"load":"per_side"},{"else":true,"load":"total"}],"note":"A bilateral dumbbell bench with two 40 kg dumbbells is logged as 40, not 80. singleImplement:true marks movements where both hands share one implement (goblet squat, pullover, Russian twist), which are total. A movement may override with loadOverride. Volume must account for this: a per_side set of 20 kg x 10 is 400 kg, not 200."},"category":["shoulders","chest","arms","back","legs","core","cardio","strongman"],"type":["strength","cardio"],"metric":["reps_weight","time","distance","time_distance","carry","race"],"attachment":["none","rope","straight_bar","ez_bar","v_handle","wide_bar","lat_bar","single_handle","ankle_strap","dual_handle"],"setType":["warmup","working","amrap","drop"],"modifier":[{"id":"comp_pause","label":"Comp pause","splitsPR":false,"detect":["comp pause"],"evidence":{"programEntries":21}},{"id":"slow_eccentric","label":"Slow eccentric","splitsPR":false,"detect":["slow eccentric"],"evidence":{"programEntries":49}},{"id":"pause_stretch","label":"2s pause at stretch","splitsPR":false,"detect":["2 s pause at stretch","2s pause at stretch"],"evidence":{"programEntries":51}},{"id":"ipf_depth","label":"IPF depth","splitsPR":false,"detect":["ipf depth"],"evidence":{"programEntries":4}},{"id":"comp_stance","label":"Comp stance","splitsPR":false,"detect":["comp stance"],"evidence":{"programEntries":4}},{"id":"full_commands","label":"Full commands","splitsPR":false,"detect":["full commands"],"evidence":{"programEntries":2}},{"id":"heavy_single","label":"Heavy single","splitsPR":false,"detect":["heavy single"],"evidence":{"programEntries":4}},{"id":"opener","label":"Opener","splitsPR":false,"detect":["opener"],"evidence":{"programEntries":2}},{"id":"stop_1_shy","label":"Stop 1 shy","splitsPR":false,"detect":["stop 1 shy"],"evidence":{"programEntries":346}},{"id":"technique","label":"Technique","splitsPR":false,"detect":["technique"],"evidence":{"programEntries":1}},{"id":"chains","label":"Chains","splitsPR":true,"detect":["chains","chain"],"evidence":{"programEntries":0}},{"id":"bands","label":"Bands","splitsPR":true,"detect":["bands","banded"],"evidence":{"programEntries":0}},{"id":"slingshot","label":"Slingshot","splitsPR":true,"detect":["slingshot"],"evidence":{"programEntries":0}},{"id":"equipped","label":"Equipped (shirt/suit)","splitsPR":true,"detect":["equipped","shirted","suited"],"evidence":{"programEntries":0}}],"modifierNote":"splitsPR:false annotates a set without changing identity — same leaf, same PR pool. splitsPR:true is a materially different lift and forms its own leaf; it must never share a PR pool with the unmodified version. detect terms are matched case-insensitively on whole words against the entry note; matching is literal, never fuzzy. Modifiers are extracted from notes; notes are never rewritten. Deficit / block / rack pull / board press are deliberately NOT modifiers — see the movement-vs-modifier ruling in r&d/specs/exercise-system-phase1.md section 8.","attachmentKind":{"none":"none","rope":"handle","single_handle":"handle","dual_handle":"handle","v_handle":"handle","ankle_strap":"handle","wide_bar":"handle","lat_bar":"handle","straight_bar":"bar","ez_bar":"bar"},"attachmentApplies":{"cable":"any","barbell":"bar","_default":"none"},"attachmentNote":"attachments lists what a movement CAN take. What it may take on a given leaf is attachmentApplies[equipment]: \"any\" = every listed attachment, \"bar\" = only attachmentKind \"bar\" (a real weighted bar), \"none\" = attachment is always \"none\". Equipment absent from attachmentApplies uses _default. This is why attachment is the fourth axis of the leaf and not a movement-level field."},"movements":[{"id":"biceps-curl","name":"Biceps Curl","category":"arms","type":"strength","equipment":["barbell","dumbbells","cable","machine","resistance_band","kettlebell"],"defaultEquipment":"barbell","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["biceps"],"secondary":["forearms"],"aliases":[{"name":"Barbell Curl","equipment":"barbell"},{"name":"Biceps Curl"},{"name":"Curl"},{"name":"Dumbbell Curl","equipment":"dumbbells"}],"verified":true,"attachments":["straight_bar","ez_bar","rope","single_handle"],"defaultAttachment":"straight_bar"},{"id":"close-grip-bench","name":"Close Grip Bench Press","category":"arms","type":"strength","equipment":["barbell","smith"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["triceps"],"secondary":["pectorals","front deltoids"],"aliases":[{"name":"Close Grip Bench"},{"name":"CGBP"},{"name":"Triceps Press"}],"verified":true},{"id":"concentration-curl","name":"Concentration Curl","category":"arms","type":"strength","equipment":["dumbbells","cable","kettlebell"],"defaultEquipment":"dumbbells","execution":["unilateral"],"defaultExecution":"unilateral","primary":["biceps"],"secondary":[],"aliases":[{"name":"Concentration Curl"}],"verified":false},{"id":"dead-hang","name":"Dead Hang","category":"arms","type":"strength","equipment":["bodyweight","plate"],"defaultEquipment":"bodyweight","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["forearms","grip"],"secondary":["lats"],"aliases":[{"name":"Dead Hang"},{"name":"Bar Hang"}],"metric":"time","verified":false},{"id":"drag-curl","name":"Drag Curl","category":"arms","type":"strength","equipment":["barbell","dumbbells","smith","cable"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["biceps"],"secondary":[],"aliases":[{"name":"Drag Curl"}],"verified":false},{"id":"hammer-curl","name":"Hammer Curl","category":"arms","type":"strength","equipment":["dumbbells","cable","resistance_band","kettlebell"],"defaultEquipment":"dumbbells","execution":["bilateral","alternating","unilateral"],"defaultExecution":"alternating","primary":["biceps","brachialis"],"secondary":["forearms"],"aliases":[{"name":"DB Hammer Curl","equipment":"dumbbells"},{"name":"Cable Hammer Curl","equipment":"cable"},{"name":"Hammer Curl"}],"verified":true,"attachments":["rope","single_handle"],"defaultAttachment":"rope"},{"id":"incline-curl","name":"Incline Curl","category":"arms","type":"strength","equipment":["dumbbells","cable"],"defaultEquipment":"dumbbells","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["biceps"],"secondary":["brachialis"],"aliases":[{"name":"Incline Curl"},{"name":"Incline Biceps Curl"},{"name":"Incline DB Curl","equipment":"dumbbells"}],"verified":false},{"id":"overhead-triceps-extension","name":"Overhead Triceps Extension","category":"arms","type":"strength","equipment":["cable","dumbbells","barbell","resistance_band"],"defaultEquipment":"cable","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["triceps"],"secondary":[],"aliases":[{"name":"Overhead Tricep Extension"},{"name":"Overhead Extension"}],"verified":true,"attachments":["rope","straight_bar","ez_bar"],"defaultAttachment":"rope"},{"id":"preacher-curl","name":"Preacher Curl","category":"arms","type":"strength","equipment":["barbell","dumbbells","machine","cable"],"defaultEquipment":"barbell","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["biceps"],"secondary":["brachialis"],"aliases":[{"name":"Preacher Curl"},{"name":"EZ Preacher Curl","attachment":"ez_bar"}],"verified":false,"attachments":["ez_bar","straight_bar"],"defaultAttachment":"ez_bar"},{"id":"reverse-curl","name":"Reverse Curl","category":"arms","type":"strength","equipment":["barbell","dumbbells","cable","resistance_band"],"defaultEquipment":"barbell","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["brachioradialis","forearms"],"secondary":["biceps"],"aliases":[{"name":"Reverse Curl"}],"verified":true,"attachments":["straight_bar","ez_bar"],"defaultAttachment":"straight_bar"},{"id":"reverse-wrist-curl","name":"Reverse Wrist Curl","category":"arms","type":"strength","equipment":["barbell","dumbbells","cable"],"defaultEquipment":"barbell","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["forearms"],"secondary":[],"aliases":[{"name":"Reverse Wrist Curl"}],"verified":false},{"id":"skull-crusher","name":"Skull Crusher","category":"arms","type":"strength","equipment":["barbell","dumbbells","cable"],"defaultEquipment":"barbell","execution":["bilateral","alternating"],"defaultExecution":"bilateral","primary":["triceps"],"secondary":[],"aliases":[{"name":"Skull Crusher"},{"name":"Lying Triceps Extension"},{"name":"Skullcrusher"},{"name":"French Press"}],"verified":false},{"id":"spider-curl","name":"Spider Curl","category":"arms","type":"strength","equipment":["dumbbells","barbell","cable"],"defaultEquipment":"dumbbells","execution":["bilateral","alternating"],"defaultExecution":"bilateral","primary":["biceps"],"secondary":[],"aliases":[{"name":"Spider Curl"}],"verified":false},{"id":"triceps-dip","name":"Triceps Dip","category":"arms","type":"strength","equipment":["bodyweight","machine","plate"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["triceps"],"secondary":["pectorals","front deltoids"],"aliases":[{"name":"Triceps Dip"},{"name":"Tricep Dip"},{"name":"Bench Dip"},{"name":"Reverse Dip"},{"name":"Dips"}],"verified":false},{"id":"triceps-kickback","name":"Triceps Kickback","category":"arms","type":"strength","equipment":["dumbbells","cable","resistance_band"],"defaultEquipment":"dumbbells","execution":["unilateral","bilateral"],"defaultExecution":"unilateral","primary":["triceps"],"secondary":[],"aliases":[{"name":"Triceps Kickback"},{"name":"Tricep Kickback"}],"verified":false,"attachments":["rope","single_handle"],"defaultAttachment":"rope"},{"id":"triceps-pushdown","name":"Triceps Pushdown","category":"arms","type":"strength","equipment":["cable","machine","resistance_band"],"defaultEquipment":"cable","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["triceps"],"secondary":[],"aliases":[{"name":"Rope Pushdown","attachment":"rope"},{"name":"Tricep Bar Pushdown","attachment":"straight_bar"},{"name":"Triceps Pushdown"},{"name":"Pushdown"},{"name":"Tricep Pushdown","attachment":"straight_bar"}],"verified":true,"attachments":["rope","straight_bar","ez_bar","v_handle","single_handle"],"defaultAttachment":"rope"},{"id":"wrist-curl","name":"Wrist Curl","category":"arms","type":"strength","equipment":["barbell","dumbbells","cable"],"defaultEquipment":"barbell","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["forearms"],"secondary":[],"aliases":[{"name":"Wrist Curl"}],"verified":false},{"id":"zottman-curl","name":"Zottman Curl","category":"arms","type":"strength","equipment":["dumbbells"],"defaultEquipment":"dumbbells","execution":["bilateral","alternating"],"defaultExecution":"alternating","primary":["biceps","forearms"],"secondary":["brachialis"],"aliases":[{"name":"Zottman Curl"},{"name":"Biceps Zottman"}],"verified":false},{"id":"bent-over-row","name":"Bent Over Row","category":"back","type":"strength","equipment":["barbell","dumbbells","smith","trap_bar"],"defaultEquipment":"barbell","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["lats","mid-back"],"secondary":["biceps","rear deltoids","spinal erectors"],"aliases":[{"name":"Barbell Row","equipment":"barbell"},{"name":"Bent Over Row"},{"name":"BOR"},{"name":"Pendlay Row"}],"verified":false},{"id":"chest-supported-row","name":"Chest Supported Row","category":"back","type":"strength","equipment":["machine","plate_loaded_machine","dumbbells"],"defaultEquipment":"machine","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["mid-back","lats"],"secondary":["rear deltoids","biceps"],"aliases":[{"name":"Chest Supported Row"},{"name":"Seal Row"},{"name":"T-Bar Row"}],"verified":false},{"id":"chin-up","name":"Chin Up","category":"back","type":"strength","equipment":["bodyweight","plate","machine","resistance_band"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["lats","biceps"],"secondary":["mid-back"],"aliases":[{"name":"Chin Up"},{"name":"Chinup"},{"name":"Underhand Pull Up"}],"verified":false},{"id":"good-morning","name":"Good Morning","category":"back","type":"strength","equipment":["barbell","smith","resistance_band","safety_squat_bar"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["hamstrings","spinal erectors"],"secondary":["glutes"],"aliases":[{"name":"Good Morning"}],"verified":false},{"id":"inverted-row","name":"Inverted Row","category":"back","type":"strength","equipment":["bodyweight","plate"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["mid-back","lats"],"secondary":["biceps","rear deltoids"],"aliases":[{"name":"Inverted Row"},{"name":"Bodyweight Row","equipment":"bodyweight"},{"name":"Australian Pull Up"}],"verified":false},{"id":"lat-pulldown","name":"Lat Pulldown","category":"back","type":"strength","equipment":["cable","machine","plate_loaded_machine"],"defaultEquipment":"cable","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["lats"],"secondary":["biceps","rear deltoids"],"aliases":[{"name":"Lat Pulldown"},{"name":"Pulldown"}],"verified":true,"attachments":["wide_bar","lat_bar","v_handle","straight_bar","rope","single_handle"],"defaultAttachment":"wide_bar"},{"id":"pull-up","name":"Pull Up","category":"back","type":"strength","equipment":["bodyweight","plate","machine","resistance_band"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["lats"],"secondary":["biceps","mid-back"],"aliases":[{"name":"Pull Up"},{"name":"Pullup"},{"name":"Wide Grip Pull Up"},{"name":"Weighted Pull Up"},{"name":"Assisted Pull Up"}],"verified":false},{"id":"pullover","name":"Pullover","category":"back","type":"strength","equipment":["dumbbells","cable","barbell","machine"],"defaultEquipment":"dumbbells","execution":["bilateral"],"defaultExecution":"bilateral","primary":["lats","pectorals"],"secondary":["triceps"],"aliases":[{"name":"Pullover"},{"name":"DB Pullover","equipment":"dumbbells"}],"verified":false,"attachments":["rope","straight_bar","ez_bar"],"singleImplement":true,"defaultAttachment":"rope"},{"id":"rack-pull","name":"Rack Pull","category":"back","type":"strength","equipment":["barbell","trap_bar","smith"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["spinal erectors","traps","glutes"],"secondary":["lats","forearms"],"aliases":[{"name":"Rack Pull"},{"name":"Block Pull"},{"name":"Partial Deadlift"}],"verified":false},{"id":"reverse-hyperextension","name":"Reverse Hyperextension","category":"back","type":"strength","equipment":["machine","bodyweight"],"defaultEquipment":"machine","execution":["bilateral"],"defaultExecution":"bilateral","primary":["glutes","spinal erectors"],"secondary":["hamstrings"],"aliases":[{"name":"Reverse Hyper"},{"name":"Reverse Hyperextension"}],"verified":false},{"id":"seated-row","name":"Seated Row","category":"back","type":"strength","equipment":["cable","machine","plate_loaded_machine"],"defaultEquipment":"cable","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["lats","mid-back"],"secondary":["biceps","rear deltoids"],"aliases":[{"name":"Seated Cable Row","equipment":"cable"},{"name":"Cable Row","equipment":"cable"},{"name":"Seated Row"}],"verified":true,"attachments":["v_handle","wide_bar","straight_bar","rope","single_handle"],"defaultAttachment":"v_handle"},{"id":"shrug","name":"Shrug","category":"back","type":"strength","equipment":["barbell","dumbbells","smith","trap_bar","machine","cable"],"defaultEquipment":"barbell","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["traps"],"secondary":["forearms"],"aliases":[{"name":"Barbell Shrug","equipment":"barbell"},{"name":"Smith Shrug","equipment":"smith"}],"verified":true},{"id":"single-arm-row","name":"Single Arm Row","category":"back","type":"strength","equipment":["dumbbells","cable","kettlebell","machine"],"defaultEquipment":"dumbbells","execution":["unilateral"],"defaultExecution":"unilateral","primary":["lats","mid-back"],"secondary":["biceps","rear deltoids"],"aliases":[{"name":"DB Row","equipment":"dumbbells"},{"name":"One Arm Row","execution":"unilateral"},{"name":"Single Arm Row","execution":"unilateral"},{"name":"Kroc Row"},{"name":"Dumbbell Row","equipment":"dumbbells"}],"verified":false,"attachments":["single_handle"],"defaultAttachment":"single_handle"},{"id":"straight-arm-pulldown","name":"Straight Arm Pulldown","category":"back","type":"strength","equipment":["cable","resistance_band","machine"],"defaultEquipment":"cable","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["lats"],"secondary":["triceps","core"],"aliases":[{"name":"Straight Arm Pulldown"},{"name":"Lat Pushdown"}],"verified":false,"attachments":["straight_bar","rope","lat_bar"],"defaultAttachment":"straight_bar"},{"id":"elliptical","name":"Elliptical","category":"cardio","type":"cardio","equipment":["machine"],"defaultEquipment":"machine","execution":["bilateral"],"defaultExecution":"bilateral","primary":["quadriceps","glutes"],"secondary":["calves","hamstrings"],"aliases":[{"name":"Elliptical"},{"name":"Cross Trainer"},{"name":"Elliptical Cross Trainer"}],"metric":"time","verified":false},{"id":"rowing-machine","name":"Rowing Machine","category":"cardio","type":"cardio","equipment":["machine"],"defaultEquipment":"machine","execution":["bilateral"],"defaultExecution":"bilateral","primary":["lats","quadriceps"],"secondary":["mid-back","hamstrings","biceps"],"aliases":[{"name":"Rowing Machine","equipment":"machine"},{"name":"Rower"},{"name":"Erg"},{"name":"Concept 2"}],"metric":"time","verified":false},{"id":"sled-push","name":"Sled Push","category":"cardio","type":"strength","equipment":["plate_loaded_machine","sled"],"defaultEquipment":"plate_loaded_machine","execution":["bilateral"],"defaultExecution":"bilateral","primary":["quadriceps","glutes"],"secondary":["calves","core"],"aliases":[{"name":"Sled Push","equipment":"plate_loaded_machine"},{"name":"Prowler"},{"name":"Strongman Sled Push","equipment":"sled"}],"metric":"carry","verified":false},{"id":"stair-climber","name":"Stair Climber","category":"cardio","type":"cardio","equipment":["machine"],"defaultEquipment":"machine","execution":["bilateral"],"defaultExecution":"bilateral","primary":["glutes","quadriceps"],"secondary":["calves","hamstrings"],"aliases":[{"name":"Stair Climber"},{"name":"Stepmill"},{"name":"Stairmaster"}],"metric":"time","verified":false},{"id":"stationary-bike","name":"Stationary Bike","category":"cardio","type":"cardio","equipment":["machine"],"defaultEquipment":"machine","execution":["bilateral"],"defaultExecution":"bilateral","primary":["quadriceps"],"secondary":["glutes","calves"],"aliases":[{"name":"Stationary Bike"},{"name":"Upright Bike"},{"name":"Recumbent Bike"},{"name":"Spin Bike"},{"name":"Exercise Bike"}],"metric":"time","verified":false},{"id":"treadmill","name":"Treadmill","category":"cardio","type":"cardio","equipment":["machine"],"defaultEquipment":"machine","execution":["bilateral"],"defaultExecution":"bilateral","primary":["quadriceps","calves"],"secondary":["glutes","hamstrings"],"aliases":[{"name":"Treadmill"},{"name":"Running"},{"name":"Walking"}],"metric":"time","verified":false},{"id":"bench-press","name":"Bench Press","category":"chest","type":"strength","equipment":["barbell","dumbbells","smith","machine","plate_loaded_machine"],"defaultEquipment":"barbell","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["pectorals"],"secondary":["triceps","front deltoids"],"aliases":[{"name":"Bench Press"},{"name":"Machine Chest Press","equipment":"machine"},{"name":"Flat DB Press","equipment":"dumbbells"},{"name":"Chest Press","equipment":"machine"},{"name":"Flat Bench"},{"name":"Pause Bench"},{"name":"Spoto Press"},{"name":"Larsen Press"},{"name":"Dumbbell Bench","equipment":"dumbbells"}],"verified":true},{"id":"chest-dip","name":"Chest Dip","category":"chest","type":"strength","equipment":["bodyweight","machine","plate"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["lower pectorals"],"secondary":["triceps","front deltoids"],"aliases":[{"name":"Chest Dip"},{"name":"Dip"},{"name":"Weighted Dip"}],"verified":false},{"id":"chest-fly","name":"Chest Fly","category":"chest","type":"strength","equipment":["dumbbells","cable","machine","resistance_band"],"defaultEquipment":"dumbbells","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["pectorals"],"secondary":["front deltoids"],"aliases":[{"name":"Fly"},{"name":"Flye"},{"name":"Cable Crossover","equipment":"cable"},{"name":"Dumbbell Fly","equipment":"dumbbells"},{"name":"Low to High Cable Fly","equipment":"cable"},{"name":"High to Low Cable Fly","equipment":"cable"}],"verified":false,"attachments":["single_handle","dual_handle"],"defaultAttachment":"single_handle"},{"id":"decline-bench-press","name":"Decline Bench Press","category":"chest","type":"strength","equipment":["barbell","dumbbells","smith","machine"],"defaultEquipment":"barbell","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["lower pectorals"],"secondary":["triceps"],"aliases":[{"name":"Decline Bench"},{"name":"Decline Press"},{"name":"Decline Chest Press"}],"verified":false},{"id":"decline-push-up","name":"Decline Push Up","category":"chest","type":"strength","equipment":["bodyweight"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["upper pectorals"],"secondary":["front deltoids","triceps"],"aliases":[{"name":"Decline Push Up"},{"name":"Feet Elevated Push Up"}],"verified":false},{"id":"incline-bench-press","name":"Incline Bench Press","category":"chest","type":"strength","equipment":["barbell","dumbbells","smith","machine"],"defaultEquipment":"barbell","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["upper pectorals"],"secondary":["front deltoids","triceps"],"aliases":[{"name":"Incline Bench"},{"name":"Incline Press"},{"name":"Incline Chest Press"}],"verified":true},{"id":"incline-chest-fly","name":"Incline Chest Fly","category":"chest","type":"strength","equipment":["dumbbells","cable","machine"],"defaultEquipment":"dumbbells","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["upper pectorals"],"secondary":["front deltoids"],"aliases":[{"name":"Incline Fly"},{"name":"Incline Flye"}],"verified":false,"attachments":["single_handle","dual_handle"],"defaultAttachment":"single_handle"},{"id":"incline-push-up","name":"Incline Push Up","category":"chest","type":"strength","equipment":["bodyweight"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["lower pectorals"],"secondary":["triceps"],"aliases":[{"name":"Incline Push Up"}],"verified":false},{"id":"pec-deck","name":"Pec Deck","category":"chest","type":"strength","equipment":["machine"],"defaultEquipment":"machine","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["pectorals"],"secondary":["front deltoids"],"aliases":[{"name":"Pec Deck"},{"name":"Butterfly"},{"name":"Machine Fly","equipment":"machine"}],"verified":false},{"id":"pin-press","name":"Pin Press","category":"chest","type":"strength","equipment":["barbell","smith"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["pectorals","triceps"],"secondary":["front deltoids"],"aliases":[{"name":"Bench Pin Press"},{"name":"Dead Bench"}],"verified":true},{"id":"push-up","name":"Push Up","category":"chest","type":"strength","equipment":["bodyweight","plate","resistance_band"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["pectorals"],"secondary":["triceps","front deltoids","core"],"aliases":[{"name":"Push Up"},{"name":"Pushup"},{"name":"Press Up"}],"verified":false},{"id":"ab-wheel","name":"Ab Wheel Rollout","category":"core","type":"strength","equipment":["bodyweight","barbell"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["rectus abdominis"],"secondary":["lats","hip flexors"],"aliases":[{"name":"Ab Wheel"},{"name":"Ab Rollout"},{"name":"Rollout"}],"verified":false,"singleImplement":true},{"id":"cable-crunch","name":"Crunch","category":"core","type":"strength","equipment":["cable","machine","bodyweight"],"defaultEquipment":"cable","execution":["bilateral"],"defaultExecution":"bilateral","primary":["rectus abdominis"],"secondary":["obliques"],"aliases":[{"name":"Cable Crunch","equipment":"cable"},{"name":"Kneeling Crunch"},{"name":"Crunch"},{"name":"Machine Seated Crunch","equipment":"machine"},{"name":"Machine Crunch","equipment":"machine"},{"name":"Seated Crunch","equipment":"machine"}],"verified":true,"attachments":["rope","single_handle"],"defaultAttachment":"rope"},{"id":"farmers-carry","name":"Farmers Carry","category":"core","type":"strength","equipment":["dumbbells","kettlebell","trap_bar","barbell","farmers_handles"],"defaultEquipment":"dumbbells","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["grip","traps","core"],"secondary":["forearms","glutes"],"aliases":[{"name":"Farmers Carry"},{"name":"Farmers Walk"},{"name":"Suitcase Carry"},{"name":"Loaded Carry"},{"name":"Farmers Handles","equipment":"farmers_handles"},{"name":"Strongman Farmers","equipment":"farmers_handles"}],"metric":"carry","verified":false},{"id":"hanging-knee-raise","name":"Hanging Knee Raise","category":"core","type":"strength","equipment":["bodyweight","dumbbells"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["hip flexors","lower abdominals"],"secondary":["obliques"],"aliases":[{"name":"Hanging Knee Raise"},{"name":"Knee Raise"}],"verified":true},{"id":"hanging-leg-raise","name":"Hanging Leg Raise","category":"core","type":"strength","equipment":["bodyweight","dumbbells"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["lower abdominals","hip flexors"],"secondary":["obliques","grip"],"aliases":[{"name":"Hanging Leg Raise"},{"name":"Straight Leg Raise"},{"name":"Toes To Bar"}],"verified":false},{"id":"pallof-press","name":"Pallof Press","category":"core","type":"strength","equipment":["cable","resistance_band"],"defaultEquipment":"cable","execution":["unilateral"],"defaultExecution":"unilateral","primary":["obliques","core"],"secondary":["front deltoids"],"aliases":[{"name":"Pallof Press"},{"name":"Anti Rotation Press"}],"verified":false,"attachments":["single_handle","rope"],"defaultAttachment":"single_handle"},{"id":"plank","name":"Plank","category":"core","type":"strength","equipment":["bodyweight","plate"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["rectus abdominis","core"],"secondary":["front deltoids","glutes"],"aliases":[{"name":"Plank"},{"name":"Front Plank"}],"metric":"time","verified":false},{"id":"russian-twist","name":"Russian Twist","category":"core","type":"strength","equipment":["bodyweight","plate","dumbbells","kettlebell"],"defaultEquipment":"plate","execution":["alternating"],"defaultExecution":"alternating","primary":["obliques"],"secondary":["rectus abdominis"],"aliases":[{"name":"Russian Twist"}],"verified":false,"singleImplement":true},{"id":"side-bend","name":"Side Bend","category":"core","type":"strength","equipment":["dumbbells","cable","kettlebell","plate"],"defaultEquipment":"dumbbells","execution":["unilateral"],"defaultExecution":"unilateral","primary":["obliques"],"secondary":["quadratus lumborum"],"aliases":[{"name":"DB Side Bend","equipment":"dumbbells"},{"name":"Side Bend"}],"verified":true},{"id":"side-plank","name":"Side Plank","category":"core","type":"strength","equipment":["bodyweight","plate"],"defaultEquipment":"bodyweight","execution":["unilateral"],"defaultExecution":"unilateral","primary":["obliques"],"secondary":["core","glutes"],"aliases":[{"name":"Side Plank"}],"metric":"time","verified":false},{"id":"sit-up","name":"Sit Up","category":"core","type":"strength","equipment":["bodyweight","plate","dumbbells"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["rectus abdominis"],"secondary":["hip flexors"],"aliases":[{"name":"Sit Up"},{"name":"Situp"},{"name":"Decline Sit Up"},{"name":"Weighted Sit Up"}],"verified":false,"singleImplement":true},{"id":"woodchopper","name":"Woodchopper","category":"core","type":"strength","equipment":["cable","resistance_band","dumbbells"],"defaultEquipment":"cable","execution":["unilateral"],"defaultExecution":"unilateral","primary":["obliques"],"secondary":["rectus abdominis","hip flexors"],"aliases":[{"name":"Cable Woodchopper","equipment":"cable"},{"name":"Woodchop"},{"name":"Woodchopper"}],"verified":true,"attachments":["rope","single_handle","dual_handle"],"defaultAttachment":"rope"},{"id":"back-extension","name":"Back Extension","category":"legs","type":"strength","equipment":["bodyweight","plate","barbell","dumbbells"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["spinal erectors"],"secondary":["glutes","hamstrings"],"aliases":[{"name":"Back Extension"},{"name":"Hyperextension"},{"name":"45 Degree Back Extension"}],"verified":true,"singleImplement":true},{"id":"back-squat","name":"Back Squat","category":"legs","type":"strength","equipment":["barbell","smith","safety_squat_bar","belt_squat"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["quadriceps","glutes"],"secondary":["adductors","spinal erectors"],"aliases":[{"name":"Back Squat"},{"name":"Squat"},{"name":"Comp Squat"},{"name":"Pause Squat"},{"name":"High Bar Squat"},{"name":"Low Bar Squat"},{"name":"Safety Bar Squat","equipment":"safety_squat_bar"}],"verified":true},{"id":"box-squat","name":"Box Squat","category":"legs","type":"strength","equipment":["barbell","smith","safety_squat_bar"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["glutes","quadriceps"],"secondary":["hamstrings"],"aliases":[{"name":"Box Squat"}],"verified":false},{"id":"bulgarian-split-squat","name":"Bulgarian Split Squat","category":"legs","type":"strength","equipment":["dumbbells","barbell","smith","kettlebell","bodyweight","safety_squat_bar","belt_squat"],"defaultEquipment":"dumbbells","execution":["unilateral"],"defaultExecution":"unilateral","primary":["quadriceps","glutes"],"secondary":["adductors","hamstrings"],"aliases":[{"name":"Bulgarian Split Squat"},{"name":"BSS"},{"name":"Rear Foot Elevated Split Squat"},{"name":"RFESS"}],"verified":false},{"id":"calf-raise-seated","name":"Calf Raise (seated)","category":"legs","type":"strength","equipment":["machine","plate_loaded_machine","dumbbells","barbell","plate"],"defaultEquipment":"machine","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["soleus"],"secondary":["gastrocnemius"],"aliases":[{"name":"Seated Calf Raise"},{"name":"Calf Raise Seated"},{"name":"Seated Calf Extension"}],"verified":false,"singleImplement":true},{"id":"calf-raise-standing","name":"Calf Raise (standing)","category":"legs","type":"strength","equipment":["smith","machine","barbell","bodyweight","plate_loaded_machine","dumbbells"],"defaultEquipment":"smith","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["gastrocnemius"],"secondary":["soleus"],"aliases":[{"name":"Smith Calf Raise","equipment":"smith"},{"name":"Standing Calf Raise"},{"name":"Calf Raise"},{"name":"Calf Extension"},{"name":"Sled Press Calf Raise","equipment":"plate_loaded_machine"},{"name":"Leg Press Calf Raise","equipment":"plate_loaded_machine"}],"verified":true},{"id":"deadlift","name":"Deadlift","category":"legs","type":"strength","equipment":["barbell","trap_bar","smith","axle"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["glutes","hamstrings","spinal erectors"],"secondary":["lats","traps","forearms"],"aliases":[{"name":"Deadlift"},{"name":"Hex Deadlift","equipment":"trap_bar"},{"name":"Trap Bar Deadlift","equipment":"trap_bar"},{"name":"Conventional Deadlift"},{"name":"Deficit Deadlift"},{"name":"Axle Deadlift","equipment":"axle"}],"verified":true},{"id":"donkey-calf-raise","name":"Donkey Calf Raise","category":"legs","type":"strength","equipment":["machine","bodyweight","plate_loaded_machine"],"defaultEquipment":"machine","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["gastrocnemius"],"secondary":["soleus"],"aliases":[{"name":"Donkey Calf Raise"},{"name":"Donkey Raise"}],"verified":false},{"id":"front-squat","name":"Front Squat","category":"legs","type":"strength","equipment":["barbell","smith","kettlebell","dumbbells","safety_squat_bar"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["quadriceps"],"secondary":["glutes","core","upper back"],"aliases":[{"name":"Front Squat"}],"verified":false},{"id":"glute-bridge","name":"Glute Bridge","category":"legs","type":"strength","equipment":["barbell","bodyweight","dumbbells","resistance_band"],"defaultEquipment":"bodyweight","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["glutes"],"secondary":["hamstrings"],"aliases":[{"name":"Glute Bridge"}],"verified":false,"singleImplement":true},{"id":"glute-ham-raise","name":"Glute Ham Raise","category":"legs","type":"strength","equipment":["bodyweight","machine","plate"],"defaultEquipment":"machine","execution":["bilateral"],"defaultExecution":"bilateral","primary":["hamstrings","glutes"],"secondary":["calves","spinal erectors"],"aliases":[{"name":"Glute Ham Raise"},{"name":"GHR"}],"verified":false},{"id":"glute-kickback","name":"Glute Kickback","category":"legs","type":"strength","equipment":["cable","machine","resistance_band"],"defaultEquipment":"cable","execution":["unilateral"],"defaultExecution":"unilateral","primary":["glutes"],"secondary":["hamstrings"],"aliases":[{"name":"Cable Kickback","equipment":"cable"},{"name":"Glute Kickback"}],"verified":true,"attachments":["ankle_strap"],"defaultAttachment":"ankle_strap"},{"id":"goblet-squat","name":"Goblet Squat","category":"legs","type":"strength","equipment":["dumbbells","kettlebell","plate"],"defaultEquipment":"kettlebell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["quadriceps","glutes"],"secondary":["core"],"aliases":[{"name":"Goblet Squat"}],"verified":false,"singleImplement":true},{"id":"hack-squat","name":"Hack Squat","category":"legs","type":"strength","equipment":["machine","plate_loaded_machine","barbell"],"defaultEquipment":"plate_loaded_machine","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["quadriceps"],"secondary":["glutes"],"aliases":[{"name":"Hack Squat"},{"name":"Hack Press"}],"verified":false},{"id":"hip-abduction","name":"Hip Abduction","category":"legs","type":"strength","equipment":["machine","cable","resistance_band"],"defaultEquipment":"machine","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["gluteus medius"],"secondary":["tensor fasciae latae"],"aliases":[{"name":"Hip Abduction"},{"name":"Abductor Machine","equipment":"machine"}],"verified":true,"attachments":["ankle_strap"],"defaultAttachment":"ankle_strap"},{"id":"hip-adduction","name":"Hip Adduction","category":"legs","type":"strength","equipment":["machine","cable","resistance_band"],"defaultEquipment":"machine","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["adductors"],"secondary":[],"aliases":[{"name":"Hip Adduction"},{"name":"Adductor Machine","equipment":"machine"}],"verified":true,"attachments":["ankle_strap"],"defaultAttachment":"ankle_strap"},{"id":"hip-thrust","name":"Hip Thrust","category":"legs","type":"strength","equipment":["barbell","machine","smith","plate_loaded_machine"],"defaultEquipment":"barbell","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["glutes"],"secondary":["hamstrings"],"aliases":[{"name":"Barbell Hip Thrust","equipment":"barbell"},{"name":"Hip Thrust"}],"verified":true},{"id":"leg-curl","name":"Leg Curl","category":"legs","type":"strength","equipment":["machine","plate_loaded_machine","resistance_band"],"defaultEquipment":"machine","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["hamstrings"],"secondary":["calves"],"aliases":[{"name":"Leg Curl"},{"name":"Hamstring Curl"},{"name":"Seated Leg Curl","equipment":"machine"},{"name":"Lying Leg Curl","equipment":"machine"}],"verified":true},{"id":"leg-extension","name":"Leg Extension","category":"legs","type":"strength","equipment":["machine","plate_loaded_machine"],"defaultEquipment":"machine","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["quadriceps"],"secondary":[],"aliases":[{"name":"Leg Extension"},{"name":"Quad Extension"}],"verified":true,"attachments":["ankle_strap"],"defaultAttachment":"ankle_strap"},{"id":"leg-press","name":"Leg Press","category":"legs","type":"strength","equipment":["plate_loaded_machine","machine"],"defaultEquipment":"plate_loaded_machine","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["quadriceps","glutes"],"secondary":["hamstrings"],"aliases":[{"name":"Sled Leg Press","equipment":"plate_loaded_machine"},{"name":"Leg Press"}],"verified":true},{"id":"lunge","name":"Lunge","category":"legs","type":"strength","equipment":["dumbbells","barbell","kettlebell","bodyweight","smith","safety_squat_bar","belt_squat"],"defaultEquipment":"dumbbells","execution":["alternating","unilateral"],"defaultExecution":"alternating","primary":["quadriceps","glutes"],"secondary":["hamstrings"],"aliases":[{"name":"Lunge"},{"name":"Forward Lunge"},{"name":"Walking Lunge"}],"verified":false},{"id":"nordic-curl","name":"Nordic Curl","category":"legs","type":"strength","equipment":["bodyweight","resistance_band"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["hamstrings"],"secondary":["glutes","calves"],"aliases":[{"name":"Nordic Curl"},{"name":"Inverse Leg Curl"},{"name":"Natural Glute Ham Raise"}],"verified":false},{"id":"pistol-squat","name":"Pistol Squat","category":"legs","type":"strength","equipment":["bodyweight","dumbbells","kettlebell"],"defaultEquipment":"bodyweight","execution":["unilateral"],"defaultExecution":"unilateral","primary":["quadriceps","glutes"],"secondary":["core"],"aliases":[{"name":"Pistol Squat"},{"name":"Single Leg Squat","execution":"unilateral"}],"verified":false},{"id":"reverse-lunge","name":"Reverse Lunge","category":"legs","type":"strength","equipment":["dumbbells","barbell","kettlebell","bodyweight","smith","safety_squat_bar"],"defaultEquipment":"dumbbells","execution":["alternating","unilateral"],"defaultExecution":"alternating","primary":["glutes","quadriceps"],"secondary":["hamstrings"],"aliases":[{"name":"Reverse Lunge"},{"name":"Rear Lunge"},{"name":"Backward Lunge"}],"verified":false},{"id":"romanian-deadlift","name":"Romanian Deadlift","category":"legs","type":"strength","equipment":["barbell","dumbbells","smith","trap_bar"],"defaultEquipment":"barbell","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["hamstrings","glutes"],"secondary":["spinal erectors"],"aliases":[{"name":"Romanian Deadlift"},{"name":"RDL"}],"verified":true},{"id":"side-lunge","name":"Side Lunge","category":"legs","type":"strength","equipment":["dumbbells","kettlebell","bodyweight","barbell"],"defaultEquipment":"dumbbells","execution":["alternating","unilateral"],"defaultExecution":"alternating","primary":["adductors","quadriceps"],"secondary":["glutes"],"aliases":[{"name":"Side Lunge"},{"name":"Lateral Lunge"},{"name":"Cossack Squat"}],"verified":false},{"id":"sissy-squat","name":"Sissy Squat","category":"legs","type":"strength","equipment":["bodyweight","machine","plate"],"defaultEquipment":"bodyweight","execution":["bilateral"],"defaultExecution":"bilateral","primary":["quadriceps"],"secondary":[],"aliases":[{"name":"Sissy Squat"}],"verified":false},{"id":"split-squat","name":"Split Squat","category":"legs","type":"strength","equipment":["dumbbells","barbell","smith","kettlebell","bodyweight","safety_squat_bar","belt_squat"],"defaultEquipment":"dumbbells","execution":["unilateral"],"defaultExecution":"unilateral","primary":["quadriceps","glutes"],"secondary":["adductors"],"aliases":[{"name":"Split Squat"},{"name":"Static Lunge"}],"verified":false},{"id":"step-up","name":"Step Up","category":"legs","type":"strength","equipment":["dumbbells","barbell","kettlebell","bodyweight","safety_squat_bar"],"defaultEquipment":"dumbbells","execution":["alternating","unilateral"],"defaultExecution":"alternating","primary":["quadriceps","glutes"],"secondary":["hamstrings"],"aliases":[{"name":"Step Up"},{"name":"Box Step Up"},{"name":"Lateral Step Up"}],"verified":false},{"id":"stiff-leg-deadlift","name":"Stiff Leg Deadlift","category":"legs","type":"strength","equipment":["barbell","dumbbells","smith"],"defaultEquipment":"barbell","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["hamstrings"],"secondary":["glutes","spinal erectors"],"aliases":[{"name":"Stiff Leg Deadlift"},{"name":"SLDL"},{"name":"Straight Leg Deadlift"}],"verified":false},{"id":"sumo-deadlift","name":"Sumo Deadlift","category":"legs","type":"strength","equipment":["barbell","trap_bar"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["glutes","quadriceps","adductors"],"secondary":["spinal erectors","traps","forearms"],"aliases":[{"name":"Sumo Deadlift"},{"name":"Sumo Pull"}],"verified":false},{"id":"arnold-press","name":"Arnold Press","category":"shoulders","type":"strength","equipment":["dumbbells","kettlebell"],"defaultEquipment":"dumbbells","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["deltoids"],"secondary":["triceps"],"aliases":[{"name":"Arnold Press"}],"verified":false},{"id":"behind-neck-press","name":"Behind The Neck Press","category":"shoulders","type":"strength","equipment":["barbell","smith"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["deltoids"],"secondary":["triceps","traps"],"aliases":[{"name":"Behind The Neck Press"},{"name":"BTN Press"}],"verified":false},{"id":"external-rotation","name":"External Rotation","category":"shoulders","type":"strength","equipment":["cable","dumbbells","resistance_band"],"defaultEquipment":"cable","execution":["unilateral","bilateral"],"defaultExecution":"unilateral","primary":["rotator cuff"],"secondary":["rear deltoids"],"aliases":[{"name":"External Rotation"},{"name":"Cuban Rotation"},{"name":"Shoulder Rotation"},{"name":"Rotator Cuff"}],"verified":false,"attachments":["single_handle"],"defaultAttachment":"single_handle"},{"id":"face-pull","name":"Face Pull","category":"shoulders","type":"strength","equipment":["cable","resistance_band"],"defaultEquipment":"cable","execution":["bilateral"],"defaultExecution":"bilateral","primary":["rear deltoids"],"secondary":["traps","rotator cuff"],"aliases":[{"name":"Face Pull"}],"verified":true,"attachments":["rope","dual_handle"],"defaultAttachment":"rope"},{"id":"front-raise","name":"Front Raise","category":"shoulders","type":"strength","equipment":["dumbbells","cable","barbell","plate","resistance_band"],"defaultEquipment":"dumbbells","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["front deltoids"],"secondary":["upper pectorals"],"aliases":[{"name":"Front Raise"}],"verified":true,"attachments":["single_handle","straight_bar","rope"],"defaultAttachment":"single_handle"},{"id":"lateral-raise","name":"Lateral Raise","category":"shoulders","type":"strength","equipment":["dumbbells","cable","machine","resistance_band","plate"],"defaultEquipment":"dumbbells","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["side deltoids"],"secondary":["traps"],"aliases":[{"name":"DB Lat Raise","equipment":"dumbbells"},{"name":"Cable Lat Raise","equipment":"cable"},{"name":"Side Raise"},{"name":"Lat Raise"}],"verified":true,"attachments":["single_handle"],"executionDefaults":{"cable":"unilateral","dumbbells":"bilateral","machine":"bilateral","resistance_band":"bilateral","plate":"bilateral"},"defaultAttachment":"single_handle"},{"id":"overhead-press","name":"Overhead Press","category":"shoulders","type":"strength","equipment":["barbell","dumbbells","smith","machine","axle"],"defaultEquipment":"barbell","execution":["bilateral","alternating","unilateral"],"defaultExecution":"bilateral","primary":["deltoids"],"secondary":["triceps","upper pectorals"],"aliases":[{"name":"Strict Press"},{"name":"Smith Shoulder Press","equipment":"smith"},{"name":"Military Press"},{"name":"Shoulder Press"},{"name":"OHP"},{"name":"Dumbbell Shoulder Press","equipment":"dumbbells"},{"name":"Axle Press","equipment":"axle"},{"name":"Axle Clean and Press","equipment":"axle"}],"verified":true},{"id":"push-press","name":"Push Press","category":"shoulders","type":"strength","equipment":["barbell","dumbbells","kettlebell"],"defaultEquipment":"barbell","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["deltoids"],"secondary":["triceps","quadriceps","glutes"],"aliases":[{"name":"Push Press"}],"verified":false},{"id":"rear-delt-fly","name":"Rear Delt Fly","category":"shoulders","type":"strength","equipment":["dumbbells","cable","machine","resistance_band"],"defaultEquipment":"dumbbells","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["rear deltoids"],"secondary":["mid-back","traps"],"aliases":[{"name":"Reverse Fly"},{"name":"Rear Delt Fly"},{"name":"Reverse Pec Deck"},{"name":"Rear Delt Machine","equipment":"machine"}],"verified":false,"attachments":["single_handle","dual_handle"],"defaultAttachment":"single_handle"},{"id":"rear-delt-row","name":"Rear Delt Row","category":"shoulders","type":"strength","equipment":["barbell","dumbbells","cable","machine"],"defaultEquipment":"dumbbells","execution":["bilateral","unilateral"],"defaultExecution":"bilateral","primary":["rear deltoids"],"secondary":["traps","mid-back"],"aliases":[{"name":"Rear Delt Row"},{"name":"High Row"}],"verified":false,"attachments":["rope","straight_bar"],"defaultAttachment":"rope"},{"id":"upright-row","name":"Upright Row","category":"shoulders","type":"strength","equipment":["barbell","dumbbells","cable","smith","resistance_band"],"defaultEquipment":"barbell","execution":["bilateral"],"defaultExecution":"bilateral","primary":["side deltoids","traps"],"secondary":["biceps"],"aliases":[{"name":"Upright Row"}],"verified":false,"attachments":["straight_bar","ez_bar","rope"],"defaultAttachment":"straight_bar"},{"id":"y-raise","name":"Y Raise","category":"shoulders","type":"strength","equipment":["dumbbells","cable","resistance_band"],"defaultEquipment":"dumbbells","execution":["bilateral"],"defaultExecution":"bilateral","primary":["rear deltoids","lower traps"],"secondary":["rotator cuff"],"aliases":[{"name":"Y Raise"}],"verified":false,"attachments":["single_handle"],"defaultAttachment":"single_handle"},{"id":"yoke-carry","name":"Yoke Carry","category":"strongman","type":"strength","equipment":["yoke"],"defaultEquipment":"yoke","execution":["bilateral"],"defaultExecution":"bilateral","primary":["traps","core","quadriceps"],"secondary":["glutes","spinal erectors"],"aliases":[{"name":"Yoke Carry"},{"name":"Yoke"},{"name":"Yoke Walk"}],"metric":"carry","verified":false},{"id":"sandbag-carry","name":"Sandbag Carry","category":"strongman","type":"strength","equipment":["sandbag"],"defaultEquipment":"sandbag","execution":["bilateral"],"defaultExecution":"bilateral","primary":["core","upper back"],"secondary":["biceps","glutes"],"aliases":[{"name":"Sandbag Carry"},{"name":"Bear Hug Carry"}],"metric":"carry","verified":false},{"id":"keg-carry","name":"Keg Carry","category":"strongman","type":"strength","equipment":["keg"],"defaultEquipment":"keg","execution":["bilateral"],"defaultExecution":"bilateral","primary":["core","upper back"],"secondary":["biceps","glutes"],"aliases":[{"name":"Keg Carry"},{"name":"Keg Walk"}],"metric":"carry","verified":false},{"id":"sled-drag","name":"Sled Drag","category":"strongman","type":"strength","equipment":["sled","plate_loaded_machine"],"defaultEquipment":"sled","execution":["bilateral"],"defaultExecution":"bilateral","primary":["glutes","hamstrings","quadriceps"],"secondary":["calves","upper back"],"aliases":[{"name":"Sled Drag"},{"name":"Sled Pull"},{"name":"Truck Pull"}],"metric":"carry","verified":false},{"id":"ruck","name":"Ruck","category":"strongman","type":"strength","equipment":["plate","sandbag","bodyweight"],"defaultEquipment":"plate","execution":["bilateral"],"defaultExecution":"bilateral","primary":["quadriceps","glutes"],"secondary":["core","traps"],"aliases":[{"name":"Ruck"},{"name":"Rucking"},{"name":"Weighted Walk"}],"metric":"carry","verified":false},{"id":"conan-wheel","name":"Conan's Wheel","category":"strongman","type":"strength","equipment":["conan_wheel"],"defaultEquipment":"conan_wheel","execution":["bilateral"],"defaultExecution":"bilateral","primary":["core","upper back"],"secondary":["quadriceps","glutes"],"aliases":[{"name":"Conan's Wheel"},{"name":"Conans Wheel"},{"name":"Conan Wheel"}],"metric":"carry","verified":false},{"id":"atlas-stone","name":"Atlas Stone","category":"strongman","type":"strength","equipment":["stone"],"defaultEquipment":"stone","execution":["bilateral"],"defaultExecution":"bilateral","primary":["glutes","spinal erectors","upper back"],"secondary":["biceps","hamstrings"],"aliases":[{"name":"Atlas Stone"},{"name":"Atlas Stones"},{"name":"Stone Load"},{"name":"Stone to Shoulder"}],"verified":false},{"id":"keg-load","name":"Keg Load","category":"strongman","type":"strength","equipment":["keg"],"defaultEquipment":"keg","execution":["bilateral"],"defaultExecution":"bilateral","primary":["glutes","spinal erectors"],"secondary":["upper back","biceps"],"aliases":[{"name":"Keg Load"},{"name":"Keg Toss"}],"verified":false},{"id":"sandbag-load","name":"Sandbag Load","category":"strongman","type":"strength","equipment":["sandbag"],"defaultEquipment":"sandbag","execution":["bilateral"],"defaultExecution":"bilateral","primary":["glutes","spinal erectors"],"secondary":["upper back","biceps"],"aliases":[{"name":"Sandbag Load"},{"name":"Sandbag to Shoulder"},{"name":"Sandbag Over Bar"}],"verified":false},{"id":"log-press","name":"Log Press","category":"strongman","type":"strength","equipment":["log"],"defaultEquipment":"log","execution":["bilateral"],"defaultExecution":"bilateral","primary":["front deltoids","triceps"],"secondary":["upper chest","core"],"aliases":[{"name":"Log Press"},{"name":"Log Clean and Press"},{"name":"Log Lift"}],"verified":false},{"id":"loading-race","name":"Loading Race","category":"strongman","type":"strength","equipment":["sandbag","keg","stone"],"defaultEquipment":"sandbag","execution":["bilateral"],"defaultExecution":"bilateral","primary":["glutes","spinal erectors","core"],"secondary":["upper back","quadriceps"],"aliases":[{"name":"Loading Race"},{"name":"Load Race"}],"metric":"race","verified":false},{"id":"medley","name":"Medley","category":"strongman","type":"strength","equipment":["sandbag","keg","yoke","farmers_handles","sled","stone"],"defaultEquipment":"sandbag","execution":["bilateral"],"defaultExecution":"bilateral","primary":["core","quadriceps","glutes"],"secondary":["grip","upper back"],"aliases":[{"name":"Medley"},{"name":"Strongman Medley"}],"metric":"race","verified":false}]};
 
 /* Indexes, built once. Alias uniqueness is a hard constraint: a duplicate makes
    import resolution non-deterministic, so this throws rather than picking a
@@ -1672,8 +1675,11 @@ function leafKey(l) { return `${l.movement}/${l.equipment}/${l.execution}/${l.at
 /* An exKey may carry the isometric suffix (see exKey); the leaf is what comes
    before it. */
 function keyLeaf(k) { const p = String(k).split('|')[0].split('/'); return { movement: p[0], equipment: p[1], execution: p[2], attachment: p[3] }; }
-function keyIsIso(k) { return String(k).endsWith('|iso'); }
-function leafName(k) { return displayName(keyLeaf(k)) + (keyIsIso(k) ? ' (hold)' : ''); }
+function keyIsIso(k) { return String(k).includes('|iso'); }
+function leafName(k) {
+  const cap = String(k).match(/\|cap(\d+)/);
+  return displayName(keyLeaf(k)) + (keyIsIso(k) ? ' (hold)' : '') + (cap ? ` (in ${capLabel(+cap[1])})` : '');
+}
 
 /* prKey adds any splitsPR modifiers. Sorted, because it is a persisted grouping
    key: a different order would silently split a PR history. */
@@ -1691,7 +1697,7 @@ function loadConventionFor(leaf) {
   const m = movementById(leaf.movement);
   if (m && m.loadOverride) return m.loadOverride;
   if (leaf.execution === 'unilateral' || leaf.execution === 'alternating') return 'per_side';
-  if ((leaf.equipment === 'dumbbells' || leaf.equipment === 'kettlebell') && !(m && m.singleImplement)) return 'per_side';
+  if ((leaf.equipment === 'dumbbells' || leaf.equipment === 'kettlebell' || leaf.equipment === 'farmers_handles') && !(m && m.singleImplement)) return 'per_side';
   return 'total';
 }
 /* A per-side set of 20 kg x 10 is 400 kg of volume, not 200. */
@@ -1726,11 +1732,11 @@ function isIso(e) { return !!(e && e.iso === true); }
    held 20 s and a bodyweight hold of 40 s are different records, and the
    heavier one must be able to be one. `best` is the longest hold at any
    weight, `heaviest` the most load ever held. */
-function holdRecords(key) {
+function holdRecords(key, before, skipId) {
   const byWeight = {};
   let best = 0, heaviest = 0, n = 0;
   for (const w of S.workouts) {
-    if (w.status !== 'completed') continue;
+    if (w.status !== 'completed' || (before && w.date >= before) || (skipId && w.id === skipId)) continue;
     for (const e of w.exercises) {
       if (!e.leaf || exKey(e) !== key) continue;
       for (const s of e.sets) {
@@ -1745,6 +1751,163 @@ function holdRecords(key) {
   }
   return { byWeight, best, heaviest, n };
 }
+/* ---------------- strongman set shapes (roadmap B1, r&d/specs/strongman-spec.md) ----------------
+   How a set is recorded, per entry. The movement's metric decides carry and
+   race; the entry decides a time cap (e.cap, seconds) or a stone series
+   (e.series), the same way it decides an isometric hold. */
+function kindOf(e) {
+  if (!e || !e.leaf) return 'reps';
+  const m = metricFor(e.leaf);
+  if (m === 'carry') return e.cap > 0 ? 'capcarry' : 'carry';
+  if (m === 'race') return 'race';
+  if (e.iso === true || m === 'time') return 'time';
+  if (e.cap > 0) return 'cap';
+  if (e.series) return 'series';
+  return 'reps';
+}
+/* Feeds weight × reps: stats, e1RM, rankings, autoregulation, plausibility.
+   A stone series' made stones are singles and count; nothing under a clock
+   or measured in metres does. */
+function inRepsPool(e) { const k = kindOf(e); return k === 'reps' || k === 'series'; }
+/* A done set that means something for its shape. */
+function setLogged(e, s) {
+  switch (kindOf(e)) {
+    case 'time': return s.sec > 0;
+    case 'carry': return s.m > 0 || s.sec > 0;
+    case 'capcarry': return s.m > 0;
+    case 'race': return s.sec > 0;
+    case 'series': return s.r > 0 || s.miss === true;
+    default: return s.r > 0;
+  }
+}
+function fmtM(m) { return m >= 1000 ? `${nice(m / 1000)} km` : `${nice(m)} m`; }
+function capLabel(sec) { return sec % 60 ? fmtSec(sec) : `${sec / 60} min`; }
+/* One set as words, for every shape. */
+function setText(e, s) {
+  const W = s.w > 0 ? wt(s.w) : '';
+  switch (kindOf(e)) {
+    case 'time': return holdLabel(s);
+    case 'carry': return [W, s.m > 0 ? fmtM(s.m) : '', s.sec > 0 ? fmtSec(s.sec) : ''].filter(Boolean).join(' · ') || '—';
+    case 'capcarry': return `${[W, s.m > 0 ? fmtM(s.m) : '—'].filter(Boolean).join(' · ')} in ${capLabel(e.cap)}`;
+    case 'race': return [s.n > 0 ? `${s.n} implements` : '', W ? `top ${W}` : '', s.m > 0 ? fmtM(s.m) : '', s.sec > 0 ? fmtSec(s.sec) : ''].filter(Boolean).join(' · ') || '—';
+    case 'cap': return `${W ? W + ' × ' : ''}${s.r || 0}${W ? '' : ' reps'} in ${capLabel(e.cap)}`;
+    case 'series': return `${W || 'bodyweight'} ${s.r > 0 ? '✓' : '✗ missed'}`;
+    default: return `${W ? W + ' × ' : ''}${s.r}${W ? '' : ' reps'}${s.rpe ? ' @ ' + rpeToRir(s.rpe) : ''}`;
+  }
+}
+/* The Prev column: the same, but short. */
+function prevText(e, p) {
+  if (!p) return '—';
+  const W = p.w > 0 ? nice(dw(p.w)) : '';
+  switch (kindOf(e)) {
+    case 'carry': case 'capcarry': return [W, p.m > 0 ? `${nice(p.m)}m` : '', p.sec > 0 ? fmtSec(p.sec) : ''].filter(Boolean).join('·') || '—';
+    case 'race': return p.sec > 0 ? fmtSec(p.sec) : '—';
+    case 'series': return `${W}${p.r > 0 ? '✓' : '✗'}`;
+    default: return `${W ? W + '×' : ''}${p.r || 0}`;
+  }
+}
+function raceKey(s) { return `${s.w > 0 ? s.w : 0}|${s.n || 0}|${s.m || 0}`; }
+function seriesBetter(a, b) {
+  if (!b) return true;
+  if (a.made !== b.made) return a.made > b.made;
+  return a.sec > 0 && (!(b.sec > 0) || a.sec < b.sec);
+}
+function seriesOf(e) {
+  const sets = e.sets.filter(s => s.done !== false && isWorking(s) && (s.r > 0 || s.miss));
+  return sets.length ? { made: sets.filter(s => s.r > 0).length, of: sets.length, sec: e.seriesSec || null } : null;
+}
+/* Records for the new shapes, derived from history like every other PR:
+   carry — fastest time per weight+distance, furthest distance per weight;
+   race — fastest per heaviest weight, implement count and distance;
+   cap — most reps (or furthest, for a carry) per weight in that cap;
+   series — most stones made, then fastest. */
+function shapeRecords(key, kind, before, skipId) {
+  const R = { n: 0, heavy: 0, fast: {}, far: {}, most: {}, series: null };
+  S.workouts.forEach(w => {
+    if (w.status !== 'completed' || (before && w.date >= before) || (skipId && w.id === skipId)) return;
+    w.exercises.forEach(e => {
+      if (!e.leaf || exKey(e) !== key || kindOf(e) !== kind) return;
+      if (kind === 'series') {
+        const c = seriesOf(e);
+        if (!c) return;
+        R.n++;
+        if (seriesBetter(c, R.series)) R.series = c;
+        return;
+      }
+      e.sets.forEach(s => {
+        if (s.done === false || !isWorking(s) || !setLogged(e, s)) return;
+        const w0 = s.w > 0 ? s.w : 0;
+        R.n++;
+        if (w0 > R.heavy) R.heavy = w0;
+        if (kind === 'carry' || kind === 'capcarry') {
+          if (s.m > 0 && !(R.far[w0] >= s.m)) R.far[w0] = s.m;
+          if (kind === 'carry' && s.m > 0 && s.sec > 0) { const k = `${w0}|${s.m}`; if (!(R.fast[k] <= s.sec)) R.fast[k] = s.sec; }
+        } else if (kind === 'race') {
+          const k = raceKey(s); if (!(R.fast[k] <= s.sec)) R.fast[k] = s.sec;
+        } else if (kind === 'cap') {
+          if (!(R.most[w0] >= s.r)) R.most[w0] = s.r;
+        }
+      });
+    });
+  });
+  return R;
+}
+/* What a set beats, in words, or null. A first-ever result isn't a PR; a
+   first result at a heavier load than any before is (the hold rule). */
+function shapeBeat(kind, R, s) {
+  if (!R.n) return null;
+  const w0 = s.w > 0 ? s.w : 0;
+  if (kind === 'carry' || kind === 'capcarry') {
+    if (kind === 'carry' && s.m > 0 && s.sec > 0) {
+      const f = R.fast[`${w0}|${s.m}`];
+      if (f && s.sec < f) return `fastest ${fmtM(s.m)}`;
+    }
+    if (s.m > 0) {
+      const far = R.far[w0];
+      if (far ? s.m > far : w0 > R.heavy) return far ? 'furthest' : 'heaviest';
+    }
+    return null;
+  }
+  if (kind === 'race') {
+    const f = R.fast[raceKey(s)];
+    if (f) return s.sec < f ? 'fastest' : null;
+    return w0 > R.heavy ? 'heaviest' : null;
+  }
+  if (kind === 'cap') {
+    const m = R.most[w0];
+    if (m ? s.r > m : w0 > R.heavy) return m ? 'most reps' : 'heaviest';
+  }
+  return null;
+}
+/* PRs from the new shapes (and holds) for one entry, as session PR records:
+   { name, key, label, what }. Compared against history before `before` (a
+   date), leaving out the session itself. Reps PRs stay in prsFor. */
+function shapePRs(e, before, skipId) {
+  const kind = kindOf(e);
+  if (kind === 'reps' || !e.leaf) return [];
+  const key = exKey(e), name = exFull(e);
+  const work = e.sets.filter(s => s.done !== false && isWorking(s) && setLogged(e, s));
+  if (!work.length) return [];
+  if (kind === 'time') {
+    const R = holdRecords(key, before, skipId);
+    const s = [...work].sort((a, b) => (b.w || 0) - (a.w || 0) || b.sec - a.sec).find(x => holdBeats(R, x.w, x.sec));
+    return s ? [{ name, key, label: holdLabel(s), what: 'best hold' }] : [];
+  }
+  const R = shapeRecords(key, kind, before, skipId);
+  if (kind === 'series') {
+    const c = seriesOf(e);
+    return c && R.n && seriesBetter(c, R.series)
+      ? [{ name, key, label: `${c.made}/${c.of} made${c.sec ? ' · ' + fmtSec(c.sec) : ''}`, what: 'best series' }] : [];
+  }
+  for (const s of [...work].sort((a, b) => (b.w || 0) - (a.w || 0))) {
+    const what = shapeBeat(kind, R, s);
+    if (what) return [{ name, key, label: setText(e, s), what }];
+  }
+  return [];
+}
+/* A session PR record as short text — reps, or a shape's own label. */
+function prText(p) { return p.label || (p.w > 0 ? `${wt(p.w)}×${p.r}` : `${p.r} reps`); }
+
 /* Longest hold at this weight; without a weight, the longest at any. */
 function bestHold(key, kg) {
   const r = holdRecords(key);
@@ -1877,6 +2040,8 @@ const EQ_LABEL = {
   bodyweight: 'bodyweight', barbell: 'barbell', dumbbells: 'dumbbell', kettlebell: 'kettlebell',
   trap_bar: 'trap bar', smith: 'Smith', machine: 'machine', plate_loaded_machine: 'plate-loaded',
   cable: 'cable', resistance_band: 'band', plate: 'plate', safety_squat_bar: 'SSB', belt_squat: 'belt squat',
+  log: 'log', axle: 'axle', yoke: 'yoke', keg: 'keg', sandbag: 'sandbag', stone: 'stone',
+  farmers_handles: 'farmers handles', sled: 'sled', conan_wheel: "Conan's wheel",
 };
 const ATT_LABEL = {
   rope: 'rope', straight_bar: 'straight bar', ez_bar: 'EZ bar', v_handle: 'V-handle',
@@ -1919,8 +2084,9 @@ function nameHtml(leaf) {
   return `${esc(displayName(leaf))}${v ? ` <span class="dimmer">${esc(v)}</span>` : ''}`;
 }
 function exVariant(e) { return e && e.leaf ? variantLabel(e.leaf) : ''; }
-function exFull(e) { return (e && e.leaf ? fullName(e.leaf) : (e && e.legacyName) || '') + (isIso(e) ? ' (hold)' : ''); }
-function exNameHtml(e) { return (e && e.leaf ? nameHtml(e.leaf) : esc((e && e.legacyName) || '')) + (isIso(e) ? ' <span class="dimmer">hold</span>' : ''); }
+function exTag(e) { return !e ? '' : isIso(e) ? 'hold' : e.cap > 0 ? `in ${capLabel(e.cap)}` : e.series ? 'series' : ''; }
+function exFull(e) { const t = exTag(e); return (e && e.leaf ? fullName(e.leaf) : (e && e.legacyName) || '') + (t ? ` (${t})` : ''); }
+function exNameHtml(e) { const t = exTag(e); return (e && e.leaf ? nameHtml(e.leaf) : esc((e && e.legacyName) || '')) + (t ? ` <span class="dimmer">${esc(t)}</span>` : ''); }
 
 
 /* Equipment and execution glyphs. Generic per-axis marks, not per-exercise
@@ -1941,6 +2107,16 @@ const EQ_ICON = {
   plate: SVG('<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.4"/>'),
   safety_squat_bar: SVG('<path d="M3 9v6M21 9v6M6 12h12"/><path d="M9 9v6M15 9v6"/>'),
   belt_squat: SVG('<path d="M4 8h16v5H4z"/><path d="M12 13v7M9 20h6"/>'),
+  // strongman implements (B1)
+  log: SVG('<rect x="3" y="9" width="18" height="6" rx="3"/><path d="M9 9v6M15 9v6"/>'),
+  axle: SVG('<path d="M3 9v6M6 7v10M18 7v10M21 9v6"/><rect x="6" y="10.5" width="12" height="3" rx="1.5"/>'),
+  yoke: SVG('<path d="M6 21V5M18 21V5M4 7h16"/><path d="M4 16h4M16 16h4"/>'),
+  keg: SVG('<path d="M7 4h10l1 3v10l-1 3H7l-1-3V7z"/><path d="M6 8h12M6 16h12"/>'),
+  sandbag: SVG('<path d="M5 9c0-3 14-3 14 0v7c0 3-14 3-14 0z"/><path d="M9 7v-2h6v2"/>'),
+  stone: SVG('<circle cx="12" cy="13" r="7"/><path d="M8 11c1-1.5 3-2 5-1.5"/>'),
+  farmers_handles: SVG('<path d="M6 4v16M18 4v16M6 8h12"/><circle cx="6" cy="18" r="2"/><circle cx="18" cy="18" r="2"/>'),
+  sled: SVG('<path d="M3 16h15l3-3M5 16v-5h9v5M9 11V7"/>'),
+  conan_wheel: SVG('<circle cx="12" cy="12" r="3"/><path d="M12 12h9M4 20l5-5"/><circle cx="12" cy="12" r="8" stroke-dasharray="2 3"/>'),
 };
 const EXEC_ICON = {
   bilateral: SVG('<circle cx="12" cy="12" r="7"/><circle cx="7.5" cy="12" r="1.6" fill="currentColor"/><circle cx="16.5" cy="12" r="1.6" fill="currentColor"/>'),
@@ -1953,6 +2129,8 @@ const EQ_TITLE = {
   trap_bar: 'Trap Bar', smith: 'Smith Machine', machine: 'Stack Machine',
   plate_loaded_machine: 'Plate Loaded', cable: 'Cable Machine', resistance_band: 'Resistance Band',
   plate: 'Plate', safety_squat_bar: 'Safety Squat Bar', belt_squat: 'Belt Squat',
+  log: 'Log', axle: 'Axle', yoke: 'Yoke', keg: 'Keg', sandbag: 'Sandbag', stone: 'Stone',
+  farmers_handles: 'Farmers Handles', sled: 'Sled', conan_wheel: "Conan's Wheel",
 };
 const ATT_TITLE = {
   none: 'None', rope: 'Rope', straight_bar: 'Straight Bar', ez_bar: 'EZ Bar', v_handle: 'V-Handle',
@@ -2289,7 +2467,9 @@ function migrateToV2(st) {
    never contend for the same record or share a history. Computed, never
    persisted. This is deliberately not prKey/splitsPR (still unwired, roadmap
    item 14) — only the iso suffix. */
-function exKey(e) { return e && e.leaf ? leafKey(e.leaf) + (e.iso === true ? '|iso' : '') : ''; }
+/* A time cap is its own pool too: 20 reps in a minute and a set of 20 aren't
+   the same lift (B1). */
+function exKey(e) { return e && e.leaf ? leafKey(e.leaf) + (e.iso === true ? '|iso' : '') + (e.cap > 0 ? '|cap' + e.cap : '') : ''; }
 function exName(e) { return e && e.leaf ? displayName(e.leaf) : (e && e.legacyName) || ''; }
 /* A set counts as working when it is not a warm-up. */
 function isWorking(s) { return s.setType !== 'warmup'; }
@@ -2816,7 +2996,8 @@ function openBodySkins() {
 function historyFor(key, before) {
   const out = [];
   S.workouts.filter(wo => wo.status === 'completed' && (!before || wo.date < before)).forEach(wo => {
-    wo.exercises.filter(e => exKey(e) === key).forEach(e => {
+    // weight × reps only: capped sets, carries and races keep their own records
+    wo.exercises.filter(e => exKey(e) === key && inRepsPool(e)).forEach(e => {
       e.sets.filter(s => s.done && isWorking(s) && s.r > 0).forEach(s => {
         out.push({ date: wo.date, w: s.w, r: s.r, rpe: s.rpe, e1: e1rm(s.w, s.r, s.rpe), workoutId: wo.id, est: wo.source === 'backfill' });
       });
@@ -2918,6 +3099,8 @@ function prsFor(wo) {
   if (_prCache.has(wo.id)) return _prCache.get(wo.id);
   const out = [];
   wo.exercises.forEach(e => {
+    out.push(...shapePRs(e, wo.date, wo.id));   // holds, carries, races, caps, series
+    if (!inRepsPool(e)) return;
     const sets = e.sets.filter(s => s.done && isWorking(s) && s.r > 0);
     if (!sets.length) return;
     const st = statsFor(exKey(e), wo.date);
@@ -3706,6 +3889,22 @@ function dayPanel(ds) {
   `;
 }
 
+/* An entry's one-line result: the heaviest e1RM for reps, the longest hold,
+   the furthest carry, the fastest race, the most reps in a cap, the stones
+   made in a series. */
+function entryHeadline(e, s) {
+  if (!s.length) return '—';
+  const kind = kindOf(e);
+  if (kind === 'series') { const c = seriesOf({ ...e, sets: s }); return c ? `${c.made}/${c.of} made${c.sec ? ' · ' + fmtSec(c.sec) : ''}` : '—'; }
+  const by = f => s.reduce((a, b) => f(b) > f(a) ? b : a);
+  const top = kind === 'time' ? by(x => x.sec || 0)
+    : kind === 'carry' || kind === 'capcarry' ? by(x => (x.w || 0) * 1e6 + (x.m || 0) * 1e3 - (x.sec || 0) / 1e3)
+    : kind === 'race' ? by(x => (x.w || 0) * 1e6 - (x.sec || 0))
+    : kind === 'cap' ? by(x => (x.w || 0) * 1e3 + (x.r || 0))
+    : by(x => e1rm(x.w, x.r));
+  return kind === 'reps' ? `${wt(top.w)} × ${top.r}` : setText(e, top);
+}
+
 function completedCard(wo) {
   const prs = prsFor(wo);
   const sets = wo.exercises.reduce((a, e) => a + e.sets.filter(s => s.done && isWorking(s)).length, 0);
@@ -3715,16 +3914,12 @@ function completedCard(wo) {
         <div class="sub">${wo.kind === 'cardio' ? 'Cardio' : `${sets} sets · ${wt(totalVolume(wo), 0)} volume`}${wo.summary && wo.summary.mins ? ` · ${wo.summary.mins} min` : ''}</div></div>
       <div class="row" style="gap:6px"><button class="btn xs ghost" data-edit-workout="${wo.id}">Edit</button><button class="btn xs ghost" data-view-workout="${wo.id}">View</button></div>
     </div>
-    ${prs.length ? `<div class="row wrap" style="gap:6px;margin-bottom:9px">${prs.map(p => `<span class="chip gold">★ ${esc(p.name)} ${p.w > 0 ? `${wt(p.w)}×${p.r}` : `${p.r} reps`}</span>`).join('')}</div>` : ''}
+    ${prs.length ? `<div class="row wrap" style="gap:6px;margin-bottom:9px">${prs.map(p => `<span class="chip gold">★ ${esc(p.name)} ${esc(prText(p))}</span>`).join('')}</div>` : ''}
     ${cardioBlock(wo)}
     ${wo.exercises.map(e => {
     const s = e.sets.filter(x => x.done && isWorking(x));
-    // a timed entry's headline set is the longest hold, not the heaviest load
-    const top = !s.length ? null
-      : isTimed(e) ? s.reduce((a, b) => (b.sec || 0) > (a.sec || 0) ? b : a)
-        : s.reduce((a, b) => e1rm(b.w, b.r) > e1rm(a.w, a.r) ? b : a);
     return `<div class="exline"><span>${exNameHtml(e)} <span class="dimmer">×${s.length}</span></span>
-        <span class="mono muted">${!top ? '—' : isTimed(e) ? holdLabel(top) : `${wt(top.w)} × ${top.r}`}</span></div>`;
+        <span class="mono muted">${esc(entryHeadline(e, s))}</span></div>`;
   }).join('')}
   </div>`;
 }
@@ -4070,6 +4265,60 @@ function vbtStrip(e) {
   }).join('')}</div>`;
 }
 
+/* ---------------- live card pieces for the B1 shapes ---------------- */
+function shapeBanner(e) {
+  const kind = kindOf(e), key = exKey(e);
+  const R = shapeRecords(key, kind);
+  if (!R.n) return `<span class="chip">First time — everything is a PR</span>`;
+  const ref = e.sets.find(s => isWorking(s)) || {};
+  const w0 = ref.w > 0 ? ref.w : 0;
+  const atW = w0 > 0 ? ` at ${wt(w0)}` : '';
+  const chips = [];
+  if (kind === 'series') {
+    if (R.series) chips.push(`★ Best series ${R.series.made}/${R.series.of} made${R.series.sec ? ' · ' + fmtSec(R.series.sec) : ''}`);
+  } else if (kind === 'carry' || kind === 'capcarry') {
+    if (R.far[w0]) chips.push(`★ Furthest ${fmtM(R.far[w0])}${atW}`);
+    if (kind === 'carry' && ref.m > 0 && R.fast[`${w0}|${ref.m}`]) chips.push(`★ Fastest ${fmtM(ref.m)} ${fmtSec(R.fast[`${w0}|${ref.m}`])}`);
+  } else if (kind === 'race') {
+    const f = R.fast[raceKey(ref)];
+    if (f) chips.push(`★ Fastest ${fmtSec(f)}`);
+  } else if (kind === 'cap') {
+    if (R.most[w0]) chips.push(`★ Most ${R.most[w0]} reps${atW} in ${capLabel(e.cap)}`);
+  }
+  if (!chips.length && R.heavy > 0) chips.push(`★ Heaviest ${wt(R.heavy)}`);
+  // anything ticked today that beats it
+  let beat = null;
+  if (kind === 'series') { const c = seriesOf(e); if (c && c.made && seriesBetter(c, R.series)) beat = `${c.made} made`; }
+  else for (const s of e.sets) if (s.done && isWorking(s) && shapeBeat(kind, R, s)) { beat = setText(e, s); break; }
+  return chips.map(c => `<span class="chip gold">${esc(c)}</span>`).join('') + (beat ? `<span class="chip green">▲ BEAT IT · ${esc(beat)}</span>` : '');
+}
+/* One of the B1 shapes (not plain reps, not a hold)? */
+function shapeKind(e) { const k = kindOf(e); return k !== 'reps' && k !== 'time'; }
+function shapeHead(e, edit) {
+  // the edit sheet has no Prev or plate column: one fewer
+  const kind = kindOf(e), span = edit ? 3 : 4, pl = edit ? '' : '<th class="c-pl"></th>';
+  if (kind === 'carry') return `<th colspan="${span}">${U()} · metres · time</th>`;
+  if (kind === 'capcarry') return `<th colspan="${span}">${U()} · metres in ${esc(capLabel(e.cap))}</th>`;
+  if (kind === 'race') return `<th colspan="${span}">top ${U()} · implements · metres · time</th>`;
+  if (kind === 'cap') return `<th class="c-kg">${U()}</th>${pl}<th class="c-reps" colspan="2">Reps in ${esc(capLabel(e.cap))}</th>`;
+  return `<th class="c-kg">${U()}</th>${pl}<th colspan="2">Stone</th>`;   // series
+}
+function shapeRow(e, ei, si, s, f = 'f') {
+  const kind = kindOf(e), k = `${ei}.${si}`;
+  const num = (fld, val, ph, step = '0.5', mode = 'decimal') => `<input type="number" step="${step}" inputmode="${mode}" data-${f}="${fld}" data-k="${k}" value="${val == null || val === 0 ? '' : val}" placeholder="${ph}" aria-label="${ph}">`;
+  const time = () => `<input type="text" inputmode="numeric" data-${f}="sec" data-k="${k}" value="${fmtSec(s.sec)}" placeholder="m:ss" aria-label="time">`;
+  const W = num('w', s.w ? dw(s.w) : '', U());
+  const timer = f === 'f' ? `<button class="plbtn" data-hold="${k}" title="Time it" aria-label="Time it">⏱</button>` : '';
+  const span = f === 'f' ? 4 : 3, pl = f === 'f' ? '<td class="c-pl"></td>' : '';
+  if (kind === 'carry') return `<td colspan="${span}"><div class="multi">${W}${num('m', s.m, 'metres', '1', 'numeric')}${time()}${timer}</div></td>`;
+  if (kind === 'capcarry') return `<td colspan="${span}"><div class="multi">${W}${num('m', s.m, 'metres', '1', 'numeric')}</div></td>`;
+  if (kind === 'race') return `<td colspan="${span}"><div class="multi">${W}${num('n', s.n, 'n', '1', 'numeric')}${num('m', s.m, 'metres', '1', 'numeric')}${time()}${timer}</div></td>`;
+  if (kind === 'cap') return `<td class="c-wt">${W}</td>${pl}<td colspan="2">${num('r', s.r || '', 'reps', '1', 'numeric')}</td>`;
+  // series: each set is one stone, made or missed
+  return `<td class="c-wt">${W}</td>${pl}
+    <td colspan="2"><button class="btn xs ${s.r > 0 ? '' : 'danger'} wide" data-${f === 'f' ? 'made' : 'emade'}="${k}">${s.r > 0 ? '✓ Made' : '✗ Missed'}</button></td>`;
+}
+
 function exerciseCard(e, ei) {
   const st = statsFor(exKey(e));
   const prev = lastSession(exKey(e));
@@ -4081,6 +4330,8 @@ function exerciseCard(e, ei) {
 
   const timed = isTimed(e);
   const isoE = isIso(e);
+  const kind = kindOf(e);
+  const special = kind !== 'reps' && kind !== 'time';   // the B1 shapes
 
   /* A timed movement never earns a weight PR, so the weight banner would sit on
      "First time — everything is a PR" forever. Best hold is the number that
@@ -4096,7 +4347,7 @@ function exerciseCard(e, ei) {
     : 0;
   const atW = isoE ? ` at ${refW > 0 ? wt(refW) : 'bodyweight'}` : '';
 
-  const prBanner = timed
+  const prBanner = special ? shapeBanner(e) : timed
     ? (recs.n
       ? (holdBest
         ? `<span class="chip gold">★ Best ${fmtSec(holdBest)}${atW}</span>
@@ -4111,7 +4362,7 @@ function exerciseCard(e, ei) {
       : `<span class="chip">First time — everything is a PR</span>`;
 
   /* Autoregulation and stall: one line under the banner. */
-  const stall = !timed ? stallFor(exKey(e)) : null;
+  const stall = kind === 'reps' ? stallFor(exKey(e)) : null;
   const autoLine = e.auto || stall ? `<div class="row wrap" style="gap:6px;margin-top:6px">
       ${e.auto ? `<span class="chip blue" title="Loads set from RIR">⟳ AUTO · target RIR ${e.auto.t}</span>
         <span class="sub">${e.auto.day ? `today e1 ${wt(e.auto.day)}` : e.auto.e1 ? `working e1 ${wt(e.auto.e1)}` : 'plan weights until RIR is logged'}</span>` : ''}
@@ -4127,6 +4378,14 @@ function exerciseCard(e, ei) {
       <td class="c-del"><button class="delset" data-delset="${ei}.${si}" title="Delete set">×</button></td>`;
     const chk = `<td class="c-chk"><button class="chk ${s.done ? 'on' : ''}" data-done="${ei}.${si}">✓</button></td>`;
     const holdBtn = `<button class="plbtn" data-hold="${ei}.${si}" title="Hold timer">⏱</button>`;
+    if (special) {
+      return `<tr class="${s.done ? 'done' : ''}">
+      ${setNo}
+      <td class="c-prev mono">${esc(prevText(e, p))}</td>
+      ${shapeRow(e, ei, si, s)}
+      ${chk}
+    </tr>`;
+    }
     /* An isometric hold keeps its load and its RIR, and swaps reps for time.
        Held to failure (test mode) means RIR 0 by definition, so it's shown
        rather than asked. */
@@ -4168,8 +4427,8 @@ function exerciseCard(e, ei) {
   return `<div class="ex-card">
     <div class="ex-head">
       <div class="row between">
-        <div class="ex-name grow" data-exdetail="${esc(exKey(e))}" title="Open ${esc(exName(e))}">${esc(exName(e))}${isoE ? ' <span class="chip">HOLD</span>' : ''}</div>
-        ${timed ? '' : `<button class="btn xs ghost" data-ramp="${ei}" title="Warm-up ramp">▲ Warm-up</button>`}
+        <div class="ex-name grow" data-exdetail="${esc(exKey(e))}" title="Open ${esc(exName(e))}">${esc(exName(e))}${isoE ? ' <span class="chip">HOLD</span>' : ''}${e.cap > 0 ? ` <span class="chip">IN ${esc(capLabel(e.cap).toUpperCase())}</span>` : ''}${e.series ? ' <span class="chip">SERIES</span>' : ''}</div>
+        ${timed || !inRepsPool(e) && kind !== 'cap' ? '' : `<button class="btn xs ghost" data-ramp="${ei}" title="Warm-up ramp">▲ Warm-up</button>`}
         <button class="icon-btn" data-ex-menu="${ei}">⋯</button>
       </div>
       ${leafChip(e.leaf, ei)}
@@ -4179,7 +4438,7 @@ function exerciseCard(e, ei) {
       ${e.notes ? `<div class="ex-note">${esc(e.notes)}</div>` : ''}
     </div>
     <table class="settable">
-      <thead><tr><th class="c-set">Set</th><th class="c-del"></th><th class="c-prev">Prev</th>${isoE
+      <thead><tr><th class="c-set">Set</th><th class="c-del"></th><th class="c-prev">Prev</th>${special ? shapeHead(e) : isoE
       ? `<th class="c-kg">${U()}</th><th class="c-pl"></th><th class="c-reps">Time</th><th class="c-rpe">RIR</th>`
       : timed
       ? `<th class="c-time" colspan="4">Time</th>`
@@ -4187,10 +4446,13 @@ function exerciseCard(e, ei) {
       <tbody>${rows}</tbody>
     </table>
     ${vbtStrip(e)}
+    ${e.series ? `<div class="row" style="gap:8px;align-items:center;padding:8px 12px 0">
+      <label class="sub grow" for="ss${ei}">Series time</label>
+      <input id="ss${ei}" type="text" inputmode="numeric" data-series-sec="${ei}" value="${fmtSec(e.seriesSec)}" placeholder="m:ss" style="width:90px"></div>` : ''}
     <div class="ex-foot">
-      <button class="btn sm ghost grow" data-addset="${ei}">+ Set</button>
-      <button class="btn sm ghost" data-rmset="${ei}">− Set</button>
-      ${vbtAvailable() && !timed ? `<button class="btn sm ghost" data-vbt="${ei}" title="Measure bar speed">◉ Measure</button>` : ''}
+      <button class="btn sm ghost grow" data-addset="${ei}">+ ${e.series ? 'Stone' : 'Set'}</button>
+      <button class="btn sm ghost" data-rmset="${ei}">− ${e.series ? 'Stone' : 'Set'}</button>
+      ${vbtAvailable() && kind === 'reps' ? `<button class="btn sm ghost" data-vbt="${ei}" title="Measure bar speed">◉ Measure</button>` : ''}
     </div>
   </div>`;
 }
@@ -4427,7 +4689,7 @@ function finishWorkout(force) {
      planks refused to finish at all, and a mixed session dropped the planks
      from the saved record without saying so. */
   const logged = a.exercises.map(e => {
-    const x = { ...e, sets: e.sets.filter(s => s.done && (isTimed(e) ? s.sec > 0 : s.r > 0))
+    const x = { ...e, sets: e.sets.filter(s => s.done && setLogged(e, s))
       .map(s => { const y = { ...s }; delete y.auto; delete y.planW; return y; }) };   // live-only markers
     delete x.rest;   // the session's ±15 s override; it isn't part of the record
     return x;
@@ -4438,8 +4700,8 @@ function finishWorkout(force) {
   if (!force) {
     const flagged = [];
     logged.forEach(e => {
-      if (isTimed(e)) return;                   // nothing to say about a duration
-      e.sets.filter(s => isWorking(s)).forEach(s => {
+      if (!inRepsPool(e)) return;               // nothing to say about a duration, a distance or a capped set
+      e.sets.filter(s => isWorking(s) && s.r > 0).forEach(s => {
         const why = plausibility(exKey(e), s.w, s.r, s.rpe);
         if (why.length) flagged.push({ name: exFull(e), s, why });
       });
@@ -4450,9 +4712,10 @@ function finishWorkout(force) {
   // PRs — compare against history BEFORE this workout is saved
   const prs = [];
   logged.forEach(e => {
-    if (isTimed(e)) return;        // a hold is not an e1RM, isometric or not; its best is toasted at tick time
+    prs.push(...shapePRs(e, null, a.id));   // holds, carries, races, caps, series: their own records
+    if (!inRepsPool(e)) return;             // none of those is an e1RM
     const st = statsFor(exKey(e));
-    const working = e.sets.filter(s => isWorking(s));
+    const working = e.sets.filter(s => isWorking(s) && s.r > 0);
     if (!working.length) return;
     const best = bestSetOf(working);
     const e1 = e1rm(best.w, best.r, best.rpe);
@@ -4531,10 +4794,7 @@ function roundRect(x, px, py, w2, h2, r) {
 
 /* Takes the entry, not the leaf: whether a set is a hold depends on the entry's
    iso flag as well as the movement. */
-function setLabel(s, e) {
-  if (isTimed(e)) return holdLabel(s);
-  return `${s.w > 0 ? wt(s.w) + ' × ' : ''}${s.r}${s.w > 0 ? '' : ' reps'}${s.rpe ? ' @ ' + rpeToRir(s.rpe) : ''}`;
-}
+function setLabel(s, e) { return setText(e, s); }
 
 function sessionTotals(wo) {
   const ws = wo.exercises.map(e => ({ e, sets: e.sets.filter(s => isWorking(s)) })).filter(o => o.sets.length);
@@ -4558,7 +4818,7 @@ function sessionMuscles(wo) {
   let unknown = 0;
   wo.exercises.forEach(e => {
     // a plank is core work; counting only sets with reps left timed holds out of the map
-    const sets = e.sets.filter(s => isWorking(s) && (s.r > 0 || s.sec > 0));
+    const sets = e.sets.filter(s => isWorking(s) && (s.r > 0 || s.sec > 0 || s.m > 0));
     if (!sets.length) return;
     const m = exMuscles(exName(e));
     if (!m) { unknown++; return; }
@@ -4680,27 +4940,32 @@ function fullCardCanvas(wo) {
       x.textAlign = 'left'; x.fillStyle = CARD.text; x.font = cardFont(27, 650);
       x.fillText(fitText(x, p.name, W / 2), P + 18, y + 32);
       x.textAlign = 'right'; x.fillStyle = CARD.gold; x.font = cardFont(27, 780);
-      x.fillText(p.w > 0 ? `${wt(p.w)} × ${p.r}` : `${p.r} reps`, W - P - 18, y + 32);
+      x.fillText(p.label || (p.w > 0 ? `${wt(p.w)} × ${p.r}` : `${p.r} reps`), W - P - 18, y + 32);
       y += 58;
     });
     y += 20;
   }
 
   section('EVERY SET');
-  const prKeys = new Set(t.prs.map(p => p.key));   // by leaf: names collapse across variants now
+  const prKeys = new Set(t.prs.filter(p => !p.label).map(p => p.key));   // reps PRs, by leaf: names collapse across variants now
   allSets.forEach(({ e, sets }) => {
     x.strokeStyle = CARD.line; x.lineWidth = 2;
     x.beginPath(); x.moveTo(P, y); x.lineTo(W - P, y); x.stroke();
     const working = sets.filter(s => isWorking(s));
     const vol = working.reduce((a, s) => a + s.w * s.r, 0);
-    const prSet = prKeys.has(exKey(e)) && working.length ? bestSetOf(working) : null;   // the one set prsFor scored
+    const scored = inRepsPool(e) ? working.filter(s => s.r > 0) : [];
+    const prSet = prKeys.has(exKey(e)) && scored.length ? bestSetOf(scored) : null;   // the one set prsFor scored
     const reps = working.reduce((a, s) => a + s.r, 0);
     x.textAlign = 'left'; x.fillStyle = CARD.text; x.font = cardFont(29, 680);
     x.fillText(fitText(x, exFull(e), W - P * 2 - 260), P, y + 42);
     x.textAlign = 'right'; x.fillStyle = CARD.dim; x.font = cardFont(24, 600);
     // timed: total time. bodyweight: reps, not 0kg
     const totSec = working.reduce((a, s) => a + (s.sec || 0), 0);
-    x.fillText(`${working.length} set${working.length === 1 ? '' : 's'} · ${isTimed(e) ? fmtSec(totSec) : vol > 0 ? wt(vol, 0) : reps + ' reps'}`, W - P, y + 42);
+    const kind = kindOf(e), totM = working.reduce((a, s) => a + (s.m || 0), 0);
+    x.fillText(`${working.length} set${working.length === 1 ? '' : 's'} · ${kind === 'time' || kind === 'race' ? fmtSec(totSec)
+      : kind === 'carry' || kind === 'capcarry' ? (totM > 0 ? fmtM(totM) : fmtSec(totSec))
+      : kind === 'series' ? entryHeadline(e, working)
+      : vol > 0 && kind === 'reps' ? wt(vol, 0) : reps + ' reps'}`, W - P, y + 42);
     y += 64;
     let n = 0;
     sets.forEach(s => {
@@ -4710,7 +4975,7 @@ function fullCardCanvas(wo) {
       x.fillText(isWarm(s) ? 'W' : String(++n), P + 12, y + 28);
       x.fillStyle = isWarm(s) ? CARD.warm : isPR ? CARD.gold : CARD.text; x.font = cardFont(26, isPR ? 780 : 620);
       x.fillText(setLabel(s, e) + (isPR ? '  ★' : ''), P + 64, y + 28);
-      if (s.w > 0 && s.r > 0 && isWorking(s)) {
+      if (s.w > 0 && s.r > 0 && isWorking(s) && kind === 'reps') {
         x.textAlign = 'right'; x.fillStyle = CARD.dim; x.font = cardFont(22, 600);
         x.fillText(`e1RM ${wt(e1rm(s.w, s.r, s.rpe))}`, W - P, y + 28);
       }
@@ -4805,16 +5070,16 @@ function showSummary(wo) {
         ${prs.map(p => `<div class="card tight" style="background:rgba(255,197,66,.07);border-color:rgba(255,197,66,.28);margin-bottom:8px">
           <div class="row between"><div>
             <div style="font-weight:700">${esc(p.name)}</div>
-            <div class="sub">${p.first ? 'First time logged' : p.w > 0 ? `previous e1RM ${wt(p.prev)}` : `previous best ${p.prevReps} reps`}</div>
-          </div><div class="right"><div style="font-weight:780;font-size:17px;color:var(--gold)">${p.w > 0 ? `${wt(p.w)} × ${p.r}` : `${p.r} reps`}</div>
-            <div class="sub">${p.w > 0 ? `e1RM ${wt(p.e1)}` : 'bodyweight'}</div></div></div>
+            <div class="sub">${p.label ? esc(p.what) : p.first ? 'First time logged' : p.w > 0 ? `previous e1RM ${wt(p.prev)}` : `previous best ${p.prevReps} reps`}</div>
+          </div><div class="right"><div style="font-weight:780;font-size:17px;color:var(--gold)">${esc(prText(p))}</div>
+            ${p.label ? '' : `<div class="sub">${p.w > 0 ? `e1RM ${wt(p.e1)}` : 'bodyweight'}</div>`}</div></div>
         </div>`).join('')}` : `<div class="empty">No PRs this session — still money in the bank.</div>`}
 
       <div class="eyebrow" style="margin:16px 0 8px">Breakdown</div>
       ${wo.exercises.map(e => {
       const ws = e.sets.filter(s => isWorking(s));
       const warm = e.sets.filter(s => isWarm(s));
-      const timed = isTimed(e);
+      const timed = isTimed(e), kind = kindOf(e), plain = kind === 'reps' || kind === 'time';
       const v = ws.reduce((a, s) => a + s.w * s.r, 0);
       // a timed entry's headline is total time held, and its best set the longest one
       const totSec = ws.reduce((a, s) => a + (s.sec || 0), 0);
@@ -4824,11 +5089,11 @@ function showSummary(wo) {
       return `<div class="card tight" style="margin-bottom:8px">
           <div class="row between" style="margin-bottom:6px">
             <div style="font-weight:680">${exNameHtml(e)}${modsHtml(e)}</div>
-            <div class="mono sub">${timed ? fmtSec(totSec) : wt(v, 0)}</div>
+            <div class="mono sub">${!plain ? esc(entryHeadline(e, ws)) : timed ? fmtSec(totSec) : wt(v, 0)}</div>
           </div>
           ${e.sets.map((st, i) => `<div class="row between" style="padding:3px 0;font-size:13px">
             <span class="sub" style="width:52px">${isWarm(st) ? 'warm' : 'Set ' + (ws.indexOf(st) + 1)}</span>
-            <span class="mono grow" style="${st === top && ws.length > 1 ? 'color:var(--gold);font-weight:700' : ''}">${timed ? holdLabel(st) : `${wt(st.w)} × ${st.r}`}</span>
+            <span class="mono grow" style="${plain && st === top && ws.length > 1 ? 'color:var(--gold);font-weight:700' : ''}">${!plain ? esc(setText(e, st)) : timed ? holdLabel(st) : `${wt(st.w)} × ${st.r}`}</span>
             <span class="mono sub">${st.rpe ? 'RIR ' + rpeToRir(st.rpe) : ''}</span>
           </div>`).join('')}
         </div>`;
@@ -4860,7 +5125,9 @@ function viewCompleted(id) {
         <div class="card tight" style="background:var(--card)">
           <div style="font-weight:700;margin-bottom:7px">${exNameHtml(e)}${modsHtml(e)}</div>
           ${e.sets.map((s, i) => `<div class="exline"><span class="dimmer">${isWarm(s) ? 'W' : 'Set ' + (i + 1)}</span>
-            <span class="mono">${isTimed(e)
+            <span class="mono">${kindOf(e) !== 'reps' && !isTimed(e)
+    ? esc(setText(e, s))
+    : isTimed(e)
     ? `${holdLabel(s)}${isIso(e) && s.rpe != null ? ` @ ${rpeToRir(s.rpe)}` : ''}`
     : `${wt(s.w)} × ${s.r}${s.rpe ? ` @ ${rpeToRir(s.rpe)}` : ''} <span class="dimmer">· e1RM ${wt(e1rm(s.w, s.r))}</span>`}${s.vbt
       ? ` <span class="dimmer">· ${s.vbt.best.toFixed(2)} m/s${s.vbt.loss >= 5 ? ` ▾${s.vbt.loss.toFixed(0)}%` : ''}</span>` : ''}</span></div>`).join('')}
@@ -4903,14 +5170,14 @@ function renderEditWorkout() {
   const key = k => k.split('.').map(Number);
   const exCard = (e, ei) => `<div class="ex-card" style="margin-bottom:9px">
     <div class="ex-head"><div class="row between" style="gap:6px">
-      <div class="ex-name grow">${esc(exName(e))}${isIso(e) ? ' <span class="chip">HOLD</span>' : ''}</div>
-      ${metricFor(e.leaf) === 'time' ? '' : `<button class="btn xs ghost" data-eex-iso="${ei}" title="${isIso(e) ? 'Back to reps' : 'Log as isometric hold'}">${isIso(e) ? 'Reps' : 'Hold'}</button>`}
+      <div class="ex-name grow">${esc(exName(e))}${isIso(e) ? ' <span class="chip">HOLD</span>' : ''}${e.cap > 0 ? ` <span class="chip">IN ${esc(capLabel(e.cap).toUpperCase())}</span>` : ''}${e.series ? ' <span class="chip">SERIES</span>' : ''}</div>
+      ${metricFor(e.leaf) !== 'reps_weight' || e.cap > 0 || e.series ? '' : `<button class="btn xs ghost" data-eex-iso="${ei}" title="${isIso(e) ? 'Back to reps' : 'Log as isometric hold'}">${isIso(e) ? 'Reps' : 'Hold'}</button>`}
       <button class="btn xs ghost" data-eex-up="${ei}" title="Move up">↑</button>
       <button class="btn xs ghost" data-eex-down="${ei}" title="Move down">↓</button>
       <button class="btn xs danger" data-eex-rm="${ei}" title="Remove exercise">✕</button>
     </div>${modChips(e, `data-emods="${ei}"`)}</div>
     <table class="settable">
-      <thead><tr><th class="c-set">Set</th><th class="c-del"></th>${isIso(e)
+      <thead><tr><th class="c-set">Set</th><th class="c-del"></th>${shapeKind(e) ? shapeHead(e, true) : isIso(e)
       ? `<th class="c-kg">${U()}</th><th class="c-reps">Time</th><th class="c-rpe">RIR</th>`
       : isTimed(e)
       ? `<th class="c-time" colspan="3">Time</th>`
@@ -4918,7 +5185,7 @@ function renderEditWorkout() {
       <tbody>${e.sets.map((s, si) => `<tr class="${s.done ? 'done' : ''}">
         <td class="c-set"><div class="setno ${isWarm(s) ? 'warm' : ''}" data-ewarm="${ei}.${si}" title="Toggle warm-up">${isWarm(s) ? 'W' : si + 1 - e.sets.slice(0, si).filter(x => isWarm(x)).length}</div></td>
         <td class="c-del"><button class="delset" data-edelset="${ei}.${si}" title="Delete set">×</button></td>
-        ${isIso(e)
+        ${shapeKind(e) ? shapeRow(e, ei, si, s, 'ef') : isIso(e)
       ? `<td class="c-wt"><input type="number" step="0.5" inputmode="decimal" data-ef="w" data-k="${ei}.${si}" value="${s.w ? dw(s.w) : ''}" placeholder="0"></td>
         <td class="c-time"><input type="text" inputmode="numeric" data-ef="sec" data-k="${ei}.${si}" value="${fmtSec(s.sec)}" placeholder="m:ss"></td>
         <td><input type="number" step="1" inputmode="numeric" data-ef="rpe" data-k="${ei}.${si}" value="${s.rpe == null ? '' : rpeToRir(s.rpe)}" placeholder="—"></td>`
@@ -4930,7 +5197,10 @@ function renderEditWorkout() {
         <td class="c-chk"><button class="chk ${s.done ? 'on' : ''}" data-edone="${ei}.${si}" title="Untick to drop this set">✓</button></td>
       </tr>`).join('')}</tbody>
     </table>
-    <div class="ex-foot"><button class="btn sm ghost grow" data-eaddset="${ei}">+ Set</button></div>
+    ${e.series ? `<div class="row" style="gap:8px;align-items:center;padding:8px 12px 0">
+      <label class="sub grow" for="ess${ei}">Series time</label>
+      <input id="ess${ei}" type="text" inputmode="numeric" data-eseries-sec="${ei}" value="${fmtSec(e.seriesSec)}" placeholder="m:ss" style="width:90px"></div>` : ''}
+    <div class="ex-foot"><button class="btn sm ghost grow" data-eaddset="${ei}">+ ${e.series ? 'Stone' : 'Set'}</button></div>
   </div>`;
 
   modal({
@@ -4964,12 +5234,25 @@ function renderEditWorkout() {
         if (inp.dataset.ef === 'w') s.w = val ? toKg(val) : 0;
         if (inp.dataset.ef === 'r') s.r = val || 0;
         if (inp.dataset.ef === 'rpe') s.rpe = rirToRpe(val == null ? null : Math.round(val));
+        if (inp.dataset.ef === 'm') s.m = val > 0 ? val : null;
+        if (inp.dataset.ef === 'n') s.n = val > 0 ? Math.round(val) : null;
         if (inp.dataset.ef === 'sec') { s.sec = parseTime(inp.value); if (s.holdMode) { s.holdMode = 'manual'; s.target = null; } }
         };
         if (inp.dataset.ef === 'sec') inp.onblur = () => {
           const [ei, si] = key(inp.dataset.k);
           inp.value = fmtSec(d.exercises[ei].sets[si].sec);
         };
+      });
+      bg.querySelectorAll('[data-emade]').forEach(b => b.onclick = () => {
+        const [ei, si] = key(b.dataset.emade); const s = d.exercises[ei].sets[si];
+        if (s.r > 0) { s.r = 0; s.miss = true; } else { s.r = 1; delete s.miss; }
+        re();
+      });
+      bg.querySelectorAll('[data-eseries-sec]').forEach(inp => {
+        selectOnFocus(inp);
+        const ex = d.exercises[+inp.dataset.eseriesSec];
+        inp.oninput = () => { ex.seriesSec = parseTime(inp.value) || null; };
+        inp.onblur = () => { inp.value = ex.seriesSec ? fmtSec(ex.seriesSec) : ''; };
       });
       bg.querySelectorAll('[data-edone]').forEach(b => b.onclick = () => {
         const [ei, si] = key(b.dataset.edone); const s = d.exercises[ei].sets[si]; s.done = !s.done; re();
@@ -4986,7 +5269,8 @@ function renderEditWorkout() {
       bg.querySelectorAll('[data-eaddset]').forEach(b => b.onclick = () => {
         const ex = d.exercises[+b.dataset.eaddset];
         const last = ex.sets[ex.sets.length - 1] || { w: 0, r: 0 };
-        ex.sets.push({ w: last.w, r: last.r, sec: last.sec || null, rpe: null, done: true, setType: 'working' });
+        ex.sets.push({ w: last.w, r: kindOf(ex) === 'series' ? 1 : last.r, sec: last.sec || null, rpe: null, done: true, setType: 'working',
+          ...(last.m > 0 ? { m: last.m } : {}), ...(last.n > 0 ? { n: last.n } : {}) });
         re();
       });
       bg.querySelectorAll('[data-emods]').forEach(b => b.onclick = () => {
@@ -5015,7 +5299,7 @@ function renderEditWorkout() {
       $('#eAddEx', bg).onclick = () => {
         grab();
         pickExercise(leaf => {
-          d.exercises.push({ leaf, legacyName: displayName(leaf), notes: '', mods: [], sets: [{ w: 0, r: 0, rpe: null, done: true, setType: 'working' }] });
+          d.exercises.push({ leaf, legacyName: displayName(leaf), notes: '', mods: [], sets: [{ w: 0, r: metricFor(leaf) === 'reps_weight' ? 0 : null, sec: null, rpe: null, done: true, setType: 'working' }] });
           renderEditWorkout();
         });
       };
@@ -5031,15 +5315,15 @@ function saveEdit(force) {
   // same metric-aware rule as finishWorkout — editing a session must not be a way to lose its holds
   const logged = d.exercises.map(e => ({
     ...e,
-    sets: e.sets.filter(s => s.done && (isTimed(e) ? s.sec > 0 : s.r > 0)),
+    sets: e.sets.filter(s => s.done && setLogged(e, s)),
   })).filter(e => e.sets.length);
   if (!logged.length) return toast('Keep at least one ticked set, or delete the session instead');
 
   if (!force) {
     const flagged = [];
     logged.forEach(e => {
-      if (isTimed(e)) return;                   // nothing to say about a duration
-      e.sets.filter(s => isWorking(s)).forEach(s => {
+      if (!inRepsPool(e)) return;               // nothing to say about a duration, a distance or a capped set
+      e.sets.filter(s => isWorking(s) && s.r > 0).forEach(s => {
         const why = plausibility(exKey(e), s.w, s.r, s.rpe, d.date);
         if (why.length) flagged.push({ name: exFull(e), s, why });
       });
@@ -5180,8 +5464,8 @@ let detailMetric = 'e1';
 function movementVariants(movementId) {
   const keys = new Set();
   S.workouts.filter(w => w.status === 'completed').forEach(wo => wo.exercises.forEach(e => {
-    // holds keep their own records and have no e1RM, so they're not a variant row here
-    if (e.leaf && e.leaf.movement === movementId && !isIso(e)) keys.add(exKey(e));
+    // holds, caps, carries and races keep their own records and have no e1RM, so they're not a variant row here
+    if (e.leaf && e.leaf.movement === movementId && inRepsPool(e)) keys.add(exKey(e));
   }));
   const m = movementById(movementId);
   if (m) keys.add(leafKey(completeLeaf(m, null)));
@@ -5284,8 +5568,8 @@ function openMovementPage(movementId, focusKey) {
       if (!e.leaf || e.leaf.movement !== movementId) return;
       const working = e.sets.filter(s => s.done && isWorking(s));
       if (!working.length) return;
-      rows.push({ date: wo.date, name: exName(e), variant: [exVariant(e), isIso(e) ? 'hold' : '', ...(e.mods || []).map(modLabel)].filter(Boolean).join(' · '),
-                  key: exKey(e), leaf: e.leaf, iso: e.iso, sets: working, id: wo.id });
+      rows.push({ date: wo.date, name: exName(e), variant: [exVariant(e), exTag(e), ...(e.mods || []).map(modLabel)].filter(Boolean).join(' · '),
+                  key: exKey(e), leaf: e.leaf, iso: e.iso, cap: e.cap, series: e.series, seriesSec: e.seriesSec, sets: working, id: wo.id });
     }));
     rows.sort((a, b) => a.date < b.date ? 1 : -1);
     if (!rows.length) return `<div class="empty">Nothing logged yet</div>`;
@@ -5297,7 +5581,7 @@ function openMovementPage(movementId, focusKey) {
           <button class="btn xs ghost" data-hist-wo="${esc(r.id)}">View</button>
         </div>
         ${r.sets.map((s, i) => `<div class="exline"><span class="dimmer">Set ${i + 1}</span>
-          <span class="mono">${isTimed(r) ? `${holdLabel(s)}${r.iso && s.rpe ? ` @ ${rpeToRir(s.rpe)}` : ''}` : `${s.w > 0 ? `${wt(s.w)} × ${s.r == null ? 'AMRAP' : s.r}` : `${s.r == null ? 'AMRAP' : s.r} reps`}${s.rpe ? ` @ ${rpeToRir(s.rpe)}` : ''}`}</span></div>`).join('')}
+          <span class="mono">${shapeKind(r) ? esc(setText(r, s)) : isTimed(r) ? `${holdLabel(s)}${r.iso && s.rpe ? ` @ ${rpeToRir(s.rpe)}` : ''}` : `${s.w > 0 ? `${wt(s.w)} × ${s.r == null ? 'AMRAP' : s.r}` : `${s.r == null ? 'AMRAP' : s.r} reps`}${s.rpe ? ` @ ${rpeToRir(s.rpe)}` : ''}`}</span></div>`).join('')}
       </div>`).join('');
   };
 
@@ -6461,7 +6745,8 @@ function importLiftoff(sessions, mapping, unit) {
 
     const built = s.exercises.map(e => {
       const leaf = leafOf(e.raw);
-      const asIso = e.secs > 0 && !isTimed(leaf) && e.sets.every(x => x.sec > 0);
+      const metric = metricFor(leaf);
+      const asIso = e.secs > 0 && metric === 'reps_weight' && e.sets.every(x => x.sec > 0);
       return {
         leaf,
         legacyName: e.raw,
@@ -6473,9 +6758,9 @@ function importLiftoff(sessions, mapping, unit) {
            the time on each set and no reps. Mixed sets keep the note — there
            the seconds may be a rest or a tempo rather than the set itself. */
         ...(asIso ? { iso: true } : {}),
-        notes: e.secs && !isTimed(leaf) && !asIso ? `${e.secs} s hold` : '',
+        notes: e.secs && metric === 'reps_weight' && !asIso ? `${e.secs} s hold` : '',
         sets: e.sets.map(x => ({
-          w: toKgFrom(x.lb, unit), r: asIso ? null : x.r, sec: x.sec, rpe: x.rpe, done: true, setType: 'working',
+          w: toKgFrom(x.lb, unit), r: asIso || metric === 'carry' || metric === 'race' ? null : x.r, sec: x.sec, rpe: x.rpe, done: true, setType: 'working',
         })),
       };
     });
@@ -7592,7 +7877,28 @@ function toggleSetDone(ei, si) {
   /* A timed set is finished by its duration, not its reps — the reps guard
      made every plank and every treadmill session impossible to tick off. */
   const timed = isTimed(ex);
-  if (timed ? !s.sec : !s.r) return toast(timed ? 'Enter a time first' : 'Enter reps first');
+  const kind = kindOf(ex);
+  if (!setLogged(ex, s)) return toast({ time: 'Enter a time first', carry: 'Enter a distance or a time first', capcarry: 'Enter a distance first',
+    race: 'Enter a time first' }[kind] || 'Enter reps first');
+  // carries, races, time caps and stone series: their own records (strongman spec)
+  if (kind !== 'reps' && kind !== 'time') {
+    const key = exKey(ex);
+    const R = isWorking(s) ? shapeRecords(key, kind) : null;
+    s.done = true;
+    if (R && kind === 'series') {
+      if (s.r > 0) {
+        const st = statsFor(key);
+        if (st && beatsBest(st, s.w, 1, s.rpe)) toast(`★ PR — ${exFull(ex)} ${s.w > 0 ? wt(s.w) : 'bodyweight'}`, 'gold');
+      }
+    } else if (R) {
+      const what = shapeBeat(kind, R, s);
+      if (!R.n) toast(`★ First ${exFull(ex)} logged`, 'gold');
+      else if (what) toast(`★ PR (${what}) — ${exFull(ex)} ${setText(ex, s)}`, 'gold');
+    }
+    startRest(ei, s);
+    save(); bust(); render();
+    return;
+  }
   const commit = () => {
     // PR check against history captured before flipping the flag
     const st = statsFor(exKey(ex));
@@ -7655,9 +7961,11 @@ function openHoldTimer(ei, si) {
   const s = e && e.sets[si];
   if (!s) return;
   const isoE = isIso(e);
+  // a carry or a race is a stopwatch: count in, count up, stop at the line
+  const course = ['carry', 'race'].includes(kindOf(e));
   // default to how this set, or the one before it, was last timed
   const prevSet = e.sets.slice(0, si).reverse().find(x => x.holdMode === 'planned' || x.holdMode === 'test');
-  let mode = s.holdMode === 'planned' || s.holdMode === 'test' ? s.holdMode : prevSet ? prevSet.holdMode : 'planned';
+  let mode = course ? 'test' : s.holdMode === 'planned' || s.holdMode === 'test' ? s.holdMode : prevSet ? prevSet.holdMode : 'planned';
   let target = s.target || (prevSet && prevSet.target) || s.sec || 30;
   let run = null;   // { goAt, iv, warned }
 
@@ -7671,8 +7979,10 @@ function openHoldTimer(ei, si) {
     stop();
     Cue.done();
     s.sec = Math.max(1, Math.floor(sec));   // what the clock showed
-    s.holdMode = mode;
-    s.target = mode === 'planned' ? target : null;
+    if (!course) {
+      s.holdMode = mode;
+      s.target = mode === 'planned' ? target : null;
+    }
     if (mode === 'test' && isoE) s.rpe = rirToRpe(0);   // held to failure
     save();
     closeModal();
@@ -7680,18 +7990,18 @@ function openHoldTimer(ei, si) {
   };
 
   modal({
-    title: `Hold · ${exFull(e)}`,
+    title: `${course ? 'Time' : 'Hold'} · ${exFull(e)}`,
     sticky: true,
     onClose: stop,
     body: `
-      <div class="seg" id="htMode">
+      <div class="seg" id="htMode"${course ? ' style="display:none"' : ''}>
         <button data-m="planned" class="${mode === 'planned' ? 'on' : ''}">Planned</button>
         <button data-m="test" class="${mode === 'test' ? 'on' : ''}">To failure</button>
       </div>
       <div class="field" id="htTargetF" style="margin-top:10px;${mode === 'planned' ? '' : 'display:none'}"><label>Target (m:ss)</label>
         <input type="text" inputmode="numeric" id="htTarget" value="${fmtSec(target)}"></div>
       <div class="timer" id="htClock" style="font-size:64px;text-align:center;margin:14px 0 4px">${mode === 'planned' ? fmtSec(target) : '0:00'}</div>
-      <div class="sub" id="htMsg" style="text-align:center;min-height:18px">${s.w > 0 ? `${wt(s.w)}${loadConventionFor(e.leaf) === 'per_side' ? ' per side' : ''} · ` : ''}three beeps, go on the long one</div>`,
+      <div class="sub" id="htMsg" style="text-align:center;min-height:18px">${s.w > 0 ? `${wt(s.w)}${loadConventionFor(e.leaf) === 'per_side' ? ' per side' : ''} · ` : ''}${course && s.m > 0 ? fmtM(s.m) + ' · ' : ''}three beeps, go on the long one</div>`,
     foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="htGo">Start</button>`,
     onOpen: bg => {
       const clock = $('#htClock', bg), msg = $('#htMsg', bg), go = $('#htGo', bg);
@@ -7724,7 +8034,7 @@ function openHoldTimer(ei, si) {
           if (whole <= 3 && whole < run.warned) { run.warned = whole; Cue.tick(); }
           clock.textContent = fmtSec(whole);
         } else clock.textContent = fmtSec(Math.floor(el));
-        msg.textContent = mode === 'planned' ? 'Stop early to log what you held' : 'Stop when the hold breaks';
+        msg.textContent = course ? 'Stop at the line' : mode === 'planned' ? 'Stop early to log what you held' : 'Stop when the hold breaks';
       };
 
       go.onclick = () => {
@@ -7988,7 +8298,7 @@ function autoHistory(key, before) {
   const out = [];
   S.workouts.filter(w => w.status === 'completed' && !w.off && w.source !== 'backfill' && (!before || w.date < before))
     .forEach(w => w.exercises.forEach(e => {
-      if (exKey(e) !== key || isTimed(e)) return;
+      if (exKey(e) !== key || kindOf(e) !== 'reps') return;   // no clock, no series: a true rep effort
       const v = sessionE1(e);
       if (v) out.push({ date: w.date, e1: v });
     }));
@@ -8021,7 +8331,7 @@ function stallFor(key) {
 function applyAuto(wo) {
   if (!autoBlock(wo)) return;
   wo.exercises.forEach(e => {
-    if (!e.leaf || isTimed(e)) return;
+    if (!e.leaf || kindOf(e) !== 'reps') return;
     const work = e.sets.filter(s => isWorking(s) && s.w > 0 && s.r > 0);
     if (!work.length) return;
     const top = work.reduce((a, b) => b.w > a.w ? b : a);
@@ -8069,7 +8379,7 @@ const HEAVY_BARS = ['barbell', 'trap_bar', 'safety_squat_bar'];
    barbell curl is an accessory; a barbell row isn't. Holds rest like
    accessories. */
 function isMainLift(e) {
-  if (!e || !e.leaf || isTimed(e)) return false;
+  if (!e || !e.leaf || !inRepsPool(e)) return false;
   if (priorityKeys().includes(leafKey(e.leaf))) return true;
   const m = movementById(e.leaf.movement);
   return !!m && HEAVY_BARS.includes(e.leaf.equipment)
@@ -8819,6 +9129,8 @@ function wireActive(v) {
       if (inp.dataset.f === 'w') { s.w = val ? toKg(val) : 0; delete s.auto; }   // a typed weight is never overwritten
       if (inp.dataset.f === 'r') s.r = val || 0;
       if (inp.dataset.f === 'rpe') s.rpe = rirToRpe(val == null ? null : Math.round(val));   // RIR is whole numbers
+      if (inp.dataset.f === 'm') s.m = val > 0 ? val : null;                 // metres
+      if (inp.dataset.f === 'n') s.n = val > 0 ? Math.round(val) : null;    // implements in a race
       if (inp.dataset.f === 'sec') {
         s.sec = parseTime(inp.value);
         // typed over a timed hold: it's a manual entry now, and RIR is asked again
@@ -8845,6 +9157,19 @@ function wireActive(v) {
   });
 
   v.querySelectorAll('[data-done]').forEach(b => b.onclick = () => toggleSetDone(...key(b.dataset.done)));
+  // stone series: made / missed
+  v.querySelectorAll('[data-made]').forEach(b => b.onclick = () => {
+    const [ei, si] = key(b.dataset.made);
+    const s = a.exercises[ei].sets[si];
+    if (s.r > 0) { s.r = 0; s.miss = true; } else { s.r = 1; delete s.miss; }
+    save(); bust(); render();
+  });
+  v.querySelectorAll('[data-series-sec]').forEach(inp => {
+    selectOnFocus(inp);
+    const ex = a.exercises[+inp.dataset.seriesSec];
+    inp.oninput = () => { ex.seriesSec = parseTime(inp.value) || null; save(); };
+    inp.onblur = () => { inp.value = ex.seriesSec ? fmtSec(ex.seriesSec) : ''; };
+  });
   v.querySelectorAll('[data-hold]').forEach(b => b.onclick = () => openHoldTimer(...key(b.dataset.hold)));
   $('#restHost').onclick = ev => {
     const b = ev.target.closest('[data-rest]');
@@ -8865,7 +9190,9 @@ function wireActive(v) {
   v.querySelectorAll('[data-addset]').forEach(b => b.onclick = () => {
     const ex = a.exercises[+b.dataset.addset];
     const last = ex.sets[ex.sets.length - 1] || { w: 0, r: 0 };
-    ex.sets.push({ w: last.w, r: last.r, sec: last.sec || null, rpe: null, done: false, setType: 'working',
+    const series = kindOf(ex) === 'series';
+    ex.sets.push({ w: last.w, r: series ? 1 : last.r, sec: last.sec || null, rpe: null, done: false, setType: 'working',
+      ...(last.m > 0 ? { m: last.m } : {}), ...(last.n > 0 ? { n: last.n } : {}),
       ...(last.holdMode === 'planned' && last.target ? { target: last.target } : {}) });
     save(); render();
   });
@@ -8912,6 +9239,9 @@ function wireActive(v) {
 
   v.querySelectorAll('[data-ex-menu]').forEach(b => b.onclick = () => {
     const ei = +b.dataset.exMenu, ex = a.exercises[ei];
+    const kind = kindOf(ex), metric = metricFor(ex.leaf);
+    const canCap = !isTimed(ex) && metric !== 'race' && !ex.series;
+    const canSeries = metric === 'reps_weight' && !isIso(ex) && !(ex.cap > 0);
     modal({
       title: exFull(ex),
       body: `<div class="field"><label>Exercise notes</label>
@@ -8923,6 +9253,12 @@ function wireActive(v) {
         ${metricFor(ex.leaf) === 'time' ? '' : `<button class="btn wide ghost" id="exIso" style="margin-bottom:8px">${isIso(ex)
           ? 'Back to reps' : 'Log as isometric hold'}</button>
           <div class="sub" style="margin:-2px 0 10px">Holds keep their own records, separate from rep sets of the same lift.</div>`}
+        ${canCap ? `<div class="field"><label for="exCap">${metric === 'carry' ? 'Log as furthest in… (m:ss)' : 'Log as max reps in… (m:ss)'}</label>
+          <div class="row" style="gap:8px"><input type="text" inputmode="numeric" id="exCap" class="grow" value="${fmtSec(ex.cap || 60)}" placeholder="1:00">
+          <button class="btn ghost" id="exCapOn">${ex.cap > 0 ? 'Update' : 'Apply'}</button>${ex.cap > 0 ? '<button class="btn ghost" id="exCapOff">Remove</button>' : ''}</div>
+          <div class="sub" style="margin-top:4px">A time cap keeps its own records and never counts toward e1RM.</div></div>` : ''}
+        ${canSeries ? `<button class="btn wide ghost" id="exSeries" style="margin-bottom:8px">${ex.series ? 'Back to normal sets' : 'Log as stone series'}</button>
+          <div class="sub" style="margin:-2px 0 10px">Each set is one stone, made or missed, with a series time.</div>` : ''}
         <button class="btn wide ghost" id="exUp" style="margin-bottom:8px">Move up</button>
         <button class="btn wide ghost" id="exDown">Move down</button>`,
       foot: `<button class="btn danger" id="exDel">Remove exercise</button><button class="btn primary" id="exOk">Save</button>`,
@@ -8932,6 +9268,23 @@ function wireActive(v) {
           ex.notes = $('#exNote', bg).value.trim();
           closeModal();
           setIso(ex, !isIso(ex), () => { save(); bust(); render(); });
+        };
+        const keepNote = () => { ex.notes = $('#exNote', bg).value.trim(); };
+        const capOn = $('#exCapOn', bg), capOff = $('#exCapOff', bg), serBtn = $('#exSeries', bg);
+        if (capOn) capOn.onclick = () => {
+          const sec = parseTime($('#exCap', bg).value);
+          if (!(sec > 0)) return toast('Enter a time cap, like 1:00');
+          keepNote(); ex.cap = sec;
+          // it's max effort: RIR goes, and a capped carry's time is the cap
+          ex.sets.forEach(s => { if (!s.done) { s.rpe = null; if (kind === 'carry' || kind === 'capcarry') s.sec = null; } });
+          save(); bust(); closeModal(); render();
+        };
+        if (capOff) capOff.onclick = () => { keepNote(); delete ex.cap; save(); bust(); closeModal(); render(); };
+        if (serBtn) serBtn.onclick = () => {
+          keepNote();
+          if (ex.series) { delete ex.series; delete ex.seriesSec; ex.sets.forEach(s => { delete s.miss; if (!s.done && !(s.r > 0)) s.r = 0; }); }
+          else { ex.series = true; ex.sets.forEach(s => { if (!s.done) { s.r = 1; s.rpe = null; delete s.miss; } }); }
+          save(); bust(); closeModal(); render();
         };
         $('#exUp', bg).onclick = () => { if (ei > 0) { const [x] = a.exercises.splice(ei, 1); a.exercises.splice(ei - 1, 0, x); save(); closeModal(); render(); } };
         $('#exDown', bg).onclick = () => { if (ei < a.exercises.length - 1) { const [x] = a.exercises.splice(ei, 1); a.exercises.splice(ei + 1, 0, x); save(); closeModal(); render(); } };
@@ -8948,7 +9301,7 @@ function wireActive(v) {
   });
 
   $('#addEx').onclick = () => pickExercise(leaf => {
-    a.exercises.push({ leaf, legacyName: displayName(leaf), notes: '', mods: [], sets: [{ w: 0, r: isTimed(leaf) ? null : 0, sec: null, rpe: null, done: false, setType: 'working' }] });
+    a.exercises.push({ leaf, legacyName: displayName(leaf), notes: '', mods: [], sets: [{ w: 0, r: metricFor(leaf) === 'reps_weight' ? 0 : null, sec: null, rpe: null, done: false, setType: 'working' }] });
     save(); render();
     window.scrollTo(0, document.body.scrollHeight);
   });

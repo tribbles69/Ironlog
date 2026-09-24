@@ -13,6 +13,23 @@ rather than guessed.
 
 ---
 
+## 0.28.0 — 24 Sep 2026
+- **Strongman and loaded carries.** Carries (farmers, yoke, sandbag, keg,
+  sled push and drag, ruck, Conan's wheel) log weight, distance and time
+  together. The ⏱ button times the run.
+- **Medleys and loading races** log the heaviest implement, how many, the
+  distance and your time.
+- **Stone series.** From an exercise's ⋯ menu, mark each stone made or missed
+  and add the series time. Made stones still count as lifts.
+- **Max reps in a time cap.** Also in the ⋯ menu: "max reps in 1 min", or the
+  furthest carry in a set time. These keep their own records and don't
+  affect your e1RM.
+- New lifts and implements: log press, atlas stones, keg and sandbag loads,
+  axle press and deadlift.
+- **PRs everywhere.** Fastest, furthest, most reps and best series all show
+  as gold PRs: live, in the session summary and on the calendar. Best holds
+  now show there too.
+
 ## 0.27.1 — 24 Sep 2026
 - **Fixed:** after closing the keyboard with Back, or tapping somewhere
   else, a weight or reps box stayed selected, so the next tap on the keyboard

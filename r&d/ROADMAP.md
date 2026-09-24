@@ -224,7 +224,7 @@ promoting it. A rename is cheap now and expensive later.
 
 ## B. Core logging — what keeps people using it
 
-### [ ] B1. Loaded carries, sleds, medleys and strongman events
+### [x] B1. Loaded carries, sleds, medleys and strongman events — shipped 0.28.0
 The biggest documented strongman gap (Blast #96, #109; research).
 - A set shape with **weight + distance + time** together: farmers, yoke,
   sandbag carry, sled push/pull, rucking.

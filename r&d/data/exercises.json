@@ -15,11 +15,20 @@
       "resistance_band",
       "plate",
       "safety_squat_bar",
-      "belt_squat"
+      "belt_squat",
+      "log",
+      "axle",
+      "yoke",
+      "keg",
+      "sandbag",
+      "stone",
+      "farmers_handles",
+      "sled",
+      "conan_wheel"
     ],
     "execution": ["bilateral", "alternating", "unilateral"],
     "load": {
-      "rule": "per_side when execution is unilateral or alternating; else per_side when equipment is dumbbells or kettlebell and the movement is not singleImplement; else total",
+      "rule": "per_side when execution is unilateral or alternating; else per_side when equipment is dumbbells, kettlebell or farmers_handles and the movement is not singleImplement; else total",
       "order": [
         {
           "when": {
@@ -29,7 +38,7 @@
         },
         {
           "when": {
-            "equipment": ["dumbbells", "kettlebell"],
+            "equipment": ["dumbbells", "kettlebell", "farmers_handles"],
             "singleImplement": false
           },
           "load": "per_side"
@@ -38,9 +47,9 @@
       ],
       "note": "A bilateral dumbbell bench with two 40 kg dumbbells is logged as 40, not 80. singleImplement:true marks movements where both hands share one implement (goblet squat, pullover, Russian twist), which are total. A movement may override with loadOverride. Volume must account for this: a per_side set of 20 kg x 10 is 400 kg, not 200."
     },
-    "category": ["shoulders", "chest", "arms", "back", "legs", "core", "cardio"],
+    "category": ["shoulders", "chest", "arms", "back", "legs", "core", "cardio", "strongman"],
     "type": ["strength", "cardio"],
-    "metric": ["reps_weight", "time", "distance", "time_distance"],
+    "metric": ["reps_weight", "time", "distance", "time_distance", "carry", "race"],
     "attachment": [
       "none",
       "rope",
@@ -804,7 +813,7 @@
       "name": "Sled Push",
       "category": "cardio",
       "type": "strength",
-      "equipment": ["plate_loaded_machine"],
+      "equipment": ["plate_loaded_machine", "sled"],
       "defaultEquipment": "plate_loaded_machine",
       "execution": ["bilateral"],
       "defaultExecution": "bilateral",
@@ -813,9 +822,9 @@
       "aliases": [
         { "name": "Sled Push", "equipment": "plate_loaded_machine" },
         { "name": "Prowler" },
-        { "name": "Sled Drag", "equipment": "plate_loaded_machine" }
+        { "name": "Strongman Sled Push", "equipment": "sled" }
       ],
-      "metric": "time",
+      "metric": "carry",
       "verified": false
     },
     {
@@ -1130,7 +1139,7 @@
       "name": "Farmers Carry",
       "category": "core",
       "type": "strength",
-      "equipment": ["dumbbells", "kettlebell", "trap_bar", "barbell"],
+      "equipment": ["dumbbells", "kettlebell", "trap_bar", "barbell", "farmers_handles"],
       "defaultEquipment": "dumbbells",
       "execution": ["bilateral", "unilateral"],
       "defaultExecution": "bilateral",
@@ -1140,9 +1149,11 @@
         { "name": "Farmers Carry" },
         { "name": "Farmers Walk" },
         { "name": "Suitcase Carry" },
-        { "name": "Loaded Carry" }
+        { "name": "Loaded Carry" },
+        { "name": "Farmers Handles", "equipment": "farmers_handles" },
+        { "name": "Strongman Farmers", "equipment": "farmers_handles" }
       ],
-      "metric": "time",
+      "metric": "carry",
       "verified": false
     },
     {
@@ -1429,7 +1440,7 @@
       "name": "Deadlift",
       "category": "legs",
       "type": "strength",
-      "equipment": ["barbell", "trap_bar", "smith"],
+      "equipment": ["barbell", "trap_bar", "smith", "axle"],
       "defaultEquipment": "barbell",
       "execution": ["bilateral"],
       "defaultExecution": "bilateral",
@@ -1440,7 +1451,8 @@
         { "name": "Hex Deadlift", "equipment": "trap_bar" },
         { "name": "Trap Bar Deadlift", "equipment": "trap_bar" },
         { "name": "Conventional Deadlift" },
-        { "name": "Deficit Deadlift" }
+        { "name": "Deficit Deadlift" },
+        { "name": "Axle Deadlift", "equipment": "axle" }
       ],
       "verified": true
     },
@@ -1989,7 +2001,7 @@
       "name": "Overhead Press",
       "category": "shoulders",
       "type": "strength",
-      "equipment": ["barbell", "dumbbells", "smith", "machine"],
+      "equipment": ["barbell", "dumbbells", "smith", "machine", "axle"],
       "defaultEquipment": "barbell",
       "execution": ["bilateral", "alternating", "unilateral"],
       "defaultExecution": "bilateral",
@@ -2001,7 +2013,9 @@
         { "name": "Military Press" },
         { "name": "Shoulder Press" },
         { "name": "OHP" },
-        { "name": "Dumbbell Shoulder Press", "equipment": "dumbbells" }
+        { "name": "Dumbbell Shoulder Press", "equipment": "dumbbells" },
+        { "name": "Axle Press", "equipment": "axle" },
+        { "name": "Axle Clean and Press", "equipment": "axle" }
       ],
       "verified": true
     },
@@ -2096,6 +2110,226 @@
       "verified": false,
       "attachments": ["single_handle"],
       "defaultAttachment": "single_handle"
+    },
+    {
+      "id": "yoke-carry",
+      "name": "Yoke Carry",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["yoke"],
+      "defaultEquipment": "yoke",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["traps", "core", "quadriceps"],
+      "secondary": ["glutes", "spinal erectors"],
+      "aliases": [
+        { "name": "Yoke Carry" },
+        { "name": "Yoke" },
+        { "name": "Yoke Walk" }
+      ],
+      "metric": "carry",
+      "verified": false
+    },
+    {
+      "id": "sandbag-carry",
+      "name": "Sandbag Carry",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["sandbag"],
+      "defaultEquipment": "sandbag",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["core", "upper back"],
+      "secondary": ["biceps", "glutes"],
+      "aliases": [
+        { "name": "Sandbag Carry" },
+        { "name": "Bear Hug Carry" }
+      ],
+      "metric": "carry",
+      "verified": false
+    },
+    {
+      "id": "keg-carry",
+      "name": "Keg Carry",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["keg"],
+      "defaultEquipment": "keg",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["core", "upper back"],
+      "secondary": ["biceps", "glutes"],
+      "aliases": [
+        { "name": "Keg Carry" },
+        { "name": "Keg Walk" }
+      ],
+      "metric": "carry",
+      "verified": false
+    },
+    {
+      "id": "sled-drag",
+      "name": "Sled Drag",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["sled", "plate_loaded_machine"],
+      "defaultEquipment": "sled",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "hamstrings", "quadriceps"],
+      "secondary": ["calves", "upper back"],
+      "aliases": [
+        { "name": "Sled Drag" },
+        { "name": "Sled Pull" },
+        { "name": "Truck Pull" }
+      ],
+      "metric": "carry",
+      "verified": false
+    },
+    {
+      "id": "ruck",
+      "name": "Ruck",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["plate", "sandbag", "bodyweight"],
+      "defaultEquipment": "plate",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes"],
+      "secondary": ["core", "traps"],
+      "aliases": [
+        { "name": "Ruck" },
+        { "name": "Rucking" },
+        { "name": "Weighted Walk" }
+      ],
+      "metric": "carry",
+      "verified": false
+    },
+    {
+      "id": "conan-wheel",
+      "name": "Conan's Wheel",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["conan_wheel"],
+      "defaultEquipment": "conan_wheel",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["core", "upper back"],
+      "secondary": ["quadriceps", "glutes"],
+      "aliases": [
+        { "name": "Conan's Wheel" },
+        { "name": "Conans Wheel" },
+        { "name": "Conan Wheel" }
+      ],
+      "metric": "carry",
+      "verified": false
+    },
+    {
+      "id": "atlas-stone",
+      "name": "Atlas Stone",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["stone"],
+      "defaultEquipment": "stone",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "spinal erectors", "upper back"],
+      "secondary": ["biceps", "hamstrings"],
+      "aliases": [
+        { "name": "Atlas Stone" },
+        { "name": "Atlas Stones" },
+        { "name": "Stone Load" },
+        { "name": "Stone to Shoulder" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "keg-load",
+      "name": "Keg Load",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["keg"],
+      "defaultEquipment": "keg",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "spinal erectors"],
+      "secondary": ["upper back", "biceps"],
+      "aliases": [
+        { "name": "Keg Load" },
+        { "name": "Keg Toss" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "sandbag-load",
+      "name": "Sandbag Load",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["sandbag"],
+      "defaultEquipment": "sandbag",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "spinal erectors"],
+      "secondary": ["upper back", "biceps"],
+      "aliases": [
+        { "name": "Sandbag Load" },
+        { "name": "Sandbag to Shoulder" },
+        { "name": "Sandbag Over Bar" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "log-press",
+      "name": "Log Press",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["log"],
+      "defaultEquipment": "log",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["front deltoids", "triceps"],
+      "secondary": ["upper chest", "core"],
+      "aliases": [
+        { "name": "Log Press" },
+        { "name": "Log Clean and Press" },
+        { "name": "Log Lift" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "loading-race",
+      "name": "Loading Race",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["sandbag", "keg", "stone"],
+      "defaultEquipment": "sandbag",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "spinal erectors", "core"],
+      "secondary": ["upper back", "quadriceps"],
+      "aliases": [
+        { "name": "Loading Race" },
+        { "name": "Load Race" }
+      ],
+      "metric": "race",
+      "verified": false
+    },
+    {
+      "id": "medley",
+      "name": "Medley",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["sandbag", "keg", "yoke", "farmers_handles", "sled", "stone"],
+      "defaultEquipment": "sandbag",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["core", "quadriceps", "glutes"],
+      "secondary": ["grip", "upper back"],
+      "aliases": [
+        { "name": "Medley" },
+        { "name": "Strongman Medley" }
+      ],
+      "metric": "race",
+      "verified": false
     }
   ]
 }
