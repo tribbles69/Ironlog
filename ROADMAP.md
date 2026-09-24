@@ -60,6 +60,23 @@ Premium (~£5/month) is AI features and cloud sync. Things that cost nothing per
 
 ## Now
 
+### 0. Fix: "Log a test" can't save anything — patch ready
+Bug (reported 23 Sep 2026): every combination of entries fails with "Enter a
+weight for at least one lift", and all three rows show Back Squat.
+- `openTestLog` preselected `sel(r.name, …)` against options valued by **key**,
+  so nothing matched and every row fell back to the first barbell lift.
+- The save built entries as `{ name, kg }`, but `logTest` filters on
+  `e.leaf` — so every entry was dropped and it always returned 0.
+
+Also requested in the same report: **tests are the big three only** (squat,
+bench, deadlift — pinned to the priority-lift variants, no picker) and **no
+warm-up ramp ▲ button** in the test modal (`openRamp` stays for the workout
+page).
+
+Patch: **`docs/patches/0.16.3-test-log.patch`** — `git apply` it, run the
+script check, commit, tick this. It bumps to 0.16.3 / `ironlog-v30`; if other
+work has bumped since, rebase the version lines rather than going backwards.
+
 ### 1. Isometric holds
 Spec: **`docs/isometrics-spec.md`** — ready to build.
 
@@ -267,6 +284,27 @@ building.
   Thomas test, wall shoulder flexion — charted per test and per side.
 - Adherence streak alongside training; loaded-stretch drills (paused goblet
   squat, Cossack, paused RDL) log as normal lifting sets so PRs still work.
+
+### 18. Body composition page
+One page for bodyweight, tape measurements and skinfold (caliper) tests, each
+with a chart. Write `docs/body-comp-spec.md` before building.
+- **Bodyweight:** build on the existing check-in weight (`ci.weight`, read by
+  `bodyweightKg()` for DOTS) — don't create a second bodyweight store. Chart
+  with a 7-day rolling average over the raw points.
+- **Measurements:** cm, any subset per entry — neck, chest, waist, hips, upper
+  arm, forearm, thigh, calf — **left/right** where it applies, plus custom
+  sites. Each site gets its own trend.
+- **Caliper tests:** pick a protocol — Jackson-Pollock 3-site, JP 7-site,
+  Durnin-Womersley 4-site. Enter mm per site, optionally 2–3 readings per site
+  averaged. Body density from the protocol's equation (uses sex and age from
+  settings), then Siri for body-fat %; fat mass / lean mass from the same day's
+  weight.
+- Always show the **raw sum of skinfolds** next to the %. The equations were
+  built on typical populations, so for adaptive lifters the mm sum is the more
+  honest trend line — present the % as an estimate.
+- Charts via `chartMulti`: pick the metric, date range; same-day entries sit
+  together. Everything lives in IndexedDB and goes through JSON export/import
+  (schema bump + migration).
 
 ---
 
