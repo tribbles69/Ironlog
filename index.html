@@ -1218,10 +1218,88 @@ async function storePut(k, v) {
 
 /* Ask Android not to evict the log when storage runs low. Granted automatically
    once the app is installed to the home screen. */
-function requestPersistence() {
-  try { navigator.storage && navigator.storage.persist && navigator.storage.persist(); }
-  catch (e) {}
+/* ---------------- storage safety (roadmap A3) ----------------
+   Chrome may clear an origin's IndexedDB when the phone runs short of space —
+   unless the origin is "persisted". Chrome decides on its own (an installed,
+   used app usually qualifies), so ask once there is a logged session worth
+   protecting, and show the answer in Settings. Until backups go to the user's
+   own drive (B6), a JSON export is the only copy, so the Home page nudges when
+   the last one is over two weeks old. */
+const persist = { state: 'unknown', usage: 0, quota: 0 };   // granted | denied | unsupported | unknown
+async function storageStatus() {
+  try {
+    if (!(navigator.storage && navigator.storage.persisted)) { persist.state = 'unsupported'; return persist; }
+    persist.state = (await navigator.storage.persisted()) ? 'granted' : 'denied';
+    if (navigator.storage.estimate) {
+      const e = await navigator.storage.estimate();
+      persist.usage = e.usage || 0; persist.quota = e.quota || 0;
+    }
+  } catch (e) { persist.state = 'unsupported'; }
+  return persist;
 }
+async function requestPersistence(force) {
+  try {
+    if (!(navigator.storage && navigator.storage.persist)) { persist.state = 'unsupported'; return persist.state; }
+    if (await navigator.storage.persisted()) { persist.state = 'granted'; return persist.state; }
+    // nothing worth protecting yet: don't spend the ask
+    if (!force && !S.workouts.some(w => w.status === 'completed')) return persist.state;
+    persist.state = (await navigator.storage.persist()) ? 'granted' : 'denied';
+    S.settings.persistAskedAt = Date.now(); save();
+  } catch (e) { persist.state = 'unsupported'; }
+  return persist.state;
+}
+const BACKUP_EVERY = 14 * 864e5, BACKUP_SNOOZE = 7 * 864e5;
+/* When the last backup was, or null. A log with no backup at all counts from
+   its first completed session, so a new user isn't nagged on day one. */
+function backupDue() {
+  const done = S.workouts.filter(w => w.status === 'completed');
+  if (!done.length) return null;
+  const now = Date.now(), st = S.settings;
+  if (st.backupSnoozeUntil && now < st.backupSnoozeUntil) return null;
+  const first = Math.min(...done.map(w => parseISO(w.date).getTime()));
+  const since = st.lastExportAt || first;
+  return now - since > BACKUP_EVERY ? { last: st.lastExportAt || null, days: Math.floor((now - since) / 864e5) } : null;
+}
+function backupCard() {
+  if (S.active) return '';           // never during a workout
+  const due = backupDue();
+  if (!due) return '';
+  return `<div class="card" id="backupCard" style="border-color:var(--gold)">
+    <div class="row between" style="gap:10px;align-items:center">
+      <div class="grow"><div style="font-weight:700">Back up your log</div>
+        <div class="sub">${due.last ? `Last backup ${due.days} days ago.` : 'No backup yet.'} Your log lives only on this phone — save a copy to Drive or your files.</div></div>
+      <div class="row" style="gap:6px;flex-direction:column">
+        <button class="btn sm primary" id="backupNow">Back up</button>
+        <button class="btn xs ghost" id="backupLater">Not now</button>
+      </div>
+    </div>
+  </div>`;
+}
+/* The storage + backup line in Settings, redrawn in place after an export or
+   an ask, so the modal doesn't jump back to the top. */
+function storageLine() {
+  return `<div class="row between" style="gap:10px;align-items:center;margin-bottom:10px" id="stStorage">
+        <div class="grow sub">${persist.state === 'granted' ? '✓ <b>Storage protected</b> — Chrome won\'t clear it when space runs low.'
+          : persist.state === 'denied' ? '<b>Storage not protected</b> — Chrome may clear it if the phone runs short of space. Installing the app and using it regularly usually earns protection; keep backups until then.'
+            : persist.state === 'unsupported' ? 'This browser doesn\'t report storage protection. Keep backups.' : 'Checking storage…'}
+          ${persist.usage ? `<br>Using ${fmtBytes(persist.usage)}.` : ''}
+          <br>${S.settings.lastExportAt ? `Last backup ${relDay(iso(new Date(S.settings.lastExportAt))).toLowerCase()}.` : 'No backup yet.'}</div>
+        ${persist.state === 'denied' ? '<button class="btn xs" id="stPersist">Ask again</button>' : ''}
+      </div>`;
+}
+function refreshStorageLine(bg) {
+  const el = $('#stStorage', bg);
+  if (!el) return;
+  el.outerHTML = storageLine();
+  const sp = $('#stPersist', bg);
+  if (sp) sp.onclick = async () => {
+    const r = await requestPersistence(true);
+    await storageStatus();
+    toast(r === 'granted' ? 'Storage is now protected' : 'Chrome said no for now — it decides by how much the app is used', r === 'granted' ? 'green' : '');
+    refreshStorageLine(bg);
+  };
+}
+function fmtBytes(n) { return n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : `${Math.max(1, Math.round(n / 1024))} KB`; }
 
 let S = structuredClone(DEFAULT_STATE);   // replaced by the real state in boot()
 
@@ -1468,7 +1546,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.26.0';
+const APP_VERSION = '0.27.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -3345,6 +3423,7 @@ function viewHome() {
   return `
   <h1>${greet}</h1>
   <div class="sub" style="margin-bottom:14px">${new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}${streak() > 1 ? ` · 🔥 ${streak()} day check-in streak` : ''}</div>
+  ${backupCard()}
 
   <div class="hero">
     <div class="row between">
@@ -4397,6 +4476,7 @@ function finishWorkout(force) {
   S.active = null;
   save(); bust();
   showSummary(done);
+  if (persist.state !== 'granted') requestPersistence();   // the first logged session is the moment worth protecting
 }
 
 /* ---------------- shareable session card ----------------
@@ -7126,6 +7206,7 @@ function openSettings() {
       <div class="hr"></div>
       <div class="eyebrow" style="margin-bottom:8px">Data</div>
       <div class="sub" style="margin-bottom:10px">${S.workouts.length} workouts · ${S.checkins.length} check-ins · ${S.meets.length} meets · ${S.goals.length} goals</div>
+      ${storageLine()}
       <div class="row" style="gap:8px">
         <button class="btn sm grow" id="stExport">Export JSON</button>
         <button class="btn sm grow" id="stImport">Import JSON</button>
@@ -7217,7 +7298,9 @@ function openSettings() {
           toast(`${c} session${c === 1 ? '' : 's'} backfilled — edit any of them to correct the numbers`, 'green');
         }, 'Mark done');
       };
-      $('#stExport', bg).onclick = exportJSON;
+      $('#stExport', bg).onclick = () => { exportJSON(); refreshStorageLine(bg); };
+      refreshStorageLine(bg);                                         // binds "Ask again"
+      if (persist.state === 'unknown') storageStatus().then(() => refreshStorageLine(bg));
       const sfx = $('#stFoodExport', bg); if (sfx) sfx.onclick = () => { closeModal(); openFoodExport(); };
       $('#stImport', bg).onclick = () => $('#stFile', bg).click();
       $('#stFile', bg).onchange = e => {
@@ -7425,6 +7508,8 @@ function wire() {
   v.querySelectorAll('[data-goal]').forEach(b => b.onclick = () => openGoal(b.dataset.goal));
 
   if (page === 'home') {
+    const bn = $('#backupNow'); if (bn) bn.onclick = exportJSON;
+    const bl = $('#backupLater'); if (bl) bl.onclick = () => { S.settings.backupSnoozeUntil = Date.now() + BACKUP_SNOOZE; save(); render(); };
     $('#checkinBtn').onclick = () => openCheckin();
     const qs = $('#quickStart'); if (qs) qs.onclick = newBlank;
     $('#addGoal').onclick = () => openGoal();
@@ -9332,6 +9417,9 @@ function applyVoiceSet(leaf, kg, reps, rpe) {
    offers the same two things and there should be one implementation of each.
    ============================================================ */
 function exportJSON() {
+  S.settings.lastExportAt = Date.now();          // the backup nudge counts from here
+  delete S.settings.backupSnoozeUntil;
+  save();
   const blob = new Blob([JSON.stringify(S, null, 2)], { type: 'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -9339,6 +9427,7 @@ function exportJSON() {
   a.click();
   URL.revokeObjectURL(a.href);
   toast('Exported', 'green');
+  if (page === 'home') render();                  // the nudge goes away
 }
 
 function importJSONFile(f) {
@@ -9602,7 +9691,7 @@ async function boot() {
      other. A fresh install is already marked as seen by load(). */
   if (!freshInstall) setTimeout(() => { whatsNewArmed = true; maybeWhatsNew(); }, 1800);
   veil.remove();
-  requestPersistence();
+  requestPersistence().then(storageStatus);
 }
 
 boot();
