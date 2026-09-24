@@ -301,7 +301,7 @@ with a chart. Write `r&d/specs/body-comp-spec.md` before building.
 A **Tools** page — the 98 skin's menu bar already has a Tools menu, so that's
 the way in. Every calculator **prefills from stored data** (bodyweight, height,
 age, sex, BF% and measurements once item 18 exists), stays editable for
-what-ifs, and saves nothing unless asked. Write `docs/calculators-spec.md`
+what-ifs, and saves nothing unless asked. Write `r&d/specs/calculators-spec.md`
 before building. Reuse the maths that's already in the app — `bmrKcal` /
 `suggestedTargets`, `e1rm`, `dots` — don't write second copies.
 
