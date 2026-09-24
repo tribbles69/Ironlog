@@ -1109,6 +1109,7 @@ const DEFAULT_STATE = {
   settings: {
     units: 'kg',            // kg | lb
     skin: 'ironlog',        // ironlog | win98 — paint only, no behaviour changes with it
+    bodySkin: 'template',   // muscle map skin: an id from BODY_SKINS, or 'custom' (imported sheet)
     // --- profile. Deliberately still settings fields rather than a new S.profile:
     // sex already drives DOTS from here and handle already reaches the share card,
     // so moving them would mean a migration and a second place to look for the
@@ -1454,7 +1455,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.22.3';
+const APP_VERSION = '0.23.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -2503,84 +2504,213 @@ function muscleScores() {
     .sort((a, b) => b.score - a.score);
 }
 
-/* ---------------- muscle map ----------------
-   Front and back views, coloured from muscleScores(). Stylised rather than
-   anatomical: the point is reading which region is lagging at a glance, so
-   legibility at phone size beats accuracy of outline. Regions with no ranked
-   lift stay neutral instead of dark — an untested muscle isn't a weak one. */
-const BODY_FRONT = [
-  ['head', null, '<circle cx="70" cy="24" r="14"/>'],
-  ['neck', null, '<rect x="62" y="35" width="16" height="11" rx="4"/>'],
-  ['fdelts', 'fdelts', '<ellipse cx="46" cy="60" rx="13" ry="11"/><ellipse cx="94" cy="60" rx="13" ry="11"/>'],
-  ['sdelts', 'sdelts', '<ellipse cx="33" cy="63" rx="9" ry="12"/><ellipse cx="107" cy="63" rx="9" ry="12"/>'],
-  ['chest', 'chest', '<rect x="51" y="52" width="18" height="29" rx="7"/><rect x="71" y="52" width="18" height="29" rx="7"/>'],
-  ['abs', 'abs', '<rect x="59" y="84" width="22" height="42" rx="6"/>'],
-  ['biceps', 'biceps', '<ellipse cx="31" cy="93" rx="8" ry="16"/><ellipse cx="109" cy="93" rx="8" ry="16"/>'],
-  ['forearms', 'forearms', '<ellipse cx="27" cy="129" rx="7" ry="18"/><ellipse cx="113" cy="129" rx="7" ry="18"/>'],
-  ['pelvis', null, '<rect x="53" y="128" width="34" height="17" rx="7"/>'],
-  ['quads', 'quads', '<ellipse cx="61" cy="177" rx="12" ry="32"/><ellipse cx="79" cy="177" rx="12" ry="32"/>'],
-  ['shin', null, '<ellipse cx="61" cy="243" rx="8" ry="26"/><ellipse cx="79" cy="243" rx="8" ry="26"/>'],
-];
+/* ---------------- muscle map (skins) ----------------
+   The body is painted from a skin sheet: one PNG holding every muscle at every
+   tier, pre-positioned on the body, so drawing a region is just copying its
+   cell onto the canvas. Any art works — the default heatmap colours, a goblin
+   that turns into an orc, whatever. Authoring guide, template and generator:
+   r&d/skins/README.md.
 
-const BODY_BACK = [
-  ['head', null, '<circle cx="70" cy="24" r="14"/>'],
-  ['traps', 'traps', '<ellipse cx="70" cy="55" rx="25" ry="15"/>'],
-  ['sdelts', 'sdelts', '<ellipse cx="33" cy="63" rx="9" ry="12"/><ellipse cx="107" cy="63" rx="9" ry="12"/>'],
-  ['upperback', 'upperback', '<ellipse cx="70" cy="78" rx="23" ry="12"/>'],
-  ['lats', 'lats', '<ellipse cx="53" cy="99" rx="13" ry="21"/><ellipse cx="87" cy="99" rx="13" ry="21"/>'],
-  ['erectors', 'erectors', '<rect x="63" y="90" width="14" height="44" rx="6"/>'],
-  ['triceps', 'triceps', '<ellipse cx="31" cy="93" rx="8" ry="16"/><ellipse cx="109" cy="93" rx="8" ry="16"/>'],
-  ['forearms', 'forearms', '<ellipse cx="27" cy="129" rx="7" ry="18"/><ellipse cx="113" cy="129" rx="7" ry="18"/>'],
-  ['glutes', 'glutes', '<ellipse cx="60" cy="148" rx="14" ry="14"/><ellipse cx="80" cy="148" rx="14" ry="14"/>'],
-  ['hams', 'hams', '<ellipse cx="61" cy="192" rx="12" ry="30"/><ellipse cx="79" cy="192" rx="12" ry="30"/>'],
-  ['calves', 'calves', '<ellipse cx="61" cy="247" rx="9" ry="24"/><ellipse cx="79" cy="247" rx="9" ry="24"/>'],
+   Sheet layout (must match r&d/tools/skin-geometry.mjs):
+     columns = layers in SKIN_LAYOUT[view] order (also the paint order)
+     rows    = SKIN_TIERS; the front block's 6 rows, then the back block's 6
+   Cell size is read from the image (width / 11, height / 12), so a sheet can
+   be painted at any resolution as long as the grid is kept. `base` is the body
+   itself and follows the lifter's overall tier. */
+const SKIN_TIERS = ['none', ...TIERS];
+const SKIN_LAYOUT = {
+  front: ['base', 'traps', 'abs', 'quads', 'calves', 'chest', 'fdelts', 'sdelts', 'biceps', 'forearms'],
+  back:  ['base', 'traps', 'upperback', 'lats', 'erectors', 'glutes', 'hams', 'calves', 'sdelts', 'triceps', 'forearms'],
+};
+const SKIN_COLS = 11, SKIN_ROWS = 12;
+/* Only the placeholder ships for now: one colour per tier, darker as the rank
+   rises. Proper art replaces or joins it later — add an entry here, the PNG
+   to /skins/ and the path to ASSETS in sw.js.
+   legend: tier colours for the swatch row under the map, when the skin is
+   flat colour and a legend means something. */
+const SKIN_TEMPLATE_COLORS = ['#ffc9b8', '#ff9a7a', '#ff5c35', '#c43a15', '#7a1f08'];   // = SHADES in r&d/tools/skin-sheet.mjs
+const BODY_SKINS = [
+  { id: 'template', name: 'Template', src: 'skins/template.png', legend: SKIN_TEMPLATE_COLORS },
 ];
+const BODY_SKIN_KEY = 'ironlog-bodyskin-custom';   // imported sheet, as a data URL
+/* Falls back to the first skin, so a removed skin id in old settings can't
+   leave the map blank. */
+const bodySkinId = () => {
+  const id = S.settings.bodySkin;
+  return id === 'custom' || BODY_SKINS.some(s => s.id === id) ? id : BODY_SKINS[0].id;
+};
 
-function heatColor(score) {
-  if (score == null) return { fill: '#252c3a', stroke: '#2f3846' };
-  const i = clamp(Math.floor(score / 20), 0, 4);
-  const c = ['#546074', '#3b7ddd', '#4fb477', '#9b6cff', '#ffc542'][i];
-  return { fill: c, stroke: c, op: 0.30 + (score / 100) * 0.62 };
+const _skinImg = {};   // id -> Promise<HTMLImageElement>
+function loadImage(src) {
+  return new Promise((res, rej) => {
+    const im = new Image();
+    im.onload = () => res(im);
+    im.onerror = () => rej(new Error('skin image failed to load'));
+    im.src = src;
+  });
+}
+function skinImage(id) {
+  if (!_skinImg[id]) {
+    const def = BODY_SKINS.find(s => s.id === id);
+    _skinImg[id] = (def ? loadImage(def.src)
+      : storeGet(BODY_SKIN_KEY).then(url => url ? loadImage(url) : Promise.reject(new Error('no custom skin'))))
+      .catch(e => { delete _skinImg[id]; throw e; });
+  }
+  return _skinImg[id];
 }
 
-function bodySvg(parts, scores) {
-  const shapes = parts.map(([id, key, geom]) => {
-    const sc = key ? (scores[key] != null ? scores[key] : null) : null;
-    const c = key ? heatColor(sc) : { fill: '#1d232a', stroke: '#2a323d', op: 1 };
-    return `<g data-muscle="${key || ''}" fill="${c.fill}" fill-opacity="${c.op != null ? c.op : 1}"
-      stroke="${c.stroke}" stroke-opacity="0.85" stroke-width="1.4"
-      style="${key ? 'cursor:pointer' : ''}">${geom}</g>`;
-  }).join('');
-  return `<svg viewBox="0 0 140 285" style="width:100%;height:auto;display:block">${shapes}</svg>`;
+/* A sheet is usable when its grid gives cells at 1:2. Anything else is almost
+   certainly not a skin (a photo, a cropped export). */
+function skinSheetOk(im) {
+  const cw = im.naturalWidth / SKIN_COLS, ch = im.naturalHeight / SKIN_ROWS;
+  return cw >= 60 && Math.abs(ch / cw - 2) < 0.05;
+}
+
+function skinTierOf(score) {
+  return score == null ? 'none' : SKIN_TIERS[1 + clamp(Math.floor(score / 20), 0, 4)];
+}
+
+/* Which cell to use for each layer of a view, and at what opacity. */
+function skinPlan(view, scores) {
+  const vals = Object.values(scores);
+  const overall = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  return SKIN_LAYOUT[view].map((layer, col) => {
+    const sc = layer === 'base' ? overall : (scores[layer] != null ? scores[layer] : null);
+    const tier = skinTierOf(sc);
+    const row = (view === 'back' ? SKIN_TIERS.length : 0) + SKIN_TIERS.indexOf(tier);
+    return { layer, col, row };
+  });
+}
+
+function paintBody(canvas, im, plan) {
+  const cw = im.naturalWidth / SKIN_COLS, ch = im.naturalHeight / SKIN_ROWS;
+  canvas.width = Math.round(cw); canvas.height = Math.round(ch);
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  plan.forEach(p => ctx.drawImage(im, p.col * cw, p.row * ch, cw, ch, 0, 0, canvas.width, canvas.height));
+}
+
+/* Topmost muscle with paint under the tap, read from the sheet itself —
+   so hit areas always match the art, whatever shape a skin gives a muscle. */
+const _probe = document.createElement('canvas');
+_probe.width = _probe.height = 1;
+function muscleAt(im, plan, fx, fy) {
+  const cw = im.naturalWidth / SKIN_COLS, ch = im.naturalHeight / SKIN_ROWS;
+  const ctx = _probe.getContext('2d', { willReadFrequently: true });
+  for (let i = plan.length - 1; i >= 0; i--) {
+    const p = plan[i];
+    if (p.layer === 'base') continue;
+    ctx.clearRect(0, 0, 1, 1);
+    ctx.drawImage(im, p.col * cw + fx * cw, p.row * ch + fy * ch, 1, 1, 0, 0, 1, 1);
+    if (ctx.getImageData(0, 0, 1, 1).data[3] > 40) return p.layer;
+  }
+  return null;
 }
 
 function viewMuscleMap() {
   const ms = muscleScores();
   if (!ms.length) return '';
-  const scores = {};
-  ms.forEach(m => { scores[m.key] = m.score; });
-
+  const def = BODY_SKINS.find(s => s.id === bodySkinId());
+  const skinName = def ? def.name : 'Custom';
   return `
   <div class="card" style="margin-bottom:13px">
-    <div class="eyebrow" style="margin-bottom:10px">Muscle map</div>
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="eyebrow">Muscle map</div>
+      <button class="chip" id="bodySkinBtn" style="cursor:pointer">Skin: ${esc(skinName)} ▾</button>
+    </div>
     <div class="row" style="gap:14px;align-items:flex-start">
       <div class="grow" style="text-align:center">
-        ${bodySvg(BODY_FRONT, scores)}
+        <canvas data-bodyview="front" style="width:100%;height:auto;aspect-ratio:1/2;display:block;cursor:pointer"></canvas>
         <div class="sub" style="margin-top:4px">Front</div>
       </div>
       <div class="grow" style="text-align:center">
-        ${bodySvg(BODY_BACK, scores)}
+        <canvas data-bodyview="back" style="width:100%;height:auto;aspect-ratio:1/2;display:block;cursor:pointer"></canvas>
         <div class="sub" style="margin-top:4px">Back</div>
       </div>
     </div>
-    <div class="row" style="gap:5px;margin-top:12px;flex-wrap:wrap">
+    ${def && def.legend ? `<div class="row" style="gap:5px;margin-top:12px;flex-wrap:wrap">
       ${TIERS.map((t, i) => `<span class="row" style="gap:4px;align-items:center;font-size:10.5px;color:var(--dim)">
-        <i style="width:9px;height:9px;border-radius:2px;background:${['#546074', '#3b7ddd', '#4fb477', '#9b6cff', '#ffc542'][i]};display:inline-block"></i>${t}</span>`).join('')}
+        <i style="width:9px;height:9px;border-radius:2px;background:${def.legend[i]};display:inline-block"></i>${t}</span>`).join('')}
       <span class="row" style="gap:4px;align-items:center;font-size:10.5px;color:var(--dim)">
-        <i style="width:9px;height:9px;border-radius:2px;background:#252c3a;display:inline-block"></i>Not ranked</span>
-    </div>
-    <div class="sub" style="margin-top:8px">Tap a muscle for its score. Shade tracks how far into the tier it is, so two green regions aren't necessarily equal.</div>
+        <i style="width:9px;height:9px;border-radius:2px;background:#4a5263;display:inline-block"></i>Not ranked</span>
+    </div>` : ''}
+    <div class="sub" style="margin-top:8px">Tap a muscle for its score.</div>
   </div>`;
+}
+
+/* Called after the analytics page renders. */
+function wireMuscleMap(v) {
+  const canvases = [...v.querySelectorAll('canvas[data-bodyview]')];
+  const btn = $('#bodySkinBtn', v);
+  if (btn) btn.onclick = openBodySkins;
+  if (!canvases.length) return;
+  const scores = {};
+  muscleScores().forEach(m => { scores[m.key] = m.score; });
+  const id = bodySkinId();
+  skinImage(id).then(im => {
+    canvases.forEach(cv => {
+      const plan = skinPlan(cv.dataset.bodyview, scores);
+      paintBody(cv, im, plan);
+      cv.onclick = e => {
+        const r = cv.getBoundingClientRect();
+        const key = muscleAt(im, plan, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
+        if (!key) return;
+        const m = muscleScores().find(x => x.key === key);
+        if (!m) return toast(`${MUSCLES[key]} — no ranked lift trains it yet`);
+        const i = clamp(Math.floor(m.score / 20), 0, 4);
+        toast(`${m.name} · ${Math.round(m.score)} · ${TIERS[i]} — from ${m.lifts} ranked lift${m.lifts === 1 ? '' : 's'}`);
+      };
+    });
+  }).catch(() => {
+    /* A missing custom sheet (cleared storage) falls back rather than
+       leaving an empty card. */
+    if (id !== BODY_SKINS[0].id) { S.settings.bodySkin = BODY_SKINS[0].id; save(); render(); }
+  });
+}
+
+function openBodySkins() {
+  const cur = bodySkinId();
+  modal({
+    title: 'Muscle map skin',
+    body: `
+      <div class="sub" style="margin-bottom:10px">A skin is one image holding every muscle at every tier. Paint your own on the paint guide and import it.</div>
+      <div id="bsList">
+        ${[...BODY_SKINS, { id: 'custom', name: 'Custom (imported)' }].map(s => `
+          <button class="btn ${s.id === cur ? '' : 'ghost'}" data-bs="${s.id}" style="width:100%;margin-bottom:7px;justify-content:flex-start">
+            ${s.id === cur ? '✓ ' : ''}${esc(s.name)}</button>`).join('')}
+      </div>
+      <div class="hr"></div>
+      <button class="btn ghost" id="bsImport" style="width:100%;margin-bottom:7px">Import a skin sheet (PNG)…</button>
+      <a class="btn ghost" href="r%26d/skins/paint-guide.png" download="ironlog-skin-paint-guide.png" style="width:100%;text-align:center;display:block;text-decoration:none">Download the paint guide</a>
+      <input type="file" id="bsFile" accept="image/png,image/webp" style="display:none">`,
+    onOpen: bg => {
+      const pick = id => {
+        S.settings.bodySkin = id; save(); closeModal(); render();
+      };
+      bg.querySelectorAll('[data-bs]').forEach(b => b.onclick = () => {
+        const id = b.dataset.bs;
+        if (id !== 'custom') return pick(id);
+        storeGet(BODY_SKIN_KEY).then(u => u ? pick('custom') : $('#bsFile', bg).click());
+      });
+      $('#bsImport', bg).onclick = () => $('#bsFile', bg).click();
+      $('#bsFile', bg).onchange = e => {
+        const f = e.target.files[0];
+        if (!f) return;
+        const rd = new FileReader();
+        rd.onload = async () => {
+          try {
+            const im = await loadImage(rd.result);
+            if (!skinSheetOk(im)) return toast(`That image isn't a skin sheet — it needs the paint guide's 11 × 12 grid of 1:2 cells.`);
+            if (!(await storePut(BODY_SKIN_KEY, rd.result))) return toast('Could not save the skin on this device');
+            delete _skinImg.custom;
+            pick('custom');
+            toast('Skin imported');
+          } catch (err) { toast('Could not read that image'); }
+        };
+        rd.readAsDataURL(f);
+      };
+    },
+  });
 }
 
 /* ---------------- PR engine ---------------- */
@@ -7828,16 +7958,7 @@ function wire() {
     }
     v.querySelectorAll('[data-sort]').forEach(b => b.onclick = () => { analyticsSort = b.dataset.sort; render(); });
     v.querySelectorAll('[data-antab]').forEach(b => b.onclick = () => { analyticsTab = b.dataset.antab; render(); window.scrollTo(0, 0); });
-    v.querySelectorAll('[data-muscle]').forEach(g => {
-      const key = g.dataset.muscle;
-      if (!key) return;
-      g.onclick = () => {
-        const m = muscleScores().find(x => x.key === key);
-        if (!m) return toast(`${MUSCLES[key]} — no ranked lift trains it yet`);
-        const i = clamp(Math.floor(m.score / 20), 0, 4);
-        toast(`${m.name} · ${Math.round(m.score)} · ${TIERS[i]} — from ${m.lifts} ranked lift${m.lifts === 1 ? '' : 's'}`);
-      };
-    });
+    wireMuscleMap(v);
   }
 
   if (page === 'meets') {

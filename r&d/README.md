@@ -10,6 +10,7 @@ Quote the folder name in the shell: `cd "r&d"`.
 | `notes/` | Audits, the parked backlog, anything written down for reference. |
 | `data/` | Source data that gets built into the app — `exercises.json` is inlined into `index.html` by `tools/build-catalogue.cjs`. Edit here, not in `index.html`. |
 | `tools/` | Build and check scripts, run from the repo root (see below). |
+| `skins/` | Muscle map skin paint guide (`paint-guide.png`, `.ora`) and the authoring notes. The shipped skin is `/skins/template.png`. |
 | `patches/` | Ready-made fixes to apply with `git apply`. Delete a patch once it's applied. |
 
 ## Tools
@@ -24,6 +25,7 @@ All run from the repo root.
 | `node "r&d/tools/validate-exercises.js"` | Checks `data/exercises.json` against the program and the phase 1 spec |
 | `node "r&d/tools/build-catalogue.cjs"` | Inlines `data/exercises.json` into `index.html` |
 | `node "r&d/tools/build-foods.cjs"` | Rebuilds the CoFID food table in `index.html` |
+| `NODE_PATH=$(npm root -g) node "r&d/tools/skin-sheet.mjs"` | Redraws the shipped template skin and the paint guide (needs Playwright) |
 | `node "r&d/tools/build-slew.cjs" ../slew-v2` | Regenerates `slew-core.js` from the Slew source |
 
 Runtime smoke test, in the browser console on the running app:
