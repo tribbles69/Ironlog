@@ -13,6 +13,18 @@ rather than guessed.
 
 ---
 
+## 0.29.0 — 24 Sep 2026
+- **Last time, beside every set.** The Prev column shows last session's
+  weight × reps and RIR for the same set, and its numbers sit greyed in the
+  empty boxes.
+- **One-tap sets.** Tick an empty set and it logs last time's numbers. Type
+  just the weight and the reps come from last time. RIR is never copied:
+  that's how today felt.
+- **Tap Prev** to fill a set with last time's numbers so you can adjust them.
+- **Steppers.** Under each exercise: −/+ 2.5 kg (5 lb) and −/+ 1 rep for the
+  highlighted set, plus **Copy down** to copy it to the sets below. Tap a row
+  to highlight it. No keyboard needed.
+
 ## 0.28.0 — 24 Sep 2026
 - **Strongman and loaded carries.** Carries (farmers, yoke, sandbag, keg,
   sled push and drag, ruck, Conan's wheel) log weight, distance and time
