@@ -349,6 +349,11 @@ button.setno{padding:0;color:inherit;font-family:inherit;cursor:pointer;display:
 tr.droprow td{border-top-color:transparent}
 .rolelist .roleopt{display:flex;flex-direction:column;align-items:flex-start;gap:2px;margin-bottom:6px;text-align:left}
 .rolelist .roleopt .sub{white-space:normal}
+.wl-list{display:flex;flex-direction:column;gap:10px;font-size:14px;line-height:1.45}
+.wl-note{margin-top:12px;padding:10px 12px;border-radius:10px;border:1px solid var(--line);font-size:12px;color:var(--dim);line-height:1.45}
+.faq details{border-bottom:1px solid var(--line);padding:10px 0}
+.faq summary{cursor:pointer;font-weight:650}
+.faq p{margin:8px 0 2px;color:var(--dim);font-size:13.5px;line-height:1.5}
 .rolelist .roleopt.on{border-color:var(--accent);color:var(--accent)}
 tr.done td input{background:rgba(61,220,132,.07);border-color:rgba(61,220,132,.22)}
 tr.pr td input{background:rgba(255,197,66,.1);border-color:rgba(255,197,66,.35)}
@@ -1830,7 +1835,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.35.0';
+const APP_VERSION = '0.36.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -3803,6 +3808,159 @@ function render() {
   maybeWhatsNew();
 }
 
+
+/* ============================================================
+   WELCOME AND HELP — roadmap C1
+   Three short steps on a fresh install: what Ironlog is (and isn't), units
+   and the lifter, what they're training for. Only ever on a device with no
+   sessions and no check-ins, and only until it's been finished or skipped —
+   a restore or an import on step one ends it too.
+   ============================================================ */
+const DISCLAIMER = 'Ironlog gives general training information, not medical or physiotherapy advice. If you have an injury or a health condition, check with a professional first. You are responsible for what you lift — use safeties, spotters and judgement.';
+const TRAINING_FOR = [
+  ['general', 'Getting stronger', 'No competition in mind — log, see PRs and progress.'],
+  ['powerlifting', 'Powerlifting', 'Squat, bench and deadlift on a platform.'],
+  ['strengthlifting', 'Strengthlifting', 'Squat, press and deadlift.'],
+  ['single-lift', 'A single-lift meet', 'Bench-only, deadlift-only, or para powerlifting.'],
+  ['strongman', 'Strongman', 'Carries, loads, presses and medleys.'],
+];
+function welcomeDue() {
+  return !S.settings.welcomed && !S.active && !(S.workouts || []).length && !(S.checkins || []).length;
+}
+function openWelcome(step = 1) {
+  const done = () => { S.settings.welcomed = APP_VERSION; save(); };
+  const dots = `<div class="row" style="gap:6px;justify-content:center;margin-bottom:12px" aria-label="Step ${step} of 3">${[1, 2, 3]
+    .map(i => `<span style="width:8px;height:8px;border-radius:50%;background:${i === step ? 'var(--accent)' : 'var(--line)'}"></span>`).join('')}</div>`;
+  if (step === 1) return modal({
+    title: 'Welcome to Ironlog', sticky: true,
+    body: `${dots}
+      <div class="wl-list">
+        <div><b>Your log stays on this phone.</b> No account and no Ironlog server — nothing about your training leaves the device unless you send it.</div>
+        <div><b>Back it up to your own Google Drive</b> if you like (Settings), so a lost phone doesn't mean a lost log. Or export a file any time.</div>
+        <div><b>AI is optional</b> and only runs on your own Anthropic key. Everything else works without it.</div>
+      </div>
+      <div class="wl-note">${esc(DISCLAIMER)}</div>
+      <button class="btn wide ghost" id="wlHelp" style="margin-top:10px">Read the help &amp; FAQ</button>`,
+    foot: `<button class="btn ghost" id="wlRestore">I already use Ironlog</button><button class="btn primary" id="wlNext">Get started</button>`,
+    onOpen: bg => {
+      $('#wlNext', bg).onclick = () => { closeModal(); openWelcome(2); };
+      $('#wlHelp', bg).onclick = () => openHelp();
+      $('#wlRestore', bg).onclick = () => modal({
+        title: 'Bring your log over',
+        body: `<p class="sub" style="margin-top:0">From your Google Drive backup, or from a file you exported (JSON, or a CSV from Ironlog, Strong, Hevy, FitNotes or Liftoff).</p>
+          <button class="btn wide primary" id="wrDrive" style="margin-bottom:8px">Restore from Google Drive</button>
+          <button class="btn wide" id="wrFile">Import a file</button>`,
+        foot: `<button class="btn ghost" data-close>Back</button>`,
+        onOpen: b2 => {
+          $('#wrDrive', b2).onclick = async () => {
+            const btn = $('#wrDrive', b2); btn.disabled = true; btn.textContent = 'Connecting…';
+            try {
+              const r = await driveSync(true);
+              if (r) { done(); closeAllModals(); render(); toast(`Restored · ${r.sessions} session${r.sessions === 1 ? '' : 's'}`, 'green'); return; }
+            } catch (e) { toast(e.message || 'Couldn\'t restore'); }
+            btn.disabled = false; btn.textContent = 'Restore from Google Drive';
+          };
+          $('#wrFile', b2).onclick = () => {
+            const inp = document.createElement('input');
+            inp.type = 'file'; inp.accept = 'application/json,.json,.csv,text/csv';
+            inp.onchange = ev => {
+              const f = ev.target.files[0]; if (!f) return;
+              done(); closeAllModals();
+              if (/\.json$/i.test(f.name) || f.type === 'application/json') return importJSONFile(f);
+              const rd = new FileReader();
+              rd.onload = () => {
+                if (/^﻿?format,/.test(rd.result) && rd.result.includes(CSV_FORMAT)) {
+                  try { const r = importIronlogCSV(rd.result); render(); toast(`Imported ${r.added} sessions`, 'green'); } catch (e2) { toast('Could not read that CSV'); }
+                } else openLiftoffImport(rd.result);
+              };
+              rd.readAsText(f);
+            };
+            inp.click();
+          };
+        },
+      });
+    },
+  });
+  if (step === 2) return modal({
+    title: 'About you', sticky: true,
+    body: `${dots}
+      <div class="field"><label>Weights in</label>
+        <div class="seg" id="wlUnits"><button data-u="kg" class="${U() === 'kg' ? 'on' : ''}">Kilograms</button><button data-u="lb" class="${U() === 'lb' ? 'on' : ''}">Pounds</button></div></div>
+      <div class="field"><label>Sex <span class="dimmer">— for DOTS and strength standards</span></label>
+        <div class="seg" id="wlSex"><button data-s="male" class="${S.settings.sex !== 'female' ? 'on' : ''}">Male</button><button data-s="female" class="${S.settings.sex === 'female' ? 'on' : ''}">Female</button></div></div>
+      <div class="field"><label for="wlBw">Bodyweight (<span id="wlBwU">${U()}</span>) <span class="dimmer">— optional</span></label>
+        <input id="wlBw" type="number" step="0.1" inputmode="decimal" value="${S.settings.bodyweight > 0 ? nice(dw(S.settings.bodyweight)) : ''}" placeholder="e.g. ${U() === 'kg' ? 80 : 176}"></div>
+      <div class="sub">All of this can be changed later in Settings → Profile.</div>`,
+    foot: `<button class="btn ghost" id="wlBack">Back</button><button class="btn primary" id="wlNext">Next</button>`,
+    onOpen: bg => {
+      const segs = (sel, attr, set) => bg.querySelectorAll(`${sel} button`).forEach(b => b.onclick = () => {
+        bg.querySelectorAll(`${sel} button`).forEach(x => x.classList.toggle('on', x === b)); set(b.dataset[attr]);
+      });
+      segs('#wlUnits', 'u', u => { S.settings.units = u; $('#wlBwU', bg).textContent = u; });
+      segs('#wlSex', 's', s => { S.settings.sex = s; });
+      const keep = () => { const v = +$('#wlBw', bg).value; if (v > 0) S.settings.bodyweight = toKg(v); save(); };
+      $('#wlBack', bg).onclick = () => { keep(); closeModal(); openWelcome(1); };
+      $('#wlNext', bg).onclick = () => { keep(); closeModal(); openWelcome(3); };
+    },
+  });
+  // step 3: what for, and the main lifts
+  const ex = allExercises().filter(x => x.leaf.equipment === 'barbell');
+  const p = priorityKeys();
+  const sel = (i, label) => `<div class="field" style="margin-bottom:8px"><label>${label}</label>
+    <select id="wlPri${i}">${ex.map(x => `<option value="${esc(x.key)}"${x.key === p[i] ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>`;
+  let pick = S.settings.trainingFor || 'general';
+  return modal({
+    title: 'What are you training for?', sticky: true,
+    body: `${dots}
+      <div class="rolelist" id="wlFor">${TRAINING_FOR.map(([id, label, sub]) => `
+        <button class="btn wide ghost roleopt ${id === pick ? 'on' : ''}" data-for="${id}"><span>${label}</span><span class="sub">${sub}</span></button>`).join('')}</div>
+      <div class="eyebrow" style="margin:12px 0 6px">Your main lifts</div>
+      <div class="sub" style="margin-bottom:8px">They lead the Stats chart and drive your total, DOTS and attempt planning.</div>
+      ${sel(0, 'Squat')}${sel(1, 'Bench')}${sel(2, 'Deadlift')}`,
+    foot: `<button class="btn ghost" id="wlBack">Back</button><button class="btn primary" id="wlDone">Done</button>`,
+    onOpen: bg => {
+      const label = () => $('#wlDone', bg).textContent = EVENT_TYPES[pick] ? 'Done — add my event' : 'Done';
+      label();
+      bg.querySelectorAll('[data-for]').forEach(b => b.onclick = () => {
+        pick = b.dataset.for;
+        bg.querySelectorAll('[data-for]').forEach(x => x.classList.toggle('on', x === b));
+        label();
+      });
+      const keep = () => {
+        S.settings.trainingFor = pick;
+        S.settings.priority = EVENT_TYPES[DEFAULT_EVENT_TYPE].lifts.map((l, i) => ({ slot: l.slot, leaf: keyLeaf($('#wlPri' + i, bg).value) }));
+      };
+      $('#wlBack', bg).onclick = () => { keep(); save(); closeModal(); openWelcome(2); };
+      $('#wlDone', bg).onclick = () => {
+        keep(); done(); closeModal(); render();
+        if (EVENT_TYPES[pick]) openMeet(null, pick);
+        else toast('All set — tap Workout to log your first session', 'green');
+      };
+    },
+  });
+}
+
+/* Help & FAQ: short answers to the questions the app raises. */
+const FAQ = [
+  ['Where is my data?', 'On this phone, in the browser\'s storage for this app. There is no Ironlog account or server. Settings shows whether the phone has agreed not to clear it when space runs low.'],
+  ['How do I back up or move to a new phone?', 'Settings → Google Drive → Connect keeps a copy in your own Drive and merges between phones — on a new phone, connect and your log comes down. Or Settings → Export JSON saves a file you can import anywhere.'],
+  ['What is RIR?', 'Reps in reserve: how many more reps you could have done. 0 is to failure, 2 means two left in the tank. Ironlog stores it as RPE (10 − RIR) for its maths.'],
+  ['What is e1RM?', 'Estimated one-rep max, worked out from a set\'s weight, reps and RIR. It lets a 100 kg × 5 be compared with a 110 kg × 2.'],
+  ['What counts as a PR?', 'A set that beats your history for that exact exercise variant — heavier at the same reps, more reps at the same weight, or a better e1RM. Warm-ups and drop sets never count. Holds, carries and time caps have their own records.'],
+  ['What are set roles?', 'Tap a set\'s number to mark it warm-up, working, top set, back-off, AMRAP or drop set. Warm-ups stay out of volume and PRs; drops count for volume but not PRs.'],
+  ['How do I log faster?', 'Ticking an empty set logs what you did last time. Tap Prev to fill a row, use the − / + bar under the table, or Copy down.'],
+  ['Can I bring in my history from another app?', 'Settings → Data → Import CSV reads exports from Strong, Hevy, FitNotes and Liftoff, or any CSV with date, exercise, weight and reps. You see exactly what will be added before anything is saved, and can remove an import later.'],
+  ['What does the AI do, and what does it cost?', 'It\'s optional: it helps parse free-text notes when you add your own Anthropic API key in Settings. The key stays on this phone and calls go straight to Anthropic, billed to your key. Nothing needs it.'],
+  ['How do updates work?', 'The app checks for a new version when it opens and asks before updating. What\'s new lists the changes.'],
+  ['Is this medical advice?', DISCLAIMER],
+];
+function openHelp() {
+  modal({
+    title: 'Help & FAQ',
+    body: `<div class="faq">${FAQ.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div>`,
+    foot: `<button class="btn primary" data-close>Close</button>`,
+  });
+}
 
 /* ============================================================
    WHAT'S NEW — roadmap A2
@@ -8293,6 +8451,7 @@ function openSettings() {
       <input type="file" id="stCsvFile" accept=".csv,text/csv" style="display:none">
     `,
     foot: `<span class="muted mono" style="font-size:11px;margin-right:auto">v${APP_VERSION}</span>
+      <button class="btn sm ghost" id="stHelp">Help</button>
       <button class="btn sm ghost" id="stNews">What's new</button>
       <button class="btn sm ghost" id="stUpdate">Check for update</button>
            <button class="btn primary" id="stSave">Save</button>`,
@@ -8406,6 +8565,7 @@ function openSettings() {
       const ui = $('#stUnimport', bg); if (ui) ui.onclick = () => { closeModal(); openRemoveImport(); };
       $('#stUpdate', bg).onclick = () => checkForUpdate(false);
       $('#stNews', bg).onclick = () => { closeModal(); openWhatsNew(); };
+      $('#stHelp', bg).onclick = () => { closeModal(); openHelp(); };
       $('#stProfile', bg).onclick = () => { closeModal(); openProfile(); };
       $('#stWipe', bg).onclick = () => confirmDlg('This erases every workout, check-in, goal and meet. It cannot be undone.', () => {
         S = structuredClone(DEFAULT_STATE); save(); applySkin(S.settings.skin); closeAllModals(); go('home'); toast('All data erased');
@@ -10929,6 +11089,7 @@ const W98_MENUS = [
     ['Check for update', () => checkForUpdate(false)],
   ] },
   { label: 'Help', items: [
+    ['Help & FAQ…', () => openHelp()],
     ["What's new…", () => openWhatsNew()],
     ['About Ironlog 98', () => aboutDlg()],
     '-',
@@ -11084,6 +11245,7 @@ async function boot() {
   /* What's new, after the update check so the two never open on top of each
      other. A fresh install is already marked as seen by load(). */
   if (!freshInstall) setTimeout(() => { whatsNewArmed = true; maybeWhatsNew(); }, 1800);
+  if (welcomeDue()) setTimeout(() => { if (welcomeDue() && !document.querySelector('.modal')) openWelcome(); }, 400);
   veil.remove();
   requestPersistence().then(storageStatus);
 }
