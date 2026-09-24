@@ -1577,7 +1577,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.30.0';
+const APP_VERSION = '0.31.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4616,7 +4616,7 @@ const RAMP = {
   high:   { pcts: [0.50, 0.70, 0.85],                   reps: [8, 5, 3],          rest: [60, 75, 90] },
 };
 
-function warmupRamp(targetKg, reps = 1, barKg = 20) {
+function warmupRamp(targetKg, reps = 1, barKg = 20, round = roundBar, roundWork = round) {
   if (!targetKg || targetKg <= 0) return [];
   const spec = reps <= 2 ? RAMP.single : reps <= 6 ? RAMP.low : RAMP.high;
   const out = [];
@@ -4626,14 +4626,14 @@ function warmupRamp(targetKg, reps = 1, barKg = 20) {
   }
 
   spec.pcts.forEach((p, i) => {
-    const kg = roundBar(targetKg * p);
+    const kg = round(targetKg * p);
     if (kg <= barKg) return;                       // below the empty bar: skip
     if (out.some(x => Math.abs(x.kg - kg) < 0.01)) return;   // duplicate after rounding
     if (kg >= targetKg) return;                    // never warm up at or above the target
     out.push({ kg, reps: spec.reps[i], rest: spec.rest[i], pct: Math.round(p * 100) });
   });
 
-  out.push({ kg: roundBar(targetKg), reps, rest: 0, work: true });
+  out.push({ kg: roundWork(targetKg), reps, rest: 0, work: true });
   return out;
 }
 
@@ -4648,23 +4648,34 @@ function fmtRest(s) {
 function openRamp(name, presetKg) {
   const st = statsFor(name);
   const suggestion = presetKg || (st ? roundBar(st.best.e1) : 0);
+  const leaf = String(name).includes('/') ? keyLeaf(name) : null;
+  const barred = !leaf || BAR_EQUIPMENT.includes(leaf.equipment);   // plates on a bar: round to what loads
+  const bar0 = barred ? barFor(leaf) : null;
 
   const draw = (targetDisp, reps, barDisp) => {
-    const ramp = warmupRamp(toKg(targetDisp), reps, toKg(barDisp));
+    const barKg = toKg(barDisp), inv = inventory(), eff = barKg + collarPair();
+    /* Warm-ups load from plain plates (2.5 kg and up): nobody wants 1.25s
+       and 0.5s on a 60% single. The work set gets the whole inventory. */
+    const plain = inv.filter(p => p.kg >= 2.5 - 1e-9);
+    const round = barred ? (kg => loadableNear(kg, eff, plain.length ? plain : inv)) : (kg => roundLoadFor(kg, leaf));
+    const roundWork = barred ? (kg => loadableNear(kg, eff, inv)) : round;
+    const ramp = warmupRamp(toKg(targetDisp), reps, barKg, round, roundWork);
     if (!ramp.length) return `<div class="sub">Enter a target weight.</div>`;
     return `<table class="settable"><thead><tr>
         <th class="c-set">#</th><th>${U()}</th><th>Reps</th><th>Rest</th></tr></thead><tbody>
       ${ramp.map((r, i) => `<tr class="${r.work ? 'pr' : ''}">
         <td class="c-set"><div class="setno ${r.work ? '' : 'warm'}">${r.work ? '★' : r.bar ? 'B' : i}</div></td>
-        <td class="mono"><b>${nice(dw(r.kg))}</b>${r.bar ? ' <span class="dimmer">bar</span>' : r.pct ? ` <span class="dimmer">${r.pct}%</span>` : ''}</td>
+        <td class="mono"><b>${nice(dw(r.kg))}</b>${r.bar ? ' <span class="dimmer">bar</span>' : r.pct ? ` <span class="dimmer">${r.pct}%</span>` : ''}
+          ${barred && !r.bar ? `<div class="dimmer" style="font-size:10.5px">${esc(plateLine(r.kg, eff, inv))}</div>` : ''}</td>
         <td class="mono">${r.reps}</td>
         <td class="mono dimmer">${r.work ? '—' : fmtRest(r.rest)}</td>
       </tr>`).join('')}
     </tbody></table>`;
   };
+  const barDisp0 = nice(dw(bar0 ? bar0.kg : (S.settings.barKg || 20)));
 
   modal({
-    title: `Warm-up · ${name}`,
+    title: `Warm-up · ${leafName(name)}`,
     body: `
       <div class="row" style="gap:8px">
         <div class="field grow"><label>Target (${U()})</label>
@@ -4672,17 +4683,17 @@ function openRamp(name, presetKg) {
         <div class="field" style="width:80px"><label>Reps</label>
           <input type="number" inputmode="numeric" id="rReps" value="1"></div>
         <div class="field" style="width:88px"><label>Bar (${U()})</label>
-          <input type="number" step="0.5" inputmode="decimal" id="rBar" value="${nice(dw(S.settings.barKg || 20))}"></div>
+          <input type="number" step="0.5" inputmode="decimal" id="rBar" value="${barDisp0}"></div>
       </div>
-      <div id="rOut">${draw(suggestion ? dw(suggestion) : 0, 1, dw(S.settings.barKg || 20))}</div>
+      ${bar0 ? `<div class="sub" style="margin:-4px 0 8px">${esc(bar0.name)}${collarPair() ? ` · collars ${wt(collarPair() / 2, 2)} each` : ''}${barred ? ' · steps rounded to plates you have' : ''}</div>` : ''}
+      <div id="rOut">${draw(suggestion ? dw(suggestion) : 0, 1, barDisp0)}</div>
       <div class="sub" style="margin-top:9px">Rest is a floor, not a target — on the last two steps take longer if you need it.</div>
     `,
     foot: `<button class="btn primary" data-close>Done</button>`,
     onOpen: bg => {
       const upd = () => {
         const bar = +$('#rBar', bg).value || 20;
-        S.settings.barKg = toKg(bar);
-        save();
+        if (!bar0 || bar0.isDefault) { S.settings.barKg = toKg(bar); save(); }   // a plain barbell remembers; a tagged bar lives in Settings
         $('#rOut', bg).innerHTML = draw(+$('#rTarget', bg).value || 0, +$('#rReps', bg).value || 1, bar);
       };
       ['#rTarget', '#rReps', '#rBar'].forEach(s => { $(s, bg).oninput = upd; });
@@ -4699,6 +4710,52 @@ const DEFAULT_PLATES = [
   { kg: 10, pairs: 4 }, { kg: 5, pairs: 2 }, { kg: 2.5, pairs: 2 },
   { kg: 1.25, pairs: 2 }, { kg: 0.5, pairs: 2 },
 ];
+
+/* Bars carry the equipment they're for, so a trap-bar deadlift loads from the
+   trap bar and a log press from the log without asking. Presets are starting
+   points — real bars vary, so each one is editable in Settings. */
+const BAR_EQUIPMENT = ['barbell', 'safety_squat_bar', 'trap_bar', 'axle', 'log'];
+const BAR_PRESETS = [
+  { name: 'Barbell', kg: 20, eq: 'barbell' }, { name: "Women's bar", kg: 15, eq: '' },
+  { name: 'Deadlift bar', kg: 20, eq: '' }, { name: 'Safety squat bar', kg: 30, eq: 'safety_squat_bar' },
+  { name: 'Trap bar', kg: 25, eq: 'trap_bar' }, { name: 'Axle', kg: 20, eq: 'axle' }, { name: 'Log', kg: 50, eq: 'log' },
+];
+/* The bar for a lift: one tagged with its equipment, else the preset for that
+   equipment (flagged, so the sheet can say it's a guess), else the usual bar. */
+function barFor(leaf) {
+  const bl = bars(), eq = leaf && leaf.equipment;
+  const tagged = eq && bl.find(b => b.eq === eq);
+  if (tagged) return tagged;
+  if (eq && eq !== 'barbell') { const p = BAR_PRESETS.find(b => b.eq === eq); if (p) return { ...p, preset: true }; }
+  const usual = bl.find(b => Math.abs(b.kg - (S.settings.barKg || 20)) < 1e-9) || bl[0];
+  return { ...usual, isDefault: true };
+}
+/* Both collars together; they ride on every loaded bar. */
+function collarPair() { return (S.settings.collarKg > 0 ? S.settings.collarKg : 0) * 2; }
+/* Nearest weight the inventory can build on this bar; a tie goes to the lighter. */
+function loadableNear(kg, barKg, inv) {
+  const n = nearestLoadable(kg, barKg, inv);
+  if (n.below == null) return n.above == null ? kg : n.above;
+  if (n.above == null) return n.below;
+  return kg - n.below <= n.above - kg ? n.below : n.above;
+}
+/* "20 + 5 + 1.25 a side" */
+function plateLine(kg, barKg, inv) {
+  const r = loadPlates(kg, barKg, inv);
+  if (r.impossible || !r.perSide.length) return r.impossible ? '' : 'empty bar';
+  return r.perSide.flatMap(p => Array(p.count).fill(String(dw(p.kg, 2)))).join(' + ') + ' a side';
+}
+
+/* One editable bar row in Settings. */
+const BAR_FOR = [['', 'For: —'], ['barbell', 'Barbell'], ['safety_squat_bar', 'SSB'], ['trap_bar', 'Trap'], ['axle', 'Axle'], ['log', 'Log']];
+function barRow(k, b) {
+  return `<div class="row" style="gap:6px;margin-bottom:6px">
+    <input class="grow" data-bn="${k}" value="${esc(b.name || '')}" placeholder="name" aria-label="Bar name" style="min-width:0">
+    <input type="number" step="0.5" inputmode="decimal" data-bk="${k}" value="${b.kg ? nice(dw(b.kg)) : ''}" placeholder="${U()}" aria-label="Bar weight" style="width:64px">
+    <select data-be="${k}" aria-label="Used for" style="width:96px">${BAR_FOR.map(([v, l]) => `<option value="${v}" ${(b.eq || '') === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+    <button class="btn sm ghost" data-brm="${k}" aria-label="Remove bar">−</button>
+  </div>`;
+}
 
 function inventory() {
   const inv = S.settings.plates && S.settings.plates.length ? S.settings.plates : DEFAULT_PLATES;
@@ -4723,6 +4780,25 @@ function loadPlates(targetKg, barKg, inv) {
     if (n > 0) { perSide.push({ kg: p.kg, count: n }); left -= n * p.kg; }
   });
 
+  if (left > 1e-9) {
+    /* Greedy only stops short when the set isn't canonical (25/20/15/10 isn't,
+       and neither is a 1 kg plate beside 1.25) or pairs run out. Then search:
+       the heaviest reachable per-side load, fewest plates on a tie. */
+    let best = { sum: side - left, n: perSide.reduce((a, p) => a + p.count, 0), pick: [...perSide] };
+    const walk = (i, sum, n, pick) => {
+      if (sum > side + 1e-9) return;
+      if (sum > best.sum + 1e-9 || (Math.abs(sum - best.sum) < 1e-9 && n < best.n)) best = { sum, n, pick: [...pick] };
+      if (i >= inv.length || Math.abs(sum - side) < 1e-9) return;
+      for (let c = Math.min(inv[i].pairs, Math.floor((side - sum + 1e-9) / inv[i].kg)); c >= 0; c--) {
+        if (c) pick.push({ kg: inv[i].kg, count: c });
+        walk(i + 1, sum + c * inv[i].kg, n + c, pick);
+        if (c) pick.pop();
+      }
+    };
+    walk(0, 0, 0, []);
+    perSide.length = 0; perSide.push(...best.pick);
+    left = side - best.sum;
+  }
   const achieved = barKg + (side - left) * 2;
   return { perSide, achieved, exact: Math.abs(left) < 1e-9, short: left * 2, bar: barKg };
 }
@@ -4773,11 +4849,17 @@ function openPlates(targetKg, presetBar, leaf) {
       }; },
     });
   }
-  const bl = smith ? [{ name: 'Smith carriage', kg: S.settings.smithKg }] : bars();
-  let barIdx = smith ? 0 : Math.max(0, bl.findIndex(b => b.kg === (presetBar || S.settings.barKg || 20)));
+  /* The lift's own bar first (a trap bar for a trap-bar pull), then the rest
+     of your bars to switch to. */
+  const own = smith ? null : barFor(leaf);
+  const bl = smith ? [{ name: 'Smith carriage', kg: S.settings.smithKg }]
+    : own && own.preset ? [own, ...bars()] : bars();
+  let barIdx = smith ? 0 : presetBar ? Math.max(0, bl.findIndex(b => b.kg === presetBar))
+    : Math.max(0, bl.findIndex(b => b.name === own.name && b.kg === own.kg));
+  const collars = smith ? 0 : collarPair();
 
   const draw = () => {
-    const bar = bl[barIdx];
+    const bar = { ...bl[barIdx], kg: bl[barIdx].kg + collars };   // collars ride on the bar
     const inv = inventory();
     const r = loadPlates(targetKg, bar.kg, inv);
 
@@ -4788,8 +4870,8 @@ function openPlates(targetKg, presetBar, leaf) {
     const stack = r.perSide.length
       ? r.perSide.map(p => `<div class="row" style="gap:9px;align-items:center;padding:6px 0">
           <div style="width:34px;height:34px;border-radius:7px;background:${PLATE_COLOR[p.kg] || '#8a93a5'};
-            display:grid;place-items:center;font-size:11.5px;font-weight:800;color:${p.kg === 5 ? '#14181d' : '#fff'}">${nice(p.kg)}</div>
-          <div class="grow"><b>${nice(dw(p.kg))}${U()}</b> <span class="sub">× ${p.count} per side</span></div>
+            display:grid;place-items:center;font-size:11.5px;font-weight:800;color:${p.kg === 5 ? '#14181d' : '#fff'}">${dw(p.kg, 2)}</div>
+          <div class="grow"><b>${dw(p.kg, 2)}${U()}</b> <span class="sub">× ${p.count} per side</span></div>
           <div class="mono sub">${nice(dw(p.kg * p.count * 2))}</div>
         </div>`).join('')
       : `<div class="sub">Empty bar.</div>`;
@@ -4803,11 +4885,13 @@ function openPlates(targetKg, presetBar, leaf) {
     }
 
     return `${warn}
+      ${bl[barIdx].preset ? `<div class="sub" style="margin-bottom:8px">${esc(bl[barIdx].name)} taken as ${wt(bl[barIdx].kg)} — add yours in Settings → Bars if it differs.</div>` : ''}
+      ${collars ? `<div class="sub" style="margin-bottom:8px">Includes collars, ${wt(collars / 2)} each.</div>` : ''}
       <div class="row between" style="margin-bottom:8px">
         <div><div class="eyebrow">Per side</div>
-          <div class="mono" style="font-size:30px;font-weight:800;line-height:1.1">${nice(dw((r.achieved - bar.kg) / 2, 2))}</div></div>
+          <div class="mono" style="font-size:30px;font-weight:800;line-height:1.1">${dw((r.achieved - bar.kg) / 2, 2)}</div></div>
         <div class="right"><div class="eyebrow">Total on bar</div>
-          <div class="mono" style="font-size:30px;font-weight:800;line-height:1.1;color:${r.exact ? 'var(--green)' : 'var(--gold)'}">${nice(dw(r.achieved))}</div></div>
+          <div class="mono" style="font-size:30px;font-weight:800;line-height:1.1;color:${r.exact ? 'var(--green)' : 'var(--gold)'}">${dw(r.achieved, 2)}</div></div>
       </div>
       ${stack}`;
   };
@@ -4818,11 +4902,13 @@ function openPlates(targetKg, presetBar, leaf) {
         ${bl.map((b, i) => `<button data-bar="${i}" class="${i === barIdx ? 'on' : ''}">${esc(b.name)} ${nice(dw(b.kg))}</button>`).join('')}
       </div>` : `<div class="sub" style="margin-bottom:9px">${esc(bl[0].name)} at ${wt(bl[0].kg)}</div>`}
       <div id="pOut">${draw()}</div>`,
-    foot: `<button class="btn primary" data-close>Done</button>`,
+    foot: `${leaf ? '<button class="btn ghost" id="pRamp">▲ Ramp to this</button>' : ''}<button class="btn primary" data-close>Done</button>`,
     onOpen: bg => {
+      const rampBtn = $('#pRamp', bg);
+      if (rampBtn) rampBtn.onclick = () => { closeModal(); openRamp(leafKey(leaf), targetKg); };
       bg.querySelectorAll('[data-bar]').forEach(b => b.onclick = () => {
         barIdx = +b.dataset.bar;
-        S.settings.barKg = bl[barIdx].kg; save();
+        if (!bl[barIdx].preset && !bl[barIdx].eq) { S.settings.barKg = bl[barIdx].kg; save(); }
         bg.querySelectorAll('[data-bar]').forEach(x => x.classList.toggle('on', +x.dataset.bar === barIdx));
         $('#pOut', bg).innerHTML = draw();
       });
@@ -7568,26 +7654,28 @@ function openSettings() {
       </div>
       <div class="hr"></div>
       <div class="eyebrow" style="margin-bottom:6px">Bars</div>
-      <div id="stBars">${bars().map((b, i) => `
-        <div class="row" style="gap:8px;margin-bottom:6px">
-          <input class="grow" data-bn="${i}" value="${esc(b.name)}" placeholder="name">
-          <input type="number" step="0.5" inputmode="decimal" data-bk="${i}" value="${nice(dw(b.kg))}" style="width:82px">
-          <button class="btn sm ghost" data-brm="${i}">−</button>
-        </div>`).join('')}</div>
-      <button class="btn xs ghost" id="stAddBar">+ Add bar</button>
+      <div class="sub" style="margin-bottom:8px">"For" picks the bar automatically on lifts with that equipment, so a trap-bar deadlift loads from the trap bar.</div>
+      <div id="stBars">${bars().map((b, i) => barRow(i, b)).join('')}</div>
+      <div class="row wrap" style="gap:6px">
+        <button class="btn xs ghost" id="stAddBar">+ Add bar</button>
+        ${BAR_PRESETS.filter(p => p.name !== 'Barbell').map((p, i) => `<button class="btn xs ghost" data-bpre="${i + 1}">+ ${esc(p.name)}</button>`).join('')}
+      </div>
 
       <div class="hr"></div>
       <div class="eyebrow" style="margin-bottom:6px">Plates — pairs you own</div>
       <div class="sub" style="margin-bottom:8px">Counted in pairs, so a stack the calculator gives you is one you can actually build.</div>
       <div id="stPlates">${inventory().map((p, i) => `
         <div class="row" style="gap:8px;margin-bottom:6px;align-items:center">
-          <input type="number" step="0.25" inputmode="decimal" data-pk="${i}" value="${nice(p.kg)}" style="width:82px">
+          <input type="number" step="0.25" inputmode="decimal" data-pk="${i}" value="${dw(p.kg, 2)}" style="width:82px">
           <span class="sub">${U()} ×</span>
           <input type="number" inputmode="numeric" data-pp="${i}" value="${p.pairs}" style="width:64px">
           <span class="sub grow">pairs</span>
           <button class="btn sm ghost" data-prm="${i}">−</button>
         </div>`).join('')}</div>
       <button class="btn xs ghost" id="stAddPlate">+ Add plate</button>
+      <div class="field" style="margin-top:10px"><label for="stCollar">Collars — each (${U()})</label>
+        <input type="number" step="0.25" inputmode="decimal" id="stCollar" value="${S.settings.collarKg > 0 ? dw(S.settings.collarKg, 2) : ''}" placeholder="0 — spring clips" style="width:140px">
+        <div class="sub" style="margin-top:4px">Competition collars are 2.5 kg each. Counted as part of the bar when working out plates.</div></div>
 
       <div class="hr"></div>
       <div class="field"><label>Gym → platform estimate (%)</label>
@@ -7705,9 +7793,11 @@ function openSettings() {
       if (pg) pg.onclick = () => { closeModal(); openProgram(); };
 
       const addRow = (host, html) => { const d = document.createElement('div'); d.innerHTML = html; host.appendChild(d.firstElementChild); };
-      $('#stAddBar', bg).onclick = () => addRow($('#stBars', bg),
-        `<div class="row" style="gap:8px;margin-bottom:6px"><input class="grow" data-bn="n${Date.now()}" placeholder="name">
-         <input type="number" step="0.5" inputmode="decimal" data-bk="n${Date.now()}" style="width:82px"><span style="width:34px"></span></div>`);
+      const wireRm = () => bg.querySelectorAll('[data-brm],[data-prm]').forEach(b => b.onclick = () => b.closest('.row').remove());
+      $('#stAddBar', bg).onclick = () => { addRow($('#stBars', bg), barRow(`n${Date.now()}`, { name: '', kg: 0, eq: '' })); wireRm(); };
+      bg.querySelectorAll('[data-bpre]').forEach(b => b.onclick = () => {
+        addRow($('#stBars', bg), barRow(`n${Date.now()}`, BAR_PRESETS[+b.dataset.bpre])); wireRm();
+      });
       $('#stAddPlate', bg).onclick = () => { const k = `n${Date.now()}`; addRow($('#stPlates', bg),
         `<div class="row" style="gap:8px;margin-bottom:6px;align-items:center"><input type="number" step="0.25" inputmode="decimal" data-pk="${k}" style="width:82px">
          <span class="sub">${U()} ×</span><input type="number" inputmode="numeric" data-pp="${k}" value="1" style="width:64px">
@@ -7774,7 +7864,8 @@ function openSettings() {
         const nb = [...bg.querySelectorAll('[data-bn]')].map((el, i) => ({
           name: el.value.trim() || `Bar ${i + 1}`,
           kg: toKg(+bg.querySelector(`[data-bk="${el.dataset.bn}"]`).value || 0),
-        })).filter(b => b.kg > 0);
+          eq: (bg.querySelector(`[data-be="${el.dataset.bn}"]`) || {}).value || '',
+        })).filter(b => b.kg > 0).map(b => b.eq ? b : { name: b.name, kg: b.kg });
         if (nb.length) { S.settings.bars = nb; S.settings.barKg = nb[0].kg; }
 
         const np = [...bg.querySelectorAll('[data-pk]')].map(el => ({
@@ -7782,6 +7873,8 @@ function openSettings() {
           pairs: Math.max(0, +bg.querySelector(`[data-pp="${el.dataset.pk}"]`).value || 0),
         })).filter(x => x.kg > 0 && x.pairs > 0).sort((x, y) => y.kg - x.kg);
         if (np.length) S.settings.plates = np;
+        const col = +$('#stCollar', bg).value;
+        if (col > 0) S.settings.collarKg = toKg(col); else delete S.settings.collarKg;
         save(); closeModal(); render(); toast('Settings saved', 'green');
       };
     },
