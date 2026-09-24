@@ -178,7 +178,14 @@ this; if not, fix it. Test against the full imported history.
 
 ## Next
 
-### 6. Workout page: finish the exercise-model UI
+### 6. ~~Workout page: finish the exercise-model UI~~ — [x] shipped 0.22.0
+Greyed-not-hidden picker, equipment icons in the list and the movement page
+(tabs, variant strip, primary headline, one line per variant) were already
+built. Added: modifier chips (live + edit; splitsPR ones greyed until item 14),
+per-variant stats for the variant picked in the strip, exercise name → its
+movement page, and Settings → **Check exercise data** (read-only report over
+every session plus an optional Liftoff CSV; Copy report). **Still to do:** run
+that check on the phone against the real log and CSV — it can't be run here.
 Make the workout page clearly better than the competition. Depends on the
 composed model being in place.
 - Equipment picker shows invalid equipment **greyed, not hidden**.
