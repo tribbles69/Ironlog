@@ -46,7 +46,7 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    building.
 4. One feature per commit. Every shipped change bumps `version.json` **and**
    the `VERSION` / cache name in `sw.js`, or installed PWAs keep serving the old
-   shell.
+   shell — **and adds an entry to the changelog** (see CLAUDE.md).
 5. Before committing, syntax-check every `<script>` block — a template-literal
    typo white-screens the single-file app:
    ```bash
@@ -93,11 +93,11 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
       `Awake` (refcounted Wake Lock) helpers — reuse them.
 - [x] Rest timer (0.18.0): auto-starts on set done, beep + vibration, per-exercise
       rest in `settings.restBy` (main vs accessory via `isMainLift`), ±15 s,
-      timestamp-based, opt-in background notification. Real-phone check is A3.
+      timestamp-based, opt-in background notification. Real-phone check is A4.
 - [x] Cardio session — HR-zone treadmill coaching (0.19.0) — spec
       `r&d/specs/cardio-spec.md`. Web Bluetooth Heart Rate Service, settle
       period, smoothed HR, hysteresis, speed/incline cues with voice, hard HR
-      ceiling, HR trace saved. Real-gym check is A3. Optional AI trend coach →
+      ceiling, HR trace saved. Real-gym check is A4. Optional AI trend coach →
       D9.
 - [x] Autoregulated programming (0.21.0) — spec `r&d/specs/autoreg-spec.md`.
       One flat working weight per exercise, loads from a per-exercise working
@@ -108,7 +108,9 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
       equipment picker, equipment icons, movement page with variant strip and
       per-variant stats, **modifier chips** that annotate a set without
       splitting the PR leaf, Settings → **Check exercise data** report. Running
-      that report on the real log is part of A3.
+      that report on the real log is part of A4.
+- [x] Changelog (24 Sep 2026): `r&d/CHANGELOG.md`, backfilled from commit
+      history. Moves to the repo root in A2.
 - [ ] Composed exercise model (movement + equipment + laterality, PRs per variant,
       parent page rolls up variants) — specs `r&d/specs/exercise-system.md` and
       `r&d/specs/exercise-system-phase1.md`. **Status unconfirmed — check how far
@@ -135,14 +137,31 @@ Decided 2026-09-24: food logging leaves Ironlog for its own separate app.
 4. Training data JSON export/import must keep working; old export files that
    still contain food data must import without errors (ignore the food part).
 
-### [ ] A2. Persistent storage and backup nudge
+### [ ] A2. "What's new" screen
+Added 2026-09-24 at Aaron's request, straight after A1. Shows the changelog in
+the app so Aaron (and users) can see what each update changed.
+- **Move the changelog to the repo root** as `CHANGELOG.md` (the app loads it,
+  so by the layout rule it lives at the root). Update `CLAUDE.md` and
+  `r&d/README.md` to point at the new path. Cache it in `sw.js` like the shell.
+- **After an update:** on the first open of a new version, show a sheet with
+  every changelog entry newer than the last version the user saw, then store
+  `settings.lastSeenVersion`. One tap dismisses it.
+- **Never mid-workout:** if a session is live, wait until it's finished.
+- **Fresh install:** don't show it — just record the current version.
+- **Settings → What's new:** opens the full changelog any time.
+- Render the changelog's simple markdown (`##` headings, `-` bullets, `**bold**`)
+  with a small local renderer — no library. If the file can't be loaded
+  (offline, first run), say so quietly; never block the app.
+- Works in both skins and with TalkBack (heading structure, labelled close).
+
+### [ ] A3. Persistent storage and backup nudge
 Chrome can clear a PWA's IndexedDB when the phone is short on space.
 - Call `navigator.storage.persist()` (after the first logged session is a good
   moment) and show the result in Settings.
 - Until B6 ships: a gentle reminder to export a backup if the last export is
   older than ~2 weeks, dismissable, never blocking a workout.
 
-### [ ] A3. Real-phone checks (check on phone)
+### [ ] A4. Real-phone checks (check on phone)
 Everything shipped but never tested on Aaron's actual kit (Oppo Reno 8,
 Galaxy Watch 7, Chrome):
 - Rest timer: alert still fires with the screen locked and the app in the
@@ -153,7 +172,7 @@ Galaxy Watch 7, Chrome):
   act as the HR source with no code changes — worth trying.)
 - Run Settings → Check exercise data against the real log and the Liftoff CSV.
 
-### [ ] A4. Checks against Blast's bugs
+### [ ] A5. Checks against Blast's bugs
 Blast shipped these; make sure Ironlog doesn't have them. Tick each.
 - [ ] Every exercise in a superset/circuit gets its PRs (Blast #87) — once
   supersets exist.
@@ -166,7 +185,7 @@ Blast shipped these; make sure Ironlog doesn't have them. Tick each.
 - [ ] Number inputs lose focus when the keyboard is dismissed or you tap
   elsewhere (#49).
 
-### [ ] A5. Name check (Aaron, not code)
+### [ ] A6. Name check (Aaron, not code)
 Search the UK trademark register (UKIPO) and the app stores for "Ironlog" before
 promoting it. A rename is cheap now and expensive later.
 
@@ -256,7 +275,7 @@ show a dry-run report before anything is written.
 - Links to a short in-app help / FAQ (Blast #27).
 
 ### [ ] C2. Events page — a real meet-day companion
-Replaces Meets. Write `r&d/specs/events-spec.md` first.
+Builds on the existing Events page. Write `r&d/specs/events-spec.md` first.
 - Pick the event type (powerlifting meet, strongman show, para powerlifting —
   C3, other) and queue several events at once.
 - **Powerlifting:** attempt planning with conservative / standard / aggressive
