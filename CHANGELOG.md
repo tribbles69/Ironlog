@@ -13,6 +13,12 @@ rather than guessed.
 
 ---
 
+## 0.26.0 — 24 Sep 2026
+- **What's new.** After an update, Ironlog shows what changed since you last
+  opened it — once, and never in the middle of a workout.
+- The full list is always in **Settings → What's new** (and Help in the
+  Windows 98 skin).
+
 ## 0.25.0 — 24 Sep 2026
 - **The Food tab is gone** — food logging is moving to its own app. The bottom
   bar is back to five tabs.

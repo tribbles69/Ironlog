@@ -1,6 +1,8 @@
 # r&d — everything that isn't the app
 
 Nothing in here is loaded by Ironlog at runtime. The app is the repo root.
+The changelog isn't here: it's `CHANGELOG.md` at the root, because the app
+loads it for What's new.
 Quote the folder name in the shell: `cd "r&d"`.
 
 | Folder | What's in it |
