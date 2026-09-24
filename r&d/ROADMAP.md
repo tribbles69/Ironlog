@@ -17,6 +17,9 @@ competes with anything.
   a paid tier roughly at cost, plus **bring-your-own API key** as a free route.
 - Funding: donations (Ko-fi / GitHub Sponsors, supporter badge) and cosmetic
   **muscle-map skin packs**.
+- **Food logging is moving out of Ironlog into its own app** (decided
+  2026-09-24). Don't build new food features here; see "Food tab — moving out"
+  under Later.
 
 ---
 
@@ -59,7 +62,8 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
 - [x] Installable PWA with offline cache and safe mid-workout updates
 - [x] IndexedDB storage, JSON export/import
 - [x] Food tab: CoFID + curated local tables first, Haiku fallback via server-side
-      function (key never on the phone)
+      function (key never on the phone). **Moving out to its own app** — see
+      "Food tab — moving out" under Later.
 - [x] Exercise database (`EX_DB`, 736 movements) with muscle shares; body heatmap
 - [x] RPE → RIR switch across display, inputs and voice logging
 - [x] Muscle map skins (0.23.0): the body is painted from a skin sheet, one cell per
@@ -481,11 +485,12 @@ before building. Reuse the maths that's already in the app — `bmrKcal` /
 
 **Energy**
 - **TDEE:** Mifflin-St Jeor (exists), plus Katch-McArdle when a BF% is known.
-- **Adaptive TDEE:** back-calculated from logged Food intake and the bodyweight
+- **Adaptive TDEE:** back-calculated from logged food intake and the bodyweight
   trend over the last 2–4 weeks (intake minus the energy in the weight change).
   Show it next to the formula figure — "formula says X, your data says Y" — and
-  only once there are enough logged days to mean anything. This is the one no
-  formula can give, and the app already has both inputs.
+  only once there are enough logged days to mean anything. **With food moving
+  to its own app, this needs daily intake imported from that app** (a simple
+  shared export file); if that link doesn't exist, leave this one out.
 
 **Physique**
 - **Max muscular potential (Casey Butt):** from height, wrist and ankle
@@ -510,6 +515,16 @@ before building. Reuse the maths that's already in the app — `bmrKcal` /
 
 Can ship before item 18 using typed-in inputs; wire the prefills when body
 comp lands.
+
+### 20. Food tab — moving out
+Decided 2026-09-24: food logging moves out of Ironlog into its own separate
+app. **Don't delete anything until Aaron says the new app is ready.**
+- Keep the Food tab working as-is until then; no new food features here.
+- When the new app is ready: give users a one-tap export of their food log
+  (and saved foods) in a format the new app imports, then remove the Food tab
+  and its bottom-nav slot, `parse-food.js` and the food tables, with a schema
+  bump. Existing food data must be exportable before it's dropped.
+- Once removed, Ironlog's AI costs are coaching only.
 
 ---
 
