@@ -19,6 +19,8 @@ Paths here are from the repo root. The folder is `r&d` — **quote it in the
 shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
 
 1. Take the **first unchecked item under "Now"** unless Aaron says otherwise.
+   If everything under "Now" is done, carry on down the file in order: "Next",
+   then the ranked Blast section, then "Later".
 2. **Check the code before trusting a status here.** Some items were marked from
    memory of planning chats, not from the code. If something is already built,
    tick it, note the version, and move on.
@@ -182,6 +184,10 @@ this; if not, fix it. Test against the full imported history.
 
 ## Next
 
+**Order (approved by Aaron 2026-09-24):** build **B1 (loaded carries, sleds and
+medleys)** and then **B3 (last session inline and fast entry)** first — full
+detail in the Blast section below — then carry on with item 7.
+
 ### 6. ~~Workout page: finish the exercise-model UI~~ — [x] shipped 0.22.0
 Greyed-not-hidden picker, equipment icons in the list and the movement page
 (tabs, variant strip, primary headline, one line per variant) were already
@@ -246,138 +252,20 @@ events at once. Keep the focus on strength sports.
 
 ---
 
-## Later
-
-### 10. Cloud sync (premium)
-Local-first with sync so data survives losing or changing a phone.
-- Supabase, anonymous auth first; Google login deferred.
-- Schema versioning, tombstone deletes.
-- **First sign-in pushes local data up — never overwrites it.**
-
-### 11. Server-side AI for all users (premium)
-Aaron's own Anthropic key used server-side for everyone (e.g. Supabase Edge
-Function), not a key per user. Non-negotiable: per-user budgets, rate limits,
-abuse controls. Meter AI usage carefully at £5/month.
-
-### 12. AI coaching
-- Logging stays tightly scoped structured calls, separate from any chat.
-- Hard system-prompt boundaries so the coach can't drift off-topic.
-- Cap or summarise conversation history; use prompt caching. No unbounded
-  history re-sent every turn.
-
-### 13. Chat front door
-Log and get coaching through a messaging app (WhatsApp or similar — **not
-Telegram**) plus voice input. Builds on the existing voice logging.
-
-### 14. Fix `prKey` / `splitsPR`
-`prKey()` is dead code, so chains, bands, slingshot and equipped currently share
-a PR pool with the raw lift. Real bug, but fixing it **changes existing PR
-numbers** — do it on its own, deliberately, and tell Aaron what moved.
-
-### 15. Supplements and blood work
-Supplement schedule, reminders and adherence history inside Ironlog (not a
-separate app), with the option to see it alongside training. Blood work results
-tracking over time. No drug dosing or cycle-planning features.
-
-### 16. Fatigue heat map
-Extend the existing body heatmap to show which muscle groups are fresh vs
-fatigued before planning a session. Only trust it once muscle shares for
-commonly trained lifts have been checked — derived shares are placeholders.
-
-### 17. Mobility training
-New session type alongside lifting and cardio. Aaron is treating flexibility
-with the same seriousness as the lifts because it feeds them (squat depth,
-overhead position, deadlift setup). Write `r&d/specs/mobility-spec.md` before
-building.
-- **Routines:** saved mobility routines (daily evening routine, pre-lift
-  dynamic warm-up, "strength at length" accessory block) made of timed holds
-  and rep-based drills, per side where relevant.
-- **Guided player:** step-by-step with hold countdowns, side switches and
-  contract-relax cues. Reuse the shared audio helper and the timestamp-based
-  timing from isometric holds (item 1); Wake Lock throughout.
-- **Hypermobility-aware:** exercises tagged by target area so a user can mark
-  joints to leave alone (e.g. wrists) and have routines skip or swap them.
-  Emphasis on loaded end-range work over passive stretching.
-- **ROM tests over time:** monthly measurements — knee-to-wall (cm),
-  straight-leg raise (degrees, optionally from the phone's inclinometer),
-  Thomas test, wall shoulder flexion — charted per test and per side.
-- Adherence streak alongside training; loaded-stretch drills (paused goblet
-  squat, Cossack, paused RDL) log as normal lifting sets so PRs still work.
-
-### 18. Body composition page
-One page for bodyweight, tape measurements and skinfold (caliper) tests, each
-with a chart. Write `r&d/specs/body-comp-spec.md` before building.
-- **Bodyweight:** build on the existing check-in weight (`ci.weight`, read by
-  `bodyweightKg()` for DOTS) — don't create a second bodyweight store. Chart
-  with a 7-day rolling average over the raw points.
-- **Measurements:** cm, any subset per entry — neck, chest, waist, hips, upper
-  arm, forearm, thigh, calf — **left/right** where it applies, plus custom
-  sites. Each site gets its own trend.
-- **Caliper tests:** pick a protocol — Jackson-Pollock 3-site, JP 7-site,
-  Durnin-Womersley 4-site. Enter mm per site, optionally 2–3 readings per site
-  averaged. Body density from the protocol's equation (uses sex and age from
-  settings), then Siri for body-fat %; fat mass / lean mass from the same day's
-  weight.
-- Always show the **raw sum of skinfolds** next to the %. The equations were
-  built on typical populations, so for adaptive lifters the mm sum is the more
-  honest trend line — present the % as an estimate.
-- Charts via `chartMulti`: pick the metric, date range; same-day entries sit
-  together. Everything lives in IndexedDB and goes through JSON export/import
-  (schema bump + migration).
-
-### 19. Tools page (calculators)
-A **Tools** page — the 98 skin's menu bar already has a Tools menu, so that's
-the way in. Every calculator **prefills from stored data** (bodyweight, height,
-age, sex, BF% and measurements once item 18 exists), stays editable for
-what-ifs, and saves nothing unless asked. Write `r&d/specs/calculators-spec.md`
-before building. Reuse the maths that's already in the app — `bmrKcal` /
-`suggestedTargets`, `e1rm`, `dots` — don't write second copies.
-
-**Energy**
-- **TDEE:** Mifflin-St Jeor (exists), plus Katch-McArdle when a BF% is known.
-- **Adaptive TDEE:** back-calculated from logged Food intake and the bodyweight
-  trend over the last 2–4 weeks (intake minus the energy in the weight change).
-  Show it next to the formula figure — "formula says X, your data says Y" — and
-  only once there are enough logged days to mean anything. This is the one no
-  formula can give, and the app already has both inputs.
-
-**Physique**
-- **Max muscular potential (Casey Butt):** from height, wrist and ankle
-  circumference → maximum lean body mass, and a table of the maximum bodyweight
-  at each body-fat % (roughly 5–20%). Commonly given as
-  `LBM_max(lb) = H^1.5 × (√W / 22.667 + √A / 17.0104) × (1 + BF% / 224)`
-  with H, W, A in inches — **verify the constants against Butt's published
-  formula before shipping**, then convert to kg / cm.
-- **FFMI** and height-normalised FFMI from current weight and BF%, with where
-  that sits against the potential figure.
-- Label all of it as an estimate: these formulas come from drug-free elite
-  bodybuilders of typical proportions, so for adaptive or short-stature lifters
-  they're a rough ceiling, not a verdict.
-
-**Strength**
-- e1RM and a rep-max table from any set (existing `e1rm`), and a %1RM ↔ RIR
-  chart.
-- **Plate loader:** target kg → plates per side for the bar in use (20 kg bar,
-  15 kg, custom), available plates and collars as a setting.
-- DOTS / IPF GL points calculator (existing `dots`), and a warm-up ramp
-  generator (reuse `openRamp`).
-
-Can ship before item 18 using typed-in inputs; wire the prefills when body
-comp lands.
-
----
-
 ## From Blast's issue tracker (ranked 2026-09-24)
 
 Ideas taken from the open issues of a competing app,
-<https://github.com/madmustachecompany/Blast-Workout-App/issues>, ranked by
-Aaron from "would be amazing" down to "only if there's nothing else to do".
-`#n` is the Blast issue number, for the original request.
+<https://github.com/madmustachecompany/Blast-Workout-App/issues>, ranked from
+"would be amazing" down to "only if there's nothing else to do". `#n` is the
+Blast issue number, for the original request.
 
-- This section sits **after Later**. Don't pull an item ahead of Now / Next
-  without asking Aaron.
-- Where an idea overlaps a numbered item above, it **extends that item** — build
-  it there, don't make a second copy.
+- **Priority approved by Aaron (2026-09-24):** B1 and B3 go first in "Next".
+  The rest of this section comes after "Next" and before "Later", worked top to
+  bottom in the order below.
+- Where an idea overlaps a numbered item elsewhere, it **extends that item** —
+  build it there, don't make a second copy. If that item is in "Later", this
+  ranking pulls the overlapping part forward; leave the rest of the item where
+  it is.
 - Check the code first: some of these may already partly exist.
 
 ### Tier 1 — would be amazing
@@ -387,7 +275,7 @@ Aaron from "would be amazing" down to "only if there's nothing else to do".
   push/pull, rucking. Plus a **time-to-complete** mode for medleys and loading
   events (n implements, time). Own PR pools (best time for a given weight and
   distance; furthest distance at a weight). Feeds strongman in the Events page
-  (item 9).
+  (item 9). **First in "Next".**
 - [ ] **B2. Plate loader and warm-up ramp from the set** — extends item 19.
   Reachable by tapping a set's weight on the workout page, not only from Tools.
   Per-bar weights: SSB, trap bar, axle, log, deadlift bar, custom. kg plates
@@ -397,10 +285,11 @@ Aaron from "would be amazing" down to "only if there's nothing else to do".
   time's weight × reps @ RIR beside each set. Tap to fill; copy a value down to
   the remaining sets; +/− steppers (2.5 kg, 1 rep) so the system keyboard is
   rarely needed. Biggest single step towards "workout page ahead of the
-  competition".
+  competition". **Second in "Next".**
 - [ ] **B4. Rest-end alert reaches the watch** (#17, #64, #101) — mostly done by
-  item 2. Remaining: confirm on Aaron's phone that the background notification
-  forwards to the watch and buzzes; if it's unreliable, say so in the setting.
+  item 2. Remaining: confirm on Aaron's phone (Oppo Reno 8 + Galaxy Watch 7)
+  that the background notification forwards to the watch and buzzes; if it's
+  unreliable, say so in the setting.
 - [ ] **B5. Recovery heatmap on the skins** (#117) — this is item 16. Blast users
   call it the feature they miss most. Also show it where exercises are picked
   when building a session or program, not only on its own page. Same caveat
@@ -478,6 +367,129 @@ checked.
   (#47).
 - [ ] Number inputs lose focus when the keyboard is dismissed or you tap
   elsewhere (#49).
+
+---
+
+## Later
+
+### 10. Cloud sync (premium)
+Local-first with sync so data survives losing or changing a phone.
+- Supabase, anonymous auth first; Google login deferred.
+- Schema versioning, tombstone deletes.
+- **First sign-in pushes local data up — never overwrites it.**
+
+### 11. Server-side AI for all users (premium)
+Aaron's own Anthropic key used server-side for everyone (e.g. Supabase Edge
+Function), not a key per user. Non-negotiable: per-user budgets, rate limits,
+abuse controls. Meter AI usage carefully at £5/month.
+
+### 12. AI coaching
+- Logging stays tightly scoped structured calls, separate from any chat.
+- Hard system-prompt boundaries so the coach can't drift off-topic.
+- Cap or summarise conversation history; use prompt caching. No unbounded
+  history re-sent every turn.
+
+### 13. Chat front door
+Log and get coaching through a messaging app (WhatsApp or similar — **not
+Telegram**) plus voice input. Builds on the existing voice logging.
+
+### 14. Fix `prKey` / `splitsPR`
+`prKey()` is dead code, so chains, bands, slingshot and equipped currently share
+a PR pool with the raw lift. Real bug, but fixing it **changes existing PR
+numbers** — do it on its own, deliberately, and tell Aaron what moved.
+
+### 15. Supplements and blood work
+Supplement schedule, reminders and adherence history inside Ironlog (not a
+separate app), with the option to see it alongside training. Blood work results
+tracking over time. No drug dosing or cycle-planning features.
+
+### 16. Fatigue heat map
+Extend the existing body heatmap to show which muscle groups are fresh vs
+fatigued before planning a session. Only trust it once muscle shares for
+commonly trained lifts have been checked — derived shares are placeholders.
+(Pulled forward as Blast item B5.)
+
+### 17. Mobility training
+New session type alongside lifting and cardio. Aaron is treating flexibility
+with the same seriousness as the lifts because it feeds them (squat depth,
+overhead position, deadlift setup). Write `r&d/specs/mobility-spec.md` before
+building.
+- **Routines:** saved mobility routines (daily evening routine, pre-lift
+  dynamic warm-up, "strength at length" accessory block) made of timed holds
+  and rep-based drills, per side where relevant.
+- **Guided player:** step-by-step with hold countdowns, side switches and
+  contract-relax cues. Reuse the shared audio helper and the timestamp-based
+  timing from isometric holds (item 1); Wake Lock throughout.
+- **Hypermobility-aware:** exercises tagged by target area so a user can mark
+  joints to leave alone (e.g. wrists) and have routines skip or swap them.
+  Emphasis on loaded end-range work over passive stretching.
+- **ROM tests over time:** monthly measurements — knee-to-wall (cm),
+  straight-leg raise (degrees, optionally from the phone's inclinometer),
+  Thomas test, wall shoulder flexion — charted per test and per side.
+- Adherence streak alongside training; loaded-stretch drills (paused goblet
+  squat, Cossack, paused RDL) log as normal lifting sets so PRs still work.
+
+### 18. Body composition page
+One page for bodyweight, tape measurements and skinfold (caliper) tests, each
+with a chart. Write `r&d/specs/body-comp-spec.md` before building.
+- **Bodyweight:** build on the existing check-in weight (`ci.weight`, read by
+  `bodyweightKg()` for DOTS) — don't create a second bodyweight store. Chart
+  with a 7-day rolling average over the raw points.
+- **Measurements:** cm, any subset per entry — neck, chest, waist, hips, upper
+  arm, forearm, thigh, calf — **left/right** where it applies, plus custom
+  sites. Each site gets its own trend.
+- **Caliper tests:** pick a protocol — Jackson-Pollock 3-site, JP 7-site,
+  Durnin-Womersley 4-site. Enter mm per site, optionally 2–3 readings per site
+  averaged. Body density from the protocol's equation (uses sex and age from
+  settings), then Siri for body-fat %; fat mass / lean mass from the same day's
+  weight.
+- Always show the **raw sum of skinfolds** next to the %. The equations were
+  built on typical populations, so for adaptive lifters the mm sum is the more
+  honest trend line — present the % as an estimate.
+- Charts via `chartMulti`: pick the metric, date range; same-day entries sit
+  together. Everything lives in IndexedDB and goes through JSON export/import
+  (schema bump + migration).
+
+### 19. Tools page (calculators)
+A **Tools** page — the 98 skin's menu bar already has a Tools menu, so that's
+the way in. Every calculator **prefills from stored data** (bodyweight, height,
+age, sex, BF% and measurements once item 18 exists), stays editable for
+what-ifs, and saves nothing unless asked. Write `r&d/specs/calculators-spec.md`
+before building. Reuse the maths that's already in the app — `bmrKcal` /
+`suggestedTargets`, `e1rm`, `dots` — don't write second copies.
+(The plate loader and warm-up ramp are pulled forward as Blast item B2.)
+
+**Energy**
+- **TDEE:** Mifflin-St Jeor (exists), plus Katch-McArdle when a BF% is known.
+- **Adaptive TDEE:** back-calculated from logged Food intake and the bodyweight
+  trend over the last 2–4 weeks (intake minus the energy in the weight change).
+  Show it next to the formula figure — "formula says X, your data says Y" — and
+  only once there are enough logged days to mean anything. This is the one no
+  formula can give, and the app already has both inputs.
+
+**Physique**
+- **Max muscular potential (Casey Butt):** from height, wrist and ankle
+  circumference → maximum lean body mass, and a table of the maximum bodyweight
+  at each body-fat % (roughly 5–20%). Commonly given as
+  `LBM_max(lb) = H^1.5 × (√W / 22.667 + √A / 17.0104) × (1 + BF% / 224)`
+  with H, W, A in inches — **verify the constants against Butt's published
+  formula before shipping**, then convert to kg / cm.
+- **FFMI** and height-normalised FFMI from current weight and BF%, with where
+  that sits against the potential figure.
+- Label all of it as an estimate: these formulas come from drug-free elite
+  bodybuilders of typical proportions, so for adaptive or short-stature lifters
+  they're a rough ceiling, not a verdict.
+
+**Strength**
+- e1RM and a rep-max table from any set (existing `e1rm`), and a %1RM ↔ RIR
+  chart.
+- **Plate loader:** target kg → plates per side for the bar in use (20 kg bar,
+  15 kg, custom), available plates and collars as a setting.
+- DOTS / IPF GL points calculator (existing `dots`), and a warm-up ramp
+  generator (reuse `openRamp`).
+
+Can ship before item 18 using typed-in inputs; wire the prefills when body
+comp lands.
 
 ---
 
