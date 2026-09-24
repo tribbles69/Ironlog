@@ -166,7 +166,9 @@ plugs in.
 - Design this so the VBT daily e1RM (item 7) can plug in later as a second
   input for the day's working weight.
 
-### 5. PR detection against history
+### 5. ~~PR detection against history~~ — not a bug
+Dropped 2026-09-24: Aaron confirmed the Smith calf raise PR was a logging
+error on his side, not the app. Nothing to fix. Kept below for the record.
 PRs are being flagged that aren't PRs (e.g. Smith calf raise 135 kg × 10 on
 12 Aug 2026, well under his real best — imported Liftoff history isn't being
 consulted). Check whether the composed exercise model migration already fixed
@@ -176,7 +178,14 @@ this; if not, fix it. Test against the full imported history.
 
 ## Next
 
-### 6. Workout page: finish the exercise-model UI
+### 6. ~~Workout page: finish the exercise-model UI~~ — [x] shipped 0.22.0
+Greyed-not-hidden picker, equipment icons in the list and the movement page
+(tabs, variant strip, primary headline, one line per variant) were already
+built. Added: modifier chips (live + edit; splitsPR ones greyed until item 14),
+per-variant stats for the variant picked in the strip, exercise name → its
+movement page, and Settings → **Check exercise data** (read-only report over
+every session plus an optional Liftoff CSV; Copy report). **Still to do:** run
+that check on the phone against the real log and CSV — it can't be run here.
 Make the workout page clearly better than the competition. Depends on the
 composed model being in place.
 - Equipment picker shows invalid equipment **greyed, not hidden**.

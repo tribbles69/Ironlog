@@ -268,6 +268,8 @@ h3{font-size:13.5px;margin:0 0 8px}
 .timer{font-size:26px;font-weight:750;letter-spacing:-1px;font-variant-numeric:tabular-nums}
 .restbar{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:6px}
 .restbar > .grow{min-width:0}
+.modchips .modadd{cursor:pointer;background:transparent;border-style:dashed}
+.ex-name[data-exdetail]{cursor:pointer}
 .restbar .eyebrow{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .restbar .rc{font-size:22px;font-weight:750;letter-spacing:-.5px;font-variant-numeric:tabular-nums;min-width:62px}
 .restbar.over .rc{color:var(--green)}
@@ -1448,7 +1450,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.21.0';
+const APP_VERSION = '0.22.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -3835,11 +3837,12 @@ function exerciseCard(e, ei) {
   return `<div class="ex-card">
     <div class="ex-head">
       <div class="row between">
-        <div class="ex-name grow">${esc(exName(e))}${isoE ? ' <span class="chip">HOLD</span>' : ''}</div>
+        <div class="ex-name grow" data-exdetail="${esc(exKey(e))}" title="Open ${esc(exName(e))}">${esc(exName(e))}${isoE ? ' <span class="chip">HOLD</span>' : ''}</div>
         ${timed ? '' : `<button class="btn xs ghost" data-ramp="${ei}" title="Warm-up ramp">▲ Warm-up</button>`}
         <button class="icon-btn" data-ex-menu="${ei}">⋯</button>
       </div>
       ${leafChip(e.leaf, ei)}
+      ${modChips(e, `data-mods="${ei}"`)}
       <div class="pr-banner">${prBanner}</div>
       ${autoLine}
       ${e.notes ? `<div class="ex-note">${esc(e.notes)}</div>` : ''}
@@ -4488,7 +4491,7 @@ function showSummary(wo) {
           : ws.reduce((a, b) => e1rm(b.w, b.r) > e1rm(a.w, a.r) ? b : a);
       return `<div class="card tight" style="margin-bottom:8px">
           <div class="row between" style="margin-bottom:6px">
-            <div style="font-weight:680">${exNameHtml(e)}</div>
+            <div style="font-weight:680">${exNameHtml(e)}${modsHtml(e)}</div>
             <div class="mono sub">${timed ? fmtSec(totSec) : wt(v, 0)}</div>
           </div>
           ${e.sets.map((st, i) => `<div class="row between" style="padding:3px 0;font-size:13px">
@@ -4523,7 +4526,7 @@ function viewCompleted(id) {
       ${wo.cardio ? `<div class="card tight" style="background:var(--card)">${cardioBlock(wo, true)}</div>` : ''}
       ${wo.exercises.map(e => `
         <div class="card tight" style="background:var(--card)">
-          <div style="font-weight:700;margin-bottom:7px">${exNameHtml(e)}</div>
+          <div style="font-weight:700;margin-bottom:7px">${exNameHtml(e)}${modsHtml(e)}</div>
           ${e.sets.map((s, i) => `<div class="exline"><span class="dimmer">${isWarm(s) ? 'W' : 'Set ' + (i + 1)}</span>
             <span class="mono">${isTimed(e)
     ? `${holdLabel(s)}${isIso(e) && s.rpe != null ? ` @ ${rpeToRir(s.rpe)}` : ''}`
@@ -4573,7 +4576,7 @@ function renderEditWorkout() {
       <button class="btn xs ghost" data-eex-up="${ei}" title="Move up">↑</button>
       <button class="btn xs ghost" data-eex-down="${ei}" title="Move down">↓</button>
       <button class="btn xs danger" data-eex-rm="${ei}" title="Remove exercise">✕</button>
-    </div></div>
+    </div>${modChips(e, `data-emods="${ei}"`)}</div>
     <table class="settable">
       <thead><tr><th class="c-set">Set</th><th class="c-del"></th>${isIso(e)
       ? `<th class="c-kg">${U()}</th><th class="c-reps">Time</th><th class="c-rpe">RIR</th>`
@@ -4653,6 +4656,10 @@ function renderEditWorkout() {
         const last = ex.sets[ex.sets.length - 1] || { w: 0, r: 0 };
         ex.sets.push({ w: last.w, r: last.r, sec: last.sec || null, rpe: null, done: true, setType: 'working' });
         re();
+      });
+      bg.querySelectorAll('[data-emods]').forEach(b => b.onclick = () => {
+        grab();
+        openModPicker(d.exercises[+b.dataset.emods], renderEditWorkout);
       });
       bg.querySelectorAll('[data-eex-iso]').forEach(b => b.onclick = () => {
         grab();
@@ -4916,7 +4923,18 @@ function openMovementPage(movementId, focusKey) {
       label: variantLabel(v.leaf) || 'Standard', color: SERIES_COLORS[i % SERIES_COLORS.length],
       points: v.stats.series.map(p => ({ date: p.date, v: dw(p.e1) })),
     }));
-    return `${headline}
+    /* The variant picked in the strip gets its own numbers — the headline
+       above stays the primary's (section 4.4). */
+    const fv = vars.find(v => v.key === focus);
+    const fs = fv && fv.stats;
+    const focusStrip = fv && focus !== pk ? `
+      <div class="eyebrow" style="margin:12px 0 6px">${esc(variantLabel(fv.leaf) || 'Standard')}</div>
+      ${fs ? `<div class="stats grid3">
+          <div class="stat"><div class="k">Best e1RM</div><div class="v">${w(fs.best.e1)}</div></div>
+          <div class="stat"><div class="k">Top set</div><div class="v">${w(fs.bestW.w)}</div><div class="d">× ${fs.bestW.r}</div></div>
+          <div class="stat"><div class="k">Last</div><div class="v" style="font-size:15px">${esc(relDay(fs.lastDate))}</div><div class="d">${fs.sessions} sessions</div></div>
+        </div>` : `<div class="sub">This variant hasn't been logged yet.</div>`}` : '';
+    return `${headline}${focusStrip}
       <div class="eyebrow" style="margin:14px 0 6px">Estimated 1RM by variant</div>
       ${chartMulti(series, { fmt: v => nice(Math.round(v)) })}
       <div class="eyebrow" style="margin:16px 0 4px">Records per variant</div>
@@ -4929,7 +4947,7 @@ function openMovementPage(movementId, focusKey) {
       if (!e.leaf || e.leaf.movement !== movementId) return;
       const working = e.sets.filter(s => s.done && isWorking(s));
       if (!working.length) return;
-      rows.push({ date: wo.date, name: exName(e), variant: [exVariant(e), isIso(e) ? 'hold' : ''].filter(Boolean).join(' · '),
+      rows.push({ date: wo.date, name: exName(e), variant: [exVariant(e), isIso(e) ? 'hold' : '', ...(e.mods || []).map(modLabel)].filter(Boolean).join(' · '),
                   key: exKey(e), leaf: e.leaf, iso: e.iso, sets: working, id: wo.id });
     }));
     rows.sort((a, b) => a.date < b.date ? 1 : -1);
@@ -6719,6 +6737,7 @@ function openSettings() {
         <button class="btn sm grow" id="stImport">Import JSON</button>
       </div>
       <button class="btn sm wide" id="stLiftoff" style="margin-top:9px">Import Liftoff CSV</button>
+      <button class="btn sm wide ghost" id="stCheck" style="margin-top:9px">Check exercise data</button>
       <div class="sub" style="margin-top:6px">Real training history — imported sessions count toward your PRs.</div>
       <button class="btn sm wide" id="stClear" style="margin-top:9px">Clear data…</button>
       <button class="btn sm danger wide" id="stWipe" style="margin-top:9px">Erase all data</button>
@@ -6817,6 +6836,7 @@ function openSettings() {
         e.target.value = '';   // so picking the same file twice still fires
       };
       $('#stClear', bg).onclick = openClearData;
+      $('#stCheck', bg).onclick = () => { closeModal(); openExerciseCheck(); };
       $('#stUpdate', bg).onclick = () => checkForUpdate(false);
       $('#stProfile', bg).onclick = () => { closeModal(); openProfile(); };
       $('#stWipe', bg).onclick = () => confirmDlg('This erases every workout, check-in, goal and meet. It cannot be undone.', () => {
@@ -7862,6 +7882,193 @@ function openHoldTimer(ei, si) {
   });
 }
 
+/* ---------------- modifiers ----------------
+   Technique, tempo, stance and range of motion ("comp pause", "slow eccentric")
+   as structured tags on the entry, instead of prose in the note. They annotate;
+   they never split the PR leaf. The splitsPR ones (chains, bands, slingshot,
+   equipped) are listed but greyed: giving them their own PR line is prKey's
+   job, and prKey is deliberately still unwired (roadmap item 14) — offering
+   them now would promise a separation that doesn't happen. Your own modifiers
+   are stored as "x:<text>". */
+function modVocab() { return catalogue().V.modifier || []; }
+function modLabel(id) {
+  if (String(id).startsWith('x:')) return String(id).slice(2);
+  const m = modVocab().find(x => x.id === id);
+  return m ? m.label : String(id);
+}
+function modsHtml(e) {
+  const ms = (e && e.mods) || [];
+  return ms.length ? ` <span class="dimmer">· ${ms.map(m => esc(modLabel(m))).join(', ')}</span>` : '';
+}
+function modChips(e, attr) {
+  const ms = e.mods || [];
+  return `<div class="row wrap modchips" style="gap:6px;margin-top:8px">
+    ${ms.map(m => `<span class="chip">${esc(modLabel(m))}</span>`).join('')}
+    <button class="chip modadd" ${attr} title="Technique, tempo, stance — tags that don't split the PR">${ms.length ? '✎' : '+ Modifier'}</button>
+  </div>`;
+}
+function openModPicker(e, after) {
+  let sel = new Set(e.mods || []);
+  const draw = () => {
+    const vocab = modVocab();
+    const custom = [...sel].filter(m => String(m).startsWith('x:'));
+    return `<div class="sub" style="margin-bottom:10px">Tags on this exercise for this session. They don't change which PR it counts toward.</div>
+      <div id="mdList">${vocab.filter(m => !m.splitsPR).map(m => `
+        <button class="axrow ${sel.has(m.id) ? 'on' : ''}" data-md="${esc(m.id)}"><span class="lbl">${esc(m.label)}</span><span class="rad"></span></button>`).join('')}
+      ${custom.map(m => `
+        <button class="axrow on" data-md="${esc(m)}"><span class="lbl">${esc(modLabel(m))} <span class="dimmer">yours</span></span><span class="rad"></span></button>`).join('')}
+      ${vocab.filter(m => m.splitsPR).map(m => `
+        <button class="axrow off" disabled title="Will get its own PR line with roadmap item 14"><span class="lbl">${esc(m.label)} <span class="dimmer">own PR line — not yet</span></span><span class="rad"></span></button>`).join('')}</div>
+      <div class="row" style="gap:8px;margin-top:10px">
+        <input id="mdNew" class="grow" placeholder="Your own — e.g. close grip, 3-0-1 tempo" maxlength="40">
+        <button class="btn sm" id="mdAdd">Add</button>
+      </div>`;
+  };
+  modal({
+    title: `Modifiers · ${exFull(e)}`,
+    body: draw(),
+    foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="mdOk">Done</button>`,
+    onOpen: bg => {
+      const bind = () => {
+        bg.querySelectorAll('[data-md]').forEach(b => b.onclick = () => {
+          const id = b.dataset.md;
+          if (sel.has(id)) sel.delete(id); else sel.add(id);
+          b.classList.toggle('on', sel.has(id));
+        });
+        const add = () => {
+          const t = $('#mdNew', bg).value.trim().replace(/\s+/g, ' ');
+          if (!t) return;
+          // a typed name that matches the list ticks that one rather than making a twin
+          const known = modVocab().find(m => m.label.toLowerCase() === t.toLowerCase());
+          sel.add(known && !known.splitsPR ? known.id : 'x:' + t);
+          $('.modal-body', bg).innerHTML = draw(); bind();
+        };
+        $('#mdAdd', bg).onclick = add;
+        $('#mdNew', bg).onkeydown = ev => { if (ev.key === 'Enter') { ev.preventDefault(); add(); } };
+      };
+      bind();
+      $('#mdOk', bg).onclick = () => {
+        // vocabulary order first, then yours in the order added
+        const order = modVocab().map(m => m.id);
+        e.mods = [...sel].sort((a, b) => (order.indexOf(a) + 1 || 999) - (order.indexOf(b) + 1 || 999));
+        closeModal(); after();
+      };
+    },
+  });
+}
+
+/* ---------------- exercise data check ----------------
+   Roadmap item 6: run against every logged session (and a Liftoff CSV) and
+   show that every entry resolves to a leaf, nothing is orphaned, and where
+   one old name now lands on more than one variant — the one place PRs can
+   have moved. Read-only: it reports and changes nothing. */
+function exerciseCheck(st, csvText) {
+  const R = { entries: 0, sets: 0, orphans: [], custom: {}, splits: [], drift: [], csv: null };
+  const byName = {};                 // legacyName -> key -> { entries, best }
+  const scan = (wo, where) => (wo.exercises || []).forEach(e => {
+    R.entries++; R.sets += (e.sets || []).length;
+    const label = e.legacyName || (e.leaf && e.leaf.movement) || '(unnamed)';
+    if (!e.leaf || !e.leaf.movement) { R.orphans.push({ name: label, where, date: wo.date, why: 'no leaf' }); return; }
+    const m = movementById(e.leaf.movement);
+    if (!m) { R.orphans.push({ name: label, where, date: wo.date, why: `unknown movement "${e.leaf.movement}"` }); return; }
+    if (m.custom) R.custom[m.name] = (R.custom[m.name] || 0) + 1;
+    if (where !== 'completed' || !e.legacyName) return;
+    const k = exKey(e);
+    const g = (byName[e.legacyName] = byName[e.legacyName] || {});
+    const x = (g[k] = g[k] || { entries: 0, best: 0 });
+    x.entries++;
+    e.sets.filter(s => s.done !== false && isWorking(s) && s.w > 0 && s.r > 0)
+      .forEach(s => { x.best = Math.max(x.best, e1rm(s.w, s.r, s.rpe)); });
+    /* The stored movement differs from what the old name resolves to today.
+       Axis changes (equipment, grip) are expected; a different movement is
+       worth a look. */
+    const r = resolveName(e.legacyName);
+    if (r && r.leaf.movement !== e.leaf.movement) R.drift.push({ name: e.legacyName, date: wo.date, now: fullName(e.leaf), resolves: fullName(r.leaf) });
+  });
+  (st.workouts || []).forEach(w => scan(w, w.status === 'completed' ? 'completed' : w.status || 'other'));
+  if (st.active) scan(st.active, 'active');
+  Object.entries(byName).forEach(([name, g]) => {
+    const keys = Object.keys(g);
+    if (keys.length > 1) R.splits.push({ name, variants: keys.map(k => ({ key: k, label: leafName(k) + (variantLabel(keyLeaf(k)) ? ` · ${variantLabel(keyLeaf(k))}` : ''), ...g[k] })) });
+  });
+  if (csvText != null) {
+    try {
+      const p = parseLiftoff(csvText);
+      const rows = p.names.map(raw => {
+        const mapped = (st.exAliases || {})[raw] || raw;
+        const r = resolveName(mapped);
+        return { raw, mapped, leaf: r ? fullName(r.leaf) : null };
+      });
+      R.csv = { sessions: p.sessions.length, sets: p.sets, resolved: rows.filter(x => x.leaf), unresolved: rows.filter(x => !x.leaf) };
+    } catch (err) { R.csv = { error: 'That does not look like a Liftoff CSV export' }; }
+  }
+  R.ok = !R.orphans.length && !(R.csv && (R.csv.error || R.csv.unresolved.length));
+  return R;
+}
+function exerciseCheckText(R) {
+  const L = [`Ironlog ${APP_VERSION} exercise data check`,
+    `${R.entries} entries, ${R.sets} sets`, `orphans: ${R.orphans.length}`];
+  R.orphans.forEach(o => L.push(`  ORPHAN ${o.name} (${o.where} ${o.date || ''}) — ${o.why}`));
+  L.push(`custom movements: ${Object.keys(R.custom).length}`);
+  Object.entries(R.custom).forEach(([n, c]) => L.push(`  ${n} ×${c}`));
+  L.push(`old names split across variants: ${R.splits.length}`);
+  R.splits.forEach(s => L.push(`  ${s.name}: ` + s.variants.map(v => `${v.label} (${v.entries}, best e1 ${Math.round(v.best)})`).join(' | ')));
+  L.push(`movement differs from what the old name resolves to: ${R.drift.length}`);
+  R.drift.slice(0, 50).forEach(d => L.push(`  ${d.date} ${d.name}: stored ${d.now}, resolves ${d.resolves}`));
+  if (R.csv) {
+    if (R.csv.error) L.push(`CSV: ${R.csv.error}`);
+    else {
+      L.push(`CSV: ${R.csv.sessions} sessions, ${R.csv.sets} sets, ${R.csv.resolved.length} names resolve, ${R.csv.unresolved.length} don't`);
+      R.csv.unresolved.forEach(u => L.push(`  UNRESOLVED ${u.raw}${u.mapped !== u.raw ? ` (alias ${u.mapped})` : ''}`));
+    }
+  }
+  return L.join('\n');
+}
+function openExerciseCheck(csvText) {
+  const R = exerciseCheck(S, csvText);
+  const list = (items, fn, empty) => items.length ? items.map(fn).join('') : `<div class="sub">${empty}</div>`;
+  modal({
+    title: 'Exercise data check',
+    body: `
+      <div class="sub" style="margin-bottom:10px">Reads everything, changes nothing.</div>
+      <div class="stats grid3" style="margin-bottom:12px">
+        <div class="stat"><div class="k">Entries</div><div class="v">${R.entries}</div><div class="d">${R.sets} sets</div></div>
+        <div class="stat"><div class="k">Orphans</div><div class="v" style="color:${R.orphans.length ? 'var(--red)' : 'var(--green)'}">${R.orphans.length}</div></div>
+        <div class="stat"><div class="k">Split names</div><div class="v">${R.splits.length}</div></div>
+      </div>
+      <div class="eyebrow">Orphans — entries with no exercise</div>
+      ${list(R.orphans.slice(0, 30), o => `<div class="exline"><span>${esc(o.name)}</span><span class="dimmer">${esc(o.date || o.where)} · ${esc(o.why)}</span></div>`, 'None — every entry resolves to an exercise.')}
+      <div class="eyebrow" style="margin-top:12px">One old name, several variants</div>
+      <div class="sub" style="margin-bottom:4px">Each variant keeps its own PRs, so these are where records split. Fine if you changed equipment on purpose.</div>
+      ${list(R.splits, s => `<div class="card tight" style="margin-bottom:6px"><b>${esc(s.name)}</b>
+        ${s.variants.map(v => `<div class="exline"><span>${esc(v.label)}</span><span class="mono dimmer">${v.entries}× · e1 ${v.best ? wt(v.best) : '—'}</span></div>`).join('')}</div>`, 'None.')}
+      <div class="eyebrow" style="margin-top:12px">Custom movements</div>
+      ${list(Object.entries(R.custom), ([n, c]) => `<div class="exline"><span>${esc(n)}</span><span class="dimmer">${c}×</span></div>`, 'None.')}
+      ${R.drift.length ? `<div class="eyebrow" style="margin-top:12px">Stored movement ≠ what the name resolves to now</div>
+        ${R.drift.slice(0, 20).map(d => `<div class="exline"><span>${esc(d.name)} <span class="dimmer">${esc(d.date)}</span></span><span class="dimmer">${esc(d.now)} · now ${esc(d.resolves)}</span></div>`).join('')}` : ''}
+      ${R.csv ? `<div class="eyebrow" style="margin-top:12px">Liftoff CSV</div>
+        ${R.csv.error ? `<div class="sub" style="color:var(--red)">${esc(R.csv.error)}</div>` : `
+        <div class="sub">${R.csv.sessions} sessions · ${R.csv.sets} sets · ${R.csv.resolved.length} names resolve · <b style="color:${R.csv.unresolved.length ? 'var(--red)' : 'var(--green)'}">${R.csv.unresolved.length} don't</b></div>
+        ${R.csv.unresolved.map(u => `<div class="exline"><span>${esc(u.raw)}</span><span class="dimmer">would become a custom movement</span></div>`).join('')}`}` : ''}
+      <input type="file" id="ckCsv" accept=".csv,text/csv" style="display:none">`,
+    foot: `<button class="btn sm ghost" id="ckCsvBtn">Check a Liftoff CSV</button><button class="btn sm ghost" id="ckCopy">Copy report</button><button class="btn primary" data-close>Close</button>`,
+    onOpen: bg => {
+      $('#ckCsvBtn', bg).onclick = () => $('#ckCsv', bg).click();
+      $('#ckCsv', bg).onchange = ev => {
+        const f = ev.target.files[0]; if (!f) return;
+        const rd = new FileReader();
+        rd.onload = () => { closeModal(); openExerciseCheck(rd.result); };
+        rd.onerror = () => toast('Could not read that file');
+        rd.readAsText(f);
+      };
+      $('#ckCopy', bg).onclick = () => {
+        const t = exerciseCheckText(R);
+        Promise.resolve(navigator.clipboard && navigator.clipboard.writeText(t)).then(() => toast('Report copied', 'green')).catch(() => toast('Could not copy'));
+      };
+    },
+  });
+}
+
 /* ============================================================
    AUTOREGULATION — roadmap item 4, r&d/specs/autoreg-spec.md
    The program says what to do; RIR decides the load. Each exercise has one
@@ -8798,6 +9005,11 @@ function wireActive(v) {
     const [ei, si] = b.dataset.plates.split('.').map(Number);
     const st = a.exercises[ei].sets[si];
     if (st && st.w > 0) openPlates(st.w, null, a.exercises[ei].leaf);
+  });
+
+  v.querySelectorAll('[data-mods]').forEach(b => b.onclick = () => {
+    const ex = a.exercises[+b.dataset.mods];
+    if (ex) openModPicker(ex, () => { save(); render(); });
   });
 
   v.querySelectorAll('[data-axis]').forEach(b => b.onclick = () => {
