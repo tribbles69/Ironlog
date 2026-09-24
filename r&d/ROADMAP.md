@@ -367,6 +367,120 @@ comp lands.
 
 ---
 
+## From Blast's issue tracker (ranked 2026-09-24)
+
+Ideas taken from the open issues of a competing app,
+<https://github.com/madmustachecompany/Blast-Workout-App/issues>, ranked by
+Aaron from "would be amazing" down to "only if there's nothing else to do".
+`#n` is the Blast issue number, for the original request.
+
+- This section sits **after Later**. Don't pull an item ahead of Now / Next
+  without asking Aaron.
+- Where an idea overlaps a numbered item above, it **extends that item** — build
+  it there, don't make a second copy.
+- Check the code first: some of these may already partly exist.
+
+### Tier 1 — would be amazing
+
+- [ ] **B1. Loaded carries, sleds and medleys** (#96, #109). A set shape with
+  **weight + distance + time** together: farmers, yoke, sandbag carry, sled
+  push/pull, rucking. Plus a **time-to-complete** mode for medleys and loading
+  events (n implements, time). Own PR pools (best time for a given weight and
+  distance; furthest distance at a weight). Feeds strongman in the Events page
+  (item 9).
+- [ ] **B2. Plate loader and warm-up ramp from the set** — extends item 19.
+  Reachable by tapping a set's weight on the workout page, not only from Tools.
+  Per-bar weights: SSB, trap bar, axle, log, deadlift bar, custom. kg plates
+  including change plates and collars. One tap for a ramp to today's working
+  weight (reuse `openRamp`).
+- [ ] **B3. Last session inline and fast entry** (#113, #42, #43). Show last
+  time's weight × reps @ RIR beside each set. Tap to fill; copy a value down to
+  the remaining sets; +/− steppers (2.5 kg, 1 rep) so the system keyboard is
+  rarely needed. Biggest single step towards "workout page ahead of the
+  competition".
+- [ ] **B4. Rest-end alert reaches the watch** (#17, #64, #101) — mostly done by
+  item 2. Remaining: confirm on Aaron's phone that the background notification
+  forwards to the watch and buzzes; if it's unreliable, say so in the setting.
+- [ ] **B5. Recovery heatmap on the skins** (#117) — this is item 16. Blast users
+  call it the feature they miss most. Also show it where exercises are picked
+  when building a session or program, not only on its own page. Same caveat
+  about muscle shares applies.
+- [ ] **B6. Import from other apps** (#13). Strong, Hevy, FitNotes and a generic
+  CSV, by generalising the Liftoff importer. Map to leaves via the exercise data
+  check (item 6) and show a dry-run report before anything is written.
+
+### Tier 2 — strong additions
+
+- [ ] **B7. Strength library seeding** (#38). Larsen press, TruSquat, SSB, trap
+  bar, belt squat, pendulum squat, sled, log, axle, yoke, stones, farmers
+  handles, Conan's wheel — as movement + equipment leaves. Check `EX_DB` for
+  what's already there.
+- [ ] **B8. Structured tempo** (#110) — extends the modifiers layer (item 6).
+  A four-digit tempo (eccentric–pause–concentric–pause, e.g. 3-1-1-0) rather
+  than a text chip; shown on the active set; doesn't split the PR leaf. VBT
+  Measure can fill in the real concentric time.
+- [ ] **B9. Per-side logging for unilateral lifts** (#79). Left and right reps
+  (and weight if different) on one set for unilateral leaves; imbalance trend on
+  the variant page. **Open decision:** which side counts for PRs (default: the
+  weaker side).
+- [ ] **B10. Set roles and linked sets** (#70). Tag sets warm-up / top set /
+  back-off / AMRAP / drop; group a drop-set chain so it reads as one. Warm-ups
+  stay out of volume and PRs. Related to supersets in `r&d/notes/backlog.md`.
+- [ ] **B11. Rep range + RIR suggestion** (#99). Optional rep range per exercise
+  in a program; hitting the top of the range at the target RIR suggests more
+  load next time. Works alongside item 4's autoregulation, doesn't replace it.
+- [ ] **B12. Session summary and PR history** (#22, #19, #18). End-of-session
+  screen: PRs hit, tonnage, e1RM change. Per-variant PR timeline on the movement
+  page.
+- [ ] **B13. Equipment profiles** (#41, #107). Named places ("Home", "Gym") with
+  their kit; the picker greys what isn't available there, and any program or AI
+  suggestion respects it.
+- [ ] **B14. Health Connect** (#58, #12). Bodyweight and HR in, sessions out.
+  Needs a native wrapper (Capacitor) — a PWA can't reach Health Connect. Only
+  if the app gets wrapped.
+
+### Tier 3 — nice when there's time
+
+- [ ] **B15.** Machine settings note or photo per variant, e.g. "seat 4, pad 6"
+  (#29). Stored locally.
+- [ ] **B16.** Band tension and chain weight fields — goes with item 14 (#112,
+  recast for accommodating resistance).
+- [ ] **B17.** Swap an exercise across past sessions, with a preview — useful
+  for cleaning up imports (#69).
+- [ ] **B18.** OLED true-black theme (#77).
+- [ ] **B19.** Setting for the workout timer at the top or bottom — machine
+  phone holders cover the bottom (#108).
+- [ ] **B20.** Custom trackers (unit + target: water, sleep, etc.) (#59, #15).
+  Bodyweight against weight class belongs with item 18 / Events.
+- [ ] **B21.** Progress photos, front/back/sides with side-by-side compare, kept
+  on the device — could live on the body comp page (item 18) (#95, #11).
+- [ ] **B22.** In-app help / FAQ, folded into the welcome screen (item 8) (#27).
+
+### Tier 4 — only if there's nothing else to do
+
+Strava (#115) · Whoop (#111) · translations (#116, #85) · reorder and sort
+routines (#80, #9) · separate muscle heads for arms (#63) · picture
+instructions (#21) · subscription status in Settings once premium exists (#20) ·
+suspension trainer, rings and jump rope exercises (#105, #93, #40).
+
+### Checks against Blast's bugs
+
+Blast shipped these bugs; make sure Ironlog doesn't have them. Tick each once
+checked.
+
+- [ ] Every exercise in a superset/circuit gets its PRs (Blast #87) — once
+  supersets exist.
+- [ ] Max-weight and max-reps PRs agree at the same weight (#51).
+- [ ] Nothing is ever stored as lbs; imported or synced weights are converted to
+  kg (#60, #61).
+- [ ] A started session can be discarded without logging it (#46).
+- [ ] Several sessions on the same day all show in history and the calendar
+  (#47).
+- [ ] Number inputs lose focus when the keyboard is dismissed or you tap
+  elsewhere (#49).
+
+---
+
 ## Parked
 See **`r&d/notes/backlog.md`** — sleep/recovery strip on sessions, sleeves/wraps/belt
 as gear, supersets and circuits. Each has its reasoning written down.
