@@ -13,6 +13,17 @@ rather than guessed.
 
 ---
 
+## 0.25.0 — 24 Sep 2026
+- **The Food tab is gone** — food logging is moving to its own app. The bottom
+  bar is back to five tabs.
+- If you had a food log, it isn't lost: **Settings → Data → Save old food log**
+  still saves it (for the new app, or as a spreadsheet). Once saved, remove it
+  from **Settings → Clear data**.
+- Check-ins no longer ask for calories, and the profile no longer sets food
+  targets. Your maintenance-calorie estimate is still shown there.
+- The optional API key in Settings is now only used by voice set logging.
+- The app is about a quarter smaller to download.
+
 ## 0.24.0 — 24 Sep 2026
 - **Export food log.** Food logging is moving out of Ironlog into its own app.
   A notice on the Food tab (and a button in Settings → Data) saves your whole

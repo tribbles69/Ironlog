@@ -70,7 +70,7 @@ window.smoke = async function smoke(opts) {
 
   // ---------------------------------------------------------------- seeding
   if (o.seed && o.seed !== 'keep') {
-    S.workouts = []; S.meets = []; S.goals = []; S.checkins = []; S.foods = [];
+    S.workouts = []; S.meets = []; S.goals = []; S.checkins = []; delete S.foods;
     S.customMovements = []; S.programs = []; S.active = null; S.exAliases = {};
     S.checkins = [{ date: today(), weight: 90 }];
     if (o.seed === 'program' || o.seed === 'migrated') {
@@ -97,13 +97,12 @@ window.smoke = async function smoke(opts) {
         mk('2026-08-14', 'Bench Press', [[80, 5]], { source: 'imported' }),
         mk('2026-08-15', 'Bench Press', [[75, 5]], { source: 'backfill' }));
       S.goals.push({ id: 'g1', type: 'lift', name: 'squat 220', exercise: 'back-squat/barbell/bilateral/none', target: 220, startVal: 200, deadline: '' });
-      S.foods.push({ id: 'f1', date: today(), meal: 'Lunch', name: 'Rice', serving: '100 g', kcal: 130, p: 2.7, c: 28, f: 0.3, fib: 0.4, src: 'table' });
     }
     save(); bust();
   }
 
   // ---------------------------------------------------------------- views
-  for (const p of ['home', 'calendar', 'workout', 'food', 'analytics', 'meets']) {
+  for (const p of ['home', 'calendar', 'workout', 'analytics', 'meets']) {
     await step(`view: ${p}`, async () => {
       go(p); await wait(120);
       const len = document.querySelector('#view').innerHTML.length;
@@ -124,9 +123,12 @@ window.smoke = async function smoke(opts) {
   await openCheck('modal: test log', () => openTestLog());
   await openCheck('modal: priority lifts', () => openPriority());
   await openCheck('modal: add event', () => openAddEvent());
-  await openCheck('modal: food targets', () => openFoodTargets());
   await openCheck('modal: profile', () => openProfile(), 300);
-  await openCheck('modal: food entry', () => openFoodEntry(null));
+  /* Food left in 0.25.0; a leftover log still has to export. */
+  await openCheck('modal: food export (leftover log)', () => {
+    S.foods = [{ id: 'f1', date: today(), meal: 'Lunch', name: 'Rice', serving: '100 g', kcal: 130, p: 2.7, c: 28, f: 0.3, fib: 0.4, src: 'table' }];
+    openFoodExport();
+  });
   /* A real Liftoff export shape — header plus a few rows, lb weights like the
      app expects to guess. Passing nothing here only proved the harness could
      call the function, not that the importer works. */
@@ -278,7 +280,7 @@ window.smoke = async function smoke(opts) {
 
   /* The profile edits S.settings live so the derived figures recompute as you
      type, which makes Cancel the interesting case: it has to put back what was
-     there. And "use these targets" has to actually reach the food targets. */
+     there. */
   await step('profile: derives, applies, and cancels cleanly', async () => {
     close();
     const st = S.settings;
@@ -303,13 +305,10 @@ window.smoke = async function smoke(opts) {
     if (suggestedTargets()) throw new Error('derived targets with no height');
     st.heightCm = h;
 
-    // applying writes through to the food targets
+    // the derived figures render on a complete profile
     openProfile(); await wait(200);
-    const use = document.querySelector('#pfUseTargets');
-    if (!use) throw new Error('no "use these targets" button on a complete profile');
-    use.click(); await wait(220); close();
-    if (S.settings.kcalTarget !== t.kcal) throw new Error(`kcal target is ${S.settings.kcalTarget}, expected ${t.kcal}`);
-    if (S.settings.proteinTarget !== t.p) throw new Error('protein target not applied');
+    if (!document.querySelector('.modal-body').textContent.includes(String(t.tdee))) throw new Error('maintenance figure not shown');
+    close();
 
     // cancel restores what was there on opening
     openProfile(); await wait(180);
@@ -496,15 +495,12 @@ window.smoke = async function smoke(opts) {
     return `share cards ${quick.width}x${quick.height} and ${full.width}x${full.height}`;
   });
 
-  await step('flow: food parse (tables only, no key)', async () => {
-    close(); go('food'); await wait(150);
-    const box = document.querySelector('#foodInput');
-    if (!box) throw new Error('no food input');
-    const before = S.foods.length;
-    box.value = '100g rice, 2 eggs';
-    document.querySelector('#foodParse').click(); await wait(900);
-    if (S.foods.length <= before) throw new Error('nothing logged from the local tables');
-    return `${S.foods.length - before} items`;
+  await step('food removed: tab gone, old route lands home', async () => {
+    close();
+    if (document.querySelector('#nav [data-page="food"]')) throw new Error('Food tab still in the nav');
+    go('food'); await wait(100);
+    if (page !== 'home') throw new Error(`go('food') landed on ${page}`);
+    return `${document.querySelectorAll('#nav button').length} tabs`;
   });
 
   await step('flow: migration dry run', async () => {
