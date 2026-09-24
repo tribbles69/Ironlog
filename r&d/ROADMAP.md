@@ -270,7 +270,7 @@ and from the Tools page (D11).
 - Per-variant PR timeline on the movement page.
 - An **e1RM trend chart** per main lift as a headline chart.
 
-### [ ] B6. Backup and sync to the user's own cloud drive
+### [x] B6. Backup and sync to the user's own cloud drive — shipped 0.33.0 (spec: `r&d/specs/drive-sync-spec.md`; **needs the Google client ID set up — see the spec's Setup**)
 Losing data is a top reason people quit apps. Local-only: no Ironlog server or
 account holds user data. Backup/sync writes to a file in the **user's own
 Google Drive** (Dropbox etc. later), so data survives losing or changing a
