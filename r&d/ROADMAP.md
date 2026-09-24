@@ -7,9 +7,16 @@ any agent (Claude Code etc.) picking up work cold.
 especially. Ironlog has to earn its keep for one user first — Aaron — before it
 competes with anything.
 
-**Model:** the app is free and genuinely complete (logging, comp prep, VBT).
-Premium (~£5/month) is AI features and cloud sync. Things that cost nothing per use
-(export, meet tooling) stay free.
+**Model (decided 2026-09-24, replaces the earlier ~£5/month premium plan):**
+- Everything that runs on the phone is **free, forever** — logging, comp prep,
+  VBT, cardio, calculators, export. Never paywall a feature.
+- **Local-only.** No Ironlog account and no Ironlog server holding user data.
+  Backup/sync goes to the **user's own cloud drive** (Google Drive first), so
+  their data sits in their storage, not ours (see item 10).
+- **AI is the only thing that costs per use**, so it's the only paid part:
+  a paid tier roughly at cost, plus **bring-your-own API key** as a free route.
+- Funding: donations (Ko-fi / GitHub Sponsors, supporter badge) and cosmetic
+  **muscle-map skin packs**.
 
 ---
 
@@ -40,7 +47,8 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
 - RIR is what's shown and typed; **RPE is what's stored** and what all effort
   maths uses, via `rirToRpe` / `rpeToRir`. Don't store RIR.
 - Weights are kg.
-- Local-first: the device is the source of truth; any server is a sync target.
+- Local-only: the device is the source of truth; the user's own cloud drive is
+  a backup/sync target. No Ironlog server stores user training data.
 - AI is a fallback, never the first path. Local tables/databases answer first.
 - Never fix `prKey` / `splitsPR` as a side effect of another feature (see Later).
 
@@ -152,7 +160,7 @@ speed, since it can't read the treadmill. Wake Lock for the whole session.
 time-in-zone, average HR, duration, distance (from speed × time). Show the HR
 trace as a chart on the session card.
 
-**Later (premium, optional):** a Haiku call about once a minute looking at HR
+**Later (paid AI, optional):** a Haiku call about once a minute looking at HR
 *trend* rather than the instant reading — pre-empting drift out of zone and
 varying the coaching language. Only once the plain loop works.
 
@@ -244,7 +252,7 @@ estimated RIR for that set.
 
 ### 8. Welcome / first-run screen
 More important than login. Sets units, lifts, event goals; explains data stays
-on the device.
+on the device and backs up to the user's own drive.
 
 ### 9. Events page (replaces Meets)
 Pick the event type (powerlifting meet, strongman, other) and queue several
@@ -349,8 +357,9 @@ Blast issue number, for the original request.
 
 Strava (#115) · Whoop (#111) · translations (#116, #85) · reorder and sort
 routines (#80, #9) · separate muscle heads for arms (#63) · picture
-instructions (#21) · subscription status in Settings once premium exists (#20) ·
-suspension trainer, rings and jump rope exercises (#105, #93, #40).
+instructions (#21) · subscription status in Settings once the paid AI tier
+exists (#20) · suspension trainer, rings and jump rope exercises (#105, #93,
+#40).
 
 ### Checks against Blast's bugs
 
@@ -372,16 +381,27 @@ checked.
 
 ## Later
 
-### 10. Cloud sync (premium)
-Local-first with sync so data survives losing or changing a phone.
-- Supabase, anonymous auth first; Google login deferred.
-- Schema versioning, tombstone deletes.
-- **First sign-in pushes local data up — never overwrites it.**
+### 10. Backup and sync to the user's own cloud drive (free)
+Replaces the Supabase plan (decided 2026-09-24). Local-only: no Ironlog server
+or account holds user data. Backup/sync writes to a file in the **user's own
+Google Drive** (Dropbox etc. later), so data survives losing or changing a
+phone.
+- Sign-in is only to reach their own Drive. Use the narrowest scope that works
+  (app-created files only), and say so plainly in the UI.
+- Schema versioning, tombstone deletes; merging between two devices must never
+  lose local data.
+- **First connect pushes local data up — never overwrites it.** Restoring on a
+  new phone pulls it down.
+- Until this ships, nudge regular JSON exports.
 
-### 11. Server-side AI for all users (premium)
-Aaron's own Anthropic key used server-side for everyone (e.g. Supabase Edge
-Function), not a key per user. Non-negotiable: per-user budgets, rate limits,
-abuse controls. Meter AI usage carefully at £5/month.
+### 11. Server-side AI (paid)
+The only paid part of Ironlog, because every call costs money.
+- Paying users: Aaron's own Anthropic key used server-side (e.g. a serverless
+  function), never on the phone. Priced roughly at cost plus a bit.
+- Free route: **bring your own API key**, entered on the device and used only
+  from the device.
+- Non-negotiable for the paid route: per-user budgets, rate limits, abuse
+  controls. The server handles AI requests only and stores no training data.
 
 ### 12. AI coaching
 - Logging stays tightly scoped structured calls, separate from any chat.
