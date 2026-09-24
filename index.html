@@ -266,6 +266,11 @@ h3{font-size:13.5px;margin:0 0 8px}
   border:1px solid rgba(255,92,53,.3);border-radius:14px;padding:12px 14px;margin-bottom:13px;
 }
 .timer{font-size:26px;font-weight:750;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.restbar{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:6px}
+.restbar > .grow{min-width:0}
+.restbar .eyebrow{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.restbar .rc{font-size:22px;font-weight:750;letter-spacing:-.5px;font-variant-numeric:tabular-nums;min-width:62px}
+.restbar.over .rc{color:var(--green)}
 
 .ex-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);margin-bottom:11px;overflow:hidden}
 .ex-head{padding:12px 13px 10px;border-bottom:1px solid var(--line)}
@@ -1107,7 +1112,13 @@ const DEFAULT_STATE = {
     activity: 'moderate',   // sedentary | light | moderate | high | athlete
     nutritionGoal: 'maintain',   // lose | maintain | gain
     priority: ['Back Squat', 'Bench Press', 'Deadlift'],
-    restDefault: 180,
+    restDefault: 180,       // rest after a main lift's working set, seconds
+    restAccessory: 90,      // rest after anything else
+    restWarn: 10,           // warning beep this many seconds before rest ends; 0 = off
+    restAuto: true,         // start the rest timer when a set is ticked
+    restBy: {},             // exKey -> seconds, a per-exercise default set from its menu
+    sound: true,            // timer beeps (hold count-in, rest end)
+    vibrate: true,          // timer haptics, where the phone supports them
     openerPct: 90,          // opener as a % of the latest tested single
     barKg: 20,              // empty bar, for warm-up ramps
     smithKg: null,          // Smith carriage; null = not measured yet. Logged Smith
@@ -1430,7 +1441,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.16.3';
+const APP_VERSION = '0.18.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -1553,8 +1564,11 @@ function resolveName(name) {
 }
 
 function leafKey(l) { return `${l.movement}/${l.equipment}/${l.execution}/${l.attachment}`; }
-function keyLeaf(k) { const p = String(k).split('/'); return { movement: p[0], equipment: p[1], execution: p[2], attachment: p[3] }; }
-function leafName(k) { return displayName(keyLeaf(k)); }
+/* An exKey may carry the isometric suffix (see exKey); the leaf is what comes
+   before it. */
+function keyLeaf(k) { const p = String(k).split('|')[0].split('/'); return { movement: p[0], equipment: p[1], execution: p[2], attachment: p[3] }; }
+function keyIsIso(k) { return String(k).endsWith('|iso'); }
+function leafName(k) { return displayName(keyLeaf(k)) + (keyIsIso(k) ? ' (hold)' : ''); }
 
 /* prKey adds any splitsPR modifiers. Sorted, because it is a persisted grouping
    key: a different order would silently split a PR history. */
@@ -1586,22 +1600,59 @@ function metricFor(leaf) { const m = movementById(leaf.movement); return (m && m
    leaves `w`/`r` alone — `r: null` reads as "not recorded" everywhere else, and
    the arithmetic already coerces it to 0, so volume and e1RM stay correct
    without a special case. */
-function isTimed(leaf) { return leaf && metricFor(leaf) === 'time'; }
+/* Takes an entry or a bare leaf. An entry flagged `iso` is an isometric hold
+   of a normally rep-based lift: isometric is a property of this entry in this
+   session, not of the movement (r&d/specs/isometrics-spec.md), so a lateral
+   raise held for 20 s is timed while every other lateral raise is not. */
+function isTimed(x) {
+  if (!x) return false;
+  if (x.leaf) return x.iso === true || metricFor(x.leaf) === 'time';   // entry
+  return metricFor(x) === 'time';                                        // bare leaf
+}
+/* An isometric entry keeps its weight column, a plain timed movement doesn't. */
+function isIso(e) { return !!(e && e.iso === true); }
 
-/* Longest completed working hold for a leaf, in seconds. Deliberately not part
-   of statsFor: that whole machine is weight x reps, and threading a second
-   metric through it would touch rankings, the muscle map and the movement page
-   for no gain here. */
-function bestHold(key) {
-  let best = 0;
+/* Completed working holds for a key, in seconds. Deliberately not part of
+   statsFor: that whole machine is weight x reps, and threading a second metric
+   through it would touch rankings, the muscle map and the movement page for no
+   gain here.
+
+   Records are per weight, mirroring statsFor's byRep: an 8 kg lateral raise
+   held 20 s and a bodyweight hold of 40 s are different records, and the
+   heavier one must be able to be one. `best` is the longest hold at any
+   weight, `heaviest` the most load ever held. */
+function holdRecords(key) {
+  const byWeight = {};
+  let best = 0, heaviest = 0, n = 0;
   for (const w of S.workouts) {
     if (w.status !== 'completed') continue;
     for (const e of w.exercises) {
       if (!e.leaf || exKey(e) !== key) continue;
-      for (const s of e.sets) if (s.done && isWorking(s) && s.sec > best) best = s.sec;
+      for (const s of e.sets) {
+        if (!s.done || !isWorking(s) || !(s.sec > 0)) continue;
+        const kg = s.w > 0 ? s.w : 0;
+        n++;
+        if (s.sec > best) best = s.sec;
+        if (kg > heaviest) heaviest = kg;
+        if (!(byWeight[kg] >= s.sec)) byWeight[kg] = s.sec;
+      }
     }
   }
-  return best;
+  return { byWeight, best, heaviest, n };
+}
+/* Longest hold at this weight; without a weight, the longest at any. */
+function bestHold(key, kg) {
+  const r = holdRecords(key);
+  return kg == null ? r.best : (r.byWeight[kg > 0 ? kg : 0] || 0);
+}
+/* Does a hold beat the history? Longer than the best at the same weight, or
+   the first hold at a load heavier than any held before. A first hold at a
+   lighter weight is just a hold. */
+function holdBeats(recs, kg, sec) {
+  if (!recs.n || !(sec > 0)) return false;
+  const w = kg > 0 ? kg : 0;
+  const at = recs.byWeight[w];
+  return at ? sec > at : w > recs.heaviest;
 }
 
 function fmtSec(sec) {
@@ -1627,6 +1678,92 @@ function parseTime(str) {
   const sec = parts.reduce((a, n) => a * 60 + n, 0);
   return sec > 0 ? sec : null;
 }
+
+/* A hold as one short string: "8 kg · 0:22", or just "0:22" unloaded. */
+function holdLabel(s) {
+  if (!s || !s.sec) return '—';
+  return `${s.w > 0 ? wt(s.w) + ' · ' : ''}${fmtSec(s.sec)}`;
+}
+
+/* ---------------- sound, haptics, wake lock ----------------
+   Shared by the hold timer and the rest timer, and meant for the cardio session
+   on the roadmap too. No audio files: a Web Audio oscillator, so it works
+   offline and weighs nothing. Mobile browsers refuse audio until a user
+   gesture, so the context is only ever created by Cue.unlock(), which the tap
+   that starts a timer calls — never on page load. */
+const Cue = {
+  ctx: null,
+  unlock() {
+    try {
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (!AC) return null;
+      if (!this.ctx || this.ctx.state === 'closed') this.ctx = new AC();
+      if (this.ctx.state === 'suspended') this.ctx.resume().catch(() => {});
+      return this.ctx;
+    } catch (e) { return null; }
+  },
+  soundOn() { return S.settings.sound !== false; },
+  vibeOn() { return S.settings.vibrate !== false; },
+  /* One tone, `at` seconds from now on the audio clock. */
+  beep(freq = 800, ms = 120, at = 0) {
+    if (!this.soundOn()) return;
+    const c = this.ctx;
+    if (!c || c.state === 'closed') return;
+    try {
+      const t = c.currentTime + 0.03 + at, len = Math.max(60, ms) / 1000;
+      const o = c.createOscillator(), g = c.createGain();
+      o.type = 'sine';
+      o.frequency.value = freq;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.4, t + 0.012);
+      g.gain.setValueAtTime(0.4, t + len - 0.04);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + len);
+      o.connect(g);
+      g.connect(c.destination);
+      o.start(t);
+      o.stop(t + len + 0.02);
+    } catch (e) { /* a missed beep is not worth a crash */ }
+  },
+  buzz(pattern) {
+    if (!this.vibeOn() || !navigator.vibrate) return;
+    try { navigator.vibrate(pattern); } catch (e) { /* unsupported */ }
+  },
+  /* Two short, then one long that marks "go" — two seconds after the call. */
+  countIn() {
+    this.beep(800, 120, 0); this.beep(800, 120, 1); this.beep(1200, 450, 2);
+    this.buzz(60);
+    setTimeout(() => this.buzz(60), 1000);
+    setTimeout(() => this.buzz(250), 2000);
+  },
+  tick() { this.beep(800, 90); },
+  done() { this.beep(1200, 650); this.buzz([220, 120, 220]); },
+};
+
+/* Screen Wake Lock, shared by whoever needs the screen on. Refcounted by name so
+   the rest timer releasing can't switch the screen off under a running hold.
+   The browser drops the lock whenever the page is hidden, so it is taken again
+   on return. Not available everywhere — failing is fine, the timers are
+   timestamp-based and read correctly after the screen has slept. */
+const Awake = {
+  who: new Set(), lock: null, pending: false,
+  hold(name) { this.who.add(name); this._take(); },
+  release(name) {
+    this.who.delete(name);
+    if (!this.who.size && this.lock) { const l = this.lock; this.lock = null; l.release().catch(() => {}); }
+  },
+  async _take() {
+    if (this.lock || this.pending || !this.who.size) return;
+    if (!('wakeLock' in navigator) || document.visibilityState !== 'visible') return;
+    this.pending = true;
+    try {
+      const l = await navigator.wakeLock.request('screen');
+      if (!this.who.size) l.release().catch(() => {});      // released while the request was in flight
+      else { this.lock = l; l.addEventListener('release', () => { if (this.lock === l) this.lock = null; }); }
+    } catch (e) { /* refused: low battery, no permission, unsupported */ }
+    this.pending = false;
+  },
+};
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') Awake._take(); });
 
 /* Display text is derived from the leaf, never stored — a stored display string
    is a third source of truth and the thing that rots. Only axes that actually
@@ -1677,8 +1814,8 @@ function nameHtml(leaf) {
   return `${esc(displayName(leaf))}${v ? ` <span class="dimmer">${esc(v)}</span>` : ''}`;
 }
 function exVariant(e) { return e && e.leaf ? variantLabel(e.leaf) : ''; }
-function exFull(e) { return e && e.leaf ? fullName(e.leaf) : (e && e.legacyName) || ''; }
-function exNameHtml(e) { return e && e.leaf ? nameHtml(e.leaf) : esc((e && e.legacyName) || ''); }
+function exFull(e) { return (e && e.leaf ? fullName(e.leaf) : (e && e.legacyName) || '') + (isIso(e) ? ' (hold)' : ''); }
+function exNameHtml(e) { return (e && e.leaf ? nameHtml(e.leaf) : esc((e && e.legacyName) || '')) + (isIso(e) ? ' <span class="dimmer">hold</span>' : ''); }
 
 
 /* Equipment and execution glyphs. Generic per-axis marks, not per-exercise
@@ -2038,7 +2175,11 @@ function migrateToV2(st) {
 }
 
 /* The identity of an entry, for every history/PR join. */
-function exKey(e) { return e && e.leaf ? leafKey(e.leaf) : ''; }
+/* An isometric entry gets its own key, so a 20 s loaded hold and a set of ten
+   never contend for the same record or share a history. Computed, never
+   persisted. This is deliberately not prKey/splitsPR (still unwired, roadmap
+   item 14) — only the iso suffix. */
+function exKey(e) { return e && e.leaf ? leafKey(e.leaf) + (e.iso === true ? '|iso' : '') : ''; }
 function exName(e) { return e && e.leaf ? displayName(e.leaf) : (e && e.legacyName) || ''; }
 /* A set counts as working when it is not a warm-up. */
 function isWorking(s) { return s.setType !== 'warmup'; }
@@ -2724,7 +2865,7 @@ function toast(msg, cls = '') {
 }
 
 let modalStack = [];
-function modal({ title, body, foot, onOpen, wide }) {
+function modal({ title, body, foot, onOpen, wide, sticky, onClose }) {
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
   bg.innerHTML = `
@@ -2733,7 +2874,10 @@ function modal({ title, body, foot, onOpen, wide }) {
       <div class="modal-body">${body}</div>
       ${foot ? `<div class="modal-foot">${foot}</div>` : ''}
     </div>`;
-  bg.addEventListener('click', e => { if (e.target === bg || e.target.hasAttribute('data-close')) closeModal(); });
+  /* sticky: a stray tap on the backdrop must not end a running timer. */
+  bg.addEventListener('click', e => {
+    if ((e.target === bg && !sticky) || e.target.hasAttribute('data-close')) { closeModal(); if (onClose) onClose(); }
+  });
   $('#modalRoot').appendChild(bg);
   modalStack.push(bg);
   if (onOpen) onOpen(bg);
@@ -3236,10 +3380,10 @@ function completedCard(wo) {
     const s = e.sets.filter(x => x.done && isWorking(x));
     // a timed entry's headline set is the longest hold, not the heaviest load
     const top = !s.length ? null
-      : isTimed(e.leaf) ? s.reduce((a, b) => (b.sec || 0) > (a.sec || 0) ? b : a)
+      : isTimed(e) ? s.reduce((a, b) => (b.sec || 0) > (a.sec || 0) ? b : a)
         : s.reduce((a, b) => e1rm(b.w, b.r) > e1rm(a.w, a.r) ? b : a);
     return `<div class="exline"><span>${exNameHtml(e)} <span class="dimmer">×${s.length}</span></span>
-        <span class="mono muted">${!top ? '—' : isTimed(e.leaf) ? fmtSec(top.sec) : `${wt(top.w)} × ${top.r}`}</span></div>`;
+        <span class="mono muted">${!top ? '—' : isTimed(e) ? holdLabel(top) : `${wt(top.w)} × ${top.r}`}</span></div>`;
   }).join('')}
   </div>`;
 }
@@ -3556,6 +3700,7 @@ function activeWorkout() {
     <div class="row" style="margin-top:8px">
       <button class="btn sm wide" id="voiceBtn">🎤 Log a set</button>
     </div>
+    <div id="restHost">${restBarHtml()}</div>
   </div>
 
   ${a.exercises.map((e, ei) => exerciseCard(e, ei)).join('')}
@@ -3589,21 +3734,29 @@ function exerciseCard(e, ei) {
   const todayBest = Math.max(0, ...e.sets.filter(s => s.done && isWorking(s) && s.w && s.r).map(s => e1rm(s.w, s.r, s.rpe)));
   const beatE1 = st && todayBest > bestE1;
 
-  const timed = isTimed(e.leaf);
+  const timed = isTimed(e);
+  const isoE = isIso(e);
 
   /* A timed movement never earns a weight PR, so the weight banner would sit on
      "First time — everything is a PR" forever. Best hold is the number that
      actually means something here, and reading it straight from history keeps
-     the stats machine (which is built on weight × reps) out of it. */
-  const holdBest = timed ? bestHold(exKey(e)) : 0;
+     the stats machine (which is built on weight × reps) out of it. An
+     isometric hold's record is per weight, so the banner shows the one at the
+     load on today's first working set — the record actually being chased. */
+  const recs = timed ? holdRecords(exKey(e)) : null;
+  const refW = isoE ? ((e.sets.find(s => isWorking(s) && s.w > 0) || {}).w || 0) : 0;
+  const holdBest = timed ? (isoE ? recs.byWeight[refW] || 0 : recs.best) : 0;
   const todayHold = timed
-    ? Math.max(0, ...e.sets.filter(s => s.done && isWorking(s) && s.sec).map(s => s.sec))
+    ? Math.max(0, ...e.sets.filter(s => s.done && isWorking(s) && s.sec && (!isoE || (s.w > 0 ? s.w : 0) === refW)).map(s => s.sec))
     : 0;
+  const atW = isoE ? ` at ${refW > 0 ? wt(refW) : 'bodyweight'}` : '';
 
   const prBanner = timed
-    ? (holdBest
-      ? `<span class="chip gold">★ Best ${fmtSec(holdBest)}</span>
-         ${todayHold > holdBest ? `<span class="chip green">▲ BEAT IT · ${fmtSec(todayHold)}</span>` : ''}`
+    ? (recs.n
+      ? (holdBest
+        ? `<span class="chip gold">★ Best ${fmtSec(holdBest)}${atW}</span>
+           ${todayHold > holdBest ? `<span class="chip green">▲ BEAT IT · ${fmtSec(todayHold)}</span>` : ''}`
+        : `<span class="chip gold">★ Longest ${fmtSec(recs.best)}</span><span class="chip">nothing yet${atW}</span>`)
       : `<span class="chip">First time — everything is a PR</span>`)
     : st
       ? `<span class="chip gold">★ PR ${wt(st.bestW.w)} × ${st.bestW.r}${st.bestWIsEst ? ' <span class="dimmer">EST</span>' : ''}</span>
@@ -3619,13 +3772,31 @@ function exerciseCard(e, ei) {
     const setNo = `<td class="c-set"><div class="setno ${isWarm(s) ? 'warm' : ''}" data-warm="${ei}.${si}" title="Toggle warm-up">${isWarm(s) ? 'W' : si + 1 - e.sets.slice(0, si).filter(x => isWarm(x)).length}</div></td>
       <td class="c-del"><button class="delset" data-delset="${ei}.${si}" title="Delete set">×</button></td>`;
     const chk = `<td class="c-chk"><button class="chk ${s.done ? 'on' : ''}" data-done="${ei}.${si}">✓</button></td>`;
+    const holdBtn = `<button class="plbtn" data-hold="${ei}.${si}" title="Hold timer">⏱</button>`;
+    /* An isometric hold keeps its load and its RIR, and swaps reps for time.
+       Held to failure (test mode) means RIR 0 by definition, so it's shown
+       rather than asked. */
+    if (isoE) {
+      return `<tr class="${s.done ? 'done' : ''}">
+      ${setNo}
+      <td class="c-prev mono">${p && p.sec ? `${p.w > 0 ? nice(dw(p.w)) + '·' : ''}${fmtSec(p.sec)}` : '—'}</td>
+      <td class="c-wt"><input type="number" step="0.5" inputmode="decimal" data-f="w" data-k="${ei}.${si}" value="${s.w ? dw(s.w) : ''}" placeholder="0"></td>
+      <td class="c-pl">${holdBtn}</td>
+      <td class="c-time"><input type="text" inputmode="numeric" data-f="sec" data-k="${ei}.${si}" value="${fmtSec(s.sec)}" placeholder="m:ss"></td>
+      <td>${s.holdMode === 'test'
+        ? `<span class="mono dimmer" title="Held to failure — RIR 0">0</span>`
+        : `<input type="number" step="1" inputmode="numeric" data-f="rpe" data-k="${ei}.${si}" value="${s.rpe == null ? '' : rpeToRir(s.rpe)}" placeholder="—">`}</td>
+      ${chk}
+    </tr>`;
+    }
     /* A timed movement has no reps or weight input (spec §6) — one duration
        field, and the plate button goes with the weight it belonged to. */
     if (timed) {
       return `<tr class="${s.done ? 'done' : ''}">
       ${setNo}
       <td class="c-prev mono">${p && p.sec ? fmtSec(p.sec) : '—'}</td>
-      <td class="c-time" colspan="4"><input type="text" inputmode="numeric" data-f="sec" data-k="${ei}.${si}" value="${fmtSec(s.sec)}" placeholder="m:ss"></td>
+      <td class="c-time" colspan="3"><input type="text" inputmode="numeric" data-f="sec" data-k="${ei}.${si}" value="${fmtSec(s.sec)}" placeholder="m:ss"></td>
+      <td class="c-pl">${holdBtn}</td>
       ${chk}
     </tr>`;
     }
@@ -3643,7 +3814,7 @@ function exerciseCard(e, ei) {
   return `<div class="ex-card">
     <div class="ex-head">
       <div class="row between">
-        <div class="ex-name grow">${esc(exName(e))}</div>
+        <div class="ex-name grow">${esc(exName(e))}${isoE ? ' <span class="chip">HOLD</span>' : ''}</div>
         ${timed ? '' : `<button class="btn xs ghost" data-ramp="${ei}" title="Warm-up ramp">▲ Warm-up</button>`}
         <button class="icon-btn" data-ex-menu="${ei}">⋯</button>
       </div>
@@ -3652,7 +3823,9 @@ function exerciseCard(e, ei) {
       ${e.notes ? `<div class="ex-note">${esc(e.notes)}</div>` : ''}
     </div>
     <table class="settable">
-      <thead><tr><th class="c-set">Set</th><th class="c-del"></th><th class="c-prev">Prev</th>${timed
+      <thead><tr><th class="c-set">Set</th><th class="c-del"></th><th class="c-prev">Prev</th>${isoE
+      ? `<th class="c-kg">${U()}</th><th class="c-pl"></th><th class="c-reps">Time</th><th class="c-rpe">RIR</th>`
+      : timed
       ? `<th class="c-time" colspan="4">Time</th>`
       : `<th class="c-kg">${U()}</th><th class="c-pl"></th><th class="c-reps">Reps</th><th class="c-rpe">RIR</th>`}<th class="c-chk"></th></tr></thead>
       <tbody>${rows}</tbody>
@@ -3897,17 +4070,18 @@ function finishWorkout(force) {
      away every timed set at the moment of finishing: a session of nothing but
      planks refused to finish at all, and a mixed session dropped the planks
      from the saved record without saying so. */
-  const logged = a.exercises.map(e => ({
-    ...e,
-    sets: e.sets.filter(s => s.done && (isTimed(e.leaf) ? s.sec > 0 : s.r > 0)),
-  })).filter(e => e.sets.length);
+  const logged = a.exercises.map(e => {
+    const x = { ...e, sets: e.sets.filter(s => s.done && (isTimed(e) ? s.sec > 0 : s.r > 0)) };
+    delete x.rest;   // the session's ±15 s override; it isn't part of the record
+    return x;
+  }).filter(e => e.sets.length);
   if (!logged.length) return toast('Log at least one set first');
 
   // sets ticked and then retyped never met the single-set prompt
   if (!force) {
     const flagged = [];
     logged.forEach(e => {
-      if (isTimed(e.leaf)) return;              // nothing to say about a duration
+      if (isTimed(e)) return;                   // nothing to say about a duration
       e.sets.filter(s => isWorking(s)).forEach(s => {
         const why = plausibility(exKey(e), s.w, s.r, s.rpe);
         if (why.length) flagged.push({ name: exFull(e), s, why });
@@ -3919,7 +4093,7 @@ function finishWorkout(force) {
   // PRs — compare against history BEFORE this workout is saved
   const prs = [];
   logged.forEach(e => {
-    if (isTimed(e.leaf)) return;   // a hold is not an e1RM; its best is toasted at tick time
+    if (isTimed(e)) return;        // a hold is not an e1RM, isometric or not; its best is toasted at tick time
     const st = statsFor(exKey(e));
     const working = e.sets.filter(s => isWorking(s));
     if (!working.length) return;
@@ -3940,6 +4114,7 @@ function finishWorkout(force) {
   if (a.plannedFrom) S.workouts = S.workouts.filter(w => w.id !== a.plannedFrom);
   S.workouts = S.workouts.filter(w => w.id !== done.id);
   S.workouts.push(done);
+  stopRest();
   S.active = null;
   save(); bust();
   showSummary(done);
@@ -3995,8 +4170,10 @@ function roundRect(x, px, py, w2, h2, r) {
   x.closePath();
 }
 
-function setLabel(s, leaf) {
-  if (isTimed(leaf)) return s.sec ? fmtSec(s.sec) : '—';
+/* Takes the entry, not the leaf: whether a set is a hold depends on the entry's
+   iso flag as well as the movement. */
+function setLabel(s, e) {
+  if (isTimed(e)) return holdLabel(s);
   return `${s.w > 0 ? wt(s.w) + ' × ' : ''}${s.r}${s.w > 0 ? '' : ' reps'}${s.rpe ? ' @ ' + rpeToRir(s.rpe) : ''}`;
 }
 
@@ -4164,7 +4341,7 @@ function fullCardCanvas(wo) {
     x.textAlign = 'right'; x.fillStyle = CARD.dim; x.font = cardFont(24, 600);
     // timed: total time. bodyweight: reps, not 0kg
     const totSec = working.reduce((a, s) => a + (s.sec || 0), 0);
-    x.fillText(`${working.length} set${working.length === 1 ? '' : 's'} · ${isTimed(e.leaf) ? fmtSec(totSec) : vol > 0 ? wt(vol, 0) : reps + ' reps'}`, W - P, y + 42);
+    x.fillText(`${working.length} set${working.length === 1 ? '' : 's'} · ${isTimed(e) ? fmtSec(totSec) : vol > 0 ? wt(vol, 0) : reps + ' reps'}`, W - P, y + 42);
     y += 64;
     let n = 0;
     sets.forEach(s => {
@@ -4173,7 +4350,7 @@ function fullCardCanvas(wo) {
       x.fillStyle = isWarm(s) ? CARD.warm : CARD.dim; x.font = cardFont(23, 600);
       x.fillText(isWarm(s) ? 'W' : String(++n), P + 12, y + 28);
       x.fillStyle = isWarm(s) ? CARD.warm : isPR ? CARD.gold : CARD.text; x.font = cardFont(26, isPR ? 780 : 620);
-      x.fillText(setLabel(s, e.leaf) + (isPR ? '  ★' : ''), P + 64, y + 28);
+      x.fillText(setLabel(s, e) + (isPR ? '  ★' : ''), P + 64, y + 28);
       if (s.w > 0 && s.r > 0 && isWorking(s)) {
         x.textAlign = 'right'; x.fillStyle = CARD.dim; x.font = cardFont(22, 600);
         x.fillText(`e1RM ${wt(e1rm(s.w, s.r, s.rpe))}`, W - P, y + 28);
@@ -4278,7 +4455,7 @@ function showSummary(wo) {
       ${wo.exercises.map(e => {
       const ws = e.sets.filter(s => isWorking(s));
       const warm = e.sets.filter(s => isWarm(s));
-      const timed = isTimed(e.leaf);
+      const timed = isTimed(e);
       const v = ws.reduce((a, s) => a + s.w * s.r, 0);
       // a timed entry's headline is total time held, and its best set the longest one
       const totSec = ws.reduce((a, s) => a + (s.sec || 0), 0);
@@ -4292,7 +4469,7 @@ function showSummary(wo) {
           </div>
           ${e.sets.map((st, i) => `<div class="row between" style="padding:3px 0;font-size:13px">
             <span class="sub" style="width:52px">${isWarm(st) ? 'warm' : 'Set ' + (ws.indexOf(st) + 1)}</span>
-            <span class="mono grow" style="${st === top && ws.length > 1 ? 'color:var(--gold);font-weight:700' : ''}">${timed ? fmtSec(st.sec) || '—' : `${wt(st.w)} × ${st.r}`}</span>
+            <span class="mono grow" style="${st === top && ws.length > 1 ? 'color:var(--gold);font-weight:700' : ''}">${timed ? holdLabel(st) : `${wt(st.w)} × ${st.r}`}</span>
             <span class="mono sub">${st.rpe ? 'RIR ' + rpeToRir(st.rpe) : ''}</span>
           </div>`).join('')}
         </div>`;
@@ -4323,8 +4500,8 @@ function viewCompleted(id) {
         <div class="card tight" style="background:var(--card)">
           <div style="font-weight:700;margin-bottom:7px">${exNameHtml(e)}</div>
           ${e.sets.map((s, i) => `<div class="exline"><span class="dimmer">${isWarm(s) ? 'W' : 'Set ' + (i + 1)}</span>
-            <span class="mono">${isTimed(e.leaf)
-    ? fmtSec(s.sec) || '—'
+            <span class="mono">${isTimed(e)
+    ? `${holdLabel(s)}${isIso(e) && s.rpe != null ? ` @ ${rpeToRir(s.rpe)}` : ''}`
     : `${wt(s.w)} × ${s.r}${s.rpe ? ` @ ${rpeToRir(s.rpe)}` : ''} <span class="dimmer">· e1RM ${wt(e1rm(s.w, s.r))}</span>`}${s.vbt
       ? ` <span class="dimmer">· ${s.vbt.best.toFixed(2)} m/s${s.vbt.loss >= 5 ? ` ▾${s.vbt.loss.toFixed(0)}%` : ''}</span>` : ''}</span></div>`).join('')}
         </div>`).join('')}
@@ -4366,19 +4543,26 @@ function renderEditWorkout() {
   const key = k => k.split('.').map(Number);
   const exCard = (e, ei) => `<div class="ex-card" style="margin-bottom:9px">
     <div class="ex-head"><div class="row between" style="gap:6px">
-      <div class="ex-name grow">${esc(exName(e))}</div>
+      <div class="ex-name grow">${esc(exName(e))}${isIso(e) ? ' <span class="chip">HOLD</span>' : ''}</div>
+      ${metricFor(e.leaf) === 'time' ? '' : `<button class="btn xs ghost" data-eex-iso="${ei}" title="${isIso(e) ? 'Back to reps' : 'Log as isometric hold'}">${isIso(e) ? 'Reps' : 'Hold'}</button>`}
       <button class="btn xs ghost" data-eex-up="${ei}" title="Move up">↑</button>
       <button class="btn xs ghost" data-eex-down="${ei}" title="Move down">↓</button>
       <button class="btn xs danger" data-eex-rm="${ei}" title="Remove exercise">✕</button>
     </div></div>
     <table class="settable">
-      <thead><tr><th class="c-set">Set</th><th class="c-del"></th>${isTimed(e.leaf)
+      <thead><tr><th class="c-set">Set</th><th class="c-del"></th>${isIso(e)
+      ? `<th class="c-kg">${U()}</th><th class="c-reps">Time</th><th class="c-rpe">RIR</th>`
+      : isTimed(e)
       ? `<th class="c-time" colspan="3">Time</th>`
       : `<th class="c-kg">${U()}</th><th class="c-reps">Reps</th><th class="c-rpe">RIR</th>`}<th class="c-chk"></th></tr></thead>
       <tbody>${e.sets.map((s, si) => `<tr class="${s.done ? 'done' : ''}">
         <td class="c-set"><div class="setno ${isWarm(s) ? 'warm' : ''}" data-ewarm="${ei}.${si}" title="Toggle warm-up">${isWarm(s) ? 'W' : si + 1 - e.sets.slice(0, si).filter(x => isWarm(x)).length}</div></td>
         <td class="c-del"><button class="delset" data-edelset="${ei}.${si}" title="Delete set">×</button></td>
-        ${isTimed(e.leaf)
+        ${isIso(e)
+      ? `<td class="c-wt"><input type="number" step="0.5" inputmode="decimal" data-ef="w" data-k="${ei}.${si}" value="${s.w ? dw(s.w) : ''}" placeholder="0"></td>
+        <td class="c-time"><input type="text" inputmode="numeric" data-ef="sec" data-k="${ei}.${si}" value="${fmtSec(s.sec)}" placeholder="m:ss"></td>
+        <td><input type="number" step="1" inputmode="numeric" data-ef="rpe" data-k="${ei}.${si}" value="${s.rpe == null ? '' : rpeToRir(s.rpe)}" placeholder="—"></td>`
+      : isTimed(e)
       ? `<td class="c-time" colspan="3"><input type="text" inputmode="numeric" data-ef="sec" data-k="${ei}.${si}" value="${fmtSec(s.sec)}" placeholder="m:ss"></td>`
       : `<td class="c-wt"><input type="number" step="0.5" inputmode="decimal" data-ef="w" data-k="${ei}.${si}" value="${s.w ? dw(s.w) : ''}" placeholder="0"></td>
         <td><input type="number" inputmode="numeric" data-ef="r" data-k="${ei}.${si}" value="${s.r || ''}" placeholder="0"></td>
@@ -4417,7 +4601,7 @@ function renderEditWorkout() {
         if (inp.dataset.ef === 'w') s.w = val ? toKg(val) : 0;
         if (inp.dataset.ef === 'r') s.r = val || 0;
         if (inp.dataset.ef === 'rpe') s.rpe = rirToRpe(val);
-        if (inp.dataset.ef === 'sec') s.sec = parseTime(inp.value);
+        if (inp.dataset.ef === 'sec') { s.sec = parseTime(inp.value); if (s.holdMode) { s.holdMode = 'manual'; s.target = null; } }
         };
         if (inp.dataset.ef === 'sec') inp.onblur = () => {
           const [ei, si] = key(inp.dataset.k);
@@ -4441,6 +4625,11 @@ function renderEditWorkout() {
         const last = ex.sets[ex.sets.length - 1] || { w: 0, r: 0 };
         ex.sets.push({ w: last.w, r: last.r, sec: last.sec || null, rpe: null, done: true, setType: 'working' });
         re();
+      });
+      bg.querySelectorAll('[data-eex-iso]').forEach(b => b.onclick = () => {
+        grab();
+        const ex = d.exercises[+b.dataset.eexIso];
+        setIso(ex, !isIso(ex), () => { ex.sets.forEach(s => { s.done = true; }); renderEditWorkout(); });
       });
       bg.querySelectorAll('[data-eex-up]').forEach(b => b.onclick = () => {
         const i = +b.dataset.eexUp;
@@ -4474,14 +4663,14 @@ function saveEdit(force) {
   // same metric-aware rule as finishWorkout — editing a session must not be a way to lose its holds
   const logged = d.exercises.map(e => ({
     ...e,
-    sets: e.sets.filter(s => s.done && (isTimed(e.leaf) ? s.sec > 0 : s.r > 0)),
+    sets: e.sets.filter(s => s.done && (isTimed(e) ? s.sec > 0 : s.r > 0)),
   })).filter(e => e.sets.length);
   if (!logged.length) return toast('Keep at least one ticked set, or delete the session instead');
 
   if (!force) {
     const flagged = [];
     logged.forEach(e => {
-      if (isTimed(e.leaf)) return;              // nothing to say about a duration
+      if (isTimed(e)) return;                   // nothing to say about a duration
       e.sets.filter(s => isWorking(s)).forEach(s => {
         const why = plausibility(exKey(e), s.w, s.r, s.rpe, d.date);
         if (why.length) flagged.push({ name: exFull(e), s, why });
@@ -4618,7 +4807,8 @@ let detailMetric = 'e1';
 function movementVariants(movementId) {
   const keys = new Set();
   S.workouts.filter(w => w.status === 'completed').forEach(wo => wo.exercises.forEach(e => {
-    if (e.leaf && e.leaf.movement === movementId) keys.add(exKey(e));
+    // holds keep their own records and have no e1RM, so they're not a variant row here
+    if (e.leaf && e.leaf.movement === movementId && !isIso(e)) keys.add(exKey(e));
   }));
   const m = movementById(movementId);
   if (m) keys.add(leafKey(completeLeaf(m, null)));
@@ -4710,7 +4900,8 @@ function openMovementPage(movementId, focusKey) {
       if (!e.leaf || e.leaf.movement !== movementId) return;
       const working = e.sets.filter(s => s.done && isWorking(s));
       if (!working.length) return;
-      rows.push({ date: wo.date, name: exName(e), variant: exVariant(e), key: exKey(e), leaf: e.leaf, sets: working, id: wo.id });
+      rows.push({ date: wo.date, name: exName(e), variant: [exVariant(e), isIso(e) ? 'hold' : ''].filter(Boolean).join(' · '),
+                  key: exKey(e), leaf: e.leaf, iso: e.iso, sets: working, id: wo.id });
     }));
     rows.sort((a, b) => a.date < b.date ? 1 : -1);
     if (!rows.length) return `<div class="empty">Nothing logged yet</div>`;
@@ -4722,7 +4913,7 @@ function openMovementPage(movementId, focusKey) {
           <button class="btn xs ghost" data-hist-wo="${esc(r.id)}">View</button>
         </div>
         ${r.sets.map((s, i) => `<div class="exline"><span class="dimmer">Set ${i + 1}</span>
-          <span class="mono">${isTimed(r.leaf) ? fmtSec(s.sec) || '—' : `${s.w > 0 ? `${wt(s.w)} × ${s.r == null ? 'AMRAP' : s.r}` : `${s.r == null ? 'AMRAP' : s.r} reps`}${s.rpe ? ` @ ${rpeToRir(s.rpe)}` : ''}`}</span></div>`).join('')}
+          <span class="mono">${isTimed(r) ? `${holdLabel(s)}${r.iso && s.rpe ? ` @ ${rpeToRir(s.rpe)}` : ''}` : `${s.w > 0 ? `${wt(s.w)} × ${s.r == null ? 'AMRAP' : s.r}` : `${s.r == null ? 'AMRAP' : s.r} reps`}${s.rpe ? ` @ ${rpeToRir(s.rpe)}` : ''}`}</span></div>`).join('')}
       </div>`).join('');
   };
 
@@ -5799,17 +5990,21 @@ function importLiftoff(sessions, mapping, unit) {
 
     const built = s.exercises.map(e => {
       const leaf = leafForName(mapping[e.raw] || e.raw);
+      const asIso = e.secs > 0 && !isTimed(leaf) && e.sets.every(x => x.sec > 0);
       return {
         leaf,
         legacyName: e.raw,
         mods: [],
         /* The duration used to survive only as the note "60 s hold" — prose,
            not data, so an imported plank could never be charted or beaten. It
-           is now a field. The note stays for movements that are not timed,
-           where seconds are a rest or a tempo rather than the set itself. */
-        notes: e.secs && !isTimed(leaf) ? `${e.secs} s hold` : '',
+           is now a field. Seconds on a rep-based movement are an isometric
+           hold when every set carries them: that entry comes in as `iso`, with
+           the time on each set and no reps. Mixed sets keep the note — there
+           the seconds may be a rest or a tempo rather than the set itself. */
+        ...(asIso ? { iso: true } : {}),
+        notes: e.secs && !isTimed(leaf) && !asIso ? `${e.secs} s hold` : '',
         sets: e.sets.map(x => ({
-          w: toKgFrom(x.lb, unit), r: x.r, sec: x.sec, rpe: x.rpe, done: true, setType: 'working',
+          w: toKgFrom(x.lb, unit), r: asIso ? null : x.r, sec: x.sec, rpe: x.rpe, done: true, setType: 'working',
         })),
       };
     });
@@ -5817,7 +6012,7 @@ function importLiftoff(sessions, mapping, unit) {
        blocks arrives twice — fold both into one entry, keeping set order. */
     const merged = [];
     built.forEach(e => {
-      const prev = merged.find(m => leafKey(m.leaf) === leafKey(e.leaf));
+      const prev = merged.find(m => exKey(m) === exKey(e));   // a hold never folds into rep sets
       if (prev) { prev.sets.push(...e.sets); if (!prev.notes) prev.notes = e.notes; }
       else merged.push(e);
     });
@@ -6384,6 +6579,36 @@ function openSettings() {
           <button data-u="kg" class="${U() === 'kg' ? 'on' : ''}">Kilograms</button>
           <button data-u="lb" class="${U() === 'lb' ? 'on' : ''}">Pounds</button>
         </div></div>
+      <div class="grid2">
+        <div class="field"><label>Timer sound</label>
+          <div class="seg" id="sndSeg">
+            <button data-v="1" class="${S.settings.sound !== false ? 'on' : ''}">On</button>
+            <button data-v="0" class="${S.settings.sound === false ? 'on' : ''}">Off</button>
+          </div></div>
+        <div class="field"><label>Vibration</label>
+          <div class="seg" id="vibSeg">
+            <button data-v="1" class="${S.settings.vibrate !== false ? 'on' : ''}">On</button>
+            <button data-v="0" class="${S.settings.vibrate === false ? 'on' : ''}">Off</button>
+          </div></div>
+      </div>
+      <div class="sub" style="margin:-4px 0 10px">Beeps and buzzes from the hold and rest timers. A phone on silent may still mute the beeps — the browser can't tell.</div>
+      <div class="field"><label>Rest timer</label>
+        <div class="seg" id="restAutoSeg">
+          <button data-v="1" class="${S.settings.restAuto !== false ? 'on' : ''}">Start on tick</button>
+          <button data-v="0" class="${S.settings.restAuto === false ? 'on' : ''}">Off</button>
+        </div></div>
+      <div class="grid3">
+        <div class="field"><label>Main lifts</label>
+          <input type="text" inputmode="numeric" id="stRestMain" value="${fmtSec(S.settings.restDefault || 180)}"></div>
+        <div class="field"><label>Accessories</label>
+          <input type="text" inputmode="numeric" id="stRestAcc" value="${fmtSec(S.settings.restAccessory || 90)}"></div>
+        <div class="field"><label>Warn (s before)</label>
+          <input type="number" inputmode="numeric" id="stRestWarn" value="${+S.settings.restWarn || 0}" min="0" max="60"></div>
+      </div>
+      <div class="sub" style="margin:-4px 0 10px">Main lifts are your priority lifts and heavy barbell compounds. Warm-ups rest half as long. Any exercise can have its own rest from its ⋯ menu; ±15 s during a session sticks for that session.</div>
+      ${'Notification' in window ? `<button class="btn sm wide ghost" id="stRestNote" style="margin-bottom:6px" ${Notification.permission !== 'default' ? 'disabled' : ''}>${
+        Notification.permission === 'granted' ? 'Rest notifications on' : Notification.permission === 'denied' ? 'Notifications blocked in browser settings' : 'Notify me when rest ends in the background'}</button>
+      <div class="sub" style="margin-bottom:10px">Best effort — a phone may pause the app in the background before the rest is up.</div>` : ''}
       <div class="field"><label>Profile</label>
         <button class="btn sm wide ghost" id="stProfile">Sex, bodyweight, age and targets →</button>
         <div class="sub" style="margin-top:4px">Sex and bodyweight set your DOTS; they live in the profile now rather than here.</div>
@@ -6485,6 +6710,28 @@ function openSettings() {
         applySkin(S.settings.skin);
         save();
       });
+      // saved on the tap, like the skin: a toggle you can hear shouldn't wait for Save
+      bg.querySelectorAll('#restAutoSeg button').forEach(b => b.onclick = () => {
+        bg.querySelectorAll('#restAutoSeg button').forEach(x => x.classList.toggle('on', x === b));
+        S.settings.restAuto = b.dataset.v === '1';
+        save();
+      });
+      const rn = $('#stRestNote', bg);
+      if (rn) rn.onclick = () => {
+        try {
+          Promise.resolve(Notification.requestPermission()).then(p => {
+            rn.disabled = true;
+            rn.textContent = p === 'granted' ? 'Rest notifications on' : 'Notifications not allowed';
+          });
+        } catch (e) { /* old API shape */ }
+      };
+      [['#sndSeg', 'sound'], ['#vibSeg', 'vibrate']].forEach(([sel, k]) => bg.querySelectorAll(sel + ' button').forEach(b => b.onclick = () => {
+        bg.querySelectorAll(sel + ' button').forEach(x => x.classList.toggle('on', x === b));
+        S.settings[k] = b.dataset.v === '1';
+        save();
+        if (k === 'sound' && S.settings.sound) { Cue.unlock(); Cue.tick(); }
+        if (k === 'vibrate' && S.settings.vibrate) Cue.buzz(80);
+      }));
       let units = U();
       bg.querySelectorAll('#unitSeg button').forEach(b => b.onclick = () => {
         units = b.dataset.u;
@@ -6553,6 +6800,11 @@ function openSettings() {
         setAiKey($('#stKey', bg).value.trim());
         const pp = +$('#stPlatform', bg).value;
         if (pp >= 80 && pp <= 100) S.settings.platformPct = pp;
+        const rm = parseTime($('#stRestMain', bg).value), ra = parseTime($('#stRestAcc', bg).value);
+        if (rm && rm <= 1800) S.settings.restDefault = rm;
+        if (ra && ra <= 1800) S.settings.restAccessory = ra;
+        const rw = +$('#stRestWarn', bg).value;
+        if (rw >= 0 && rw <= 60) S.settings.restWarn = Math.round(rw);
 
         // inventory: read the rows back, drop anything blank or nonsensical
         const nb = [...bg.querySelectorAll('[data-bn]')].map((el, i) => ({
@@ -7389,11 +7641,313 @@ function wire() {
     $('#editPriority').onclick = openPriority;
   }
 
+  // the rest loop runs on every page, so the end alert fires wherever you are
+  if (S.active && S.active.rest && !restIv) restLoop();
+
   // timer ticking only while a workout is live and visible
   clearInterval(tick);
   if (page === 'workout' && S.active) {
     tick = setInterval(() => { const t = $('#timer'); if (t) t.textContent = elapsed(); else clearInterval(tick); }, 1000);
   }
+}
+
+/* Ticking a set in the live session. Top level rather than inside wireActive
+   because the hold timer ticks its set too, and one path means the PR toast
+   and the checks can't drift between them. */
+function toggleSetDone(ei, si) {
+  const a = S.active;
+  const ex = a && a.exercises[ei];
+  const s = ex && ex.sets[si];
+  if (!s) return;
+  if (s.done) { s.done = false; save(); bust(); render(); return; }
+  /* A timed set is finished by its duration, not its reps — the reps guard
+     made every plank and every treadmill session impossible to tick off. */
+  const timed = isTimed(ex);
+  if (timed ? !s.sec : !s.r) return toast(timed ? 'Enter a time first' : 'Enter reps first');
+  const commit = () => {
+    // PR check against history captured before flipping the flag
+    const st = statsFor(exKey(ex));
+    const recs = timed ? holdRecords(exKey(ex)) : null;
+    s.done = true;
+    if (timed) {
+      if (isWorking(s) && (!recs.n || holdBeats(recs, s.w, s.sec))) {
+        toast(recs.n ? `★ Best hold — ${exFull(ex)} ${holdLabel(s)}` : `★ First ${exFull(ex)} logged`, 'gold');
+      }
+    } else if (isWorking(s) && (!st || beatsBest(st, s.w, s.r, s.rpe))) {
+      toast(st ? `★ PR — ${exFull(ex)} ${s.w > 0 ? `${wt(s.w)}×${s.r}` : `${s.r} reps`}` : `★ First ${exFull(ex)} logged`, 'gold');
+    }
+    startRest(ei, s);
+    save(); bust(); render();
+  };
+  /* plausibility() reasons about load and reps against history; it has
+     nothing to say about a duration, so a timed set skips it rather than
+     being asked a question in the wrong units. */
+  const why = (isWarm(s) || timed) ? [] : plausibility(exKey(ex), s.w, s.r, s.rpe);
+  if (why.length) plausDlg(exKey(ex), s, why, commit); else commit();
+}
+
+/* Flip an entry between normal and isometric. The sets are rewritten with it —
+   reps cleared going in, time cleared coming out — so no row is left half
+   converted. Converted sets are unticked: a ticked hold with no time (or a
+   ticked set with no reps) isn't a logged set, and would be dropped silently
+   at finish. Warn first if that throws away anything already ticked. */
+function setIso(e, on, after) {
+  const apply = () => {
+    if (on) {
+      e.iso = true;
+      e.sets.forEach(s => { s.r = null; s.done = false; });
+    } else {
+      delete e.iso;
+      e.sets.forEach(s => { s.r = 0; s.sec = null; s.done = false; delete s.holdMode; delete s.target; });
+    }
+    after();
+  };
+  if (e.sets.some(s => s.done)) {
+    confirmDlg(on
+      ? 'Ticked sets lose their reps and become holds you\'ll need to time or type in. Convert?'
+      : 'Ticked holds lose their times and become rep sets you\'ll need to fill in. Convert?', apply, 'Convert');
+  } else apply();
+}
+
+/* ---------------- hold timer ----------------
+   Planned: count in, then count down from the target; finishing logs the
+   target, stopping early logs what was held. Test: count in, then count up
+   until stopped — a hold to failure, so RIR 0. Manual needs no timer: it's
+   the time field on the row.
+
+   The clock is a start timestamp, never a sum of interval ticks: intervals
+   throttle when the tab is hidden, and a hold timed with the phone locked
+   must still read right on return. */
+function openHoldTimer(ei, si) {
+  const a = S.active;
+  const e = a && a.exercises[ei];
+  const s = e && e.sets[si];
+  if (!s) return;
+  const isoE = isIso(e);
+  // default to how this set, or the one before it, was last timed
+  const prevSet = e.sets.slice(0, si).reverse().find(x => x.holdMode === 'planned' || x.holdMode === 'test');
+  let mode = s.holdMode === 'planned' || s.holdMode === 'test' ? s.holdMode : prevSet ? prevSet.holdMode : 'planned';
+  let target = s.target || (prevSet && prevSet.target) || s.sec || 30;
+  let run = null;   // { goAt, iv, warned }
+
+  const stop = () => {
+    if (!run) return;
+    clearInterval(run.iv);
+    run = null;
+    Awake.release('hold');
+  };
+  const log = sec => {
+    stop();
+    Cue.done();
+    s.sec = Math.max(1, Math.floor(sec));   // what the clock showed
+    s.holdMode = mode;
+    s.target = mode === 'planned' ? target : null;
+    if (mode === 'test' && isoE) s.rpe = rirToRpe(0);   // held to failure
+    save();
+    closeModal();
+    if (!s.done) toggleSetDone(ei, si); else { bust(); render(); }
+  };
+
+  modal({
+    title: `Hold · ${exFull(e)}`,
+    sticky: true,
+    onClose: stop,
+    body: `
+      <div class="seg" id="htMode">
+        <button data-m="planned" class="${mode === 'planned' ? 'on' : ''}">Planned</button>
+        <button data-m="test" class="${mode === 'test' ? 'on' : ''}">To failure</button>
+      </div>
+      <div class="field" id="htTargetF" style="margin-top:10px;${mode === 'planned' ? '' : 'display:none'}"><label>Target (m:ss)</label>
+        <input type="text" inputmode="numeric" id="htTarget" value="${fmtSec(target)}"></div>
+      <div class="timer" id="htClock" style="font-size:64px;text-align:center;margin:14px 0 4px">${mode === 'planned' ? fmtSec(target) : '0:00'}</div>
+      <div class="sub" id="htMsg" style="text-align:center;min-height:18px">${s.w > 0 ? `${wt(s.w)}${loadConventionFor(e.leaf) === 'per_side' ? ' per side' : ''} · ` : ''}three beeps, go on the long one</div>`,
+    foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="htGo">Start</button>`,
+    onOpen: bg => {
+      const clock = $('#htClock', bg), msg = $('#htMsg', bg), go = $('#htGo', bg);
+      bg.querySelectorAll('#htMode button').forEach(b => b.onclick = () => {
+        if (run) return;
+        mode = b.dataset.m;
+        bg.querySelectorAll('#htMode button').forEach(x => x.classList.toggle('on', x === b));
+        $('#htTargetF', bg).style.display = mode === 'planned' ? '' : 'none';
+        clock.textContent = mode === 'planned' ? fmtSec(target) : '0:00';
+      });
+      const tIn = $('#htTarget', bg);
+      tIn.oninput = () => { const v = parseTime(tIn.value); if (v) { target = v; if (!run) clock.textContent = fmtSec(v); } };
+      tIn.onblur = () => { tIn.value = fmtSec(target); };
+      selectOnFocus(tIn);
+
+      const frame = () => {
+        if (!run) return;
+        if (!document.body.contains(clock)) { stop(); return; }   // modal gone some other way
+        const now = Date.now();
+        if (now < run.goAt) {
+          clock.textContent = String(Math.ceil((run.goAt - now) / 1000));
+          return;
+        }
+        const el = (now - run.goAt) / 1000;
+        if (mode === 'planned') {
+          const left = target - el;
+          if (left <= 0) return log(target);
+          // a short tick on each of the last three seconds
+          const whole = Math.ceil(left);
+          if (whole <= 3 && whole < run.warned) { run.warned = whole; Cue.tick(); }
+          clock.textContent = fmtSec(whole);
+        } else clock.textContent = fmtSec(Math.floor(el));
+        msg.textContent = mode === 'planned' ? 'Stop early to log what you held' : 'Stop when the hold breaks';
+      };
+
+      go.onclick = () => {
+        if (!run) {
+          if (mode === 'planned' && !(target > 0)) return toast('Set a target first');
+          Cue.unlock();            // this tap is the gesture the browser wants
+          if (S.active && S.active.rest) { stopRest(); save(); }   // the rest is over once the hold starts
+          Cue.countIn();
+          Awake.hold('hold');
+          run = { goAt: Date.now() + 2000, warned: 4, iv: setInterval(frame, 100) };
+          go.textContent = 'Stop';
+          go.classList.remove('primary'); go.classList.add('danger');
+          tIn.disabled = true;
+          frame();
+          return;
+        }
+        const el = (Date.now() - run.goAt) / 1000;
+        if (el < 1) {                                     // stopped in the count-in: nothing held
+          stop();
+          go.textContent = 'Start';
+          go.classList.add('primary'); go.classList.remove('danger');
+          tIn.disabled = false;
+          clock.textContent = mode === 'planned' ? fmtSec(target) : '0:00';
+          msg.textContent = 'Stopped before the hold started — nothing logged';
+          return;
+        }
+        log(mode === 'planned' ? Math.min(el, target) : el);
+      };
+    },
+  });
+}
+
+/* ---------------- rest timer ----------------
+   Starts itself when a set is ticked. Main lifts rest longer than accessories;
+   an exercise can carry its own default (its ⋯ menu), and ±15 s during a
+   session sticks for that exercise for the rest of the session.
+
+   The state is an end timestamp on the live session, so it survives the phone
+   locking, the app being backgrounded and even a reload: whatever the clock
+   says on return is right. The loop only paints and fires the alerts — it is
+   never the clock. */
+const HEAVY_BARS = ['barbell', 'trap_bar', 'safety_squat_bar'];
+/* No compound flag in the catalogue, so: a priority lift, or a heavy-bar
+   movement that is either multi-muscle or a squat/pull/press pattern. A
+   barbell curl is an accessory; a barbell row isn't. Holds rest like
+   accessories. */
+function isMainLift(e) {
+  if (!e || !e.leaf || isTimed(e)) return false;
+  if (priorityKeys().includes(leafKey(e.leaf))) return true;
+  const m = movementById(e.leaf.movement);
+  return !!m && HEAVY_BARS.includes(e.leaf.equipment)
+    && ((m.primary || []).length >= 2 || ['legs', 'back', 'chest'].includes(m.category));
+}
+function restDefaultFor(e) {
+  const own = (S.settings.restBy || {})[exKey(e)];
+  if (own > 0) return own;
+  return isMainLift(e) ? (S.settings.restDefault || 180) : (S.settings.restAccessory || 90);
+}
+/* Warm-ups get half, capped at 90 s — the ramp itself says longer only for
+   the last steps, and those are the lifter's call. */
+function restFor(e, s) {
+  const base = e.rest > 0 ? e.rest : restDefaultFor(e);
+  return s && isWarm(s) ? Math.min(90, Math.round(base / 2 / 5) * 5) : base;
+}
+
+let restIv = null;
+function startRest(ei, s) {
+  const a = S.active;
+  const e = a && a.exercises[ei];
+  if (!e || S.settings.restAuto === false) return;
+  const len = restFor(e, s);
+  a.rest = { endAt: Date.now() + len * 1000, len, ei, name: exFull(e) };
+  Cue.unlock();               // the tick is the gesture; the end beep needs the context awake
+  restLoop();
+}
+function stopRest() {
+  if (S.active) delete S.active.rest;
+  clearInterval(restIv); restIv = null;
+  const host = $('#restHost');
+  if (host) host.innerHTML = '';
+}
+function restLoop() {
+  clearInterval(restIv);
+  restIv = setInterval(restTick, 250);
+  restTick();
+}
+function restTick() {
+  const r = S.active && S.active.rest;
+  if (!r) { clearInterval(restIv); restIv = null; return; }
+  const left = (r.endAt - Date.now()) / 1000;
+  const warnAt = +S.settings.restWarn || 0;
+  // a warning only makes sense on a rest meaningfully longer than it
+  if (!r.warned && warnAt > 0 && r.len > warnAt + 5 && left <= warnAt && left > 0) {
+    r.warned = true;
+    Cue.beep(800, 90); Cue.beep(800, 90, 0.18); Cue.buzz(80);
+  }
+  if (left <= 0 && !r.alerted) {
+    r.alerted = true;
+    /* Coming back to the app long after rest ran out shouldn't set it off. */
+    if (left > -30) {
+      Cue.done();
+      if (document.visibilityState === 'hidden') restNotify(r);
+      else toast(`Rest over — ${r.name}`, 'green');
+    }
+    save();
+  }
+  if (left < -600) { stopRest(); save(); return; }    // ten minutes over: nobody is resting now
+  paintRest();
+}
+function restBarHtml() {
+  const r = S.active && S.active.rest;
+  if (!r) return '';
+  return `<div class="restbar" id="restBar">
+    <div class="grow"><div class="eyebrow">Rest · ${esc(r.name)}</div><div class="rc" id="restClock"></div></div>
+    <button class="btn xs ghost" data-rest="-15">−15</button>
+    <button class="btn xs ghost" data-rest="15">+15</button>
+    <button class="btn xs ghost" data-rest="skip">Skip</button>
+  </div>`;
+}
+/* Only the clock text changes per tick; the buttons are built once. */
+function paintRest() {
+  const r = S.active && S.active.rest;
+  const host = $('#restHost');
+  if (!host) return;
+  if (!r) { host.innerHTML = ''; return; }
+  if (!$('#restBar', host)) host.innerHTML = restBarHtml();
+  const left = (r.endAt - Date.now()) / 1000;
+  $('#restClock', host).textContent = left > 0 ? fmtSec(Math.ceil(left)) : `+${fmtSec(Math.floor(-left))}`;
+  $('#restBar', host).classList.toggle('over', left <= 0);
+}
+/* ±15 s moves this rest and becomes this exercise's rest for the session. */
+function adjustRest(d) {
+  const r = S.active && S.active.rest;
+  if (!r) return;
+  const now = Date.now();
+  r.endAt = Math.max(now, r.endAt + d * 1000);
+  r.len = Math.max(15, r.len + d);
+  const e = S.active.exercises[r.ei];
+  if (e) e.rest = r.len;
+  const left = (r.endAt - now) / 1000;
+  if (left > 0) r.alerted = false;
+  if (left > (+S.settings.restWarn || 0)) r.warned = false;
+  save(); paintRest();
+}
+/* Best effort, as the roadmap asks: a page in the background may be frozen
+   before the moment comes, and without permission there is nothing to show. */
+function restNotify(r) {
+  try {
+    if (!('Notification' in window) || Notification.permission !== 'granted' || !navigator.serviceWorker) return;
+    navigator.serviceWorker.ready.then(reg => reg.showNotification('Rest over', {
+      body: `Next set — ${r.name}`, tag: 'ironlog-rest', renotify: true, icon: 'icon-192.png',
+      ...(S.settings.vibrate !== false ? { vibrate: [220, 120, 220] } : {}),
+    })).catch(() => {});
+  } catch (e) { /* notifications unavailable */ }
 }
 
 function wireActive(v) {
@@ -7412,7 +7966,11 @@ function wireActive(v) {
       if (inp.dataset.f === 'w') s.w = val ? toKg(val) : 0;
       if (inp.dataset.f === 'r') s.r = val || 0;
       if (inp.dataset.f === 'rpe') s.rpe = rirToRpe(val);
-      if (inp.dataset.f === 'sec') s.sec = parseTime(inp.value);
+      if (inp.dataset.f === 'sec') {
+        s.sec = parseTime(inp.value);
+        // typed over a timed hold: it's a manual entry now, and RIR is asked again
+        if (s.holdMode) { s.holdMode = 'manual'; s.target = null; }
+      }
       save();
     };
     /* Reformat a duration once the field is left, so "90" visibly becomes
@@ -7433,35 +7991,14 @@ function wireActive(v) {
     };
   });
 
-  v.querySelectorAll('[data-done]').forEach(b => b.onclick = () => {
-    const [ei, si] = key(b.dataset.done);
-    const s = a.exercises[ei].sets[si];
-    const ex = a.exercises[ei];
-    if (s.done) { s.done = false; save(); bust(); render(); return; }
-    /* A timed set is finished by its duration, not its reps — the reps guard
-       made every plank and every treadmill session impossible to tick off. */
-    const timed = isTimed(ex.leaf);
-    if (timed ? !s.sec : !s.r) return toast(timed ? 'Enter a time first' : 'Enter reps first');
-    const commit = () => {
-      // PR check against history captured before flipping the flag
-      const st = statsFor(exKey(ex));
-      const prevHold = timed ? bestHold(exKey(ex)) : 0;
-      s.done = true;
-      if (timed) {
-        if (isWorking(s) && s.sec > prevHold) {
-          toast(prevHold ? `★ Best hold — ${exFull(ex)} ${fmtSec(s.sec)}` : `★ First ${exFull(ex)} logged`, 'gold');
-        }
-      } else if (isWorking(s) && (!st || beatsBest(st, s.w, s.r, s.rpe))) {
-        toast(st ? `★ PR — ${exFull(ex)} ${s.w > 0 ? `${wt(s.w)}×${s.r}` : `${s.r} reps`}` : `★ First ${exFull(ex)} logged`, 'gold');
-      }
-      save(); bust(); render();
-    };
-    /* plausibility() reasons about load and reps against history; it has
-       nothing to say about a duration, so a timed set skips it rather than
-       being asked a question in the wrong units. */
-    const why = (isWarm(s) || timed) ? [] : plausibility(exKey(ex), s.w, s.r, s.rpe);
-    if (why.length) plausDlg(exKey(ex), s, why, commit); else commit();
-  });
+  v.querySelectorAll('[data-done]').forEach(b => b.onclick = () => toggleSetDone(...key(b.dataset.done)));
+  v.querySelectorAll('[data-hold]').forEach(b => b.onclick = () => openHoldTimer(...key(b.dataset.hold)));
+  $('#restHost').onclick = ev => {
+    const b = ev.target.closest('[data-rest]');
+    if (!b) return;
+    if (b.dataset.rest === 'skip') { stopRest(); save(); } else adjustRest(+b.dataset.rest);
+  };
+  paintRest();
 
   v.querySelectorAll('[data-warm]').forEach(b => b.onclick = () => {
     const [ei, si] = key(b.dataset.warm);
@@ -7475,7 +8012,8 @@ function wireActive(v) {
   v.querySelectorAll('[data-addset]').forEach(b => b.onclick = () => {
     const ex = a.exercises[+b.dataset.addset];
     const last = ex.sets[ex.sets.length - 1] || { w: 0, r: 0 };
-    ex.sets.push({ w: last.w, r: last.r, sec: last.sec || null, rpe: null, done: false, setType: 'working' });
+    ex.sets.push({ w: last.w, r: last.r, sec: last.sec || null, rpe: null, done: false, setType: 'working',
+      ...(last.holdMode === 'planned' && last.target ? { target: last.target } : {}) });
     save(); render();
   });
   v.querySelectorAll('[data-rmset]').forEach(b => b.onclick = () => {
@@ -7520,14 +8058,33 @@ function wireActive(v) {
       title: exFull(ex),
       body: `<div class="field"><label>Exercise notes</label>
           <textarea id="exNote" rows="3" placeholder="Cues, belt, tempo…">${esc(ex.notes || '')}</textarea></div>
+        <div class="field"><label>Rest for this exercise (m:ss)</label>
+          <input type="text" inputmode="numeric" id="exRest" value="${(S.settings.restBy || {})[exKey(ex)] ? fmtSec(S.settings.restBy[exKey(ex)]) : ''}"
+            placeholder="${fmtSec(isMainLift(ex) ? (S.settings.restDefault || 180) : (S.settings.restAccessory || 90))} — ${isMainLift(ex) ? 'main lift' : 'accessory'} default">
+          <div class="sub" style="margin-top:4px">Kept for next time. Blank uses the default from Settings.</div></div>
+        ${metricFor(ex.leaf) === 'time' ? '' : `<button class="btn wide ghost" id="exIso" style="margin-bottom:8px">${isIso(ex)
+          ? 'Back to reps' : 'Log as isometric hold'}</button>
+          <div class="sub" style="margin:-2px 0 10px">Holds keep their own records, separate from rep sets of the same lift.</div>`}
         <button class="btn wide ghost" id="exUp" style="margin-bottom:8px">Move up</button>
         <button class="btn wide ghost" id="exDown">Move down</button>`,
       foot: `<button class="btn danger" id="exDel">Remove exercise</button><button class="btn primary" id="exOk">Save</button>`,
       onOpen: bg => {
+        const isoBtn = $('#exIso', bg);
+        if (isoBtn) isoBtn.onclick = () => {
+          ex.notes = $('#exNote', bg).value.trim();
+          closeModal();
+          setIso(ex, !isIso(ex), () => { save(); bust(); render(); });
+        };
         $('#exUp', bg).onclick = () => { if (ei > 0) { const [x] = a.exercises.splice(ei, 1); a.exercises.splice(ei - 1, 0, x); save(); closeModal(); render(); } };
         $('#exDown', bg).onclick = () => { if (ei < a.exercises.length - 1) { const [x] = a.exercises.splice(ei, 1); a.exercises.splice(ei + 1, 0, x); save(); closeModal(); render(); } };
         $('#exDel', bg).onclick = () => { a.exercises.splice(ei, 1); save(); closeModal(); render(); };
-        $('#exOk', bg).onclick = () => { ex.notes = $('#exNote', bg).value.trim(); save(); closeModal(); render(); };
+        $('#exOk', bg).onclick = () => {
+          ex.notes = $('#exNote', bg).value.trim();
+          const by = S.settings.restBy = S.settings.restBy || {};
+          const sec = parseTime($('#exRest', bg).value);
+          if (sec) { by[exKey(ex)] = sec; delete ex.rest; } else delete by[exKey(ex)];
+          save(); closeModal(); render();
+        };
       },
     });
   });
@@ -7541,7 +8098,7 @@ function wireActive(v) {
   if ($('#voiceBtn')) $('#voiceBtn').onclick = dictateSet;
   $('#finishBtn').onclick = () => finishWorkout();   // no event object as `force`
   $('#discardBtn').onclick = () => confirmDlg('Discard this workout? Nothing will be saved.', () => {
-    S.active = null; save(); render(); toast('Workout discarded');
+    stopRest(); S.active = null; save(); render(); toast('Workout discarded');
   }, 'Discard');
 }
 

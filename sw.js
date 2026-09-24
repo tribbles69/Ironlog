@@ -1,7 +1,7 @@
 /* Ironlog service worker.
    Bump VERSION whenever the app files change — that's what triggers the
    "Update ready" prompt on the next launch. */
-const VERSION = 'ironlog-v30';
+const VERSION = 'ironlog-v32';
 
 const ASSETS = [
   './',
@@ -28,6 +28,16 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('message', e => {
   if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
+});
+
+/* The rest timer's "Rest over" notification: tapping it brings the app back. */
+self.addEventListener('notificationclick', e => {
+  e.notification.close();
+  e.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    if (wins.length) return wins[0].focus();
+    return self.clients.openWindow('./');
+  })());
 });
 
 self.addEventListener('fetch', e => {
