@@ -6,8 +6,8 @@
    Open Government Licence v3. Crown copyright.
 
    Usage:
-     node tools/build-foods.cjs            download the current CoFID and rebuild
-     node tools/build-foods.cjs file.xlsx  rebuild from a local copy
+     node "r&d/tools/build-foods.cjs"            download the current CoFID and rebuild
+     node "r&d/tools/build-foods.cjs" file.xlsx  rebuild from a local copy
 
    It rewrites the single `const FOOD_DB = "…";` line in index.html in place and
    leaves everything else untouched, so the diff is one line. Remember to bump
@@ -18,7 +18,7 @@ const path = require('path');
 const os = require('os');
 const { execFileSync } = require('child_process');
 
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = path.resolve(__dirname, '..', '..');
 const INDEX = path.join(ROOT, 'index.html');
 const PAGE = 'https://www.gov.uk/government/publications/composition-of-foods-integrated-dataset-cofid';
 

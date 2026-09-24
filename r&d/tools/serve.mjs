@@ -1,4 +1,4 @@
-// Optional local server: `node serve.mjs` then open http://localhost:5177
+// Optional local server: `node "r&d/tools/serve.mjs"` then open http://localhost:5178
 // You can also just double-click index.html — this is only needed if your
 // browser restricts localStorage on file:// URLs.
 import http from 'node:http';
@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = path.dirname(fileURLToPath(import.meta.url));
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const PORT = 5178;
 const TYPES = {
   '.html': 'text/html; charset=utf-8',

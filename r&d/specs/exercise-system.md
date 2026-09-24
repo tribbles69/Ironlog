@@ -3,8 +3,8 @@
 Specification for replacing flat exercise-name strings with a composed
 exercise model, and absolute-dated programs with relative ones.
 
-Companion file: `docs/exercises.json` (104 movements).
-Prior context: `docs/audit-2026-09-03.md`.
+Companion file: `r&d/data/exercises.json` (104 movements).
+Prior context: `r&d/notes/audit-2026-09-03.md`.
 
 ---
 
@@ -52,7 +52,7 @@ Lateral Raise          /  cable     /  unilateral
 
 ### Movement record
 
-Defined in `docs/exercises.json`:
+Defined in `r&d/data/exercises.json`:
 
 ```json
 {

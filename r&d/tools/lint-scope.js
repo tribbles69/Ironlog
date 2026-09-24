@@ -13,12 +13,12 @@
    expected and listed; the point is that the list should be short and every
    entry explainable.
 
-   Usage:  node tools/lint-scope.js
+   Usage:  node "r&d/tools/lint-scope.js"
 */
 const fs = require('fs');
 const path = require('path');
 
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = path.resolve(__dirname, '..', '..');
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 
 /* Every script block, joined. They share one global scope in the page, so

@@ -1,23 +1,34 @@
-# Ironlog — install on Android
+# Ironlog
 
-Five files. They must all sit in the **same folder** on the host, and the host
+Powerlifting / strength training log. An installable web app (PWA) — the repo
+root *is* the app; everything else lives in `r&d/`.
+
+```
+index.html              the app (single file)
+sw.js                   offline cache + update handling
+manifest.webmanifest    name, icon, "open full screen"
+version.json            how a running app notices a new build
+program.json            bundled training program
+slew-core.js            VBT velocity engine (generated — see r&d/tools)
+parse-food.js           Netlify function: AI food parsing, keeps the API key server-side
+icon-*.png              app icons
+r&d/                    roadmap, specs, notes, data sources, build tools — not used by the app
+CLAUDE.md               entry point for coding agents
+```
+
+What's being built next: **`r&d/ROADMAP.md`**.
+
+# Install on Android
+
+The app files above must sit in the **same folder** on the host, and the host
 must serve over **https** (service workers refuse to run otherwise).
-
-```
-index.html                 the app
-sw.js                      offline cache + update handling
-manifest.webmanifest       name, icon, "open full screen"
-icon-192.png
-icon-512.png
-icon-maskable-512.png      the round/squircle version Android uses
-```
 
 ## Putting it online (from the phone is fine)
 
 **GitHub Pages** — best if you want to keep changing it.
 
 1. github.com → new repository → name it `ironlog`, set it **Public**, create.
-2. Add file → Upload files → select all six files above → Commit.
+2. Add file → Upload files → select all the app files above → Commit.
 3. Settings → Pages → Source: *Deploy from a branch*, Branch: `main`, folder `/ (root)` → Save.
 4. Wait a minute or two. Your URL is `https://<username>.github.io/ironlog/`.
 
@@ -146,7 +157,7 @@ Open Government Licence v3. 2,848 UK foods as one generated line of
 `name<TAB>kcal<TAB>protein<TAB>carbs<TAB>fat<TAB>fibre`. Don't hand-edit
 it; regenerate when a new CoFID edition is published:
 
-    node tools/build-foods.cjs
+    node "r&d/tools/build-foods.cjs"
 
 That downloads the current spreadsheet from gov.uk and rewrites the one
 `FOOD_DB` line, leaving the rest of index.html alone. Pass a path to use

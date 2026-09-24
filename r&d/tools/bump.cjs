@@ -9,15 +9,15 @@
    the branch was a version behind, and once index.html and sw.js were served
    briefly disagreeing. One command, or the mistake comes back.
 
-   Usage:  node tools/bump.cjs 0.13.0
+   Usage:  node "r&d/tools/bump.cjs" 0.13.0
 */
 const fs = require('fs');
 const path = require('path');
 
-const ROOT = path.resolve(__dirname, '..');
+const ROOT = path.resolve(__dirname, '..', '..');
 const next = process.argv[2];
 if (!/^\d+\.\d+\.\d+$/.test(next || '')) {
-  console.error('usage: node tools/bump.cjs <x.y.z>');
+  console.error('usage: node "r&d/tools/bump.cjs" <x.y.z>');
   process.exit(1);
 }
 

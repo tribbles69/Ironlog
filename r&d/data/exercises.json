@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "note": "Movement catalogue for the Ironlog exercise system. A logged set references a LEAF — movement + equipment + execution + attachment — not a name string. Aliases are historical/colloquial names used for import resolution only, never for identity, and each may pin the axes its name implies (e.g. \"Smith Shrug\" pins equipment=smith). Axes an alias does not pin fall back to the movement defaults. `metric` omitted means reps_weight. `verified:true` means the leaf mapping was checked against real logged data; false means generated and provisional. See docs/exercise-system-phase1.md.",
+  "note": "Movement catalogue for the Ironlog exercise system. A logged set references a LEAF — movement + equipment + execution + attachment — not a name string. Aliases are historical/colloquial names used for import resolution only, never for identity, and each may pin the axes its name implies (e.g. \"Smith Shrug\" pins equipment=smith). Axes an alias does not pin fall back to the movement defaults. `metric` omitted means reps_weight. `verified:true` means the leaf mapping was checked against real logged data; false means generated and provisional. See r&d/specs/exercise-system-phase1.md.",
   "vocabularies": {
     "equipment": [
       "bodyweight",
@@ -154,7 +154,7 @@
         "evidence": { "programEntries": 0 }
       }
     ],
-    "modifierNote": "splitsPR:false annotates a set without changing identity — same leaf, same PR pool. splitsPR:true is a materially different lift and forms its own leaf; it must never share a PR pool with the unmodified version. detect terms are matched case-insensitively on whole words against the entry note; matching is literal, never fuzzy. Modifiers are extracted from notes; notes are never rewritten. Deficit / block / rack pull / board press are deliberately NOT modifiers — see the movement-vs-modifier ruling in docs/exercise-system-phase1.md section 8.",
+    "modifierNote": "splitsPR:false annotates a set without changing identity — same leaf, same PR pool. splitsPR:true is a materially different lift and forms its own leaf; it must never share a PR pool with the unmodified version. detect terms are matched case-insensitively on whole words against the entry note; matching is literal, never fuzzy. Modifiers are extracted from notes; notes are never rewritten. Deficit / block / rack pull / board press are deliberately NOT modifiers — see the movement-vs-modifier ruling in r&d/specs/exercise-system-phase1.md section 8.",
     "attachmentKind": {
       "none": "none",
       "rope": "handle",
