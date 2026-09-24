@@ -359,6 +359,10 @@ tr.pr td input{background:rgba(255,197,66,.1);border-color:rgba(255,197,66,.35)}
 }
 .chk.on{background:var(--green);border-color:var(--green);color:#07240f;font-weight:800}
 .ex-foot{display:flex;gap:8px;padding:9px 11px 11px}
+/* PR timeline on the movement page */
+.prtl{border-left:2px solid rgba(255,197,66,.35);margin:6px 0 0 5px;padding-left:12px}
+.prtl-row{display:flex;gap:10px;align-items:flex-start;padding:7px 0;position:relative;cursor:pointer}
+.prtl-dot{position:absolute;left:-18px;top:12px;width:10px;height:10px;border-radius:50%;background:var(--gold)}
 /* fast entry: last time's set is a button, the selected row is marked, and
    the step bar sits under the table */
 .prevbtn{border:0;background:transparent;color:inherit;font:inherit;padding:4px 0;width:100%;line-height:1.25;cursor:pointer;border-radius:6px}
@@ -1577,7 +1581,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.31.0';
+const APP_VERSION = '0.32.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -2565,6 +2569,13 @@ function openRolePicker(e, si, after, done) {
   });
 }
 /* A set's label in lists: "Set 2", "W", or "↳" for a drop hanging off the set above. */
+/* An entry-shaped object from a PR key, so exTag can name "in 1 min" or "hold". */
+function keyEntry(k) {
+  const parts = String(k).split('|');
+  const e = { leaf: keyLeaf(k), sets: [] };
+  parts.slice(1).forEach(p => { if (p === 'iso') e.iso = true; else if (p.startsWith('cap')) e.cap = +p.slice(3); });
+  return e;
+}
 function setListLabel(sets, si) { const n = setNumber(sets, si); return Number.isFinite(+n) ? 'Set ' + n : n; }
 function roleSuffix(s) { const w = roleWord(s); return w ? ` <span class="dimmer">· ${w}</span>` : ''; }
 /* Short role word for set lists: "top", "back-off", "AMRAP", "drop". */
@@ -5282,6 +5293,35 @@ async function shareSession(wo, mode = 'quick') {
   toast('Image saved', 'green');
 }
 
+/* e1RM against last time, per rep-based lift in a session (roadmap B5):
+   today's best set against the last session before this one, and the
+   all-time best as it stood. Drops and warm-ups don't count. */
+function e1Changes(wo) {
+  const seen = new Set(), out = [];
+  wo.exercises.forEach(e => {
+    if (kindOf(e) !== 'reps' || !e.leaf) return;
+    const key = exKey(e);
+    if (seen.has(key)) return;
+    seen.add(key);
+    const sets = wo.exercises.filter(x => exKey(x) === key && kindOf(x) === 'reps')
+      .flatMap(x => x.sets.filter(s => s.done !== false && isPRSet(s) && s.w > 0 && s.r > 0));
+    if (!sets.length) return;
+    const today = Math.max(...sets.map(s => e1rm(s.w, s.r, s.rpe)));
+    const st = statsFor(key, wo.date);
+    const last = st && st.last ? st.last.e1 : null;
+    out.push({ name: exFull(e), key, today, last, best: st ? st.best.e1 : null, lastDate: st && st.last ? st.last.date : null });
+  });
+  return out;
+}
+function e1ChangeRows(rows) {
+  return rows.map(r => {
+    const d = r.last ? r.today - r.last : null;
+    const col = d == null ? 'var(--dim)' : d > 0.05 ? 'var(--green)' : d < -0.05 ? 'var(--red)' : 'var(--dim)';
+    return `<div class="exline"><span>${esc(r.name)}</span>
+      <span class="mono"><b>${wt(r.today)}</b> <span style="color:${col}">${d == null ? 'first' : `${d > 0.05 ? '▲' : d < -0.05 ? '▼' : '='} ${wt(Math.abs(d))}`}</span></span></div>`;
+  }).join('');
+}
+
 function showSummary(wo) {
   const sets = wo.exercises.reduce((n, e) => n + e.sets.filter(s => isPRSet(s)).length, 0);
   const reps = wo.exercises.reduce((n, e) => n + e.sets.filter(s => isWorking(s)).reduce((a, s) => a + s.r, 0), 0);
@@ -5307,6 +5347,9 @@ function showSummary(wo) {
           </div><div class="right"><div style="font-weight:780;font-size:17px;color:var(--gold)">${esc(prText(p))}</div>
             ${p.label ? '' : `<div class="sub">${p.w > 0 ? `e1RM ${wt(p.e1)}` : 'bodyweight'}</div>`}</div></div>
         </div>`).join('')}` : `<div class="empty">No PRs this session — still money in the bank.</div>`}
+      ${(() => { const ch = e1Changes(wo); return ch.length ? `
+        <div class="eyebrow" style="margin:16px 0 6px">e1RM vs last time</div>
+        <div class="card tight">${e1ChangeRows(ch)}</div>` : ''; })()}
 
       <div class="eyebrow" style="margin:16px 0 8px">Breakdown</div>
       ${wo.exercises.map(e => {
@@ -5612,6 +5655,8 @@ function viewAnalytics() {
     <div class="stat"><div class="k">PRs</div><div class="v">${totalPRs}</div><div class="d">all time</div></div>
   </div>
 
+  ${mainLiftChart()}
+
   <div class="seg" id="anTabs" style="margin-bottom:13px">
     ${[['exercises', 'Exercises'], ['rankings', 'Rankings'], ['muscles', 'Muscles']]
       .map(([k, l]) => `<button data-antab="${k}" class="${analyticsTab === k ? 'on' : ''}">${l}</button>`).join('')}
@@ -5689,6 +5734,37 @@ function viewAnalytics() {
         }).join('') || `<div class="empty">No exercise matches “${esc(analyticsQuery)}”.</div>`}
   </div>` : `<div class="card"><div class="empty"><span class="big">◫</span>No completed workouts yet.<br>Log a session and this fills up.</div></div>`}
   `;
+}
+
+/* The headline chart (roadmap B5): e1RM per session for the main lifts —
+   your priority lifts, or else the three most-trained heavy barbell lifts.
+   The last twelve months, so a long history doesn't flatten the recent line. */
+function mainLiftKeys() {
+  const pk = priorityKeys().filter(k => statsFor(k));
+  if (pk.length) return pk.slice(0, 5);
+  return allStats().filter(s => s.leaf && isMainLift({ leaf: s.leaf })).slice(0, 3).map(s => s.key);
+}
+function mainLiftChart() {
+  const keys = mainLiftKeys();
+  if (!keys.length) return '';
+  const d = new Date(); d.setFullYear(d.getFullYear() - 1);
+  const since = iso(d);
+  const series = keys.map((k, i) => {
+    const st = statsFor(k);
+    const recent = st.series.filter(p => p.date >= since);
+    return { label: leafName(k), color: SERIES_COLORS[i % SERIES_COLORS.length],
+      points: (recent.length >= 2 ? recent : st.series).map(p => ({ date: p.date, v: dw(p.e1) })), st };
+  });
+  return `<div class="card" style="margin-bottom:13px">
+    <div class="row between" style="margin-bottom:6px"><div class="eyebrow">e1RM trend · main lifts</div>
+      <div class="sub" style="font-size:11px">${priorityKeys().some(k => keys.includes(k)) ? 'your priority lifts' : 'most-trained heavy lifts'}</div></div>
+    ${chartMulti(series, { fmt: v => nice(Math.round(v)) })}
+    <div class="row wrap" style="gap:6px;margin-top:8px">${series.map(s => {
+      const pct = s.st.pct;
+      return `<button class="chip" data-exdetail="${esc(keys[series.indexOf(s)])}" style="border-color:${s.color}">${esc(s.label)} ${wt(s.st.best.e1)}
+        <span style="color:${pct > 1 ? 'var(--green)' : pct < -1 ? 'var(--red)' : 'var(--dim)'}">${pct > 1 ? '▲' : pct < -1 ? '▼' : '—'}${Math.abs(Math.round(pct))}%</span></button>`;
+    }).join('')}</div>
+  </div>`;
 }
 
 let detailMetric = 'e1';
@@ -5788,11 +5864,27 @@ function openMovementPage(movementId, focusKey) {
           <div class="stat"><div class="k">Top set</div><div class="v">${w(fs.bestW.w)}</div><div class="d">× ${fs.bestW.r}</div></div>
           <div class="stat"><div class="k">Last</div><div class="v" style="font-size:15px">${esc(relDay(fs.lastDate))}</div><div class="d">${fs.sessions} sessions</div></div>
         </div>` : `<div class="sub">This variant hasn't been logged yet.</div>`}` : '';
+    /* Every PR this variant has had, newest first — the same records the
+       calendar chips show, so reps, holds, caps and carries all appear. */
+    const base = focus ? focus.split('|')[0] : null;
+    const timeline = !base ? [] : S.workouts.filter(wo => wo.status === 'completed')
+      .sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0)
+      .flatMap(wo => prsFor(wo).filter(p => p.key && p.key.split('|')[0] === base).map(p => ({ p, wo })));
+    const tl = fv ? `
+      <div class="eyebrow" style="margin:16px 0 4px">PR timeline · ${esc(variantLabel(fv.leaf) || 'Standard')}</div>
+      ${timeline.length ? `<div class="prtl">${timeline.slice(0, 30).map(({ p, wo }) => `
+        <div class="prtl-row" data-hist-wo="${esc(wo.id)}">
+          <span class="prtl-dot"></span>
+          <div class="grow"><div class="mono"><b>${esc(prText(p))}</b>${p.label ? ` <span class="dimmer">${esc(p.what)}${p.key.includes('|') ? ` · ${esc(exTag(keyEntry(p.key)))}` : ''}</span>` : p.e1 ? ` <span class="dimmer">e1RM ${wt(p.e1)}${p.prev ? ` · ▲ ${wt(p.e1 - p.prev)}` : ''}</span>` : ''}</div>
+            <div class="sub">${fmtDate(wo.date)} · ${relDay(wo.date)}</div></div>
+        </div>`).join('')}${timeline.length > 30 ? `<div class="sub" style="padding:6px 0">…and ${timeline.length - 30} earlier</div>` : ''}</div>`
+        : `<div class="sub">No PRs yet${fs ? ' — the first session sets the marks to beat' : ''}.</div>`}` : '';
     return `${headline}${focusStrip}
       <div class="eyebrow" style="margin:14px 0 6px">Estimated 1RM by variant</div>
       ${chartMulti(series, { fmt: v => nice(Math.round(v)) })}
       <div class="eyebrow" style="margin:16px 0 4px">Records per variant</div>
-      <table class="vartable"><tbody>${rows || '<tr><td class="sub">Nothing logged yet</td></tr>'}</tbody></table>`;
+      <table class="vartable"><tbody>${rows || '<tr><td class="sub">Nothing logged yet</td></tr>'}</tbody></table>
+      ${tl}`;
   };
 
   const historyTab = () => {

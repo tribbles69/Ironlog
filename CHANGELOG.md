@@ -13,6 +13,16 @@ rather than guessed.
 
 ---
 
+## 0.32.0 — 24 Sep 2026
+- **e1RM vs last time.** The session summary shows today's best e1RM for
+  each lift against last time: up, down or first.
+- **PR timeline.** On a lift's page, under Stats, every PR the variant has
+  had, newest first. Tap one to open that session. Holds, carries and
+  time-cap PRs show there too.
+- **Main-lift trend chart.** The top of the Stats page charts e1RM over
+  the last year for your priority lifts, or your most-trained heavy lifts
+  if you haven't picked any. Tap a lift below the chart to open it.
+
 ## 0.31.0 — 24 Sep 2026
 - **The right bar, automatically.** The plate loader and warm-up ramp use
   the bar that matches the lift: trap bar, safety squat bar, axle or log. In
