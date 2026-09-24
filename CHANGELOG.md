@@ -13,6 +13,11 @@ rather than guessed.
 
 ---
 
+## 0.27.1 — 24 Sep 2026
+- **Fixed:** after closing the keyboard with Back, or tapping somewhere
+  else, a weight or reps box stayed selected, so the next tap on the keyboard
+  could type into it. Fields now let go when you're done with them.
+
 ## 0.27.0 — 24 Sep 2026
 - **Backup reminder.** If your last backup is more than two weeks old, Home
   shows a card to save a copy. "Not now" hides it for a week; it never shows
