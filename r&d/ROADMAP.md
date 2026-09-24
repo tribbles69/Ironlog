@@ -166,7 +166,9 @@ plugs in.
 - Design this so the VBT daily e1RM (item 7) can plug in later as a second
   input for the day's working weight.
 
-### 5. PR detection against history
+### 5. ~~PR detection against history~~ — not a bug
+Dropped 2026-09-24: Aaron confirmed the Smith calf raise PR was a logging
+error on his side, not the app. Nothing to fix. Kept below for the record.
 PRs are being flagged that aren't PRs (e.g. Smith calf raise 135 kg × 10 on
 12 Aug 2026, well under his real best — imported Liftoff history isn't being
 consulted). Check whether the composed exercise model migration already fixed
