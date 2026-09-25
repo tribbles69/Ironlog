@@ -13,6 +13,19 @@ rather than guessed.
 
 ---
 
+## 0.46.0 — 25 Sep 2026
+- **Log each side on single-arm and single-leg lifts.** On lifts like split
+  squats or one-arm rows, tap ⇆ Each side to enter left and right reps for
+  every set. "Different weights" gives each side its own weight too. It
+  stays on for that lift next time.
+- **Your weaker side counts.** The set's reps, and your PRs, go by the weaker
+  side, which is outlined as you type.
+- **See your imbalance.** Pick a single-arm or single-leg version of a lift
+  on its page to see, session by session, how far apart your sides were and
+  which one was weaker.
+- Sets show both sides, e.g. "20 kg × 7 (L 9 · R 7)", in the summary, the
+  history and the share image.
+
 ## 0.45.0 — 25 Sep 2026
 - **Tempo.** Give an exercise a tempo such as 3-1-1-0: seconds down, pause
   at the bottom, up, pause at the top. X means as fast as you can. Set it
