@@ -647,7 +647,8 @@
       "primary": ["hamstrings", "spinal erectors"],
       "secondary": ["glutes"],
       "aliases": [
-        { "name": "Good Morning" }
+        { "name": "Good Morning" },
+        { "name": "SSB Good Morning", "equipment": "safety_squat_bar" }
       ],
       "verified": false
     },
@@ -796,6 +797,7 @@
       "secondary": ["forearms"],
       "aliases": [
         { "name": "Barbell Shrug", "equipment": "barbell" },
+        { "name": "Trap Bar Shrug", "equipment": "trap_bar" },
         { "name": "Smith Shrug", "equipment": "smith" }
       ],
       "verified": true
@@ -977,7 +979,6 @@
         { "name": "Flat Bench" },
         { "name": "Pause Bench" },
         { "name": "Spoto Press" },
-        { "name": "Larsen Press" },
         { "name": "Dumbbell Bench", "equipment": "dumbbells" }
       ],
       "verified": true
@@ -1428,7 +1429,11 @@
         { "name": "Pause Squat" },
         { "name": "High Bar Squat" },
         { "name": "Low Bar Squat" },
-        { "name": "Safety Bar Squat", "equipment": "safety_squat_bar" }
+        { "name": "Safety Bar Squat", "equipment": "safety_squat_bar" },
+        { "name": "SSB Squat", "equipment": "safety_squat_bar" },
+        { "name": "Safety Squat Bar Squat", "equipment": "safety_squat_bar" },
+        { "name": "Belt Squat", "equipment": "belt_squat" },
+        { "name": "Belt Squat Machine", "equipment": "belt_squat" }
       ],
       "verified": true
     },
@@ -1521,6 +1526,7 @@
       "aliases": [
         { "name": "Deadlift" },
         { "name": "Hex Deadlift", "equipment": "trap_bar" },
+        { "name": "Hex Bar Deadlift", "equipment": "trap_bar" },
         { "name": "Trap Bar Deadlift", "equipment": "trap_bar" },
         { "name": "Conventional Deadlift" },
         { "name": "Deficit Deadlift" },
@@ -1630,6 +1636,61 @@
       ],
       "verified": false,
       "singleImplement": true
+    },
+    {
+      "id": "larsen-press",
+      "name": "Larsen Press",
+      "category": "chest",
+      "type": "strength",
+      "equipment": ["barbell", "dumbbells", "smith"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["pectorals"],
+      "secondary": ["triceps", "front deltoids"],
+      "aliases": [
+        { "name": "Larsen Press" },
+        { "name": "Larsen Bench" },
+        { "name": "Feet Up Bench", "equipment": "barbell" },
+        { "name": "Legs Up Bench" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "trusquat",
+      "name": "TruSquat",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["machine", "plate_loaded_machine"],
+      "defaultEquipment": "plate_loaded_machine",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes"],
+      "secondary": ["hamstrings", "adductors"],
+      "aliases": [
+        { "name": "TruSquat" },
+        { "name": "Tru Squat" },
+        { "name": "Tru-Squat" },
+        { "name": "TruSquat Machine" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "pendulum-squat",
+      "name": "Pendulum Squat",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["plate_loaded_machine", "machine"],
+      "defaultEquipment": "plate_loaded_machine",
+      "execution": ["bilateral", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps"],
+      "secondary": ["glutes", "adductors"],
+      "aliases": [
+        { "name": "Pendulum Squat" },
+        { "name": "Pendulum Squat Machine" }
+      ],
+      "verified": false
     },
     {
       "id": "hack-squat",
@@ -1842,6 +1903,7 @@
       "secondary": ["spinal erectors"],
       "aliases": [
         { "name": "Romanian Deadlift" },
+        { "name": "Trap Bar RDL", "equipment": "trap_bar" },
         { "name": "RDL" }
       ],
       "verified": true
@@ -1893,6 +1955,7 @@
       "secondary": ["adductors"],
       "aliases": [
         { "name": "Split Squat" },
+        { "name": "SSB Split Squat", "equipment": "safety_squat_bar" },
         { "name": "Static Lunge" }
       ],
       "verified": false
