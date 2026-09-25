@@ -430,7 +430,7 @@ tr.pr td input{background:rgba(255,197,66,.1);border-color:rgba(255,197,66,.35)}
 .lv-today{stroke:var(--accent);stroke-width:2}
 .lv-pt{fill:var(--accent)}
 .lv-pt.hollow{fill:none;stroke:var(--accent);stroke-width:1.5}
-.hrbox{display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:12px}
+.hrbox{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:12px}
 .dot-on{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(61,220,132,.2)}
 .hrhelp summary{cursor:pointer;margin:4px 0}
 .hrhelp .sub{line-height:1.6;margin:4px 0 6px}
@@ -1906,7 +1906,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.44.0';
+const APP_VERSION = '0.44.1';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -10681,8 +10681,14 @@ function cardioDecide(cfg, st) {
 
 /* ---- heart rate over Web Bluetooth (standard Heart Rate Service) ---- */
 function parseHr(dv) { const f = dv.getUint8(0); return f & 1 ? dv.getUint16(1, true) : dv.getUint8(1); }
+/* Flags bits 1–2: bit 2 = the device reports skin contact, bit 1 = contact now. */
+function hrContact(dv) { const f = dv.getUint8(0); return f & 4 ? !!(f & 2) : null; }
 const HR = {
   dev: null, ch: null, state: 'none', name: '', samples: [], tries: 0,
+  /* What actually arrived since connecting, so "no signal" can say why:
+     nothing at all (the watch isn't broadcasting) or readings of 0 / no
+     contact (it is, but can't read a pulse). */
+  diag: { at: 0, pkts: 0, zeros: 0, raw: '', bpm: null, contact: null, resub: false },
   supported() { return !!(navigator.bluetooth && navigator.bluetooth.requestDevice); },
   /* A chest strap advertises the Heart Rate service and shows up with the
      filter. A watch only does once "broadcast heart rate" is on, and some
@@ -10736,9 +10742,37 @@ const HR = {
     ch.addEventListener('characteristicvaluechanged', HR.value);
     await ch.startNotifications();
     this.ch = ch; this.state = 'on'; this.tries = 0;
+    this.diag = { at: Date.now(), pkts: 0, zeros: 0, raw: '', bpm: null, contact: null, resub: false };
     paintCardio();
+    // most devices don't allow reading the measurement, but a few answer one
+    ch.readValue().then(dv => HR.take(dv)).catch(() => {});
+    setTimeout(() => HR.watchdog(ch), 12000);
   },
-  value: ev => HR.feed(parseHr(ev.target.value)),
+  value: ev => HR.take(ev.target.value),
+  take(dv) {
+    if (!dv || dv.byteLength < 2) return;
+    const d = this.diag, bpm = parseHr(dv), contact = hrContact(dv);
+    d.pkts++; d.bpm = bpm; d.contact = contact;
+    d.raw = Array.from(new Uint8Array(dv.buffer, dv.byteOffset, Math.min(dv.byteLength, 8)), b => b.toString(16).padStart(2, '0')).join(' ');
+    if (!(bpm > 0) || contact === false) { d.zeros++; return; }
+    this.feed(bpm);
+  },
+  /* Connected but silent: subscribe once more — some watches only start
+     sending after a second subscription. */
+  async watchdog(ch) {
+    if (this.ch !== ch || this.state !== 'on' || this.diag.pkts || this.diag.resub) return;
+    this.diag.resub = true;
+    try { await ch.stopNotifications(); await ch.startNotifications(); } catch (e) { /* left as is */ }
+  },
+  /* Why there's no number, in words; null when there is one. */
+  why() {
+    if (this.state !== 'on' || this.avg(5) != null) return null;
+    const d = this.diag, secs = (Date.now() - d.at) / 1000;
+    if (!d.pkts) return secs < 8 ? 'waiting for the first reading…'
+      : 'connected, but nothing received — the watch isn\'t broadcasting heart rate';
+    if (d.contact === false || !(d.bpm > 0)) return 'readings arriving but no pulse — check the watch is snug on the wrist';
+    return 'readings stopped';
+  },
   lost: () => {
     if (HR.ch) HR.ch.removeEventListener('characteristicvaluechanged', HR.value);
     HR.ch = null; HR.state = 'lost';
@@ -10918,7 +10952,7 @@ function openCardioSetup() {
           <br>• <b>Polar</b> — Settings → General → Share HR with other devices, or start a workout with HR sharing on.
           <br>• <b>Coros</b> — Settings → Heart Rate Broadcast.
           <br>• <b>Suunto, Wahoo, Amazfit</b> — look for "HR broadcast" or "Share heart rate".
-          <br>• <b>Samsung Galaxy Watch, Wear OS</b> — needs a heart-rate broadcast app from the watch's store.
+          <br>• <b>Samsung Galaxy Watch, Wear OS</b> — the watch connects but sends nothing on its own. Install a heart-rate broadcast app on the watch (search the Play Store <i>on the watch</i> for "heart rate broadcast" or "HR BLE"), start it, then connect here. If it still shows nothing received, also start a workout on the watch.
           <br>• <b>Apple Watch and Fitbit</b> can't send heart rate to a browser — use a chest strap or arm band.
           <br>If the watch doesn't appear, try <b>Not listed?</b> — it shows every nearby device.</div></details>` : ''}
       <div class="hr"></div>
@@ -10985,9 +11019,11 @@ function openCardioSetup() {
       const hrPaint = () => {
         const box = $('#cdHrBox', bg);
         if (!box) return false;
-        const st = HR.state, bpm = HR.avg(5);
+        const st = HR.state, bpm = HR.avg(5), why = HR.why();
         box.innerHTML = !HR.supported() ? '<span class="sub">Bluetooth heart rate needs Chrome on Android. Without it the session is a plain log.</span>'
           : st === 'on' ? `<span class="dot-on"></span><b>${esc(HR.name)}</b><span class="grow"></span><span class="mono" style="font-size:20px;font-weight:800">${bpm != null ? Math.round(bpm) : '—'}</span><span class="sub"> bpm</span>`
+            + (why ? `<div class="sub" style="flex-basis:100%;margin-top:4px">${esc(why)}${why.endsWith('…') ? '' : '.'}${why.includes('nothing received') ? ' See <b>Using a smartwatch</b> below.' : ''}</div>` : '')
+            + (why && HR.diag.pkts ? `<div class="sub mono" style="flex-basis:100%;font-size:11px">${HR.diag.pkts} readings · last ${esc(HR.diag.raw)}${HR.diag.zeros ? ` · ${HR.diag.zeros} with no pulse` : ''}</div>` : '')
           : st === 'connecting' ? `<span class="sub">Connecting to ${esc(HR.name)}…</span>`
           : st === 'lost' ? `<span class="sub">${esc(HR.name)} not connected.</span><span class="grow"></span><button class="btn xs" id="cdHrRe">Reconnect</button>`
           : '<span class="sub">Nothing connected. You can start without — cues need heart rate, the log doesn\'t.</span>';
@@ -11207,7 +11243,7 @@ function paintCardio(force) {
   hrEl.style.color = hr == null || !zone ? '' : cfg.ceiling > 0 && hr > cfg.ceiling ? 'var(--red)'
     : hr < cfg.lo ? 'var(--blue)' : hr > cfg.hi ? 'var(--gold)' : 'var(--green)';
   const st = HR.state;
-  $('#cdHrState').textContent = !HR.supported() ? 'No Bluetooth here' : st === 'on' ? (hr != null ? HR.name : `${HR.name} · no signal`)
+  $('#cdHrState').textContent = !HR.supported() ? 'No Bluetooth here' : st === 'on' ? (hr != null ? HR.name : `${HR.name} · ${HR.diag.pkts ? 'no pulse' : 'nothing received'}`)
     : st === 'connecting' ? 'Connecting…' : st === 'lost' ? 'HR lost' : 'No HR';
   const conn = $('#cdConn');
   conn.style.display = !HR.supported() || st === 'on' || st === 'connecting' ? 'none' : '';
