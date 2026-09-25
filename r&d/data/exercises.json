@@ -135,6 +135,78 @@
         "evidence": { "programEntries": 1 }
       },
       {
+        "id": "seated",
+        "label": "Seated",
+        "splitsPR": false,
+        "group": "adaptation",
+        "detect": ["seated"],
+        "evidence": { "programEntries": 0, "provisional": "C5 list, to be validated with adaptive lifters" }
+      },
+      {
+        "id": "strapped",
+        "label": "Strapped in",
+        "splitsPR": false,
+        "group": "adaptation",
+        "detect": ["strapped", "straps on legs"],
+        "evidence": { "programEntries": 0, "provisional": "C5 list, to be validated with adaptive lifters" }
+      },
+      {
+        "id": "grip_aid",
+        "label": "Grip aid / hand strap",
+        "splitsPR": false,
+        "group": "adaptation",
+        "detect": ["grip aid", "hand strap", "gripping aid"],
+        "evidence": { "programEntries": 0, "provisional": "C5 list, to be validated with adaptive lifters" }
+      },
+      {
+        "id": "assisted",
+        "label": "Assisted set-up",
+        "splitsPR": false,
+        "group": "adaptation",
+        "detect": ["assisted set-up", "assisted setup", "help to unrack"],
+        "evidence": { "programEntries": 0, "provisional": "C5 list, to be validated with adaptive lifters" }
+      },
+      {
+        "id": "one_sided",
+        "label": "One-sided set-up",
+        "splitsPR": false,
+        "group": "adaptation",
+        "detect": ["one-sided", "one sided"],
+        "evidence": { "programEntries": 0, "provisional": "C5 list, to be validated with adaptive lifters" }
+      },
+      {
+        "id": "wheelchair",
+        "label": "From wheelchair",
+        "splitsPR": false,
+        "group": "adaptation",
+        "detect": ["from wheelchair", "in chair"],
+        "evidence": { "programEntries": 0, "provisional": "C5 list, to be validated with adaptive lifters" }
+      },
+      {
+        "id": "prosthesis",
+        "label": "Prosthesis / orthosis",
+        "splitsPR": false,
+        "group": "adaptation",
+        "detect": ["prosthesis", "prosthetic", "orthosis", "brace"],
+        "evidence": { "programEntries": 0, "provisional": "C5 list, to be validated with adaptive lifters" }
+      },
+      {
+        "id": "supported",
+        "label": "Supported (chest or back)",
+        "splitsPR": false,
+        "group": "adaptation",
+        "detect": ["supported", "chest supported"],
+        "evidence": { "programEntries": 0, "provisional": "C5 list, to be validated with adaptive lifters" }
+      },
+      {
+        "id": "adapted_rom",
+        "label": "Adapted range",
+        "splitsPR": false,
+        "group": "adaptation",
+        "detect": ["adapted range", "adapted rom"],
+        "evidence": { "programEntries": 0, "provisional": "C5 list, to be validated with adaptive lifters" }
+      },
+      {
         "id": "chains",
         "label": "Chains",
         "splitsPR": true,

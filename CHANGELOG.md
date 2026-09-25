@@ -13,6 +13,20 @@ rather than guessed.
 
 ---
 
+## 0.40.0 — 25 Sep 2026
+- **Adaptation modifiers.** The modifier picker has a new Adaptations
+  section: seated, strapped in, grip aid / hand strap, assisted set-up,
+  one-sided set-up, from wheelchair, prosthesis / orthosis, supported (chest
+  or back), adapted range. They record how a lift was set up for you and
+  never split your PRs. This is a first list, so tell us what's missing.
+- **Flag pain or fatigue on a set.** Tap the set number: under "How it
+  felt", mark pain or fatigue and add a short note. Flagged sets get a gold
+  dot.
+- **Flag the whole session** with "How it feels today…" on the workout, or
+  "How it felt" when editing a past session.
+- Flags show in the session summary, on the calendar, in the session view
+  and in each lift's history. They never change a PR, volume or your plan.
+
 ## 0.39.0 — 25 Sep 2026
 - **Easier to hit with chalky hands.** On the workout screen, the tick,
   set number, weight and reps boxes, steppers, ⋯ menu, and Finish and Off

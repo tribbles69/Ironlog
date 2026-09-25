@@ -168,7 +168,8 @@ ok(M.filter(m => m.metric === 'time').length === 8, 'movements with metric:time 
 ok(M.filter(m => m.singleImplement).length === 8, 'movements with singleImplement = 8');
 ok(M.filter(m => m.verified === true).length === 32, 'verified:true = 32');
 ok(names.every(n => resolve(n).m.verified === true), 'all program names map to verified:true movements');
-ok(V.modifier.filter(m => !m.splitsPR).every(m => m.evidence.programEntries > 0),
+// adaptation modifiers (C5) are a provisional list, not drawn from the program notes
+ok(V.modifier.filter(m => !m.splitsPR && m.group !== 'adaptation').every(m => m.evidence.programEntries > 0),
    'every splitsPR:false modifier is evidenced in the program notes');
 ok(V.modifier.filter(m => m.splitsPR).every(m => m.evidence.programEntries === 0),
    'every splitsPR:true modifier has zero instances (stated in section 8)');
