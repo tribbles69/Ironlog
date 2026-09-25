@@ -420,7 +420,7 @@ record the error in `r&d/notes/`.
 plus the strongman implements from B1 — as movement + equipment leaves. Check
 `EX_DB` for what's already there. Can be done alongside B1.
 
-### [ ] D3. Structured tempo
+### [x] D3. Structured tempo — shipped 0.45.0 (spec `r&d/specs/tempo-spec.md`; four counts with X, picker boxes and presets, picked up from notes, line on the active set with time under tension, Measure shows real down/up times)
 (Blast #110.) Extends the modifier chips: a four-digit tempo (eccentric–pause–
 concentric–pause, e.g. 3-1-1-0) rather than a text chip; shown on the active
 set; doesn't split the PR leaf. VBT Measure can fill in the real concentric
