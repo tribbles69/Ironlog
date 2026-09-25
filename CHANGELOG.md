@@ -13,6 +13,20 @@ rather than guessed.
 
 ---
 
+## 0.48.0 — 25 Sep 2026
+- **Places.** Set up where you train, such as Home, Gym or a hotel, with the
+  kit each one has. Find it in Settings → Places, with presets to start
+  from.
+- **Plates per place.** A place can have its own bars and plates, so the
+  plate calculator and warm-ups load from what's actually there.
+- **Switch place from the session.** A 📍 button on the session says where
+  you are and changes it.
+- **The exercise picker greys what isn't there**, and picks equipment that
+  is when you tap a lift.
+- **Planned and program sessions offer a swap** when an exercise needs kit
+  you don't have. For example, "Needs Barbell — not at Home" comes with a
+  button to swap to dumbbells.
+
 ## 0.47.0 — 25 Sep 2026
 - **Rep ranges.** Give an exercise a range like 8–12, from its ⋯ menu or the
   planner. Program notes such as "3×8-12" are picked up by themselves, and

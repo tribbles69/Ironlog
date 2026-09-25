@@ -436,7 +436,7 @@ side counts for PRs (default: the weaker side).
 the range at the target RIR suggests more load next time. Works alongside the
 autoregulated programming, doesn't replace it.
 
-### [ ] D6. Equipment profiles
+### [x] D6. Equipment profiles — shipped 0.48.0 (spec `r&d/specs/places-spec.md`; places with kit and optional own bars/plates, 📍 switcher on the session, picker greys, swap on planned sessions, voice adds respect it — the only AI use today)
 (Blast #41, #107.) Named places ("Home", "Gym") with their kit and plate
 inventory (shared with B4); the picker greys what isn't available there, and
 any program or AI suggestion respects it.

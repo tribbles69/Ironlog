@@ -433,6 +433,9 @@ tr.pr td input{background:rgba(255,197,66,.1);border-color:rgba(255,197,66,.35)}
 .hrbox{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:12px}
 .dot-on{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(61,220,132,.2)}
 .rangeline{margin-top:6px}
+.placewarn{display:flex;gap:8px;align-items:center;margin-top:8px;padding:8px 10px;border-radius:10px;border:1px solid rgba(255,197,66,.35);background:rgba(255,197,66,.07);color:var(--gold);font-size:13px}
+.pickitem.na{opacity:.45}
+.eqi.na{opacity:.3}
 .siderow td{padding:0 11px 8px !important;border-top:0 !important}
 .sides{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .side{display:flex;gap:5px;align-items:center;padding:2px 6px;border-radius:8px;border:1px solid transparent}
@@ -1919,7 +1922,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.47.0';
+const APP_VERSION = '0.48.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -2556,7 +2559,7 @@ function openAxisPicker(ei, axis) {
     return t;
   };
   const optionsFor = ax => {
-    if (ax === 'equipment') return (V.equipment || []).map(v => ({ v, label: EQ_TITLE[v] || v, icon: EQ_ICON[v], ok: (m.equipment || []).includes(v) }));
+    if (ax === 'equipment') return (V.equipment || []).map(v => ({ v, label: (EQ_TITLE[v] || v) + ((m.equipment || []).includes(v) && !kitHas(v) ? ` · not at ${placeName()}` : ''), icon: EQ_ICON[v], ok: (m.equipment || []).includes(v) }));
     if (ax === 'execution') return (V.execution || []).map(v => ({ v, label: EXEC_LABEL[v] || v, icon: EXEC_ICON[v], ok: (m.execution || []).includes(v) }));
     const allowed = attachmentsFor(m, e.leaf.equipment);
     return (V.attachment || []).map(v => ({ v, label: ATT_TITLE[v] || v, icon: ATT_ICON_FALLBACK, ok: allowed.includes(v) || v === 'none' }));
@@ -4758,10 +4761,11 @@ function pickExercise(cb) {
   const draw = (q) => {
     const all = allExercises();
     const ql = (q || '').toLowerCase();
-    const list = ql ? all.filter(x => x.name.toLowerCase().includes(ql)) : all;
+    const list = (ql ? all.filter(x => x.name.toLowerCase().includes(ql)) : all).slice()
+      .sort((x, y) => (movableHere(x.leaf) ? 0 : 1) - (movableHere(y.leaf) ? 0 : 1));   // stable: kit that isn't here sinks (D6)
     const groups = {};
     list.forEach(x => { const c = categoryOf(x.leaf); (groups[c] = groups[c] || []).push(x); });
-    let html = '';
+    let html = curPlace() ? `<div class="sub" style="padding:4px 16px 2px">At ${esc(placeName())} — greyed needs kit that isn't here.</div>` : '';
     if (!q && recent.length) {
       html += `<div style="padding:8px 16px 4px" class="eyebrow">Recent</div>`;
       html += recent.map(item).join('');
@@ -4783,8 +4787,8 @@ function pickExercise(cb) {
     const m = movementById(x.leaf.movement);
     const opts = (m && m.equipment) || [];
     if (opts.length < 2) return '';
-    return `<div class="eqrow">${opts.map(v => `<span class="eqi ${v === x.leaf.equipment ? 'on' : ''}"
-      data-pickeq="${esc(x.leaf.movement)}|${esc(v)}" title="${esc(EQ_TITLE[v] || v)}">${EQ_ICON[v] || ''}</span>`).join('')}</div>`;
+    return `<div class="eqrow">${opts.map(v => `<span class="eqi ${v === x.leaf.equipment ? 'on' : ''} ${kitHas(v) ? '' : 'na'}"
+      data-pickeq="${esc(x.leaf.movement)}|${esc(v)}" title="${esc(EQ_TITLE[v] || v)}${kitHas(v) ? '' : ` — not at ${esc(placeName())}`}">${EQ_ICON[v] || ''}</span>`).join('')}</div>`;
   };
 
   const item = x => {
@@ -4792,7 +4796,7 @@ function pickExercise(cb) {
     const v = variantLabel(x.leaf);
     const meta = [v, st ? `PR ${wt(st.bestW.w)} × ${st.bestW.r} · ${st.sessions} sessions` : 'No history']
       .filter(Boolean).join(' · ');
-    return `<div class="pickitem" data-pick="${esc(x.key)}">
+    return `<div class="pickitem ${movableHere(x.leaf) ? '' : 'na'}" data-pick="${esc(x.key)}">
       <div class="grow"><div class="n">${esc(x.name)}</div><div class="m">${esc(meta)}</div>${eqRow(x)}</div>
       <span class="dimmer">›</span></div>`;
   };
@@ -4805,7 +4809,7 @@ function pickExercise(cb) {
       const list = $('#pkList', bg), q = $('#pkQ', bg);
       const bind = () => {
         list.querySelectorAll('[data-pick]').forEach(el =>
-          el.onclick = () => { closeModal(); cb(keyLeaf(el.dataset.pick)); });
+          el.onclick = () => { const lf = keyLeaf(el.dataset.pick); closeModal(); cb(leafHere(lf) ? lf : placeSwap(lf) || lf); });
         /* Bound after the row, and stops the event, so tapping an icon picks
            that equipment instead of the row's default leaf. */
         list.querySelectorAll('[data-pickeq]').forEach(el => el.onclick = ev => {
@@ -4813,6 +4817,7 @@ function pickExercise(cb) {
           const [movement, equipment] = el.dataset.pickeq.split('|');
           const m = movementById(movement);
           if (!m) return;
+          if (!kitHas(equipment)) return toast(`${EQ_TITLE[equipment] || equipment} isn't at ${placeName()}`);
           closeModal();
           cb(completeLeaf(m, { equipment }));
         });
@@ -4879,6 +4884,7 @@ function workoutLanding() {
 function startWorkout(wo) {
   if (S.active) { toast('Finish the active workout first'); go('workout'); return; }
   (wo.exercises || []).forEach(e => { adoptTempo(e); adoptRange(e); });
+  wo.place = S.settings.place && places().some(p => p.id === S.settings.place) ? S.settings.place : null;   // today's place, not the copied session's (D6)
   S.active = wo;
   save(); go('workout');
 }
@@ -5018,6 +5024,7 @@ function activeWorkout() {
       <button class="btn sm danger" id="discardBtn">Discard</button>
     </div>
     ${runInLine(a.date, true)}
+    ${placeChip()}
     <button class="btn xs ${hasFeel(a) ? 'primary' : 'ghost'} wide" id="feelBtn" style="margin-top:8px">${hasFeel(a) ? `Feels: ${esc(feelWords(a) || 'note')}` : 'How it feels today…'}</button>
     <div class="row" style="margin-top:8px">
       <button class="btn sm wide" id="voiceBtn">🎤 Log a set</button>
@@ -5244,6 +5251,7 @@ function exerciseCard(e, ei) {
         <button class="icon-btn" data-ex-menu="${ei}">⋯</button>
       </div>
       ${leafChip(e.leaf, ei)}
+      ${placeWarn(e, ei)}
       ${modChips(e, `data-mods="${ei}"`)}
       <div class="pr-banner">${prBanner}</div>
       ${autoLine}
@@ -5395,11 +5403,15 @@ function barFor(leaf) {
   const tagged = eq && bl.find(b => b.eq === eq);
   if (tagged) return tagged;
   if (eq && eq !== 'barbell') { const p = BAR_PRESETS.find(b => b.eq === eq); if (p) return { ...p, preset: true }; }
-  const usual = bl.find(b => Math.abs(b.kg - (S.settings.barKg || 20)) < 1e-9) || bl[0];
+  const pl = curPlace(), own = pl && pl.bars && pl.bars.length;
+  const usual = (own ? null : bl.find(b => Math.abs(b.kg - (S.settings.barKg || 20)) < 1e-9)) || bl[0];
   return { ...usual, isDefault: true };
 }
 /* Both collars together; they ride on every loaded bar. */
-function collarPair() { return (S.settings.collarKg > 0 ? S.settings.collarKg : 0) * 2; }
+function collarPair() {
+  const pl = curPlace(), c = pl && pl.plates && pl.plates.length ? pl.collarKg : S.settings.collarKg;
+  return (c > 0 ? c : 0) * 2;
+}
 /* Nearest weight the inventory can build on this bar; a tie goes to the lighter. */
 function loadableNear(kg, barKg, inv) {
   const n = nearestLoadable(kg, barKg, inv);
@@ -5425,13 +5437,23 @@ function barRow(k, b) {
   </div>`;
 }
 
-function inventory() {
+/* The main inventory (Settings), and the one in use: the current place's own
+   when it has one (D6), else the main. */
+function mainPlates() {
   const inv = S.settings.plates && S.settings.plates.length ? S.settings.plates : DEFAULT_PLATES;
   return inv.filter(p => p.kg > 0 && p.pairs > 0).sort((a, b) => b.kg - a.kg);
 }
-function bars() {
+function mainBars() {
   return (S.settings.bars && S.settings.bars.length ? S.settings.bars : [{ name: 'Barbell', kg: 20 }])
     .filter(b => b.kg > 0);
+}
+function inventory() {
+  const pl = curPlace();
+  return pl && pl.plates && pl.plates.length ? pl.plates.filter(p => p.kg > 0 && p.pairs > 0).sort((a, b) => b.kg - a.kg) : mainPlates();
+}
+function bars() {
+  const pl = curPlace();
+  return pl && pl.bars && pl.bars.length ? pl.bars.filter(b => b.kg > 0) : mainBars();
 }
 
 /* Greedy is optimal here: every plate set in use is "canonical" (each size at
@@ -5630,7 +5652,7 @@ function finishWorkout(force) {
   const mins = a.start ? Math.max(1, Math.round((Date.now() - a.start) / 60000)) : 0;
   const done = {
     id: a.id, date: a.date, name: a.name, status: 'completed', source: 'logged',
-    ...(a.off ? { off: true } : {}), ...(a.block ? { block: a.block, prog: a.prog } : {}),
+    ...(a.off ? { off: true } : {}), ...(a.block ? { block: a.block, prog: a.prog } : {}), ...(a.place ? { place: a.place } : {}),
     exercises: logged, start: a.start, end: Date.now(), ...(hasFeel(a) ? { feel: a.feel } : {}),
     summary: { mins, prs, volume: logged.reduce((t, e) => t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + s.w * s.r, 0), 0) },
   };
@@ -9597,9 +9619,13 @@ function openSettings() {
         <div class="sub" style="margin-top:4px">Sex and bodyweight set your DOTS; they live in the profile now rather than here.</div>
       </div>
       <div class="hr"></div>
-      <div class="eyebrow" style="margin-bottom:6px">Bars</div>
+      <div class="eyebrow" style="margin-bottom:6px">Places</div>
+      <div class="sub" style="margin-bottom:8px">${places().length ? `${places().map(x => esc(x.name)).join(' · ')} — the kit at each, so exercises you can't do there are greyed.` : 'Name where you train and the kit there — Home, Gym, a hotel — and exercises you can\'t do there are greyed.'}</div>
+      <button class="btn sm wide ghost" id="stPlaces" style="margin-bottom:4px">${places().length ? 'Manage places →' : 'Set up places →'}</button>
+      <div class="hr"></div>
+      <div class="eyebrow" style="margin-bottom:6px">Bars${places().length ? ' — main inventory' : ''}</div>
       <div class="sub" style="margin-bottom:8px">"For" picks the bar automatically on lifts with that equipment, so a trap-bar deadlift loads from the trap bar.</div>
-      <div id="stBars">${bars().map((b, i) => barRow(i, b)).join('')}</div>
+      <div id="stBars">${mainBars().map((b, i) => barRow(i, b)).join('')}</div>
       <div class="row wrap" style="gap:6px">
         <button class="btn xs ghost" id="stAddBar">+ Add bar</button>
         ${BAR_PRESETS.filter(p => p.name !== 'Barbell').map((p, i) => `<button class="btn xs ghost" data-bpre="${i + 1}">+ ${esc(p.name)}</button>`).join('')}
@@ -9608,7 +9634,7 @@ function openSettings() {
       <div class="hr"></div>
       <div class="eyebrow" style="margin-bottom:6px">Plates — pairs you own</div>
       <div class="sub" style="margin-bottom:8px">Counted in pairs, so a stack the calculator gives you is one you can actually build.</div>
-      <div id="stPlates">${inventory().map((p, i) => `
+      <div id="stPlates">${mainPlates().map((p, i) => `
         <div class="row" style="gap:8px;margin-bottom:6px;align-items:center">
           <input type="number" step="0.25" inputmode="decimal" data-pk="${i}" value="${dw(p.kg, 2)}" style="width:82px" aria-label="Plate size (${U()})">
           <span class="sub">${U()} ×</span>
@@ -9806,6 +9832,7 @@ function openSettings() {
       $('#stNews', bg).onclick = () => { closeModal(); openWhatsNew(); };
       $('#stHelp', bg).onclick = () => { closeModal(); openHelp(); };
       $('#stProfile', bg).onclick = () => { closeModal(); openProfile(); };
+      $('#stPlaces', bg).onclick = () => { closeModal(); openPlaces(); };
       $('#stWipe', bg).onclick = () => confirmDlg('This erases every workout, check-in, goal and meet. It cannot be undone.', () => {
         S = structuredClone(DEFAULT_STATE); save(); applySkin(S.settings.skin); closeAllModals(); go('home'); toast('All data erased');
       }, 'Erase everything');
@@ -10286,6 +10313,200 @@ function openHoldTimer(ei, si) {
       };
     },
   });
+}
+
+/* ---------------- PLACES (D6) ----------------
+   Named places with their kit, and optionally their own bars and plates.
+   No places = everything available, as before. r&d/specs/places-spec.md. */
+const PLACE_PRESETS = [
+  { name: 'Home gym', kit: ['barbell', 'dumbbells', 'kettlebell', 'plate', 'resistance_band'] },
+  { name: 'Commercial gym', kit: ['barbell', 'dumbbells', 'kettlebell', 'trap_bar', 'smith', 'machine', 'plate_loaded_machine', 'cable', 'resistance_band', 'plate'] },
+  { name: 'Hotel / travel', kit: ['dumbbells', 'machine', 'cable', 'resistance_band'] },
+  { name: 'Strongman gym', kit: null },   // null = the whole vocabulary
+];
+function places() { return S.settings.places || []; }
+/* Any equipment of this movement is here. */
+function movableHere(leaf) {
+  if (!curPlace() || !leaf) return true;
+  const m = movementById(leaf.movement);
+  return kitHas(leaf.equipment) || !!(m && (m.equipment || []).some(v => kitHas(v)));
+}
+function curPlace() {
+  const id = S.active && S.active.place !== undefined ? S.active.place : S.settings.place;
+  return id ? places().find(p => p.id === id) || null : null;
+}
+function kitHas(eq, pl = curPlace()) { return !pl || !eq || eq === 'bodyweight' || (pl.kit || []).includes(eq); }
+function leafHere(leaf) { return !leaf || kitHas(leaf.equipment); }
+/* The same movement with equipment that is here, keeping the execution when
+   the new equipment allows it. */
+function placeSwap(leaf) {
+  const m = leaf && movementById(leaf.movement);
+  if (!m) return null;
+  const eq = (m.equipment || []).find(v => v !== leaf.equipment && kitHas(v));
+  if (!eq) return null;
+  return completeLeaf(m, { equipment: eq, ...((m.execution || []).includes(leaf.execution) ? { execution: leaf.execution } : {}) });
+}
+function placeName(pl = curPlace()) { return pl ? pl.name : ''; }
+/* Live card: this exercise needs kit that isn't here. */
+function placeWarn(e, ei) {
+  if (!e.leaf || leafHere(e.leaf)) return '';
+  const sw = placeSwap(e.leaf);
+  return `<div class="placewarn" role="note"><span class="grow">Needs ${esc(EQ_TITLE[e.leaf.equipment] || e.leaf.equipment)} — not at ${esc(placeName())}.</span>
+    ${sw ? `<button class="btn xs primary" data-place-swap="${ei}">Swap to ${esc(EQ_TITLE[sw.equipment] || sw.equipment)}</button>` : '<span class="sub">No other kit for this here</span>'}</div>`;
+}
+function swapForPlace(e) {
+  const sw = placeSwap(e.leaf);
+  if (!sw) return false;
+  e.leaf = sw; e.legacyName = displayName(sw);
+  delete e.auto;
+  e.sets.forEach(s => { if (!s.done) { s.w = 0; delete s.auto; delete s.planW; if (s.sides) { s.sides.L.w = s.sides.R.w = 0; s.sides.at = [0, s.r || 0]; } } });
+  return true;
+}
+function placeChip() {
+  if (!places().length) return '';
+  const pl = curPlace(), need = S.active ? S.active.exercises.filter(e => e.leaf && !leafHere(e.leaf)).length : 0;
+  return `<div class="row" style="gap:8px;margin-top:8px;align-items:center">
+    <button class="btn xs ghost" id="placeBtn" aria-label="Where you're training: ${esc(pl ? pl.name : 'anywhere')}. Change">📍 ${esc(pl ? pl.name : 'Anywhere')} ▾</button>
+    ${need ? `<span class="sub" style="color:var(--gold)">${need} exercise${need === 1 ? ' needs' : 's need'} kit that isn't here</span>` : ''}</div>`;
+}
+function openPlacePick(after) {
+  const cur = curPlace();
+  modal({
+    title: 'Where are you training?',
+    body: `${places().map(p => `<button class="axrow ${cur && cur.id === p.id ? 'on' : ''}" data-pl-pick="${esc(p.id)}"><span class="lbl">${esc(p.name)} <span class="dimmer">${kitSummary(p)}</span></span><span class="rad"></span></button>`).join('')}
+      <button class="axrow ${cur ? '' : 'on'}" data-pl-pick=""><span class="lbl">Anywhere <span class="dimmer">no filter</span></span><span class="rad"></span></button>`,
+    foot: `<button class="btn ghost" id="plMng">Manage places</button><button class="btn primary" data-close>Done</button>`,
+    onOpen: bg => {
+      bg.querySelectorAll('[data-pl-pick]').forEach(b => b.onclick = () => {
+        const id = b.dataset.plPick || null;
+        if (S.active) S.active.place = id;
+        S.settings.place = id;
+        save(); closeModal(); if (after) after();
+      });
+      $('#plMng', bg).onclick = () => { closeModal(); openPlaces(); };
+    },
+  });
+}
+function kitSummary(p) {
+  const all = catalogue().V.equipment || [];
+  const n = (p.kit || []).filter(k => k !== 'bodyweight').length, of = all.filter(k => k !== 'bodyweight').length;
+  return `${n === of ? 'all kit' : `${n} kinds of kit`}${p.plates && p.plates.length ? ' · own plates' : ''}`;
+}
+function openPlaces() {
+  const list = places();
+  modal({
+    title: 'Places',
+    body: `<div class="sub" style="margin-bottom:10px">The kit where you train. The exercise picker greys what isn't there, and planned sessions offer a swap.</div>
+      ${list.length ? list.map(p => `<div class="card tight row between" style="margin-bottom:8px;gap:8px">
+          <div class="grow"><div style="font-weight:650">${esc(p.name)}${S.settings.place === p.id ? ' <span class="chip">current</span>' : ''}</div><div class="sub">${kitSummary(p)}</div></div>
+          <button class="btn sm ghost" data-pl-edit="${esc(p.id)}">Edit</button></div>`).join('') : '<div class="empty">No places yet.</div>'}
+      <div class="eyebrow" style="margin:12px 0 6px">Add a place</div>
+      <div class="row wrap" style="gap:6px">${PLACE_PRESETS.map((p, i) => `<button class="btn sm ghost" data-pl-new="${i}">+ ${esc(p.name)}</button>`).join('')}
+        <button class="btn sm ghost" data-pl-new="-1">+ Blank</button></div>`,
+    foot: `<button class="btn primary" data-close>Done</button>`,
+    onOpen: bg => {
+      bg.querySelectorAll('[data-pl-edit]').forEach(b => b.onclick = () => { closeModal(); openPlaceEdit(places().find(p => p.id === b.dataset.plEdit)); });
+      bg.querySelectorAll('[data-pl-new]').forEach(b => b.onclick = () => {
+        const pr = PLACE_PRESETS[+b.dataset.plNew];
+        const all = catalogue().V.equipment || [];
+        closeModal();
+        openPlaceEdit({ id: uid(), name: pr ? pr.name : '', kit: ['bodyweight', ...(pr ? (pr.kit || all) : [])].filter((v, i, a) => a.indexOf(v) === i), isNew: true });
+      });
+    },
+  });
+}
+function openPlaceEdit(src) {
+  if (!src) return;
+  const p = structuredClone(src);
+  const all = catalogue().V.equipment || [];
+  const kit = new Set(p.kit || []);
+  let own = !!(p.plates && p.plates.length);
+  const invRows = () => `
+      <div class="eyebrow" style="margin:10px 0 6px">Bars here</div>
+      <div id="peBars">${(p.bars && p.bars.length ? p.bars : mainBars()).map((b, i) => barRow(i, b)).join('')}</div>
+      <button class="btn xs ghost" id="peAddBar">+ Add bar</button>
+      <div class="eyebrow" style="margin:12px 0 6px">Plates here — pairs</div>
+      <div id="pePlates">${(p.plates && p.plates.length ? p.plates : mainPlates()).map((x, i) => plateRowHtml(i, x)).join('')}</div>
+      <button class="btn xs ghost" id="peAddPlate">+ Add plate</button>
+      <div class="field" style="margin-top:10px"><label for="peCollar">Collars — each (${U()})</label>
+        <input type="number" step="0.25" inputmode="decimal" id="peCollar" value="${(p.plates && p.plates.length ? p.collarKg : S.settings.collarKg) > 0 ? dw(p.plates && p.plates.length ? p.collarKg : S.settings.collarKg, 2) : ''}" placeholder="0" style="width:120px"></div>`;
+  modal({
+    title: src.isNew ? 'New place' : `Edit · ${src.name}`,
+    body: `<div class="field"><label for="peName">Name</label><input id="peName" value="${esc(p.name)}" placeholder="Home, Gym, Mum's garage…" maxlength="30"></div>
+      <div class="eyebrow" style="margin:6px 0 6px">Kit here</div>
+      <div id="peKit">${all.map(v => `<button class="axrow ${v === 'bodyweight' || kit.has(v) ? 'on' : ''} ${v === 'bodyweight' ? 'off' : ''}" data-pe-kit="${esc(v)}" ${v === 'bodyweight' ? 'disabled' : ''} aria-pressed="${v === 'bodyweight' || kit.has(v) ? 'true' : 'false'}">${EQ_ICON[v] || ''}<span class="lbl">${esc(EQ_TITLE[v] || v)}${v === 'bodyweight' ? ' <span class="dimmer">always</span>' : ''}</span><span class="rad"></span></button>`).join('')}</div>
+      <div class="hr"></div>
+      <button class="btn sm wide ${own ? 'primary' : 'ghost'}" id="peOwn" aria-pressed="${own}">${own ? '✓ Own bars and plates here' : 'Use the main bars and plates'}</button>
+      <div class="sub" style="margin-top:4px">Turn on if the plates here differ — the calculator then loads from these.</div>
+      <div id="peInv">${own ? invRows() : ''}</div>`,
+    foot: `${src.isNew ? '' : '<button class="btn danger" id="peDel">Delete</button>'}<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="peSave">Save</button>`,
+    onOpen: bg => {
+      bg.querySelectorAll('[data-pe-kit]').forEach(b => b.onclick = () => {
+        const v = b.dataset.peKit;
+        if (kit.has(v)) kit.delete(v); else kit.add(v);
+        b.classList.toggle('on', kit.has(v)); b.setAttribute('aria-pressed', kit.has(v) ? 'true' : 'false');
+      });
+      const wireInv = () => {
+        const addRow = (host, html) => { const d = document.createElement('div'); d.innerHTML = html; host.appendChild(d.firstElementChild); wireRm(); };
+        const wireRm = () => bg.querySelectorAll('#peInv [data-brm], #peInv [data-prm]').forEach(b => b.onclick = () => b.closest('.row').remove());
+        const ab = $('#peAddBar', bg), ap = $('#peAddPlate', bg);
+        if (ab) ab.onclick = () => addRow($('#peBars', bg), barRow(`n${Date.now()}`, { name: '', kg: 0, eq: '' }));
+        if (ap) ap.onclick = () => addRow($('#pePlates', bg), plateRowHtml(`n${Date.now()}`, { kg: 0, pairs: 1 }));
+        wireRm();
+      };
+      $('#peOwn', bg).onclick = () => {
+        own = !own;
+        const b = $('#peOwn', bg);
+        b.classList.toggle('primary', own); b.classList.toggle('ghost', !own); b.setAttribute('aria-pressed', own);
+        b.textContent = own ? '✓ Own bars and plates here' : 'Use the main bars and plates';
+        $('#peInv', bg).innerHTML = own ? invRows() : '';
+        wireInv();
+      };
+      wireInv();
+      const del = $('#peDel', bg);
+      if (del) del.onclick = () => confirmDlg(`Delete ${src.name}? Sessions logged there keep their records.`, () => {
+        S.settings.places = places().filter(x => x.id !== src.id);
+        if (S.settings.place === src.id) S.settings.place = null;
+        if (S.active && S.active.place === src.id) S.active.place = null;
+        save(); bust(); closeAllModals(); render(); openPlaces();
+      }, 'Delete');
+      $('#peSave', bg).onclick = () => {
+        const name = $('#peName', bg).value.trim();
+        if (!name) return toast('Give the place a name');
+        const out = { id: p.id, name, kit: ['bodyweight', ...all.filter(v => v !== 'bodyweight' && kit.has(v))] };
+        if (own) {
+          const nb = [...bg.querySelectorAll('#peInv [data-bn]')].map((el, i) => ({
+            name: el.value.trim() || `Bar ${i + 1}`,
+            kg: toKg(+bg.querySelector(`#peInv [data-bk="${el.dataset.bn}"]`).value || 0),
+            eq: (bg.querySelector(`#peInv [data-be="${el.dataset.bn}"]`) || {}).value || '',
+          })).filter(b => b.kg > 0).map(b => b.eq ? b : { name: b.name, kg: b.kg });
+          const np = [...bg.querySelectorAll('#peInv [data-pk]')].map(el => ({
+            kg: toKg(+el.value || 0),
+            pairs: Math.max(0, +bg.querySelector(`#peInv [data-pp="${el.dataset.pk}"]`).value || 0),
+          })).filter(x => x.kg > 0 && x.pairs > 0).sort((x, y) => y.kg - x.kg);
+          if (!np.length) return toast('Add at least one plate, or use the main plates');
+          out.plates = np;
+          if (nb.length) out.bars = nb;
+          const col = +$('#peCollar', bg).value;
+          if (col > 0) out.collarKg = toKg(col);
+        }
+        const ls = places().slice(), i = ls.findIndex(x => x.id === p.id);
+        if (i >= 0) ls[i] = out; else ls.push(out);
+        S.settings.places = ls;
+        if (!S.settings.place) S.settings.place = out.id;   // the first place becomes where you are
+        save(); bust(); closeAllModals(); render(); openPlaces();
+      };
+    },
+  });
+}
+function plateRowHtml(k, x) {
+  return `<div class="row" style="gap:8px;margin-bottom:6px;align-items:center">
+    <input type="number" step="0.25" inputmode="decimal" data-pk="${k}" value="${x.kg ? dw(x.kg, 2) : ''}" style="width:82px" aria-label="Plate size (${U()})">
+    <span class="sub">${U()} ×</span>
+    <input type="number" inputmode="numeric" data-pp="${k}" value="${x.pairs || 1}" style="width:64px" aria-label="Pairs of this plate">
+    <span class="sub grow">pairs</span>
+    <button class="btn sm ghost" data-prm="${k}" aria-label="Remove plate">−</button>
+  </div>`;
 }
 
 /* ---------------- REP RANGE (D5) ----------------
@@ -11799,6 +12020,13 @@ function wireActive(v) {
       if (nx) nx.focus(); else inp.blur();
     };
   });
+  const plb = $('#placeBtn'); if (plb) plb.onclick = () => openPlacePick(render);
+  v.querySelectorAll('[data-place-swap]').forEach(b => b.onclick = () => {
+    const ex = a.exercises[+b.dataset.placeSwap];
+    if (!swapForPlace(ex)) return;
+    save(); bust(); render();
+    toast(`Swapped to ${exFull(ex)} — set the weights`, 'green');
+  });
   v.querySelectorAll('[data-range-use]').forEach(b => b.onclick = () => {
     const ex = a.exercises[+b.dataset.rangeUse], last = lastSession(exKey(ex));
     const vd = last && rangeVerdict(ex, last.sets, last.date);
@@ -12489,6 +12717,10 @@ function applyVoiceSet(leaf, kg, reps, rpe) {
   if (!leaf) return toast('Pick the exercise first');
   const name = displayName(leaf);
   let ex = a.exercises.find(e => exKey(e) === leafKey(leaf));
+  if (!ex && !leafHere(leaf)) {   // a new exercise gets kit that's here (D6)
+    const sw = placeSwap(leaf);
+    if (sw) { leaf = sw; ex = a.exercises.find(e => exKey(e) === leafKey(leaf)); }
+  }
   if (!ex) { ex = { leaf, legacyName: displayName(leaf), notes: '', mods: [], sets: [] }; a.exercises.push(ex); }
 
   const st = statsFor(leafKey(leaf));
