@@ -432,6 +432,7 @@ tr.pr td input{background:rgba(255,197,66,.1);border-color:rgba(255,197,66,.35)}
 .lv-pt.hollow{fill:none;stroke:var(--accent);stroke-width:1.5}
 .hrbox{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:12px}
 .dot-on{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(61,220,132,.2)}
+.rangeline{margin-top:6px}
 .siderow td{padding:0 11px 8px !important;border-top:0 !important}
 .sides{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
 .side{display:flex;gap:5px;align-items:center;padding:2px 6px;border-radius:8px;border:1px solid transparent}
@@ -1918,7 +1919,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.46.0';
+const APP_VERSION = '0.47.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4703,6 +4704,8 @@ function renderPlanner() {
             <div><label class="sub" style="display:block;margin-bottom:4px">Weight (${U()})</label>
               <input type="number" step="0.5" inputmode="decimal" data-pl="wt" data-i="${i}" value="${e.sets[0] && e.sets[0].w ? dw(e.sets[0].w) : ''}"></div>
           </div>
+          ${rangeOk(e) ? `<div style="margin-top:8px"><label class="sub" style="display:block;margin-bottom:4px" for="plR${i}">Rep range (optional)</label>
+            <input type="text" inputmode="numeric" id="plR${i}" data-pl="range" data-i="${i}" value="${e.range ? `${e.range[0]}-${e.range[1]}` : ''}" placeholder="e.g. 8-12"></div>` : ''}
         </div>`).join('') : `<div class="empty" style="padding:14px">No exercises added</div>`}
       <button class="btn wide ghost" id="plAdd">+ Add exercise</button>
     `,
@@ -4722,6 +4725,7 @@ function renderPlanner() {
           }
           if (inp.dataset.pl === 'reps') ex.sets.forEach(s => s.r = +inp.value || 0);
           if (inp.dataset.pl === 'wt') ex.sets.forEach(s => s.w = inp.value ? toKg(+inp.value) : 0);
+          if (inp.dataset.pl === 'range') { const r = parseRange(inp.value); if (r) ex.range = r; else delete ex.range; }
         });
       };
       bg.querySelectorAll('[data-pl]').forEach(i => { selectOnFocus(i); i.onchange = () => { grab(); renderPlanner(); }; });
@@ -4874,7 +4878,7 @@ function workoutLanding() {
 
 function startWorkout(wo) {
   if (S.active) { toast('Finish the active workout first'); go('workout'); return; }
-  (wo.exercises || []).forEach(adoptTempo);
+  (wo.exercises || []).forEach(e => { adoptTempo(e); adoptRange(e); });
   S.active = wo;
   save(); go('workout');
 }
@@ -5172,6 +5176,8 @@ function exerciseCard(e, ei) {
   const sidesOn = !!(e.sides && sidesAllowed(e));
   if (sidesOn) e.sets.forEach(s => { if (!s.done) sidesInit(s); sideSync(s); });
 
+  adoptRange(e);   // D5: from the note or remembered for the variant
+
   const cur = curSet(e, ei);
   const rows = e.sets.map((s, si) => {
     const isPR = s.done && isPRSet(s) && s.r > 0 && beatsBest(st, s.w, s.r, s.rpe);
@@ -5241,6 +5247,7 @@ function exerciseCard(e, ei) {
       ${modChips(e, `data-mods="${ei}"`)}
       <div class="pr-banner">${prBanner}</div>
       ${autoLine}
+      ${rangeLine(e, ei)}
       ${e.notes ? `<div class="ex-note">${esc(e.notes)}</div>` : ''}
     </div>
     <table class="settable">
@@ -6095,6 +6102,12 @@ function showSummary(wo) {
       ${(() => { const ch = e1Changes(wo); return ch.length ? `
         <div class="eyebrow" style="margin:16px 0 6px">e1RM vs last time</div>
         <div class="card tight">${e1ChangeRows(ch)}</div>` : ''; })()}
+
+      ${(() => { const nx = wo.exercises.filter(e => e.range).map(e => ({ e, v: rangeVerdict(e, e.sets, wo.date) })).filter(x => x.v);
+        return nx.length ? `<div class="eyebrow" style="margin:16px 0 6px">Next time · rep ranges</div>
+          <div class="card tight">${nx.map(({ e, v }) => `<div class="row between" style="gap:10px;padding:3px 0">
+            <span style="font-weight:650">${esc(exFull(e))} <span class="dimmer">${rangeText(e.range)}</span></span>
+            <span class="sub right" style="${v.kind === 'up' ? 'color:var(--green)' : ''}">${esc(verdictWords(v, true))}</span></div>`).join('')}</div>` : ''; })()}
 
       <div class="eyebrow" style="margin:16px 0 8px">Breakdown</div>
       ${wo.exercises.map(e => {
@@ -10275,6 +10288,90 @@ function openHoldTimer(ei, si) {
   });
 }
 
+/* ---------------- REP RANGE (D5) ----------------
+   Double progression: keep the weight until every working set reaches the
+   top of the range at the target RIR, then add a step and start from the
+   bottom. Alongside autoregulation, not instead of it: an autoregulated entry
+   only gets the verdict. r&d/specs/rep-range-spec.md. */
+function parseRange(str) {
+  const m = String(str || '').trim().match(new RegExp('^(\\d{1,2})\\s*(?:-|–|to)\\s*(\\d{1,2})$', 'i'));
+  if (!m) return null;
+  const lo = +m[1], hi = +m[2];
+  return lo >= 1 && hi <= 30 && lo < hi ? [lo, hi] : null;
+}
+const rangeText = r => `${r[0]}–${r[1]}`;
+/* "3×8-12", "8–12 reps", "10 to 15 reps" — not a bare "5-3", never a tempo. */
+function rangeFromText(txt) {
+  const s = String(txt || '');
+  const pats = [
+    '[x×]\\s*(\\d{1,2})\\s*(?:-|–)\\s*(\\d{1,2})(?!\\s*(?:-|–)\\s*\\d)',
+    '(?:^|[^\\d-])(\\d{1,2})\\s*(?:-|–|to)\\s*(\\d{1,2})\\s*reps?\\b',
+  ];
+  for (const p of pats) {
+    const m = s.match(new RegExp(p, 'i'));
+    if (m) { const r = parseRange(`${m[1]}-${m[2]}`); if (r) return r; }
+  }
+  return null;
+}
+function rangeOk(e) { return !!(e && e.leaf && kindOf(e) === 'reps' && !isIso(e) && !isTimed(e)); }
+function adoptRange(e) {
+  if (!rangeOk(e) || e.range) return;
+  const r = rangeFromText(e.notes) || (S.settings.rangeBy || {})[exKey(e)];
+  if (r) e.range = [r[0], r[1]];
+}
+function rangeNextLoad(w, leaf) {
+  const step = leaf && (leaf.equipment === 'dumbbells' || leaf.equipment === 'kettlebell') ? 2 : 2.5;
+  const next = roundLoadFor(Math.max(w * 1.025, w + step), leaf);
+  return next > w ? next : w + step;
+}
+/* The verdict on one session's sets of a ranged entry. */
+function rangeVerdict(e, sets, date) {
+  if (!e.range) return null;
+  const [lo, hi] = e.range;
+  const ab = activeBlock(date || today());
+  const t = targetRirFor(e, ab ? ab.kind.rir : null);
+  const work = (sets || []).filter(s => s.done !== false && isPRSet(s) && s.setType !== 'amrap' && s.w > 0 && s.r > 0);
+  if (!work.length) return null;
+  const W = Math.max(...work.map(s => s.w)), at = work.filter(s => s.w === W);
+  const rirs = at.filter(s => s.rpe != null).map(s => rpeToRir(s.rpe));
+  const base = { w: W, lo, hi, t, reps: at.map(s => s.r), noRir: !rirs.length };
+  if (at.every(s => s.r >= hi) && rirs.every(r => r >= t)) return { ...base, kind: 'up', next: rangeNextLoad(W, e.leaf) };
+  if (at[0].r < lo) return { ...base, kind: 'below' };
+  return { ...base, kind: 'build', grind: at.every(s => s.r >= hi) };
+}
+function verdictWords(v, today2) {
+  const rir = v.noRir ? ' (no RIR logged)' : '';
+  if (v.kind === 'up') return today2 ? `Top of the range at RIR ${v.t}+${rir} → next time ${wt(v.next)} × ${v.lo}`
+    : `top of the range${rir} → try ${wt(v.next)} × ${v.lo}`;
+  if (v.kind === 'below') return today2 ? `Under ${v.lo} reps — stay at ${wt(v.w)} until you reach ${v.lo}, or drop the weight`
+    : `under ${v.lo} reps (${v.reps.join(', ')}) — stay at this weight, or drop it`;
+  if (v.grind) return today2 ? `Reached ${v.hi}, but harder than RIR ${v.t} — same weight next time` : `reached ${v.hi} but past RIR ${v.t} — same weight again`;
+  return today2 ? `In range — same weight next time, aim for more reps` : `${v.reps.join(', ')} — same weight, beat those reps`;
+}
+function rangeLine(e, ei) {
+  if (!rangeOk(e)) return '';
+  if (!e.range) return '';
+  const open = e.sets.some(s => !s.done && isPRSet(s));
+  const ab = activeBlock(today());
+  const t = targetRirFor(e, ab ? ab.kind.rir : null);
+  let msg = '', use = '';
+  if (!open) {
+    const v = rangeVerdict(e, e.sets.filter(s => s.done), today());
+    if (v) msg = `<span style="${v.kind === 'up' ? 'color:var(--green)' : ''}">${esc(verdictWords(v, true))}</span>`;
+  } else {
+    const last = lastSession(exKey(e));
+    const v = last && rangeVerdict(e, last.sets, last.date);
+    if (v) {
+      msg = `Last time ${wt(v.w)} — ${esc(verdictWords(v, false))}`;
+      const pending = e.sets.filter(s => !s.done && isPRSet(s) && s.setType !== 'amrap');
+      if (v.kind === 'up' && !e.auto && pending.some(s => s.w !== v.next || s.r !== v.lo)) use = `<button class="btn xs primary" data-range-use="${ei}">Use</button>`;
+    }
+  }
+  return `<div class="rangeline"><div class="row" style="gap:8px;align-items:center">
+      <span class="chip">${rangeText(e.range)} reps · RIR ${t}</span>
+      <span class="sub grow">${msg || 'Work up through the range at the target RIR, then add weight.'}</span>${use}</div></div>`;
+}
+
 /* ---------------- PER-SIDE (D4) ----------------
    Left and right on one set, for unilateral leaves. s.w / s.r stay the
    counted side — the weaker one — so PRs, e1RM, volume and export read a
@@ -11702,6 +11799,15 @@ function wireActive(v) {
       if (nx) nx.focus(); else inp.blur();
     };
   });
+  v.querySelectorAll('[data-range-use]').forEach(b => b.onclick = () => {
+    const ex = a.exercises[+b.dataset.rangeUse], last = lastSession(exKey(ex));
+    const vd = last && rangeVerdict(ex, last.sets, last.date);
+    if (!vd || vd.kind !== 'up') return;
+    let n = 0;
+    ex.sets.forEach(s => { if (!s.done && isPRSet(s) && s.setType !== 'amrap') { s.w = vd.next; s.r = vd.lo; delete s.auto; n++; } });
+    save(); render();
+    toast(`${n} set${n === 1 ? '' : 's'} → ${wt(vd.next)} × ${vd.lo}`, 'green');
+  });
   v.querySelectorAll('[data-sdiff]').forEach(b => b.onclick = () => {
     const [ei, si] = key(b.dataset.sdiff);
     const s = a.exercises[ei].sets[si];
@@ -11864,6 +11970,9 @@ function wireActive(v) {
           <input type="text" inputmode="numeric" id="exRest" value="${(S.settings.restBy || {})[exKey(ex)] ? fmtSec(S.settings.restBy[exKey(ex)]) : ''}"
             placeholder="${fmtSec(isMainLift(ex) ? (S.settings.restDefault || 180) : (S.settings.restAccessory || 90))} — ${isMainLift(ex) ? 'main lift' : 'accessory'} default">
           <div class="sub" style="margin-top:4px">Kept for next time. Blank uses the default from Settings.</div></div>
+        ${rangeOk(ex) ? `<div class="field"><label for="exRange">Rep range</label>
+          <input type="text" inputmode="numeric" id="exRange" value="${ex.range ? `${ex.range[0]}-${ex.range[1]}` : ''}" placeholder="e.g. 8-12">
+          <div class="sub" style="margin-top:4px">Reach the top on every set at the target RIR, then add weight. Kept for next time; blank for none.</div></div>` : ''}
         ${metricFor(ex.leaf) === 'time' ? '' : `<button class="btn wide ghost" id="exIso" style="margin-bottom:8px">${isIso(ex)
           ? 'Back to reps' : 'Log as isometric hold'}</button>
           <div class="sub" style="margin:-2px 0 10px">Holds keep their own records, separate from rep sets of the same lift.</div>`}
@@ -11912,6 +12021,13 @@ function wireActive(v) {
           const by = S.settings.restBy = S.settings.restBy || {};
           const sec = parseTime($('#exRest', bg).value);
           if (sec) { by[exKey(ex)] = sec; delete ex.rest; } else delete by[exKey(ex)];
+          const rIn = $('#exRange', bg);
+          if (rIn) {
+            const txt = rIn.value.trim(), r = parseRange(txt);
+            if (txt && !r) return toast('Rep range like 8-12, lowest first, up to 30');
+            const rb = S.settings.rangeBy = S.settings.rangeBy || {};
+            if (r) { ex.range = r; rb[exKey(ex)] = r; } else { delete ex.range; delete rb[exKey(ex)]; }
+          }
           save(); closeModal(); render();
         };
       },

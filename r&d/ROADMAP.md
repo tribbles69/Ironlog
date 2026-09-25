@@ -431,7 +431,7 @@ time.
 unilateral leaves; imbalance trend on the variant page. **Open decision:** which
 side counts for PRs (default: the weaker side).
 
-### [ ] D5. Rep range + RIR suggestion
+### [x] D5. Rep range + RIR suggestion — shipped 0.47.0 (spec `r&d/specs/rep-range-spec.md`; double progression from note, menu or planner; up / build / below verdict; Use fills next weight on non-autoregulated entries)
 (Blast #99.) Optional rep range per exercise in a program; hitting the top of
 the range at the target RIR suggests more load next time. Works alongside the
 autoregulated programming, doesn't replace it.
