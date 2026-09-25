@@ -327,12 +327,39 @@ No app does this; Aaron's own niche. Check current WPPO rules before building.
 - Results for best lift and for total of good lifts.
 - Uses the C2 meet-day tools with these rules swapped in.
 
-### [ ] C4. Accessibility pass
+### [x] C4. Accessibility pass — code shipped 0.39.0 **(check on phone)**
 Few competitors get this right; Hevy is rated near-unusable with a screen reader.
 - Test the whole workout flow with TalkBack; label every control.
 - Large touch targets on the active workout; no gesture-only actions.
 - Haptic cues for rest end and set logged (reuse `Cue`).
 - Voice logging (already built) stays a first-class input.
+
+Done in code:
+- axe-core (WCAG 2.1 A/AA plus best practice) now reports no violations on
+  18 screens and sheets, in both skins.
+- `a11yPass` labels set inputs and buttons by set number, ties visible labels
+  to their fields, fills empty table headers, and marks pressed tabs and
+  ticks.
+- Modals are `role="dialog"`: focus moves to the title and returns to the
+  opener on close. Toasts are a polite live region, and the nav marks the
+  current page.
+- Workout controls are mostly 40 px, and no smaller than 32 px except the
+  22 px-wide plate and timer buttons. There are no gesture-only actions.
+- `Cue.logged()` gives a short buzz on a ticked set. Rest end already buzzed.
+
+**Checklist for Aaron (TalkBack on, Settings → Accessibility):**
+1. Home → Workout → Start blank: swipe through, and every button is spoken
+   with a name. No "unlabelled" or bare symbols like "check mark".
+2. Add Bench Press: each set box reads e.g. "Set 1 weight (kg), edit box".
+   Double-tap types into it.
+3. Tick a set: "Set 1 done, pressed", and the phone buzzes.
+4. Open ⋯: "Bench Press, dialog", and the title is read first. Close it and
+   focus returns to ⋯.
+5. The rest timer ends: buzz and beep, with the screen locked too.
+6. Finish: the summary is read. Toasts ("PR — …") are spoken without moving
+   focus.
+7. Voice logging (🎤) still works with TalkBack on.
+Note anything read badly or out of order.
 
 ### [ ] C5. Adaptation modifiers and pain / fatigue notes
 Extends the modifier chips. Structured modifiers such as **seated, strapped,

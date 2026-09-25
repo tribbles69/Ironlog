@@ -13,6 +13,22 @@ rather than guessed.
 
 ---
 
+## 0.39.0 — 25 Sep 2026
+- **Easier to hit with chalky hands.** On the workout screen, the tick,
+  set number, weight and reps boxes, steppers, ⋯ menu, and Finish and Off
+  day buttons are all bigger, most of them at least 40 px.
+- **Easier to read.** Small grey labels are brighter, and orange buttons use
+  dark text, so everything meets the contrast standard for text. The 98
+  skin's red text is a touch darker for the same reason.
+- **Works with a screen reader.**
+  - Every box and button says what it is, e.g. "Set 2 weight (kg)" or
+    "Set 2 done".
+  - Sheets are announced as dialogs, and focus goes back to where you were
+    when they close.
+  - Messages are read out, and the current tab is announced.
+- **A short buzz when you tick a set**, as well as the one when rest ends
+  (turn it off with Vibration in Settings).
+
 ## 0.38.0 — 25 Sep 2026
 - **Para powerlifting.** A new event type for WPPO bench press meets:
   - **Classes:** pick your class from the WPPO list for your sex.
