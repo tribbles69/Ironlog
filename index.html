@@ -432,6 +432,17 @@ tr.pr td input{background:rgba(255,197,66,.1);border-color:rgba(255,197,66,.35)}
 .lv-pt.hollow{fill:none;stroke:var(--accent);stroke-width:1.5}
 .hrbox{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:12px}
 .dot-on{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(61,220,132,.2)}
+.siderow td{padding:0 11px 8px !important;border-top:0 !important}
+.sides{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.side{display:flex;gap:5px;align-items:center;padding:2px 6px;border-radius:8px;border:1px solid transparent}
+.side b{font-size:12px;color:var(--dim);width:12px}
+.side input{width:58px;min-height:40px;text-align:center}
+.side.weak{border-color:var(--gold)}
+.side.weak b{color:var(--gold)}
+.sidecount{display:inline-block;min-width:36px;text-align:center;color:var(--gold)}
+.imbar{position:relative;flex:1;height:10px;border-radius:5px;background:var(--line)}
+.imbar::after{content:'';position:absolute;left:50%;top:-3px;bottom:-3px;width:2px;background:var(--dim2)}
+.imbar i{position:absolute;top:0;bottom:0;background:var(--accent);border-radius:5px}
 .tempoline{margin:8px 12px 0;padding:8px 10px;border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;gap:2px}
 .hrhelp summary{cursor:pointer;margin:4px 0}
 .hrhelp .sub{line-height:1.6;margin:4px 0 6px}
@@ -1907,7 +1918,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.45.0';
+const APP_VERSION = '0.46.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -2150,7 +2161,7 @@ function setText(e, s) {
     case 'race': return [s.n > 0 ? `${s.n} implements` : '', W ? `top ${W}` : '', s.m > 0 ? fmtM(s.m) : '', s.sec > 0 ? fmtSec(s.sec) : ''].filter(Boolean).join(' · ') || '—';
     case 'cap': return `${W ? W + ' × ' : ''}${s.r || 0}${W ? '' : ' reps'} in ${capLabel(e.cap)}`;
     case 'series': return `${W || 'bodyweight'} ${s.r > 0 ? '✓' : '✗ missed'}`;
-    default: return `${W ? W + ' × ' : ''}${s.r}${W ? '' : ' reps'}${s.rpe ? ' @ ' + rpeToRir(s.rpe) : ''}`;
+    default: return `${W ? W + ' × ' : ''}${s.r}${W ? '' : ' reps'}${sidesText(s)}${s.rpe ? ' @ ' + rpeToRir(s.rpe) : ''}`;
   }
 }
 /* The Prev column: the same, but short. */
@@ -4933,6 +4944,12 @@ function fillSet(e, s, from, onlyEmpty) {
     s[f] = from[f];
     if (f === 'w') delete s.auto;   // chosen, not computed: autoregulation leaves it be
   });
+  // last time's left and right, when both sets are per-side (D4)
+  if (s.sides && from.sides && !onlyEmpty) {
+    s.sides.L = { ...from.sides.L }; s.sides.R = { ...from.sides.R };
+    s.sides.at = [s.w || 0, s.r || 0];
+    sideSync(s);
+  }
 }
 /* The set the step bar acts on: the one last touched while it's still open,
    otherwise the first one not yet ticked. */
@@ -4954,6 +4971,7 @@ function fastBar(e, ei) {
     <div class="fb-grp"><button class="fbtn" data-step="${ei}.w.-1" aria-label="Weight down ${st}">−</button><span>${st}</span><button class="fbtn" data-step="${ei}.w.1" aria-label="Weight up ${st}">+</button></div>
     ${k === 'series' ? '' : `<div class="fb-grp"><button class="fbtn" data-step="${ei}.r.-1" aria-label="One rep fewer">−</button><span>rep</span><button class="fbtn" data-step="${ei}.r.1" aria-label="One rep more">+</button></div>`}
     <button class="btn xs ghost" data-copydown="${ei}" title="Copy the selected set to the sets below it">⇣ Copy down</button>
+    ${sidesAllowed(e) ? `<button class="btn xs ${e.sides ? 'primary' : 'ghost'}" data-sides="${ei}" aria-pressed="${e.sides ? 'true' : 'false'}" title="Log left and right separately">⇆ Each side</button>` : ''}
   </div>`;
 }
 
@@ -5086,6 +5104,18 @@ function shapeRow(e, ei, si, s, f = 'f') {
     <td colspan="2"><button class="btn xs ${s.r > 0 ? '' : 'danger'} wide" data-${f === 'f' ? 'made' : 'emade'}="${k}">${s.r > 0 ? '✓ Made' : '✗ Missed'}</button></td>`;
 }
 
+function sideRow(e, ei, si, s, p) {
+  const sd = s.sides, g = sideGap(s), c = g ? sideCounted(s) : null, diff = sd.split || sd.L.w !== sd.R.w, n = setNumber(e.sets, si);
+  const ph = k => p && p.sides && p.sides[k] && p.sides[k].r != null ? p.sides[k].r : p && p.r > 0 ? p.r : '0';
+  return `<tr class="siderow${s.done ? ' done' : ''}"><td colspan="8"><div class="sides">
+    ${['L', 'R'].map(k => `<div class="side${c === k ? ' weak' : ''}" data-side="${ei}.${si}.${k}">
+      <b>${k}</b>
+      ${diff ? `<input type="number" step="0.5" inputmode="decimal" data-sw="${ei}.${si}.${k}" value="${sd[k].w ? dw(sd[k].w) : ''}" placeholder="0" aria-label="Set ${n} ${k === 'L' ? 'left' : 'right'} weight"><span class="dimmer">×</span>` : ''}
+      <input type="number" inputmode="numeric" data-sr="${ei}.${si}.${k}" value="${sd[k].r == null ? '' : sd[k].r}" placeholder="${ph(k)}" aria-label="Set ${n} ${k === 'L' ? 'left' : 'right'} reps">
+    </div>`).join('')}
+    <button class="btn xs ghost" data-sdiff="${ei}.${si}" aria-pressed="${diff ? 'true' : 'false'}">⚖ ${diff ? 'Same weight' : 'Different weights'}</button>
+  </div></td></tr>`;
+}
 function exerciseCard(e, ei) {
   const st = statsFor(exKey(e));
   const prev = lastSession(exKey(e));
@@ -5136,6 +5166,11 @@ function exerciseCard(e, ei) {
       ${stall ? `<span class="chip" style="color:var(--gold)" title="No e1RM gain over the last ${stall.n} sessions — consider a deload or a variation">⚠ Stalled · ${stall.n} sessions</span>` : ''}
     </div>` : '';
   const rirPh = e.auto ? String(e.auto.t) : '—';
+
+  // per-side (D4): remembered per variant, and every set kept in step
+  if (sidesAllowed(e) && e.sides == null && (S.settings.sidesOn || {})[exKey(e)]) e.sides = true;
+  const sidesOn = !!(e.sides && sidesAllowed(e));
+  if (sidesOn) e.sets.forEach(s => { if (!s.done) sidesInit(s); sideSync(s); });
 
   const cur = curSet(e, ei);
   const rows = e.sets.map((s, si) => {
@@ -5188,10 +5223,11 @@ function exerciseCard(e, ei) {
       ${prevCell(`${p && p.w > 0 ? `${nice(dw(p.w))}×` : ''}${p ? p.r : ''}${p && p.rpe ? `<span class="prir">@${rpeToRir(p.rpe)} RIR</span>` : ''}`)}
       <td class="c-wt"><input type="number" step="0.5" inputmode="decimal" data-f="w" data-k="${ei}.${si}" value="${s.w ? dw(s.w) : ''}" placeholder="${p && p.w > 0 ? nice(dw(p.w)) : '0'}"></td>
       <td class="c-pl">${s.w > 0 ? `<button class="plbtn" data-plates="${ei}.${si}" title="Plates">▤</button>` : ''}</td>
-      <td><input type="number" inputmode="numeric" data-f="r" data-k="${ei}.${si}" value="${s.r || ''}" placeholder="${s.setType === 'amrap' ? 'max' : p && p.r > 0 ? p.r : '0'}"></td>
+      <td>${sidesOn && s.sides ? `<span class="mono sidecount" data-sc="${ei}.${si}" title="Counted: the weaker side">${s.r || '—'}</span>`
+        : `<input type="number" inputmode="numeric" data-f="r" data-k="${ei}.${si}" value="${s.r || ''}" placeholder="${s.setType === 'amrap' ? 'max' : p && p.r > 0 ? p.r : '0'}">`}</td>
       <td><input type="number" step="1" inputmode="numeric" data-f="rpe" data-k="${ei}.${si}" value="${s.rpe == null ? '' : rpeToRir(s.rpe)}" placeholder="${rirPh}"></td>
       ${chk}
-    </tr>`;
+    </tr>${sidesOn && s.sides ? sideRow(e, ei, si, s, p) : ''}`;
   }).join('');
 
   return `<div class="ex-card">
@@ -5543,6 +5579,7 @@ function openPlates(targetKg, presetBar, leaf) {
 
 function finishWorkout(force) {
   const a = S.active;
+  a.exercises.forEach(e => e.sets.forEach(sideSync));   // per-side sets carry their counted side (D4)
   /* What counts as logged depends on the metric. Keeping only `s.r > 0` threw
      away every timed set at the moment of finishing: a session of nothing but
      planks refused to finish at all, and a mixed session dropped the planks
@@ -6077,7 +6114,7 @@ function showSummary(wo) {
           </div>
           ${e.sets.map((st, i) => `<div class="row between" style="padding:3px 0;font-size:13px">
             <span class="sub" style="width:52px">${isWarm(st) ? 'warm' : setListLabel(e.sets, i)}</span>
-            <span class="mono grow" style="${plain && st === top && ws.length > 1 ? 'color:var(--gold);font-weight:700' : ''}">${!plain ? esc(setText(e, st)) : timed ? holdLabel(st) : `${wt(st.w)} × ${st.r}`}${roleSuffix(st)}${feelSuffix(st)}</span>
+            <span class="mono grow" style="${plain && st === top && ws.length > 1 ? 'color:var(--gold);font-weight:700' : ''}">${!plain ? esc(setText(e, st)) : timed ? holdLabel(st) : `${wt(st.w)} × ${st.r}${sidesText(st)}`}${roleSuffix(st)}${feelSuffix(st)}</span>
             <span class="mono sub">${st.rpe ? 'RIR ' + rpeToRir(st.rpe) : ''}</span>
           </div>`).join('')}
         </div>`;
@@ -6114,7 +6151,7 @@ function viewCompleted(id) {
     ? esc(setText(e, s))
     : isTimed(e)
     ? `${holdLabel(s)}${isIso(e) && s.rpe != null ? ` @ ${rpeToRir(s.rpe)}` : ''}`
-    : `${wt(s.w)} × ${s.r}${s.rpe ? ` @ ${rpeToRir(s.rpe)}` : ''}${isPRSet(s) ? ` <span class="dimmer">· e1RM ${wt(e1rm(s.w, s.r))}</span>` : ''}`}${roleSuffix(s)}${feelSuffix(s)}${s.vbt
+    : `${wt(s.w)} × ${s.r}${sidesText(s)}${s.rpe ? ` @ ${rpeToRir(s.rpe)}` : ''}${isPRSet(s) ? ` <span class="dimmer">· e1RM ${wt(e1rm(s.w, s.r))}</span>` : ''}`}${roleSuffix(s)}${feelSuffix(s)}${s.vbt
       ? ` <span class="dimmer">· ${s.vbt.best.toFixed(2)} m/s${s.vbt.loss >= 5 ? ` ▾${s.vbt.loss.toFixed(0)}%` : ''}</span>` : ''}</span></div>`).join('')}
         </div>`).join('')}
     `,
@@ -6299,6 +6336,7 @@ function renderEditWorkout() {
 function saveEdit(force) {
   const d = editDraft;
   if (!d) return;
+  d.exercises.forEach(e => e.sets.forEach(sideSync));   // an edited weight or rep count applies to both sides (D4)
   // same metric-aware rule as finishWorkout — editing a session must not be a way to lose its holds
   const logged = d.exercises.map(e => ({
     ...e,
@@ -6591,7 +6629,7 @@ function openMovementPage(movementId, focusKey) {
             <div class="sub">${fmtDate(wo.date)} · ${relDay(wo.date)}</div></div>
         </div>`).join('')}${timeline.length > 30 ? `<div class="sub" style="padding:6px 0">…and ${timeline.length - 30} earlier</div>` : ''}</div>`
         : `<div class="sub">No PRs yet${fs ? ' — the first session sets the marks to beat' : ''}.</div>`}` : '';
-    return `${headline}${focusStrip}
+    return `${headline}${focusStrip}${fv && fv.leaf && fv.leaf.execution === 'unilateral' ? imbalanceBlock(fv.key) : ''}
       <div class="eyebrow" style="margin:14px 0 6px">Estimated 1RM by variant</div>
       ${chartMulti(series, { fmt: v => nice(Math.round(v)) })}
       <div class="eyebrow" style="margin:16px 0 4px">Records per variant</div>
@@ -10237,6 +10275,89 @@ function openHoldTimer(ei, si) {
   });
 }
 
+/* ---------------- PER-SIDE (D4) ----------------
+   Left and right on one set, for unilateral leaves. s.w / s.r stay the
+   counted side — the weaker one — so PRs, e1RM, volume and export read a
+   per-side set exactly as they read any other. r&d/specs/per-side-spec.md. */
+function sidesAllowed(e) { return !!(e && e.leaf && e.leaf.execution === 'unilateral' && kindOf(e) === 'reps' && !isIso(e) && !isTimed(e)); }
+function sideScore(w, r, rpe) { return w > 0 ? e1rm(w, r, rpe) : r; }   // bodyweight: reps are the measure
+function sideCounted(s) {
+  const L = s.sides.L, R = s.sides.R, has = x => x && x.r != null;
+  if (!has(L) && !has(R)) return null;
+  if (!has(L)) return 'R';
+  if (!has(R)) return 'L';
+  const a = sideScore(L.w, L.r, s.rpe), b = sideScore(R.w, R.r, s.rpe);
+  if (Math.abs(a - b) > 1e-9) return a < b ? 'L' : 'R';
+  return R.r < L.r ? 'R' : 'L';
+}
+function sidesInit(s) {
+  if (!s.sides) s.sides = { L: { w: s.w || 0, r: s.r > 0 ? s.r : null }, R: { w: s.w || 0, r: s.r > 0 ? s.r : null }, at: [s.w || 0, s.r || 0] };
+}
+/* Anything that wrote s.w / s.r directly (step buttons, Prev, copy down,
+   autoregulation, voice, the edit screen) applies to both sides; then the
+   counted side is chosen again. */
+function sideSync(s) {
+  const sd = s && s.sides;
+  if (!sd) return;
+  const at = sd.at || [s.w || 0, s.r || 0];
+  if ((s.w || 0) !== at[0]) { sd.L.w = s.w || 0; sd.R.w = s.w || 0; }
+  if ((s.r || 0) !== at[1]) { sd.L.r = s.r > 0 ? s.r : null; sd.R.r = s.r > 0 ? s.r : null; }
+  const c = sideCounted(s);
+  if (c) { s.w = sd[c].w || 0; s.r = sd[c].r || 0; } else s.r = 0;
+  sd.at = [s.w || 0, s.r || 0];
+}
+function sidesText(s) {
+  const sd = s && s.sides;
+  if (!sd) return '';
+  const diff = sd.L.w !== sd.R.w;
+  const one = k => `${k} ${diff ? nice(dw(sd[k].w)) + '×' : ''}${sd[k].r == null ? '—' : sd[k].r}`;
+  return ` (${one('L')} · ${one('R')})`;
+}
+/* Left against right on one set, signed (+ = left stronger), % of the
+   stronger. Same weight: reps straight — e1RM flattens high reps, and these
+   are often sets of 10–15. Different weights: e1RM. */
+function sideGap(s) {
+  const L = s.sides.L, R = s.sides.R;
+  if (!(L.r > 0 && R.r > 0)) return null;
+  const a = L.w === R.w ? L.r : sideScore(L.w, L.r, s.rpe), b = L.w === R.w ? R.r : sideScore(R.w, R.r, s.rpe);
+  return (a - b) / Math.max(a, b) * 100;
+}
+/* Per session: the mean gap over its per-side working sets. */
+function imbalanceFor(key) {
+  return S.workouts.filter(wo => wo.status === 'completed').sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0).map(wo => {
+    const gs = [];
+    (wo.exercises || []).forEach(e => {
+      if (exKey(e) !== key) return;
+      e.sets.forEach(s => { if (s.sides && isPRSet(s)) { const g = sideGap(s); if (g != null) gs.push(g); } });
+    });
+    if (!gs.length) return null;
+    const signed = gs.reduce((x, y) => x + y, 0) / gs.length, gap = Math.abs(signed);
+    return { date: wo.date, id: wo.id, signed, gap, weak: gap < 3 ? null : signed < 0 ? 'L' : 'R' };
+  }).filter(Boolean);
+}
+function imbalanceBlock(key) {
+  const rows = imbalanceFor(key);
+  if (!rows.length) return '';
+  const last = rows.slice(-12).reverse(), recent = rows.slice(-6);
+  const side = k => k === 'L' ? 'Left' : 'Right';
+  const cnt = k => recent.filter(r => r.weak === k).length;
+  const avg = recent.reduce((a, r) => a + r.gap, 0) / recent.length;
+  const lead = cnt('L') === cnt('R') ? null : cnt('L') > cnt('R') ? 'L' : 'R';
+  const line = avg < 3 ? `Even — average gap ${avg.toFixed(0)}% over the last ${recent.length}`
+    : `${lead ? `${side(lead)} weaker in ${cnt(lead)} of the last ${recent.length}` : 'No side consistently weaker'} · average gap ${avg.toFixed(0)}%`;
+  return `<div class="eyebrow" style="margin:16px 0 4px">Imbalance · left vs right</div>
+    <div class="sub" style="margin-bottom:6px">${line}</div>
+    <div class="card tight"><div class="row sub" style="gap:10px;font-size:11px"><span style="width:64px"></span><span class="grow row between"><span>◂ left stronger</span><span>right stronger ▸</span></span><span style="width:92px"></span></div>${last.map(r => {
+      const wd = Math.min(50, r.gap * 2.5);   // 20% fills a half
+      return `<div class="row" style="gap:10px;padding:4px 0;align-items:center" data-hist-wo="${esc(r.id)}">
+        <span class="sub" style="width:64px">${fmtDate(r.date, { day: 'numeric', month: 'short' })}</span>
+        <div class="imbar" aria-hidden="true"><i style="${r.signed >= 0 ? 'right:50%' : 'left:50%'};width:${wd}%"></i></div>
+        <span class="mono sub" style="width:92px;text-align:right">${r.weak ? `${side(r.weak)} −${r.gap.toFixed(0)}%` : 'even'}</span>
+      </div>`;
+    }).join('')}</div>
+    <div class="sub" style="margin-top:4px">The bar leans toward the stronger side. Under 3% counts as even.</div>`;
+}
+
 /* ---------------- STRUCTURED TEMPO (D3) ----------------
    Four counts on the entry — down, bottom pause, up, top pause — each a digit
    or X (as fast as possible), stored "3-1-1-0". Annotates like a modifier:
@@ -11530,6 +11651,7 @@ function wireActive(v) {
         // typed over a timed hold: it's a manual entry now, and RIR is asked again
         if (s.holdMode) { s.holdMode = 'manual'; s.target = null; }
       }
+      if (s.sides) sideSync(s);   // a typed weight is both sides' (D4)
       save();
     };
     /* Reformat a duration once the field is left, so "90" visibly becomes
@@ -11551,6 +11673,51 @@ function wireActive(v) {
   });
 
   v.querySelectorAll('[data-done]').forEach(b => b.onclick = () => toggleSetDone(...key(b.dataset.done)));
+
+  // per-side (D4): typing a side re-picks the counted side without a redraw
+  v.querySelectorAll('[data-sr], [data-sw]').forEach(inp => {
+    selectOnFocus(inp);
+    inp.oninput = () => {
+      const [eis, sis, k] = (inp.dataset.sr || inp.dataset.sw).split('.');
+      const s = a.exercises[+eis].sets[+sis];
+      if (!s || !s.sides) return;
+      const val = inp.value === '' ? null : +inp.value;
+      if (inp.dataset.sr) s.sides[k].r = val == null ? null : Math.max(0, Math.round(val));
+      else s.sides[k].w = val ? toKg(val) : 0;
+      s.sides.at = [s.w || 0, s.r || 0];   // not an outside change
+      sideSync(s);
+      save();
+      const sc = v.querySelector(`[data-sc="${eis}.${sis}"]`);
+      if (sc) sc.textContent = s.r || '—';
+      const wIn = v.querySelector(`[data-f="w"][data-k="${eis}.${sis}"]`);
+      if (wIn && document.activeElement !== wIn) wIn.value = s.w ? dw(s.w) : '';
+      const c = sideGap(s) ? sideCounted(s) : null;
+      ['L', 'R'].forEach(x => { const el = v.querySelector(`[data-side="${eis}.${sis}.${x}"]`); if (el) el.classList.toggle('weak', c === x); });
+    };
+    inp.onkeydown = ev => {
+      if (ev.key !== 'Enter') return;
+      ev.preventDefault();
+      const all = [...v.querySelectorAll('[data-sr], [data-sw]')];
+      const nx = all[all.indexOf(inp) + 1];
+      if (nx) nx.focus(); else inp.blur();
+    };
+  });
+  v.querySelectorAll('[data-sdiff]').forEach(b => b.onclick = () => {
+    const [ei, si] = key(b.dataset.sdiff);
+    const s = a.exercises[ei].sets[si];
+    if (!s || !s.sides) return;
+    if (s.sides.split || s.sides.L.w !== s.sides.R.w) { delete s.sides.split; s.sides.L.w = s.sides.R.w = s.w || 0; s.sides.at = [s.w || 0, s.r || 0]; sideSync(s); }
+    else s.sides.split = true;
+    save(); render();
+  });
+  v.querySelectorAll('[data-sides]').forEach(b => b.onclick = () => {
+    const ex = a.exercises[+b.dataset.sides];
+    ex.sides = !ex.sides;
+    S.settings.sidesOn = S.settings.sidesOn || {};
+    if (ex.sides) S.settings.sidesOn[exKey(ex)] = true; else delete S.settings.sidesOn[exKey(ex)];
+    if (!ex.sides) ex.sets.forEach(s => { if (!s.done) delete s.sides; });
+    save(); bust(); render();
+  });
 
   // fast entry (B2): select a row by touching it; Prev fills it; the bar steps and copies
   v.querySelectorAll('tr[data-row]').forEach(tr => tr.addEventListener('pointerdown', () => {
@@ -11594,6 +11761,7 @@ function wireActive(v) {
     ex.sets.forEach((s, i) => {
       if (i <= si || s.done || isWarm(s) !== isWarm(src) || isDrop(s) !== isDrop(src)) return;
       fillFields(ex).forEach(f => { s[f] = src[f] > 0 ? src[f] : (f === 'w' ? 0 : null); });
+      if (src.sides && s.sides) s.sides = structuredClone(src.sides);
       delete s.auto;
       n++;
     });

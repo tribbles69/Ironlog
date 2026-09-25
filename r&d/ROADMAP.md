@@ -426,7 +426,7 @@ concentric–pause, e.g. 3-1-1-0) rather than a text chip; shown on the active
 set; doesn't split the PR leaf. VBT Measure can fill in the real concentric
 time.
 
-### [ ] D4. Per-side logging for unilateral lifts
+### [x] D4. Per-side logging for unilateral lifts — shipped 0.46.0 (spec `r&d/specs/per-side-spec.md`; decision taken: the weaker side counts for PRs, the roadmap default; imbalance section on the variant page)
 (Blast #79.) Left and right reps (and weight if different) on one set for
 unilateral leaves; imbalance trend on the variant page. **Open decision:** which
 side counts for PRs (default: the weaker side).
