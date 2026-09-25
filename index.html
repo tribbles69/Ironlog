@@ -1906,7 +1906,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.44.1';
+const APP_VERSION = '0.44.2';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -5860,17 +5860,109 @@ function fullCardCanvas(wo) {
   return c;
 }
 
+/* Cardio: time, distance, heart rate and the HR trace with the zone shaded.
+   4:5 so the chart gets room; the lifting totals (volume, sets, reps) mean
+   nothing for a treadmill session. */
+function cardioCardCanvas(wo) {
+  const W = 1080, H = 1350, P = 72;
+  const cd = wo.cardio || {}, s = cd.summary || {}, cfg = cd.cfg || {};
+  const c = document.createElement('canvas');
+  c.width = W; c.height = H;
+  const x = c.getContext('2d');
+  cardHead(x, wo, W, P);
+
+  const zone = cardioHasZone(cfg);
+  const pct = s.hrSec > 0 && zone ? Math.round((s.inZoneSec / s.hrSec) * 100) : null;
+  const kmh = s.sec > 0 ? s.distKm / (s.sec / 3600) : 0;
+  const tiles = [
+    [fmtSec(s.sec || 0), 'TIME'], [`${(s.distKm || 0).toFixed(2)}`, 'KM'], [kmh ? kmh.toFixed(1) : '—', 'AVG KM/H'],
+    [s.avgHr ? String(s.avgHr) : '—', 'AVG HR'], [s.maxHr ? String(s.maxHr) : '—', 'MAX HR'], [pct != null ? `${pct}%` : '—', 'IN ZONE'],
+  ];
+  const gap = 20, tw = (W - P * 2 - gap * 2) / 3, th = 170;
+  tiles.forEach((v, i) => {
+    const tx = P + (i % 3) * (tw + gap), ty = 210 + Math.floor(i / 3) * (th + gap);
+    x.fillStyle = CARD.tile; roundRect(x, tx, ty, tw, th, 20); x.fill();
+    x.textAlign = 'left'; x.fillStyle = CARD.text; x.font = cardFont(62, 800);
+    x.fillText(fitText(x, v[0], tw - 48), tx + 26, ty + 94);
+    x.fillStyle = CARD.dim; x.font = cardFont(22, 650);
+    x.fillText(v[1], tx + 26, ty + 138);
+  });
+
+  // heart-rate trace
+  let y = 210 + th * 2 + gap + 70;
+  x.fillStyle = CARD.dim; x.font = cardFont(22, 700);
+  x.fillText(`HEART RATE${zone ? ' · ' + cardioZoneText(cfg).toUpperCase() : ''}`, P, y);
+  const cx = P, cy = y + 24, cw = W - P * 2, ch = 440;
+  x.fillStyle = CARD.tile; roundRect(x, cx, cy, cw, ch, 20); x.fill();
+  const pts = cd.hr || [];
+  if (pts.length < 2) {
+    x.textAlign = 'center'; x.fillStyle = CARD.dim; x.font = cardFont(28, 600);
+    x.fillText('No heart rate recorded', W / 2, cy + ch / 2 + 10);
+  } else {
+    const L = cx + 80, R = cx + cw - 30, T = cy + 30, B = cy + ch - 60;
+    const bpm = pts.map(p2 => p2[1]);
+    let lo = Math.min(...bpm, zone ? cfg.lo : Infinity) - 8, hi = Math.max(...bpm, zone ? cfg.hi : 0) + 8;
+    if (cfg.ceiling > 0 && cfg.ceiling < hi + 15) hi = Math.max(hi, cfg.ceiling + 4);
+    const tMax = Math.max(pts[pts.length - 1][0], 60);
+    const px = tt => L + (tt / tMax) * (R - L), py = v => T + (1 - (v - lo) / (hi - lo)) * (B - T);
+    x.font = cardFont(22, 600); x.textAlign = 'right';
+    if (zone) {
+      x.fillStyle = 'rgba(79,180,119,.16)'; x.fillRect(L, py(cfg.hi), R - L, py(cfg.lo) - py(cfg.hi));
+      x.fillStyle = CARD.dim; x.fillText(String(cfg.hi), L - 14, py(cfg.hi) + 8); x.fillText(String(cfg.lo), L - 14, py(cfg.lo) + 8);
+      x.strokeStyle = CARD.moderate; x.lineWidth = 2; x.setLineDash([6, 8]);
+      x.beginPath(); x.moveTo(L, py((cfg.lo + cfg.hi) / 2)); x.lineTo(R, py((cfg.lo + cfg.hi) / 2)); x.stroke();
+    } else {
+      x.fillStyle = CARD.dim; x.fillText(String(Math.round(hi - 8)), L - 14, py(hi - 8) + 8); x.fillText(String(Math.round(lo + 8)), L - 14, py(lo + 8) + 8);
+    }
+    if (cfg.ceiling > 0 && cfg.ceiling <= hi) {
+      x.strokeStyle = '#ff4d5e'; x.lineWidth = 2; x.setLineDash([10, 8]);
+      x.beginPath(); x.moveTo(L, py(cfg.ceiling)); x.lineTo(R, py(cfg.ceiling)); x.stroke();
+    }
+    x.setLineDash([]);
+    x.strokeStyle = CARD.accent; x.lineWidth = 5; x.lineJoin = 'round'; x.lineCap = 'round';
+    x.beginPath(); pts.forEach((p2, i) => i ? x.lineTo(px(p2[0]), py(p2[1])) : x.moveTo(px(p2[0]), py(p2[1]))); x.stroke();
+    x.fillStyle = CARD.dim; x.textAlign = 'left'; x.fillText('0', L, B + 40);
+    x.textAlign = 'right'; x.fillText(`${Math.round(tMax / 60)} min`, R, B + 40);
+  }
+
+  // speed: where it started and ended
+  const ch2 = cd.changes || [], last = ch2.length ? ch2[ch2.length - 1] : null;
+  if (cd.startSpeed != null) {
+    x.textAlign = 'left'; x.fillStyle = CARD.dim; x.font = cardFont(27, 600);
+    const cued = ch2.filter(k => k.cued).length;
+    x.fillText(fitText(x, `${nice(cd.startSpeed)}${last && last.speed !== cd.startSpeed ? ` → ${nice(last.speed)}` : ''} km/h · ${nice(last ? last.incline : cd.startIncline)}% incline`
+      + (ch2.length ? ` · ${ch2.length} change${ch2.length === 1 ? '' : 's'}${cued ? `, ${cued} cued` : ''}` : ''), W - P * 2), P, cy + ch + 70);
+  }
+  cardFoot(x, W, H, P);
+  return c;
+}
+
+function shareCanvas(wo, mode) { return wo.cardio ? cardioCardCanvas(wo) : mode === 'full' ? fullCardCanvas(wo) : quickCardCanvas(wo); }
+
+/* Preview first, then share or save. Lifting sessions pick Quick (square,
+   totals) or Full (every set, muscles); cardio has its own card. */
 function openShare(wo) {
-  const opt = (id, head, sub) => `<button class="btn wide big" id="${id}" style="display:flex;flex-direction:column;align-items:flex-start;gap:3px;margin-bottom:10px">
-      <span>${head}</span><span class="sub">${sub}</span></button>`;
+  let mode = 'quick';
   modal({
     title: 'Share session',
-    body: opt('shQuick', 'Quick card', 'Square · volume, sets, reps, time, PRs')
-        + opt('shFull', 'Full detail', 'Every set · muscles worked and how hard'),
-    foot: `<button class="btn ghost" data-close>Cancel</button>`,
+    body: `${wo.cardio ? '' : `<div class="seg" id="shMode" style="margin-bottom:10px">
+        <button data-m="quick" class="on">Quick card</button><button data-m="full">Full detail</button></div>`}
+      <div style="max-height:58vh;overflow:auto;border-radius:10px;border:1px solid var(--line)">
+        <img id="shImg" alt="Preview of the image to share" style="display:block;width:100%"></div>`,
+    foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn" id="shSave">Save image</button><button class="btn primary" id="shGo">↗ Share</button>`,
     onOpen: bg => {
-      $('#shQuick', bg).onclick = () => { closeModal(); shareSession(wo, 'quick'); };
-      $('#shFull', bg).onclick = () => { closeModal(); shareSession(wo, 'full'); };
+      const paint = () => {
+        try { $('#shImg', bg).src = shareCanvas(wo, mode).toDataURL('image/png'); }
+        catch (e) { console.warn('share preview', e); }
+      };
+      bg.querySelectorAll('#shMode button').forEach(b => b.onclick = () => {
+        mode = b.dataset.m;
+        bg.querySelectorAll('#shMode button').forEach(o => o.classList.toggle('on', o === b));
+        paint();
+      });
+      paint();
+      $('#shGo', bg).onclick = () => { closeModal(); shareSession(wo, mode); };
+      $('#shSave', bg).onclick = () => { closeModal(); shareSession(wo, mode, true); };
     },
   });
 }
@@ -5878,16 +5970,16 @@ function openShare(wo) {
 /* Share sheet where the platform allows it, download where it doesn't — the
    sandbox may block navigator.share, and a silent failure is worse than a file
    in the downloads folder. */
-async function shareSession(wo, mode = 'quick') {
+async function shareSession(wo, mode = 'quick', saveOnly = false) {
   let c;
-  try { c = mode === 'full' ? fullCardCanvas(wo) : quickCardCanvas(wo); }
+  try { c = shareCanvas(wo, mode); }
   catch (e) { console.warn('share card', e); return toast('Could not build the image'); }
 
   const blob = await new Promise(res => c.toBlob(res, 'image/png'));
   if (!blob) return toast('Could not build the image');
-  const file = new File([blob], `session-${wo.date}-${mode}.png`, { type: 'image/png' });
+  const file = new File([blob], `session-${wo.date}-${wo.cardio ? 'cardio' : mode}.png`, { type: 'image/png' });
 
-  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+  if (!saveOnly && navigator.canShare && navigator.canShare({ files: [file] })) {
     try { await navigator.share({ files: [file] }); return; }
     catch (e) { if (e && e.name === 'AbortError') return; }   // user dismissed: not an error
   }
@@ -11127,8 +11219,11 @@ function finishCardio() {
   modal({
     title: 'Session complete',
     body: cardioBlock(done, true),
-    foot: `<button class="btn primary" id="cdSumDone">Done</button>`,
-    onOpen: bg => { $('#cdSumDone', bg).onclick = () => { closeAllModals(); go('home'); }; },
+    foot: `<button class="btn sm ghost" id="cdSumShare">↗ Share image</button><button class="btn primary" id="cdSumDone">Done</button>`,
+    onOpen: bg => {
+      $('#cdSumShare', bg).onclick = () => openShare(done);
+      $('#cdSumDone', bg).onclick = () => { closeAllModals(); go('home'); };
+    },
   });
 }
 

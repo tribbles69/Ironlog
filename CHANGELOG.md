@@ -13,6 +13,15 @@ rather than guessed.
 
 ---
 
+## 0.44.2 — 25 Sep 2026
+- **Cardio sessions get their own share image.** Time, distance, average
+  speed, average and max heart rate, time in zone, and your heart-rate line
+  over the zone — instead of a lifting card showing 0 kg and 0 reps.
+- **Share or save when you finish.** The cardio "Session complete" screen now
+  has a Share image button, like lifting sessions do.
+- **See the image before you send it.** Sharing now shows a preview, with
+  *Share* and a new *Save image* that puts it straight in your downloads.
+
 ## 0.44.1 — 25 Sep 2026
 - **Heart rate now says why there's no number.** Instead of just "no
   signal", it tells you whether the watch is connected but sending nothing
