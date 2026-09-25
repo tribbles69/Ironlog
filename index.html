@@ -35,8 +35,8 @@ try {
   --line:#252c3a;
   --line2:#333c4d;
   --txt:#e8ecf3;
-  --dim:#8a93a5;
-  --dim2:#5f6879;
+  --dim:#a4adbd;
+  --dim2:#858fa1;   /* ≥ 4.5:1 on every card background (C4) */
   --accent:#ff5c35;
   --accent2:#ff8a5c;
   --gold:#ffc542;
@@ -146,7 +146,7 @@ h3{font-size:13.5px;margin:0 0 8px}
 }
 .btn:hover{border-color:var(--dim2)}
 .btn:active{transform:scale(.97)}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#14110f}   /* dark on the accent: white was 3.1:1 */
 .btn.primary:hover{background:var(--accent2);border-color:var(--accent2)}
 .btn.ghost{background:transparent;border-color:var(--line)}
 .btn.danger{background:transparent;border-color:#5c2626;color:var(--red)}
@@ -248,10 +248,10 @@ h3{font-size:13.5px;margin:0 0 8px}
   transition:.12s;padding:0;
 }
 .cal-day:hover{border-color:var(--line2)}
-.cal-day.out{opacity:.28}
+.cal-day.out{opacity:.55}   /* other-month days: dimmed, but still readable (C4) */
 .cal-day.today{border-color:var(--accent);color:var(--accent)}
-.cal-day.sel{background:var(--accent);color:#fff;border-color:var(--accent)}
-.cal-day.sel .dot{background:#fff !important}
+.cal-day.sel{background:var(--accent);color:#14110f;border-color:var(--accent)}
+.cal-day.sel .dot{background:#14110f !important}
 .cal-day .dots{position:absolute;bottom:6px;display:flex;gap:3px}
 .dot{width:5px;height:5px;border-radius:50%}
 .dot.done{background:var(--green)}
@@ -387,6 +387,31 @@ tr.pr td input{background:rgba(255,197,66,.1);border-color:rgba(255,197,66,.35)}
 }
 .chk.on{background:var(--green);border-color:var(--green);color:#07240f;font-weight:800}
 .ex-foot{display:flex;gap:8px;padding:9px 11px 11px}
+/* for screen readers only (C4) */
+/* the live workout is used with chalky hands between sets: 40px+ targets (C4) */
+.ex-card .chk{width:40px;height:40px;border-radius:11px}
+.settable .c-chk{width:46px}
+.ex-card .setno{width:32px;height:32px;line-height:30px}
+.settable .c-set{width:38px}
+.settable .c-prev{width:58px}
+.settable .c-del{width:30px}
+.ex-card .delset{width:30px;height:38px}
+.ex-card .settable td input{padding:11px 4px}
+.ex-card .plbtn{height:40px}
+.ex-card .icon-btn{min-width:40px;min-height:40px}
+.ex-card .fbtn{width:44px;height:42px}
+.ex-card .ex-foot .btn,.ex-card .fastbar .btn,.ex-card [data-ramp],.ex-card .md-made,.ex-card [data-made]{min-height:40px}
+.ex-card .leafchip button{min-height:36px}
+.ex-card .modadd{min-height:32px}
+#finishBtn,#offBtn,#discardBtn,#voiceBtn{min-height:40px}
+@media (max-width:380px){   /* small phones: give back the width the bigger targets took */
+  .settable .c-prev{width:44px;font-size:10px}
+  .settable .c-chk{width:42px}
+  .settable .c-set{width:35px}
+  .settable .c-del{width:26px}
+  .ex-card .delset{width:26px}
+}
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 /* PR timeline on the movement page */
 .prtl{border-left:2px solid rgba(255,197,66,.35);margin:6px 0 0 5px;padding-left:12px}
 .prtl-row{display:flex;gap:10px;align-items:flex-start;padding:7px 0;position:relative;cursor:pointer}
@@ -395,7 +420,7 @@ tr.pr td input{background:rgba(255,197,66,.1);border-color:rgba(255,197,66,.35)}
    the step bar sits under the table */
 .prevbtn{border:0;background:transparent;color:inherit;font:inherit;padding:4px 0;width:100%;line-height:1.25;cursor:pointer;border-radius:6px}
 .prevbtn:active{background:rgba(255,255,255,.06)}
-.prir{display:block;font-size:9.5px;opacity:.8}
+.prir{display:block;font-size:9.5px}
 tr.sel .setno{border-color:var(--accent);color:var(--accent)}
 tr.sel td{background:rgba(255,92,53,.045)}
 .fastbar{display:flex;gap:8px;align-items:center;justify-content:space-between;padding:8px 11px 0;flex-wrap:wrap}
@@ -902,13 +927,13 @@ html[data-skin="win98"] .btn:hover{background:var(--w-face)}
    alone: .btn.big and .btn.sm set their own, and nudging it here would resize
    them mid-tap. */
 html[data-skin="win98"] .btn:active{box-shadow:var(--w-sink);transform:none}
-html[data-skin="win98"] .btn.primary{background:var(--w-face);color:#b00000}
+html[data-skin="win98"] .btn.primary{background:var(--w-face);color:#990000}
 html[data-skin="win98"] .btn.primary:hover{background:var(--w-face)}
 html[data-skin="win98"] .btn.ghost{background:var(--w-face);color:var(--w-dk)}
-html[data-skin="win98"] .btn.danger{background:var(--w-face);color:#b00000}
+html[data-skin="win98"] .btn.danger{background:var(--w-face);color:#990000}
 html[data-skin="win98"] .btn.danger:hover{background:var(--w-face)}
 html[data-skin="win98"] .btn:disabled{opacity:1;color:var(--w-sh);text-shadow:1px 1px 0 var(--w-hi)}
-html[data-skin="win98"] #finishBtn{color:#c00000;font-weight:800}
+html[data-skin="win98"] #finishBtn{color:#990000;font-weight:800}
 
 /* ---------- 6. inputs ---------- */
 html[data-skin="win98"] input,
@@ -1103,9 +1128,9 @@ html[data-skin="win98"] .cal-day{
   font-family:var(--w-mono);font-weight:700;transition:none;
 }
 html[data-skin="win98"] .cal-day:hover{border:0}
-html[data-skin="win98"] .cal-day.today{box-shadow:var(--w-raise),inset 0 0 0 2px var(--accent);color:#b00000}
+html[data-skin="win98"] .cal-day.today{box-shadow:var(--w-raise),inset 0 0 0 2px var(--accent);color:#990000}
 html[data-skin="win98"] .cal-day.sel{background:var(--w-navy);color:#fff;box-shadow:var(--w-sink)}
-html[data-skin="win98"] .cal-day.out{opacity:.4}
+html[data-skin="win98"] .cal-day.out{opacity:.7}
 html[data-skin="win98"] .dot{border-radius:0 !important}
 html[data-skin="win98"] .chart .grid{shape-rendering:crispEdges;stroke:#2a2a2a}
 html[data-skin="win98"] .chart .ln{stroke-width:2;stroke-linejoin:miter;stroke-linecap:butt}
@@ -1140,16 +1165,16 @@ html[data-skin="win98"] .summary-hero .t{font-family:var(--w-mono)}
 
 <main id="view"></main>
 
-<nav id="nav">
-  <button data-page="home"><span class="ico">◧</span><span>Home</span></button>
-  <button data-page="calendar"><span class="ico">▦</span><span>Calendar</span></button>
-  <button data-page="workout"><span class="ico">⬤</span><span>Workout</span></button>
-  <button data-page="analytics"><span class="ico">◫</span><span>Stats</span></button>
-  <button data-page="meets"><span class="ico">★</span><span>Events</span></button>
+<nav id="nav" aria-label="Main">
+  <button data-page="home"><span class="ico" aria-hidden="true">◧</span><span>Home</span></button>
+  <button data-page="calendar"><span class="ico" aria-hidden="true">▦</span><span>Calendar</span></button>
+  <button data-page="workout"><span class="ico" aria-hidden="true">⬤</span><span>Workout</span></button>
+  <button data-page="analytics"><span class="ico" aria-hidden="true">◫</span><span>Stats</span></button>
+  <button data-page="meets"><span class="ico" aria-hidden="true">★</span><span>Events</span></button>
 </nav>
 
 <div id="modalRoot"></div>
-<div id="toastRoot"></div>
+<div id="toastRoot" role="status" aria-live="polite"></div>
 <!-- Slew's velocity engine, bundled from its own source by r&d/tools/build-slew.cjs.
      28 kB, sensor mode only, precached by the service worker so a set can be
      measured in a basement with no signal. Kept as its own file rather than
@@ -1858,7 +1883,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.38.0';
+const APP_VERSION = '0.39.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -2313,6 +2338,7 @@ const Cue = {
     setTimeout(() => this.buzz(250), 2000);
   },
   tick() { this.beep(800, 90); },
+  logged() { this.buzz(35); },   // a set ticked off: felt, not heard (C4)
   done() { this.beep(1200, 650); this.buzz([220, 120, 220]); },
 };
 
@@ -3661,6 +3687,58 @@ function selectOnFocus(inp) {
   }, 0);
 }
 
+/* ---------------- accessibility (roadmap C4) ----------------
+   One pass over whatever was just drawn, run after every render and every
+   modal, and again when a modal redraws itself: names for controls whose
+   meaning comes from their row, labels tied to their fields, table headers
+   that say something. Doing it here rather than in each template keeps the
+   hundred-odd templates readable and means a new one is covered by default. */
+let _lblSeq = 0;
+const SET_FIELD = { w: () => `weight (${U()})`, r: () => 'reps', rpe: () => 'RIR', sec: () => 'time', m: () => 'metres', n: () => 'implements' };
+function a11yPass(root) {
+  if (!root || !root.querySelectorAll) return;
+  // a visible label beside a control, but not tied to it
+  root.querySelectorAll('.field').forEach(f => {
+    const lab = f.querySelector(':scope > label');
+    const ctl = f.querySelector('input:not([type=hidden]):not([type=checkbox]):not([type=radio]), select, textarea');
+    if (!lab || !ctl || lab.contains(ctl) || ctl.hasAttribute('aria-label') || ctl.hasAttribute('aria-labelledby')) return;
+    if (ctl.id && lab.htmlFor === ctl.id) return;
+    if (!lab.id) lab.id = 'lb' + (++_lblSeq);
+    ctl.setAttribute('aria-labelledby', lab.id);
+  });
+  // set rows: every box and button says which set it belongs to
+  root.querySelectorAll('tr[data-row], .settable tbody tr').forEach(tr => {
+    const no = tr.querySelector('.setno');
+    const n = no ? no.textContent.trim() : '';
+    const set = n === 'W' ? 'Warm-up set' : n === '↳' ? 'Drop set' : `Set ${n.replace(/^[TBA]/, '')}`;
+    tr.querySelectorAll('input[data-f], input[data-ef]').forEach(i => {
+      if (i.hasAttribute('aria-label') && !i.dataset.a11y) return;
+      const f = SET_FIELD[i.dataset.f || i.dataset.ef];
+      if (f) { i.setAttribute('aria-label', `${set} ${f()}`); i.dataset.a11y = '1'; }
+    });
+    const chk = tr.querySelector('.chk');
+    if (chk) { chk.setAttribute('aria-label', `${set} done`); chk.setAttribute('aria-pressed', chk.classList.contains('on') ? 'true' : 'false'); }
+    const del = tr.querySelector('.delset');
+    if (del) del.setAttribute('aria-label', `Delete ${set.toLowerCase()}`);
+    const pl = tr.querySelector('[data-plates]');
+    if (pl) pl.setAttribute('aria-label', `Plates for ${set.toLowerCase()}`);
+  });
+  root.querySelectorAll('.settable th').forEach(th => {
+    if (th.textContent.trim()) return;
+    const w = th.classList.contains('c-del') ? 'Delete' : th.classList.contains('c-pl') ? 'Tools' : th.classList.contains('c-chk') ? 'Done' : 'Actions';
+    th.innerHTML = `<span class="sr">${w}</span>`;
+  });
+  root.querySelectorAll('[data-ex-menu]').forEach(b => b.setAttribute('aria-label', 'Exercise options'));
+  root.querySelectorAll('.setno[data-warm], .setno[data-ewarm]').forEach(b => b.setAttribute('aria-haspopup', 'dialog'));
+  // the current tab, said rather than only coloured
+  root.querySelectorAll('.seg').forEach(s => s.querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.classList.contains('on') ? 'true' : 'false')));
+}
+// redraws inside a modal (tabs, lists) replace their HTML — cover those too
+new MutationObserver(ms => {
+  const roots = new Set(ms.map(m => m.target.closest ? (m.target.closest('.modal') || m.target.closest('#view')) : null).filter(Boolean));
+  roots.forEach(a11yPass);
+}).observe(document.body, { childList: true, subtree: true });
+
 function toast(msg, cls = '') {
   const el = document.createElement('div');
   el.className = 'toast ' + cls;
@@ -3673,12 +3751,14 @@ let modalStack = [];
 function modal({ title, body, foot, onOpen, wide, sticky, onClose }) {
   const bg = document.createElement('div');
   bg.className = 'modal-bg';
+  const hid = 'mh' + (++modalSeq);
   bg.innerHTML = `
-    <div class="modal">
-      <div class="modal-head"><h2>${esc(title)}</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
-      <div class="modal-body">${body}</div>
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="${hid}">
+      <div class="modal-head"><h2 id="${hid}" tabindex="-1">${esc(title)}</h2><button class="icon-btn" data-close aria-label="Close">✕</button></div>
+      <div class="modal-body" tabindex="0">${body}</div>
       ${foot ? `<div class="modal-foot">${foot}</div>` : ''}
     </div>`;
+  bg._ret = document.activeElement;   // focus goes back here when it closes
   /* sticky: a stray tap on the backdrop must not end a running timer. */
   bg.addEventListener('click', e => {
     if ((e.target === bg && !sticky) || e.target.hasAttribute('data-close')) { closeModal(); if (onClose) onClose(); }
@@ -3686,11 +3766,18 @@ function modal({ title, body, foot, onOpen, wide, sticky, onClose }) {
   $('#modalRoot').appendChild(bg);
   modalStack.push(bg);
   if (onOpen) onOpen(bg);
+  a11yPass(bg);
+  // a screen reader lands on the title, unless onOpen already put focus somewhere inside
+  if (!bg.contains(document.activeElement)) { try { $('h2', bg).focus({ preventScroll: true }); } catch (e) { /* old browser */ } }
   return bg;
 }
+let modalSeq = 0;
 function closeModal() {
   const m = modalStack.pop();
-  if (m) m.remove();
+  if (!m) return;
+  m.remove();
+  const r = m._ret;
+  if (r && document.body.contains(r) && typeof r.focus === 'function') { try { r.focus({ preventScroll: true }); } catch (e) { /* gone */ } }
 }
 function closeAllModals() { modalStack.forEach(m => m.remove()); modalStack = []; }
 
@@ -3821,6 +3908,7 @@ function go(p) {
 
 function render() {
   bust();
+  document.querySelectorAll('#nav [data-page]').forEach(b => { if (b.dataset.page === page) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
   const v = $('#view');
   if (page === 'home') v.innerHTML = viewHome();
   else if (page === 'calendar') v.innerHTML = viewCalendar();
@@ -3828,6 +3916,7 @@ function render() {
   else if (page === 'analytics') v.innerHTML = viewAnalytics();
   else if (page === 'meets') v.innerHTML = viewMeets();
   wire();
+  a11yPass(v);
   maybeWhatsNew();
 }
 
@@ -3853,7 +3942,7 @@ function welcomeDue() {
 }
 function openWelcome(step = 1) {
   const done = () => { S.settings.welcomed = APP_VERSION; save(); };
-  const dots = `<div class="row" style="gap:6px;justify-content:center;margin-bottom:12px" aria-label="Step ${step} of 3">${[1, 2, 3]
+  const dots = `<div class="row" style="gap:6px;justify-content:center;margin-bottom:12px" role="img" aria-label="Step ${step} of 3">${[1, 2, 3]
     .map(i => `<span style="width:8px;height:8px;border-radius:50%;background:${i === step ? 'var(--accent)' : 'var(--line)'}"></span>`).join('')}</div>`;
   if (step === 1) return modal({
     title: 'Welcome to Ironlog', sticky: true,
@@ -4819,7 +4908,7 @@ function activeWorkout() {
       </div>
     </div>
     <div class="row" style="margin-top:11px;gap:8px">
-      <input id="woName" value="${esc(a.name)}" style="font-weight:650">
+      <input id="woName" value="${esc(a.name)}" style="font-weight:650" aria-label="Session name">
       <button class="btn sm ${a.off ? 'primary' : 'ghost'}" id="offBtn" title="Off day — kept out of progression and stall checks">${a.off ? '✓ Off day' : 'Off day'}</button>
       <button class="btn sm danger" id="discardBtn">Discard</button>
     </div>
@@ -8883,9 +8972,9 @@ function openSettings() {
       <div class="sub" style="margin-bottom:8px">Counted in pairs, so a stack the calculator gives you is one you can actually build.</div>
       <div id="stPlates">${inventory().map((p, i) => `
         <div class="row" style="gap:8px;margin-bottom:6px;align-items:center">
-          <input type="number" step="0.25" inputmode="decimal" data-pk="${i}" value="${dw(p.kg, 2)}" style="width:82px">
+          <input type="number" step="0.25" inputmode="decimal" data-pk="${i}" value="${dw(p.kg, 2)}" style="width:82px" aria-label="Plate size (${U()})">
           <span class="sub">${U()} ×</span>
-          <input type="number" inputmode="numeric" data-pp="${i}" value="${p.pairs}" style="width:64px">
+          <input type="number" inputmode="numeric" data-pp="${i}" value="${p.pairs}" style="width:64px" aria-label="Pairs of ${dw(p.kg, 2)} ${U()} plates">
           <span class="sub grow">pairs</span>
           <button class="btn sm ghost" data-prm="${i}">−</button>
         </div>`).join('')}</div>
@@ -8932,7 +9021,7 @@ function openSettings() {
       <div class="eyebrow" style="margin-bottom:8px">Backfill</div>
       <div class="sub" style="margin-bottom:8px">Mark past planned sessions as done at their prescribed loads. Today is never included. Flagged as estimates — they count toward volume and streaks but can't set a PR.</div>
       <div class="row" style="gap:8px;align-items:center">
-        <select id="stBfDays" class="grow">
+        <select id="stBfDays" class="grow" aria-label="Mark planned sessions done from">
           <option value="7">Last 7 days</option>
           <option value="14" selected>Last 14 days</option>
           <option value="28">Last 28 days</option>
@@ -9021,8 +9110,8 @@ function openSettings() {
         addRow($('#stBars', bg), barRow(`n${Date.now()}`, BAR_PRESETS[+b.dataset.bpre])); wireRm();
       });
       $('#stAddPlate', bg).onclick = () => { const k = `n${Date.now()}`; addRow($('#stPlates', bg),
-        `<div class="row" style="gap:8px;margin-bottom:6px;align-items:center"><input type="number" step="0.25" inputmode="decimal" data-pk="${k}" style="width:82px">
-         <span class="sub">${U()} ×</span><input type="number" inputmode="numeric" data-pp="${k}" value="1" style="width:64px">
+        `<div class="row" style="gap:8px;margin-bottom:6px;align-items:center"><input type="number" step="0.25" inputmode="decimal" data-pk="${k}" style="width:82px" aria-label="Plate size (${U()})">
+         <span class="sub">${U()} ×</span><input type="number" inputmode="numeric" data-pp="${k}" value="1" style="width:64px" aria-label="Pairs of this plate">
          <span class="sub grow">pairs</span><span style="width:34px"></span></div>`); };
       bg.querySelectorAll('[data-brm],[data-prm]').forEach(b => b.onclick = () => b.closest('.row').remove());
 
@@ -9376,6 +9465,7 @@ function toggleSetDone(ei, si) {
     const key = exKey(ex);
     const R = isPRSet(s) ? shapeRecords(key, kind) : null;
     s.done = true;
+    Cue.logged();
     if (R && kind === 'series') {
       if (s.r > 0) {
         const st = statsFor(key);
@@ -9395,6 +9485,7 @@ function toggleSetDone(ei, si) {
     const st = statsFor(exKey(ex));
     const recs = timed ? holdRecords(exKey(ex)) : null;
     s.done = true;
+    Cue.logged();
     if (timed) {
       if (isPRSet(s) && (!recs.n || holdBeats(recs, s.w, s.sec))) {
         toast(recs.n ? `★ Best hold — ${exFull(ex)} ${holdLabel(s)}` : `★ First ${exFull(ex)} logged`, 'gold');
