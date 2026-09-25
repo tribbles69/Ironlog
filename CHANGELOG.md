@@ -13,6 +13,19 @@ rather than guessed.
 
 ---
 
+## 0.44.0 — 25 Sep 2026
+- **Connect your smartwatch on the cardio setup screen.** A new Heart rate
+  section shows what's connected and your live bpm before you start, and
+  the connection carries straight into the session.
+- **Watches that don't show up** can be found with "Not listed?", which
+  shows every nearby Bluetooth device. If the one you pick isn't sending
+  heart rate, Ironlog says so and how to fix it.
+- **"Using a smartwatch"** explains how to turn on heart-rate broadcast on
+  Garmin, Polar, Coros, Suunto, Wahoo, Amazfit and Wear OS watches. Apple
+  Watch and Fitbit can't send heart rate to a browser.
+- **Remembers your device:** next time, the setup screen reconnects to it
+  by itself if it's on and nearby.
+
 ## 0.43.0 — 25 Sep 2026
 - **New lifts:**
   - **Larsen Press** (feet-up bench) is now its own lift with its own

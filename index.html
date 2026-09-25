@@ -430,6 +430,10 @@ tr.pr td input{background:rgba(255,197,66,.1);border-color:rgba(255,197,66,.35)}
 .lv-today{stroke:var(--accent);stroke-width:2}
 .lv-pt{fill:var(--accent)}
 .lv-pt.hollow{fill:none;stroke:var(--accent);stroke-width:1.5}
+.hrbox{display:flex;align-items:center;gap:8px;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:12px}
+.dot-on{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(61,220,132,.2)}
+.hrhelp summary{cursor:pointer;margin:4px 0}
+.hrhelp .sub{line-height:1.6;margin:4px 0 6px}
 .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 /* PR timeline on the movement page */
 .prtl{border-left:2px solid rgba(255,197,66,.35);margin:6px 0 0 5px;padding-left:12px}
@@ -1902,7 +1906,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.43.0';
+const APP_VERSION = '0.44.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -10680,20 +10684,49 @@ function parseHr(dv) { const f = dv.getUint8(0); return f & 1 ? dv.getUint16(1, 
 const HR = {
   dev: null, ch: null, state: 'none', name: '', samples: [], tries: 0,
   supported() { return !!(navigator.bluetooth && navigator.bluetooth.requestDevice); },
-  async pick() {
+  /* A chest strap advertises the Heart Rate service and shows up with the
+     filter. A watch only does once "broadcast heart rate" is on, and some
+     don't list the service in their advert at all — `all` shows every nearby
+     device and finds out on connecting. */
+  async pick(all) {
     if (!this.supported()) return toast('Bluetooth heart rate needs Chrome on Android');
+    let dev;
     try {
-      const dev = await navigator.bluetooth.requestDevice({ filters: [{ services: ['heart_rate'] }] });
-      this.forget();
-      this.dev = dev;
-      this.name = dev.name || 'HR strap';
-      dev.addEventListener('gattserverdisconnected', HR.lost);
-      await this.connect();
+      dev = await navigator.bluetooth.requestDevice(all
+        ? { acceptAllDevices: true, optionalServices: ['heart_rate'] }
+        : { filters: [{ services: ['heart_rate'] }] });
     } catch (e) {
-      if (e && e.name !== 'NotFoundError') toast(`Couldn't connect — ${(e && e.message) || 'unknown error'}`);   // NotFound = picker cancelled
-      this.state = this.dev ? 'lost' : 'none';
-      paintCardio();
+      if (e && e.name !== 'NotFoundError') toast(`Couldn't open the device list — ${(e && e.message) || 'unknown error'}`);   // NotFound = picker cancelled
+      return;
     }
+    this.adopt(dev);
+    try { await this.connect(); }
+    catch (e) {
+      this.state = 'lost'; paintCardio();
+      toast(e && e.name === 'NotFoundError'
+        ? `${this.name} isn't sending heart rate — turn on heart-rate broadcast on the watch, then try again`
+        : `Couldn't connect to ${this.name} — ${(e && e.message) || 'unknown error'}`);
+    }
+  },
+  adopt(dev) {
+    this.forget();
+    this.dev = dev;
+    this.name = dev.name || 'Heart-rate device';
+    dev.addEventListener('gattserverdisconnected', HR.lost);
+    S.settings.hrDevice = this.name; save();   // remembered, so next time it can reconnect without the picker
+  },
+  /* Chrome remembers devices this site was allowed to use; reconnect to the
+     one used last, quietly, if it's awake and nearby. */
+  async resume() {
+    if (this.dev || !this.supported() || !navigator.bluetooth.getDevices) return false;
+    try {
+      const devs = await navigator.bluetooth.getDevices();
+      const d = devs.find(x => x.name && x.name === S.settings.hrDevice) || (devs.length === 1 ? devs[0] : null);
+      if (!d) return false;
+      this.adopt(d);
+      await Promise.race([this.connect(), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 6000))]);
+      return true;
+    } catch (e) { this.state = this.dev ? 'lost' : 'none'; paintCardio(); return false; }
   },
   async connect() {
     if (!this.dev) return;
@@ -10724,7 +10757,7 @@ const HR = {
   reconnect() {
     if (!this.dev) return this.pick();
     this.tries = 0;
-    this.connect().catch(() => { this.state = 'lost'; paintCardio(); toast('Still no strap — check it is on and awake'); });
+    this.connect().catch(() => { this.state = 'lost'; paintCardio(); toast('Still no heart rate — check the strap is on, or the watch is broadcasting'); });
   },
   /* A zero is "no skin contact", not a heart rate. */
   feed(bpm) {
@@ -10874,6 +10907,21 @@ function openCardioSetup() {
     title: 'Cardio session',
     body: `
       <div class="sub" style="margin-bottom:10px">Treadmill. Ironlog watches your heart rate and says what speed to set. It assumes you set it — if you didn't, Undo puts it back.</div>
+      <div class="eyebrow" style="margin-bottom:6px">Heart rate</div>
+      <div id="cdHrBox" class="hrbox"></div>
+      ${HR.supported() ? `<div class="row" style="gap:8px;margin:8px 0 4px">
+        <button class="btn sm primary grow" id="cdHrPick">Connect watch or strap</button>
+        <button class="btn sm ghost" id="cdHrAll" title="For watches that don't show up in the first list">Not listed?</button></div>
+      <details class="hrhelp"><summary class="sub">Using a smartwatch</summary>
+        <div class="sub">Turn on heart-rate broadcast on the watch first, then connect:
+          <br>• <b>Garmin</b> — hold the menu button → Broadcast Heart Rate (or start an activity and broadcast from its controls).
+          <br>• <b>Polar</b> — Settings → General → Share HR with other devices, or start a workout with HR sharing on.
+          <br>• <b>Coros</b> — Settings → Heart Rate Broadcast.
+          <br>• <b>Suunto, Wahoo, Amazfit</b> — look for "HR broadcast" or "Share heart rate".
+          <br>• <b>Samsung Galaxy Watch, Wear OS</b> — needs a heart-rate broadcast app from the watch's store.
+          <br>• <b>Apple Watch and Fitbit</b> can't send heart rate to a browser — use a chest strap or arm band.
+          <br>If the watch doesn't appear, try <b>Not listed?</b> — it shows every nearby device.</div></details>` : ''}
+      <div class="hr"></div>
       <div class="grid3">
         <div class="field"><label>Warm-up from</label><input type="number" step="0.1" inputmode="decimal" id="cdWarm0" value="${cfg.warmSpeed}"></div>
         <div class="field"><label>Target (km/h)</label><input type="number" step="0.1" inputmode="decimal" id="cdSpeed0" value="${cfg.speed}"></div>
@@ -10933,6 +10981,26 @@ function openCardioSetup() {
           : !max ? 'Enter a max HR (or a date of birth in your profile) to fill the zone, or type the numbers.'
             : `${HR_ZONES[preset].label} — ${Math.round(HR_ZONES[preset].lo * 100)}–${Math.round(HR_ZONES[preset].hi * 100)}% of ${rest ? 'heart-rate reserve' : 'max'}${num('#cdMax') ? '' : ', from an estimated max'}.`;
       };
+      // heart rate: live status while the sheet is open, connect from here, carried into the session
+      const hrPaint = () => {
+        const box = $('#cdHrBox', bg);
+        if (!box) return false;
+        const st = HR.state, bpm = HR.avg(5);
+        box.innerHTML = !HR.supported() ? '<span class="sub">Bluetooth heart rate needs Chrome on Android. Without it the session is a plain log.</span>'
+          : st === 'on' ? `<span class="dot-on"></span><b>${esc(HR.name)}</b><span class="grow"></span><span class="mono" style="font-size:20px;font-weight:800">${bpm != null ? Math.round(bpm) : '—'}</span><span class="sub"> bpm</span>`
+          : st === 'connecting' ? `<span class="sub">Connecting to ${esc(HR.name)}…</span>`
+          : st === 'lost' ? `<span class="sub">${esc(HR.name)} not connected.</span><span class="grow"></span><button class="btn xs" id="cdHrRe">Reconnect</button>`
+          : '<span class="sub">Nothing connected. You can start without — cues need heart rate, the log doesn\'t.</span>';
+        const re = $('#cdHrRe', bg); if (re) re.onclick = () => HR.reconnect();
+        const pk = $('#cdHrPick', bg); if (pk) pk.textContent = st === 'on' ? 'Change device' : 'Connect watch or strap';
+        return true;
+      };
+      hrPaint();
+      const hrIv = setInterval(() => { if (!hrPaint()) clearInterval(hrIv); }, 1000);
+      const pick = $('#cdHrPick', bg), all = $('#cdHrAll', bg);
+      if (pick) pick.onclick = () => HR.pick(false).then(hrPaint);
+      if (all) all.onclick = () => HR.pick(true).then(hrPaint);
+      if (HR.state === 'none' && S.settings.hrDevice) HR.resume().then(hrPaint);
       seg('#cdCueSeg', v => { cue = v; });
       seg('#cdVoiceSeg', v => { voice = v === '1'; });
       seg('#cdZoneSeg', v => { preset = v; refill(); });
@@ -11140,7 +11208,7 @@ function paintCardio(force) {
     : hr < cfg.lo ? 'var(--blue)' : hr > cfg.hi ? 'var(--gold)' : 'var(--green)';
   const st = HR.state;
   $('#cdHrState').textContent = !HR.supported() ? 'No Bluetooth here' : st === 'on' ? (hr != null ? HR.name : `${HR.name} · no signal`)
-    : st === 'connecting' ? 'Connecting…' : st === 'lost' ? 'Strap lost' : 'No strap';
+    : st === 'connecting' ? 'Connecting…' : st === 'lost' ? 'HR lost' : 'No HR';
   const conn = $('#cdConn');
   conn.style.display = !HR.supported() || st === 'on' || st === 'connecting' ? 'none' : '';
   conn.textContent = st === 'lost' ? 'Reconnect' : 'Connect HR';
