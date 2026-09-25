@@ -13,6 +13,19 @@ rather than guessed.
 
 ---
 
+## 0.47.0 — 25 Sep 2026
+- **Rep ranges.** Give an exercise a range like 8–12, from its ⋯ menu or the
+  planner. Program notes such as "3×8-12" are picked up by themselves, and
+  the range is remembered for that lift.
+- **Know when to add weight.** Once every set hits the top of the range at
+  your target RIR, Ironlog suggests the next weight and resets you to the
+  bottom of the range. If you're still in the range, it tells you to beat
+  last time's reps.
+- **One tap to use it.** Next session, *Use* fills in the new weight and reps.
+  On autoregulated lifts it only gives the verdict and leaves your weights
+  alone.
+- **The finish summary has a "Next time" list** for exercises with a range.
+
 ## 0.46.0 — 25 Sep 2026
 - **Log each side on single-arm and single-leg lifts.** On lifts like split
   squats or one-arm rows, tap ⇆ Each side to enter left and right reps for
