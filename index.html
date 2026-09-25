@@ -432,6 +432,7 @@ tr.pr td input{background:rgba(255,197,66,.1);border-color:rgba(255,197,66,.35)}
 .lv-pt.hollow{fill:none;stroke:var(--accent);stroke-width:1.5}
 .hrbox{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:12px}
 .dot-on{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(61,220,132,.2)}
+.tempoline{margin:8px 12px 0;padding:8px 10px;border:1px solid var(--line);border-radius:10px;display:flex;flex-direction:column;gap:2px}
 .hrhelp summary{cursor:pointer;margin:4px 0}
 .hrhelp .sub{line-height:1.6;margin:4px 0 6px}
 .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
@@ -1906,7 +1907,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.44.2';
+const APP_VERSION = '0.45.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4862,6 +4863,7 @@ function workoutLanding() {
 
 function startWorkout(wo) {
   if (S.active) { toast('Finish the active workout first'); go('workout'); return; }
+  (wo.exercises || []).forEach(adoptTempo);
   S.active = wo;
   save(); go('workout');
 }
@@ -5010,6 +5012,13 @@ function activeWorkout() {
 /* Measured sets, listed under the table. Kept out of the set row itself: that
    table is already eight columns on a phone, and velocity belongs to the set as
    a whole rather than to a cell. */
+/* Mean down / up seconds of a measured set, when Slew timed them (0.45.0+). */
+function vbtTimes(v) {
+  const con = (v.reps || []).map(r => r.con).filter(x => x > 0), ecc = (v.reps || []).map(r => r.ecc).filter(x => x > 0);
+  if (!con.length) return '';
+  const m = a => (a.reduce((x, y) => x + y, 0) / a.length).toFixed(1);
+  return ` <span class="dimmer">${ecc.length ? `↓${m(ecc)} ` : ''}↑${m(con)} s</span>`;
+}
 function vbtStrip(e) {
   const rows = e.sets.map((s, i) => ({ s, i })).filter(x => x.s.vbt);
   if (!rows.length) return '';
@@ -5017,7 +5026,7 @@ function vbtStrip(e) {
     const v = s.vbt;
     return `<div class="row between">
       <span class="sub">Set ${i + 1}</span>
-      <span class="mono grow">${v.best.toFixed(2)} m/s${v.loss >= 5 ? ` <span class="dimmer">▾${v.loss.toFixed(0)}%</span>` : ''}</span>
+      <span class="mono grow">${v.best.toFixed(2)} m/s${v.loss >= 5 ? ` <span class="dimmer">▾${v.loss.toFixed(0)}%</span>` : ''}${e.tempo ? vbtTimes(v) : ''}</span>
       ${v.est ? `<span class="mono sub" style="color:var(--purple)">RIR ${rpeToRir(v.est.rpe)}</span>` : ''}
     </div>`;
   }).join('')}</div>`;
@@ -5206,6 +5215,7 @@ function exerciseCard(e, ei) {
       : `<th class="c-kg">${U()}</th><th class="c-pl"></th><th class="c-reps">Reps</th><th class="c-rpe">RIR</th>`}<th class="c-chk"></th></tr></thead>
       <tbody>${rows}</tbody>
     </table>
+    ${tempoLine(e, ei)}
     ${fastBar(e, ei)}
     ${lvPanel(e, ei)}
     ${vbtStrip(e)}
@@ -5808,7 +5818,7 @@ function fullCardCanvas(wo) {
     const prSet = prKeys.has(exKey(e)) && scored.length ? bestSetOf(scored) : null;   // the one set prsFor scored
     const reps = working.reduce((a, s) => a + s.r, 0);
     x.textAlign = 'left'; x.fillStyle = CARD.text; x.font = cardFont(29, 680);
-    x.fillText(fitText(x, exFull(e), W - P * 2 - 260), P, y + 42);
+    x.fillText(fitText(x, exFull(e) + (e.tempo ? `  · ${e.tempo}` : ''), W - P * 2 - 260), P, y + 42);
     x.textAlign = 'right'; x.fillStyle = CARD.dim; x.font = cardFont(24, 600);
     // timed: total time. bodyweight: reps, not 0kg
     const totSec = working.reduce((a, s) => a + (s.sec || 0), 0);
@@ -6595,7 +6605,7 @@ function openMovementPage(movementId, focusKey) {
       if (!e.leaf || e.leaf.movement !== movementId) return;
       const working = e.sets.filter(s => s.done && isWorking(s));
       if (!working.length) return;
-      rows.push({ date: wo.date, name: exName(e), variant: [exVariant(e), exTag(e), ...(e.mods || []).map(modLabel)].filter(Boolean).join(' · '),
+      rows.push({ date: wo.date, name: exName(e), variant: [exVariant(e), exTag(e), ...modWords(e)].filter(Boolean).join(' · '),
                   key: exKey(e), leaf: e.leaf, iso: e.iso, cap: e.cap, series: e.series, seriesSec: e.seriesSec, sets: working, id: wo.id });
     }));
     rows.sort((a, b) => a.date < b.date ? 1 : -1);
@@ -8956,6 +8966,8 @@ function packVbt(rec, est, liftId, place) {
       v: +r.concentric.meanVelocity.toFixed(3),
       peak: +r.concentric.peakVelocity.toFixed(3),
       rom: +r.rom.toFixed(3),
+      con: r.concentric.duration > 0 ? Math.round(r.concentric.duration / 100) / 10 : null,   // seconds, for tempo (D3)
+      ecc: r.eccentric && r.eccentric.duration > 0 ? Math.round(r.eccentric.duration / 100) / 10 : null,
       rpe: r.rpe == null ? null : +r.rpe.toFixed(1),
       conf: +r.quality.confidence.toFixed(2),
       flags: r.quality.flags || [],
@@ -10225,6 +10237,74 @@ function openHoldTimer(ei, si) {
   });
 }
 
+/* ---------------- STRUCTURED TEMPO (D3) ----------------
+   Four counts on the entry — down, bottom pause, up, top pause — each a digit
+   or X (as fast as possible), stored "3-1-1-0". Annotates like a modifier:
+   exKey never sees it, so a tempo squat counts toward squat PRs.
+   r&d/specs/tempo-spec.md. */
+const TEMPO_PRESETS = ['3-1-1-0', '3-0-1-0', '4-0-1-0', '2-1-X-0', '5-0-1-0', '3-3-X-0'];
+const TEMPO_WORDS = ['down', 'pause', 'up', 'top'];
+function parseTempo(str) {
+  let s = String(str == null ? '' : str).toUpperCase().trim();
+  ['/', '·', '.', ':', ' ', ',', '–'].forEach(c => { s = s.split(c).join('-'); });
+  let parts = s.split('-').filter(Boolean);
+  if (parts.length === 1 && parts[0].length >= 3) parts = parts[0].split('');
+  if (parts.length === 3) parts.push('0');
+  if (parts.length !== 4 || !parts.every(p => p.length === 1 && (p === 'X' || (p >= '0' && p <= '9')))) return null;
+  if (parts.every(p => p === '0')) return null;
+  return parts.join('-');
+}
+const tempoParts = t => String(t).split('-');
+/* One rep in seconds; X counts as one. */
+function tempoRepSec(t) { return tempoParts(t).reduce((a, p) => a + (p === 'X' ? 1 : +p), 0); }
+/* A tempo written in a note or typed as a modifier. It has to look like a
+   tempo and not a set scheme: "5-3-1" is a program. */
+function tempoFromText(txt) {
+  const s = String(txt || ''), low = s.toLowerCase();
+  for (let i = 0; i < s.length; i++) {
+    const m = s.slice(i).match(new RegExp('^([0-9xX])[-/]([0-9xX])[-/]([0-9xX])(?:[-/]([0-9xX]))?(?![0-9])'));
+    if (!m || (i > 0 && s[i - 1] >= '0' && s[i - 1] <= '9')) continue;
+    const got = m.slice(1).filter(Boolean);
+    if (got.some(p => p.toUpperCase() === 'X') || got.length === 4 || low.includes('tempo')) return parseTempo(got.join('-'));
+  }
+  return null;
+}
+/* At session start: a tempo in the note or a typed modifier becomes the
+   structured one; the typed modifier then goes, it'd say the same thing twice. */
+function adoptTempo(e) {
+  if (!e || e.tempo) return;
+  const typed = (e.mods || []).find(m => String(m).startsWith('x:') && tempoFromText(String(m).slice(2)));
+  const t = typed ? tempoFromText(String(typed).slice(2)) : tempoFromText(e.notes);
+  if (!t) return;
+  e.tempo = t;
+  if (typed) e.mods = e.mods.filter(m => m !== typed);
+}
+/* The latest measured set of this entry with rep timings (D1's Measure). */
+function tempoMeasured(e) {
+  for (let i = e.sets.length - 1; i >= 0; i--) {
+    const reps = e.sets[i].vbt && e.sets[i].vbt.reps || [];
+    const con = reps.map(r => r.con).filter(x => x > 0), ecc = reps.map(r => r.ecc).filter(x => x > 0);
+    if (con.length) return { si: i, con: con.reduce((a, b) => a + b, 0) / con.length, ecc: ecc.length ? ecc.reduce((a, b) => a + b, 0) / ecc.length : null };
+  }
+  return null;
+}
+function tempoLine(e, ei) {
+  if (!e.tempo) return '';
+  const p = tempoParts(e.tempo), per = tempoRepSec(e.tempo);
+  const k = curSet(e, ei), s = e.sets[k];
+  const reps = s && s.r > 0 ? s.r : 0;
+  const words = p.map((c, i) => `${TEMPO_WORDS[i]} ${c === 'X' ? 'fast' : c}`).join(' · ');
+  const meas = tempoMeasured(e);
+  const shortDown = meas && meas.ecc != null && p[0] !== 'X' && meas.ecc < +p[0] - 1;
+  return `<div class="tempoline" role="note" aria-label="Tempo ${esc(e.tempo)}">
+    <div class="row" style="gap:10px;align-items:baseline;flex-wrap:wrap">
+      <span class="mono" style="font-weight:800;font-size:16px;letter-spacing:.04em">${p.join(' · ')}</span>
+      <span class="sub">${words}</span></div>
+    <div class="sub">${s ? `Set ${setNumber(e.sets, k)}: ` : ''}${reps ? `${reps} rep${reps === 1 ? '' : 's'} ≈ ${reps * per < 60 ? reps * per + ' s' : fmtSec(reps * per)} under tension` : `${per} s a rep`}</div>
+    ${meas ? `<div class="sub" style="${shortDown ? 'color:var(--gold)' : ''}">Measured set ${setNumber(e.sets, meas.si)}: ${meas.ecc != null ? `down ${meas.ecc.toFixed(1)} s · ` : ''}up ${meas.con.toFixed(1)} s${shortDown ? ' — faster down than planned' : ''}</div>` : ''}
+  </div>`;
+}
+
 /* ---------------- modifiers ----------------
    Technique, tempo, stance and range of motion ("comp pause", "slow eccentric")
    as structured tags on the entry, instead of prose in the note. They annotate;
@@ -10239,23 +10319,40 @@ function modLabel(id) {
   const m = modVocab().find(x => x.id === id);
   return m ? m.label : String(id);
 }
+function modWords(e) {
+  return [...(e && e.tempo ? [`tempo ${e.tempo}`] : []), ...((e && e.mods) || []).map(modLabel)];
+}
 function modsHtml(e) {
-  const ms = (e && e.mods) || [];
-  return ms.length ? ` <span class="dimmer">· ${ms.map(m => esc(modLabel(m))).join(', ')}</span>` : '';
+  const ws = modWords(e);
+  return ws.length ? ` <span class="dimmer">· ${ws.map(esc).join(', ')}</span>` : '';
 }
 function modChips(e, attr) {
   const ms = e.mods || [];
   return `<div class="row wrap modchips" style="gap:6px;margin-top:8px">
+    ${e.tempo ? `<span class="chip" style="font-variant-numeric:tabular-nums">Tempo ${esc(e.tempo)}</span>` : ''}
     ${ms.map(m => `<span class="chip">${esc(modLabel(m))}</span>`).join('')}
-    <button class="chip modadd" ${attr} title="Technique, adaptations, tempo — tags that don't split the PR">${ms.length ? '✎' : '+ Modifier'}</button>
+    <button class="chip modadd" ${attr} title="Tempo, technique, adaptations — tags that don't split the PR" aria-label="${ms.length || e.tempo ? 'Edit tempo and modifiers' : 'Add tempo or modifier'}">${ms.length || e.tempo ? '✎' : '+ Tempo / modifier'}</button>
   </div>`;
 }
 function openModPicker(e, after) {
+  adoptTempo(e);
   let sel = new Set(e.mods || []);
+  let tp = e.tempo ? tempoParts(e.tempo) : ['', '', '', ''];
   const draw = () => {
     const vocab = modVocab();
     const custom = [...sel].filter(m => String(m).startsWith('x:'));
+    const cur = parseTempo(tp.map(x => x || '0').join('-'));
     return `<div class="sub" style="margin-bottom:10px">Tags on this exercise for this session. They don't change which PR it counts toward.</div>
+      <div class="eyebrow" style="margin:4px 0 4px">Tempo</div>
+      <div class="sub" style="margin-bottom:6px">Seconds down · pause at the bottom · up · pause at the top. X = as fast as you can.</div>
+      <div class="row" style="gap:8px;margin-bottom:8px" id="mdTempo">
+        ${TEMPO_WORDS.map((w, i) => `<div class="field" style="flex:1;margin:0"><label for="mdT${i}">${w[0].toUpperCase() + w.slice(1)}</label>
+          <input id="mdT${i}" data-tp="${i}" class="mono" maxlength="1" autocapitalize="characters" autocomplete="off" value="${esc(tp[i])}" placeholder="–" style="text-align:center;font-weight:800"></div>`).join('')}
+      </div>
+      <div class="row wrap" style="gap:6px;margin-bottom:6px">
+        ${TEMPO_PRESETS.map(pr => `<button class="btn xs mono ${cur === pr ? 'primary' : 'ghost'}" data-tpset="${pr}">${pr}</button>`).join('')}
+        <button class="btn xs ghost" data-tpset="">No tempo</button>
+      </div>
       <div id="mdList">
       <div class="eyebrow" style="margin:4px 0 4px">Technique</div>
       ${vocab.filter(m => !m.splitsPR && m.group !== 'adaptation').map(m => `
@@ -10280,6 +10377,18 @@ function openModPicker(e, after) {
     foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="mdOk">Done</button>`,
     onOpen: bg => {
       const bind = () => {
+        const tpIns = [...bg.querySelectorAll('[data-tp]')];
+        tpIns.forEach((inp, i) => inp.oninput = () => {
+          let v = inp.value.toUpperCase().slice(-1);
+          if (v && !(v === 'X' || (v >= '0' && v <= '9'))) v = '';
+          inp.value = v; tp[i] = v;
+          if (v && tpIns[i + 1]) tpIns[i + 1].focus();
+        });
+        bg.querySelectorAll('[data-tpset]').forEach(b => b.onclick = () => {
+          tp = b.dataset.tpset ? tempoParts(b.dataset.tpset) : ['', '', '', ''];
+          tpIns.forEach((inp, i) => { inp.value = tp[i]; });
+          bg.querySelectorAll('[data-tpset]').forEach(o => { const on = !!b.dataset.tpset && o === b; o.classList.toggle('primary', on); o.classList.toggle('ghost', !on); });
+        });
         bg.querySelectorAll('[data-md]').forEach(b => b.onclick = () => {
           const id = b.dataset.md;
           if (sel.has(id)) sel.delete(id); else sel.add(id);
@@ -10290,7 +10399,9 @@ function openModPicker(e, after) {
           if (!t) return;
           // a typed name that matches the list ticks that one rather than making a twin
           const known = modVocab().find(m => m.label.toLowerCase() === t.toLowerCase());
-          sel.add(known && !known.splitsPR ? known.id : 'x:' + t);
+          const typedTempo = !known && tempoFromText(t);
+          if (typedTempo) tp = tempoParts(typedTempo);   // "3-0-1 tempo" typed here fills the boxes instead
+          else sel.add(known && !known.splitsPR ? known.id : 'x:' + t);
           $('.modal-body', bg).innerHTML = draw(); bind();
         };
         $('#mdAdd', bg).onclick = add;
@@ -10301,6 +10412,8 @@ function openModPicker(e, after) {
         // vocabulary order first, then yours in the order added
         const order = modVocab().map(m => m.id);
         e.mods = [...sel].sort((a, b) => (order.indexOf(a) + 1 || 999) - (order.indexOf(b) + 1 || 999));
+        const t = tp.some(Boolean) ? parseTempo(tp.map(x => x || '0').join('-')) : null;
+        if (t) e.tempo = t; else delete e.tempo;
         closeModal(); after();
       };
     },
@@ -12224,7 +12337,7 @@ function workoutsToCSV(list) {
       if (ex) {
         const leaf = ex.leaf && typeof ex.leaf === 'object' ? ex.leaf : null;
         Object.assign(r, exSplit.cells, {
-          exercise_no: ei + 1, exercise: exFull(ex), modifiers: (ex.mods || []).map(modLabel).join('; '),
+          exercise_no: ei + 1, exercise: exFull(ex), modifiers: modWords(ex).join('; '),
           exercise_extra: si <= 0 ? exSplit.extra : '',
         });
         if (leaf) CSV_LEAF.forEach(k => { r[k] = leaf[k] || ''; });

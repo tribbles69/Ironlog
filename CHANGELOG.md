@@ -13,6 +13,19 @@ rather than guessed.
 
 ---
 
+## 0.45.0 — 25 Sep 2026
+- **Tempo.** Give an exercise a tempo such as 3-1-1-0: seconds down, pause
+  at the bottom, up, pause at the top. X means as fast as you can. Set it
+  from the Tempo / modifier button, with presets or your own counts.
+- **Shown on the set you're doing**, with the time under tension for that
+  set's reps.
+- **Picked up automatically** when an exercise's note or a modifier you typed
+  says something like "tempo 3-0-1".
+- **Measure shows your real tempo.** Measured sets now record how long each
+  rep took going down and up, and flag it if you came down faster than
+  planned.
+- A tempo doesn't change your PRs: a tempo squat still counts as a squat.
+
 ## 0.44.2 — 25 Sep 2026
 - **Cardio sessions get their own share image.** Time, distance, average
   speed, average and max heart rate, time in zone, and your heart-rate line
