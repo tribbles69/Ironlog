@@ -317,7 +317,7 @@ Builds on the existing Events page. Write `r&d/specs/events-spec.md` first.
   time), prep peaking toward exactly those events, results entry and points.
 - Bodyweight against weight class on the run-in.
 
-### [ ] C3. Para powerlifting mode
+### [x] C3. Para powerlifting mode — shipped 0.38.0 (rules as written here; events spec §5)
 No app does this; Aaron's own niche. Check current WPPO rules before building.
 - Bench press only; WPPO bodyweight classes (men 49, 54, 59, 65, 72, 80, 88, 97,
   107, 107+ kg; women 41, 45, 50, 55, 61, 67, 73, 79, 86, 86+ kg).

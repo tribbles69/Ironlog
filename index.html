@@ -357,6 +357,10 @@ tr.droprow td{border-top-color:transparent}
 .md-att .k{font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:var(--dim2)}
 .md-att input{text-align:center;font-weight:700;margin:4px 0}
 .md-att .res{font-size:11px;font-weight:700;min-height:14px}
+.md-atts.four{grid-template-columns:repeat(4,1fr);gap:6px}
+.md-atts.four .light{width:18px;height:18px}
+.md-att.rec{border-style:dashed;border-color:var(--line)}
+.md-att .warn{font-size:10.5px;color:var(--gold);line-height:1.25;margin-top:2px}
 .md-att.good{border-color:rgba(61,220,132,.5);background:rgba(61,220,132,.07)} .md-att.good .res{color:var(--green)}
 .md-att.miss{border-color:rgba(224,72,61,.5);background:rgba(224,72,61,.07)} .md-att.miss .res{color:var(--red)}
 .lights{display:flex;gap:6px;justify-content:center}
@@ -1854,7 +1858,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.37.0';
+const APP_VERSION = '0.38.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -3840,7 +3844,8 @@ const TRAINING_FOR = [
   ['general', 'Getting stronger', 'No competition in mind — log, see PRs and progress.'],
   ['powerlifting', 'Powerlifting', 'Squat, bench and deadlift on a platform.'],
   ['strengthlifting', 'Strengthlifting', 'Squat, press and deadlift.'],
-  ['single-lift', 'A single-lift meet', 'Bench-only, deadlift-only, or para powerlifting.'],
+  ['single-lift', 'A single-lift meet', 'Bench-only, deadlift-only, or whatever the meet contests.'],
+  ['para', 'Para powerlifting', 'Bench press in WPPO classes, with a record attempt.'],
   ['strongman', 'Strongman', 'Carries, loads, presses and medleys.'],
 ];
 function welcomeDue() {
@@ -6473,6 +6478,19 @@ const EVENT_TYPES = {
     scored: 'total',
     wclass: true,
   },
+  /* WPPO para powerlifting (roadmap C3, events spec §5): bench only, whole-kg
+     increases, an optional fourth record attempt that doesn't count. */
+  para: {
+    id: 'para',
+    label: 'Para powerlifting',
+    blurb: 'Bench press only, WPPO classes. Three attempts plus an optional record attempt; best lift and total of good lifts.',
+    icon: '◆',
+    lifts: [{ slot: 'bench', label: 'Bench', movement: 'bench-press', equipment: 'barbell' }],
+    attempts: true,
+    scored: 'para',
+    wclass: true,
+    para: true,
+  },
   /* A show is its own list of events, each with its rules (events spec §4). */
   strongman: {
     id: 'strongman',
@@ -6672,7 +6690,15 @@ function liftName(k) {
    unlock the meet and they come straight back.
    Third goes to whichever is higher. Testing above your goal third doesn't mean
    you should open at 90% of a target you've already beaten. */
+/* WPPO bodyweight classes, kg. */
+const PARA_CLASSES = {
+  male: ['49', '54', '59', '65', '72', '80', '88', '97', '107', '107+'],
+  female: ['41', '45', '50', '55', '61', '67', '73', '79', '86', '86+'],
+};
+/* Para attempts go up in whole kilograms (0.5 only for a record attempt). */
+function attemptRound(m) { return eventType(m).para ? (kg => Math.round(kg)) : roundBar; }
 function attemptsFor(m, lift) {
+  const roundBar = attemptRound(m);   // shadows the plate rounding for a para event
   const slot = typeof lift === 'string' ? lift : lift.slot;
   const goal = (m.lifts && m.lifts[slot]) || 0;
   const a = (m.attempts && m.attempts[slot]) || null;
@@ -6945,17 +6971,42 @@ function mdTotals(m) {
     const ws = mdWeights(m, lift), arr = d.att[lift.slot] || [];
     const res = [0, 1, 2].map(i => lightsResult(arr[i] && arr[i].l));
     const good = ws.filter((w, i) => res[i] === 'good' && w > 0);
-    return { lift, best: good.length ? Math.max(...good) : 0, bomb: res.every(r => r === 'miss'), done: res.filter(Boolean).length };
+    const rec = arr[3] && arr[3].w > 0 ? { w: arr[3].w, res: lightsResult(arr[3].l) } : null;   // para record attempt: never counts
+    return { lift, best: good.length ? Math.max(...good) : 0, goodSum: good.reduce((a, w) => a + w, 0), rec,
+             bomb: res.every(r => r === 'miss'), done: res.filter(Boolean).length };
   });
   const total = per.reduce((a, p) => a + p.best, 0);
   const complete = per.every(p => p.best > 0);
   const bw = d.bw || bodyweightKg();
   const bench = lifts.length === 1 && /bench/.test(lifts[0].movement);
   return {
-    per, total, complete, bw,
+    per, total, complete, bw, para: !!type.para, goodSum: per.reduce((a, p) => a + p.goodSum, 0),
     dots: type.scored === 'dots' && complete ? dots(total, bw, S.settings.sex) : 0,
-    gl: complete && (type.id === 'powerlifting' || bench) ? glPoints(total, bw, S.settings.sex, bench) : 0,
+    gl: complete && !type.para && (type.id === 'powerlifting' || bench) ? glPoints(total, bw, S.settings.sex, bench) : 0,
   };
+}
+/* What the rules say about an attempt, or ''. Weights never go down; para
+   needs +1 kg after a good lift, and a record attempt +0.5 kg over the best
+   good lift so far. */
+function attemptWarning(m, lift, i) {
+  const d = meetDay(m), arr = d.att[lift.slot] || [], ws = mdWeights(m, lift);
+  const w = i < 3 ? ws[i] : arr[3] && arr[3].w;
+  if (!(w > 0)) return '';
+  const para = eventType(m).para;
+  if (i === 3) {
+    const good = ws.filter((x, j) => x > 0 && lightsResult(arr[j] && arr[j].l) === 'good');
+    const best = good.length ? Math.max(...good) : 0;
+    return best && w - best < 0.5 - 1e-9 ? 'A record attempt must be at least 0.5 kg over your best lift' : '';
+  }
+  if (i === 0) return para && Math.abs(w - Math.round(w)) > 1e-9 ? 'Para attempts are whole kilograms' : '';
+  const prev = ws[i - 1];
+  if (!(prev > 0)) return '';
+  if (w < prev - 1e-9) return 'An attempt can\'t be lighter than the one before';
+  if (para) {
+    if (Math.abs(w - Math.round(w)) > 1e-9) return 'Para attempts are whole kilograms';
+    if (lightsResult(arr[i - 1] && arr[i - 1].l) === 'good' && w - prev < 1 - 1e-9) return 'At least 1 kg more after a good lift';
+  }
+  return '';
 }
 const hhmm = mins => { const x = ((Math.round(mins) % 1440) + 1440) % 1440; return `${String(Math.floor(x / 60)).padStart(2, '0')}:${String(x % 60).padStart(2, '0')}`; };
 let mdTab = 'attempts', mdLift = 0, mdFor = null;
@@ -7006,22 +7057,28 @@ function openMeetDay(id) {
         <div class="field grow" style="margin:0"><label for="mdBw">Weigh-in (${U()})</label>
           <input id="mdBw" type="number" step="0.01" inputmode="decimal" value="${d.bw ? dw(d.bw, 2) : ''}" placeholder="${T.bw ? nice(dw(T.bw)) : '—'}"></div>
       </div>
-      <div class="stats grid3" style="margin-bottom:12px">
+      ${T.para ? `<div class="stats grid2" style="margin-bottom:12px">
+        <div class="stat"><div class="k">Best lift</div><div class="v">${T.total ? nice(dw(T.total)) : '—'}</div></div>
+        <div class="stat"><div class="k">Good lifts total</div><div class="v">${T.goodSum ? nice(dw(T.goodSum)) : '—'}</div></div>
+      </div>` : `<div class="stats grid3" style="margin-bottom:12px">
         <div class="stat"><div class="k">${T.complete ? 'Total' : 'Subtotal'}</div><div class="v">${T.total ? nice(dw(T.total)) : '—'}</div></div>
         ${eventType(m).scored === 'dots' ? `<div class="stat"><div class="k">DOTS</div><div class="v" style="color:var(--purple)">${T.dots ? T.dots.toFixed(1) : '—'}</div></div>` : ''}
         <div class="stat"><div class="k">IPF GL</div><div class="v">${T.gl ? T.gl.toFixed(1) : '—'}</div></div>
-      </div>
+      </div>`}
       ${T.per.map(p => {
         const ws = mdWeights(m, p.lift), arr = d.att[p.lift.slot] || [];
         return `<div class="md-lift">
           <div class="row between"><b>${esc(p.lift.label)}</b><span class="mono">${p.best ? `best ${wt(p.best)}` : p.bomb ? '<b style="color:var(--red)">no total — bombed</b>' : p.done ? '<span style="color:var(--gold)">no good lift yet</span>' : ''}</span></div>
-          <div class="md-atts">${[0, 1, 2].map(i => {
+          <div class="md-atts${T.para ? ' four' : ''}">${(T.para ? [0, 1, 2, 3] : [0, 1, 2]).map(i => {
             const l = (arr[i] && arr[i].l) || [0, 0, 0], res = lightsResult(l);
-            return `<div class="md-att ${res || ''}"><div class="k">${['Opener', 'Second', 'Third'][i]}</div>
-              <input type="number" step="0.5" inputmode="decimal" data-mdw="${esc(p.lift.slot)}.${i}" value="${ws[i] ? dw(ws[i]) : ''}" aria-label="${esc(p.lift.label)} attempt ${i + 1} (${U()})">
+            const w = i < 3 ? ws[i] : arr[3] && arr[3].w;
+            const warn = attemptWarning(m, p.lift, i);
+            return `<div class="md-att ${res || ''}${i === 3 ? ' rec' : ''}"><div class="k">${['Opener', 'Second', 'Third', 'Record'][i]}</div>
+              <input type="number" step="${T.para ? (i === 3 ? '0.5' : '1') : '0.5'}" inputmode="decimal" data-mdw="${esc(p.lift.slot)}.${i}" value="${w ? dw(w) : ''}" placeholder="${i === 3 ? 'optional' : ''}" aria-label="${esc(p.lift.label)} ${i === 3 ? 'record attempt' : `attempt ${i + 1}`} (${U()})">
               <div class="lights">${l.map((x, j) => `<button class="light l${x}" data-mdl="${esc(p.lift.slot)}.${i}.${j}" aria-label="Referee ${j + 1}: ${['no light', 'white', 'red'][x]}"></button>`).join('')}</div>
-              <div class="res">${res === 'good' ? 'Good lift' : res === 'miss' ? 'No lift' : '&nbsp;'}</div></div>`;
-          }).join('')}</div></div>`;
+              <div class="res">${res === 'good' ? (i === 3 ? 'Record lift' : 'Good lift') : res === 'miss' ? 'No lift' : '&nbsp;'}</div>
+              ${warn ? `<div class="warn">${esc(warn)}</div>` : ''}</div>`;
+          }).join('')}</div>${T.para ? '<div class="sub" style="margin-top:6px">The record attempt doesn\'t count toward your result.</div>' : ''}</div>`;
       }).join('')}
       <div class="sub" style="margin:4px 0 10px">Tap a light for white, again for red. Two of either decides it.</div>
       <button class="btn wide" id="mdTests" ${T.per.some(p => p.best) ? '' : 'disabled'}>${d.saved ? '✓ Saved as tested singles' : 'Save results as tested singles'}</button>`;
@@ -7089,7 +7146,9 @@ function openMeetDay(id) {
         const tb = $('#mdTests', bg);
         if (tb) tb.onclick = () => {
           const T = mdTotals(m);
-          const entries = T.per.filter(p => p.best > 0).map(p => ({ leaf: keyLeaf(liftKey(p.lift)), kg: p.best, legacyName: p.lift.label }));
+          // a good record attempt doesn't score, but it was lifted: it's the tested single
+          const top = p => Math.max(p.best, p.rec && p.rec.res === 'good' ? p.rec.w : 0);
+          const entries = T.per.filter(p => top(p) > 0).map(p => ({ leaf: keyLeaf(liftKey(p.lift)), kg: top(p), legacyName: p.lift.label }));
           const n = logTest(m.date <= today() ? m.date : today(), entries, `${m.name} — meet results`);
           if (n) { d.saved = true; keep(); toast(`${n} result${n === 1 ? '' : 's'} saved as tested singles`, 'green'); redraw(); }
         };
@@ -7293,7 +7352,9 @@ function openMeet(id, typeId, ownLifts) {
       </div>
       <div class="grid2">
         <div class="field"><label>Location</label><input id="mLoc" value="${esc(m.loc)}" placeholder="optional"></div>
-        <div class="field"><label>Weight class</label><input id="mWc" value="${esc(m.wclass)}" placeholder="e.g. 83kg"></div>
+        <div class="field"><label>Weight class</label>${type.para
+          ? `<select id="mWc">${PARA_CLASSES[S.settings.sex === 'female' ? 'female' : 'male'].map(c => `<option value="${c}kg" ${m.wclass === c + 'kg' ? 'selected' : ''}>${c} kg</option>`).join('')}</select>`
+          : `<input id="mWc" value="${esc(m.wclass)}" placeholder="e.g. 83kg">`}</div>
       </div>
       <div class="field"><label>Bodyweight target (${U()})</label>
         <input type="number" step="0.1" inputmode="decimal" id="mBw" value="${m.bwTarget ? dw(m.bwTarget) : ''}" placeholder="optional"></div>
@@ -7331,8 +7392,9 @@ function openMeet(id, typeId, ownLifts) {
         lifts.forEach(({ slot: k }) => {
           const t = attVal(`${k}.t`);
           if (!t) return;
-          bg.querySelector(`[data-att="${k}.o"]`).value = dw(roundBar(t * 0.9));
-          bg.querySelector(`[data-att="${k}.s"]`).value = dw(roundBar(t * 0.95));
+          const rb = attemptRound(m);
+          bg.querySelector(`[data-att="${k}.o"]`).value = dw(rb(t * 0.9));
+          bg.querySelector(`[data-att="${k}.s"]`).value = dw(rb(t * 0.95));
         });
       };
       $('#mSave', bg).onclick = () => {
