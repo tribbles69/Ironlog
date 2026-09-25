@@ -415,7 +415,7 @@ before presenting velocity-estimated RIR as more than a guide, compare against a
 known device (linear transducer or a validated app) on a batch of real sets and
 record the error in `r&d/notes/`.
 
-### [ ] D2. Strength library seeding
+### [x] D2. Strength library seeding — shipped 0.43.0 (Larsen, TruSquat, pendulum new; SSB, trap bar and belt squat as equipment with aliases; strongman implements from B1)
 (Blast #38.) Larsen press, TruSquat, SSB, trap bar, belt squat, pendulum squat,
 plus the strongman implements from B1 — as movement + equipment leaves. Check
 `EX_DB` for what's already there. Can be done alongside B1.

@@ -13,6 +13,24 @@ rather than guessed.
 
 ---
 
+## 0.43.0 — 25 Sep 2026
+- **New lifts:**
+  - **Larsen Press** (feet-up bench) is now its own lift with its own
+    PRs. It used to be counted as Bench Press.
+  - **TruSquat** and **Pendulum Squat** are added.
+- **More names recognised**, for picking exercises and importing from
+  other apps:
+  - SSB squat, SSB good morning and SSB split squat;
+  - belt squat;
+  - hex bar deadlift, trap bar shrug and trap bar RDL.
+
+  Each lands on the right lift and bar.
+- The strongman implements (log, axle, yoke, keg, sandbag, stones, farmers
+  handles, sled, Conan's wheel) came in 0.28.0.
+- **Heads-up:** sessions already logged as Bench Press stay Bench Press,
+  including any that were really Larsen presses. Change them in Edit if you
+  want them on the Larsen PRs.
+
 ## 0.42.0 — 25 Sep 2026
 - **Warm-up profile: today's max from your warm-ups.** In Measure, pick
   "Warm-up profile" and measure 1–2 fast reps on each warm-up.
