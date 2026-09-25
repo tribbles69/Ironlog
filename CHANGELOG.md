@@ -13,6 +13,26 @@ rather than guessed.
 
 ---
 
+## 0.42.0 — 25 Sep 2026
+- **Warm-up profile: today's max from your warm-ups.** In Measure, pick
+  "Warm-up profile" and measure 1–2 fast reps on each warm-up.
+  - From three or more, Ironlog draws your load–speed line and shows
+    today's estimated max as a **range**, e.g. 158–176 kg. The range
+    tightens as your warm-ups get heavier.
+  - It shows whether your bar speed is faster or slower than usual, and
+    suggests today's working weight. "Use it" sets your working sets.
+  - A chart shows today's points and line against your usual one.
+- **Calibrate bar speed — about 8 minutes** (exercise ⋯ menu): a measured
+  ramp builds your own velocity profile for that lift. An optional set to
+  failure teaches it your limit speed and how fast you slow down. It's
+  optional; everything works without it.
+- **Calibration is steadier.** Your limit speed is now blended from all
+  your near-failure sets instead of the last one. Lifts you haven't
+  calibrated borrow how fast you slow down from the ones you have.
+- **"On the bar" or "In a pocket".** Pocket readings are marked as rougher
+  and never change your calibration or your profile.
+- All bar-speed numbers are labelled as a guide. A phone isn't a lab device.
+
 ## 0.41.0 — 25 Sep 2026
 - **Plan the run-in to a meet.** On an event, "Plan the run-in" lays
   training blocks out backwards from the meet date: accumulation,

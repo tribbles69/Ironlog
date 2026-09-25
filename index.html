@@ -421,6 +421,15 @@ tr.pr td input{background:rgba(255,197,66,.1);border-color:rgba(255,197,66,.35)}
 .runin-bar i{display:block;border-radius:3px;opacity:.85}
 .runin-now{position:absolute;top:-4px;bottom:-4px;width:3px;border-radius:2px;background:var(--txt);box-shadow:0 0 0 2px var(--card)}
 .runin-key{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:middle}
+.lvchart{width:100%;height:auto;margin-top:6px}
+.lv-axis{stroke:var(--line);stroke-width:1}
+.lv-t{fill:var(--dim2);font-size:9px}
+.lv-mvt{stroke:var(--red);stroke-width:1;stroke-dasharray:3 3}
+.lv-band{fill:var(--gold);opacity:.45}
+.lv-stored{stroke:var(--dim2);stroke-width:1.5}
+.lv-today{stroke:var(--accent);stroke-width:2}
+.lv-pt{fill:var(--accent)}
+.lv-pt.hollow{fill:none;stroke:var(--accent);stroke-width:1.5}
 .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 /* PR timeline on the movement page */
 .prtl{border-left:2px solid rgba(255,197,66,.35);margin:6px 0 0 5px;padding-left:12px}
@@ -1893,7 +1902,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.41.0';
+const APP_VERSION = '0.42.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -5192,6 +5201,7 @@ function exerciseCard(e, ei) {
       <tbody>${rows}</tbody>
     </table>
     ${fastBar(e, ei)}
+    ${lvPanel(e, ei)}
     ${vbtStrip(e)}
     ${e.series ? `<div class="row" style="gap:8px;align-items:center;padding:8px 12px 0">
       <label class="sub grow" for="ss${ei}">Series time</label>
@@ -5542,6 +5552,7 @@ function finishWorkout(force) {
     if (flagged.length) return plausListDlg(flagged, 'Finish', () => finishWorkout(true));
   }
 
+  harvestLvp(logged);   // today's warm-up profiles join the stored ones (D1)
   // PRs — compare against history BEFORE this workout is saved
   const prs = [];
   logged.forEach(e => {
@@ -8788,9 +8799,37 @@ function slewLiftFor(leaf) {
    taken to failure the lifter's true 0-RIR velocity is observed, and from then
    on their RIR stops depending on any assumed constant. */
 function slewProfile(liftId) {
-  const stored = (S.settings.slewProfiles || {})[liftId];
+  const all = S.settings.slewProfiles || {};
+  const stored = all[liftId];
   const base = Slew.defaultProfile(liftId);
-  return stored ? { ...base, ...stored } : base;
+  const p = stored ? { ...base, ...stored } : base;
+  /* Fatigue scalar only (D1): a lift with no personal vlF borrows the lifter's
+     personal/population ratio from the lifts that have one. MVT and the
+     load-velocity line never transfer — they're too lift-specific. */
+  if (!(stored && stored.vlFCal)) {
+    const ratios = Object.entries(all).filter(([id, s]) => id !== liftId && s.vlFCal && s.vlF > 0 && Slew.DEFAULT_PROFILES[id])
+      .map(([id, s]) => s.vlF / Slew.DEFAULT_PROFILES[id].vlF);
+    if (ratios.length) { p.vlF = +(base.vlF * ratios.reduce((a, b) => a + b, 0) / ratios.length).toFixed(3); p.vlFFrom = 'other lifts'; }
+  }
+  return p;
+}
+/* The minimum velocity threshold in use: the population prior shrunk toward
+   what this lifter has actually failed at — (3·prior + Σobs) / (3 + n), so
+   one odd set can't move it far. Written back as v0Observed so Slew's own
+   estimator reads the same number. */
+const MVT_PRIOR_WEIGHT = 3;
+function mvtFor(liftId) {
+  const s = (S.settings.slewProfiles || {})[liftId] || {};
+  const prior = Slew.defaultProfile(liftId).v0;
+  const obs = (s.v0Obs || []).map(o => o.v).filter(v => v > 0);
+  if (!obs.length) return s.v0Observed > 0 ? s.v0Observed : prior;   // before D1: one stored observation
+  return (MVT_PRIOR_WEIGHT * prior + obs.reduce((a, b) => a + b, 0)) / (MVT_PRIOR_WEIGHT + obs.length);
+}
+function addMvtObservation(liftId, v) {
+  const s = (S.settings.slewProfiles || {})[liftId] || {};
+  const obs = [...(s.v0Obs || []), ...(s.v0Observed > 0 && !(s.v0Obs || []).length ? [{ v: s.v0Observed, at: s.v0ObservedAt || 0 }] : []), { v, at: Date.now() }].slice(-10);
+  saveSlewProfile(liftId, { v0Obs: obs });
+  saveSlewProfile(liftId, { v0Observed: +mvtFor(liftId).toFixed(3), v0ObservedAt: Date.now() });
 }
 function saveSlewProfile(liftId, patch) {
   S.settings.slewProfiles = S.settings.slewProfiles || {};
@@ -8805,15 +8844,16 @@ function vbtAvailable() {
 /* What gets stored on the set. Scalars only — never the samples. A three
    minute set at 60 Hz is ~10,800 of them, and the whole of Ironlog lives in one
    IndexedDB blob that is rewritten on every save. */
-function packVbt(rec, est, liftId) {
+function packVbt(rec, est, liftId, place) {
   return {
     at: rec.timestamp,
     lift: liftId,
     mode: rec.provenance.mode,
+    place: place || 'bar',
     rate: Math.round(rec.provenance.sourceRate || 0),
     best: +rec.summary.bestMeanVelocity.toFixed(3),
     loss: +rec.summary.velocityLoss.toFixed(1),
-    conf: +rec.summary.confidence.toFixed(2),
+    conf: +(rec.summary.confidence * (place === 'pocket' ? 0.6 : 1)).toFixed(2),   // a phone in a pocket reads the body, not the bar
     reps: rec.reps.map(r => ({
       v: +r.concentric.meanVelocity.toFixed(3),
       peak: +r.concentric.peakVelocity.toFixed(3),
@@ -8835,11 +8875,15 @@ function packVbt(rec, est, liftId) {
    first second rather than at the end. */
 let vbtCapture = null;
 
-function openVbtRecord(ei) {
+function openVbtRecord(ei, opts = {}) {
   const a = S.active;
   const ex = a && a.exercises[ei];
   if (!ex) return;
   if (!vbtAvailable()) return toast('This device exposes no motion sensor');
+  /* Two modes per exercise (D1): this set's effort, or a warm-up profile point.
+     A calibration step (opts.onRecorded) takes the recording straight back. */
+  let mode = opts.onRecorded ? 'calib' : (ex.vbtMode || 'set');
+  let place = ex.vbtPlace || (['machine', 'plate_loaded_machine', 'cable'].includes(ex.leaf && ex.leaf.equipment) ? 'pocket' : 'bar');
 
   const liftId = slewLiftFor(ex.leaf);
   /* No bucket: still measure, but say plainly that effort will not be
@@ -8850,8 +8894,15 @@ function openVbtRecord(ei) {
   const loadKg = load ? load.w : 0;
 
   modal({
-    title: `Measure — ${esc(exName(ex))}`,
-    body: `<div class="sub" style="margin-top:0">Strap the phone to the bar, or put it in a pocket for a machine. Start it, do the set, stop it.</div>
+    title: opts.title || `Measure — ${esc(exName(ex))}`,
+    body: `${mode === 'calib' ? '' : `<div class="seg" id="vbMode" style="margin-bottom:8px" role="group" aria-label="What to measure">
+        <button data-vm="set" class="${mode === 'set' ? 'on' : ''}">This set (effort)</button>
+        <button data-vm="profile" class="${mode === 'profile' ? 'on' : ''}">Warm-up profile</button></div>`}
+      <div class="seg" id="vbPlace" style="margin-bottom:8px" role="group" aria-label="Where the phone is">
+        <button data-vp="bar" class="${place === 'bar' ? 'on' : ''}">On the bar</button>
+        <button data-vp="pocket" class="${place === 'pocket' ? 'on' : ''}">In a pocket</button></div>
+      ${opts.note ? `<div class="sub" style="margin-bottom:6px">${opts.note}</div>` : ''}
+      <div class="sub" style="margin-top:0" id="vbHow">${mode === 'profile' ? 'Warm-up profile: 1–2 fast reps at this warm-up weight. Each warm-up adds a point; three or more give today\'s e1RM.' : 'Strap the phone to the bar, or put it in a pocket for a machine. Start it, do the set, stop it.'}${place === 'pocket' ? ' <b>Pocket readings are rougher</b> — they never calibrate your profile.' : ''}</div>
       ${liftId
       ? `<div class="chip" style="margin:10px 0">${esc(liftId)}${(S.settings.slewProfiles || {})[liftId] && (S.settings.slewProfiles || {})[liftId].v0Observed ? ' · calibrated' : ' · population profile'}</div>`
       : `<div class="chip" style="margin:10px 0">No velocity profile for this movement — speed and reps only, no effort estimate</div>`}
@@ -8865,6 +8916,12 @@ function openVbtRecord(ei) {
     onOpen(bg) {
       let running = false;
       const setMsg = t => { const el = $('#vbMsg', bg); if (el) el.textContent = t; };
+      const segs = (sel, attr, set) => bg.querySelectorAll(`${sel} button`).forEach(b => b.onclick = () => {
+        if (running) return;
+        bg.querySelectorAll(`${sel} button`).forEach(x => x.classList.toggle('on', x === b)); set(b.dataset[attr]);
+      });
+      segs('#vbMode', 'vm', m => { mode = m; ex.vbtMode = m; save(); });
+      segs('#vbPlace', 'vp', p => { place = p; ex.vbtPlace = p; save(); });
       const stopCapture = () => { if (vbtCapture) { try { vbtCapture.stop(); } catch (e) {} } running = false; };
 
       $('#vbCancel', bg).onclick = () => { stopCapture(); vbtCapture = null; closeModal(); };
@@ -8918,7 +8975,10 @@ function openVbtRecord(ei) {
         };
         vbtCapture = null;
         closeModal();
-        vbtReviewDlg(ei, packVbt(rec, est, liftId), est, out.failure);
+        const packed = packVbt(rec, est, liftId, place);
+        if (opts.onRecorded) return opts.onRecorded(packed, est, out.failure);
+        if (mode === 'profile') return lvRecorded(ei, packed);
+        vbtReviewDlg(ei, packed, est, out.failure);
       };
     },
   });
@@ -8979,13 +9039,237 @@ function attachVbt(ei, v, est) {
   /* Calibration by observation: a set taken to failure measures this lifter's
      own 0-RIR velocity, and every later estimate stops leaning on a population
      constant. This is the reason the profile is stored at all. */
-  if (est && est.measuredV0 && v.lift) {
-    saveSlewProfile(v.lift, { v0Observed: est.measuredV0, v0ObservedAt: Date.now() });
-    toast(`Calibrated ${v.lift} — 0-RIR velocity ${est.measuredV0.toFixed(2)} m/s`, 'gold');
+  if (est && est.measuredV0 && v.lift && v.place !== 'pocket') {   // pocket sets never calibrate (D1)
+    addMvtObservation(v.lift, est.measuredV0);
+    toast(`Calibrated ${v.lift} — failure speed ${est.measuredV0.toFixed(2)} m/s, limit now ${mvtFor(v.lift).toFixed(2)} m/s`, 'gold');
   } else {
     toast(`Set ${target + 1} measured — ${v.best.toFixed(2)} m/s`, 'green');
   }
   save(); bust(); render();
+}
+
+/* ============================================================
+   VBT PROFILE — roadmap D1, r&d/specs/vbt-overhaul-spec.md
+   Profile mode: each measured warm-up is a (load, best-rep speed) point; a
+   straight line through them meets the lift's minimum velocity threshold at
+   the day's e1RM, shown as a range because a phone is not a transducer.
+   Pocket readings are shown but never fitted.
+   ============================================================ */
+function lvFit(points) {
+  const pts = (points || []).filter(p => p.place !== 'pocket' && p.kg > 0 && p.v > 0);
+  if (pts.length < 3) return null;
+  const kgs = pts.map(p => p.kg), maxKg = Math.max(...kgs), minKg = Math.min(...kgs);
+  if ((maxKg - minKg) / maxKg < 0.15) return null;   // too narrow a ramp to draw a line through
+  const n = pts.length, mx = kgs.reduce((a, b) => a + b, 0) / n, my = pts.reduce((a, p) => a + p.v, 0) / n;
+  let sxy = 0, sxx = 0;
+  pts.forEach(p => { sxy += (p.kg - mx) * (p.v - my); sxx += (p.kg - mx) ** 2; });
+  const b = sxy / sxx, a = my - b * mx;
+  if (!(b < 0)) return null;                          // faster as it gets heavier: a bad recording
+  const rse = n > 2 ? Math.sqrt(pts.reduce((s, p) => s + (p.v - (a + b * p.kg)) ** 2, 0) / (n - 2)) : 0;
+  return { a, b, n, rse, heavy: maxKg, light: minKg };
+}
+/* The day's e1RM for an entry: where today's line meets the MVT, as a range. */
+function lvDay(e) {
+  const f = lvFit(e && e.lvp && e.lvp.points);
+  const liftId = e && e.leaf ? slewLiftFor(e.leaf) : null;
+  if (!f || !liftId) return null;
+  const mvt = mvtFor(liftId);
+  const mid = (mvt - f.a) / f.b;
+  if (!(mid > f.heavy)) return null;                  // the line says the heaviest warm-up was already a max: not believable
+  const pctHeavy = f.heavy / mid * 100;
+  const half = 4 + (f.rse / Math.abs(f.b)) / mid * 100 + Math.max(0, 80 - pctHeavy) * 0.5;
+  return { mid, lo: mid * (1 - half / 100), hi: mid * (1 + half / 100), half, pctHeavy, mvt, fit: f, liftId };
+}
+/* Against the stored profile: speed at today's heaviest warm-up, today vs usual. */
+function lvReadiness(e) {
+  const d = lvDay(e);
+  const stored = (S.settings.lvProfiles || {})[exKey(e)];
+  if (!d || !stored) return null;
+  const vs = stored.a + stored.b * d.fit.heavy, vt = d.fit.a + d.fit.b * d.fit.heavy;
+  if (!(vs > 0)) return null;
+  const diff = (vt - vs) / vs * 100;
+  return { diff, word: diff > 5 ? 'faster than usual' : diff < -5 ? 'slower than usual' : 'normal', storedE1: stored.e1 || null };
+}
+/* Today's working weight from the middle of the range, at the first open working set's reps and target RIR. */
+function lvSuggest(e) {
+  const d = lvDay(e);
+  if (!d) return null;
+  const si = e.sets.findIndex(s => !s.done && isPRSet(s) && !isWarm(s) && s.r > 0);
+  if (si < 0) return null;
+  const s = e.sets[si];
+  const ab = activeBlock();
+  const t = e.auto ? e.auto.t : targetRirFor(e, ab ? ab.kind.rir : null);
+  return { si, r: s.r, t, kg: roundLoadFor(loadFor(d.mid, s.r, t), e.leaf) };
+}
+function vbtDayE1(key) {
+  const a = S.active;
+  if (!a || a.date !== today()) return null;
+  const e = a.exercises.find(x => x.leaf && x.lvp && exKey(x) === key);
+  const d = e && lvDay(e);
+  return d ? d.mid : null;
+}
+/* A measured warm-up becomes a point on the next open warm-up set (or next open set). */
+function lvRecorded(ei, v) {
+  const ex = S.active && S.active.exercises[ei];
+  if (!ex) return;
+  let si = ex.sets.findIndex(s => !s.done && isWarm(s));
+  if (si < 0) si = ex.sets.findIndex(s => !s.done);
+  if (si < 0) si = ex.sets.length - 1;
+  const s = ex.sets[si];
+  if (!(s.w > 0)) return toast('Put the weight on that warm-up first, then measure it');
+  if (!v.reps.length) return toast('No reps came out of that recording');
+  ex.lvp = ex.lvp || { points: [] };
+  ex.lvp.points.push({ kg: s.w, v: v.best, place: v.place, si, at: v.at });
+  s.vbt = v;
+  if (!s.r) s.r = v.reps.length;
+  if (isWarm(s)) s.done = true;                        // a measured warm-up is a done warm-up
+  save(); bust(); render();
+  const d = lvDay(ex);
+  toast(d ? `e1RM today ${nice(dw(d.lo, 0))}–${nice(dw(d.hi, 0))} ${U()}` : `Point ${ex.lvp.points.length} · ${v.best.toFixed(2)} m/s at ${wt(s.w)}${v.place === 'pocket' ? ' (pocket — shown, not fitted)' : ''}`, d ? 'green' : '');
+}
+/* The load-velocity chart: today's points and line, the stored line dashed,
+   the MVT across, and the e1RM range where they meet. */
+function lvChart(e) {
+  const pts = (e.lvp && e.lvp.points) || [];
+  if (!pts.length) return '';
+  const d = lvDay(e), stored = (S.settings.lvProfiles || {})[exKey(e)];
+  const liftId = slewLiftFor(e.leaf), mvt = liftId ? mvtFor(liftId) : 0;
+  const x1 = Math.max(...pts.map(p => p.kg), d ? d.hi : 0) * 1.04, x0 = Math.max(0, Math.min(...pts.map(p => p.kg)) * 0.85);
+  const y1 = Math.max(...pts.map(p => p.v), 0.4) * 1.1;
+  const W = 300, H = 150, L = 34, B = 20, T = 8, R = 8;
+  const X = kg => L + (kg - x0) / (x1 - x0 || 1) * (W - L - R), Y = v => T + (1 - v / y1) * (H - T - B);
+  const line = (a, b, cls, dash) => `<line x1="${X(x0).toFixed(1)}" y1="${Y(a + b * x0).toFixed(1)}" x2="${X(x1).toFixed(1)}" y2="${Y(Math.max(0, a + b * x1)).toFixed(1)}" class="${cls}"${dash ? ' stroke-dasharray="5 4"' : ''}/>`;
+  return `<svg class="lvchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Load-velocity chart: ${pts.length} warm-up points${d ? `, e1RM ${Math.round(dw(d.lo))} to ${Math.round(dw(d.hi))} ${U()}` : ''}">
+    <line x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}" class="lv-axis"/><line x1="${L}" y1="${T}" x2="${L}" y2="${H - B}" class="lv-axis"/>
+    <text x="${L - 4}" y="${T + 8}" text-anchor="end" class="lv-t">${y1.toFixed(1)}</text><text x="${L - 4}" y="${H - B}" text-anchor="end" class="lv-t">0</text>
+    <text x="${L}" y="${H - 5}" class="lv-t">${nice(dw(x0, 0))}</text><text x="${W - R}" y="${H - 5}" text-anchor="end" class="lv-t">${nice(dw(x1, 0))} ${U()}</text>
+    ${mvt ? `<line x1="${L}" y1="${Y(mvt).toFixed(1)}" x2="${W - R}" y2="${Y(mvt).toFixed(1)}" class="lv-mvt"/><text x="${L + 4}" y="${(Y(mvt) - 3).toFixed(1)}" class="lv-t">limit ${mvt.toFixed(2)} m/s</text>` : ''}
+    ${d ? `<rect x="${X(d.lo).toFixed(1)}" y="${(Y(mvt) - 5).toFixed(1)}" width="${Math.max(2, X(d.hi) - X(d.lo)).toFixed(1)}" height="10" class="lv-band"/>` : ''}
+    ${stored ? line(stored.a, stored.b, 'lv-stored', true) : ''}
+    ${d ? line(d.fit.a, d.fit.b, 'lv-today') : ''}
+    ${pts.map(p => `<circle cx="${X(p.kg).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="4" class="${p.place === 'pocket' ? 'lv-pt hollow' : 'lv-pt'}"/>`).join('')}
+  </svg>`;
+}
+function lvPanel(e, ei) {
+  const pts = (e.lvp && e.lvp.points) || [];
+  if (e.vbtMode !== 'profile' && !pts.length) return '';
+  const liftId = e.leaf ? slewLiftFor(e.leaf) : null;
+  if (!liftId) return `<div class="vbtstrip"><div class="sub">Warm-up profile needs a lift Ironlog has a velocity model for (squat, bench, deadlift, press, rows).</div></div>`;
+  const d = lvDay(e), rd = lvReadiness(e), sg = lvSuggest(e);
+  const personal = ((S.settings.slewProfiles || {})[liftId] || {}).v0Obs;
+  const bar = pts.filter(p => p.place !== 'pocket').length;
+  return `<div class="vbtstrip lvpanel">
+    <div class="row between"><b>Warm-up profile</b><span class="sub" style="font-size:11px">${esc(liftId)} · limit ${mvtFor(liftId).toFixed(2)} m/s ${personal && personal.length ? '(yours)' : '(population)'}</span></div>
+    ${pts.length ? `<div class="row wrap" style="gap:5px;margin:6px 0">${pts.map(p => `<span class="chip${p.place === 'pocket' ? '' : ' blue'}" title="${p.place === 'pocket' ? 'pocket — not fitted' : ''}">${nice(dw(p.kg))} · ${p.v.toFixed(2)}</span>`).join('')}</div>` : ''}
+    ${d ? `<div style="font-size:15px;margin:4px 0">e1RM today <b>${nice(dw(d.lo, 0))}–${nice(dw(d.hi, 0))}</b> ${U()} <span class="sub">±${d.half.toFixed(0)}%${d.pctHeavy < 80 ? ` · heaviest warm-up ${d.pctHeavy.toFixed(0)}% — go a little heavier to tighten it` : ''}</span></div>`
+      : `<div class="sub" style="margin:4px 0">${bar < 3 ? `Measure ${3 - bar} more warm-up${3 - bar === 1 ? '' : 's'} on the bar — 1–2 fast reps each, rising weight.` : 'The warm-ups are too close together or the line doesn\'t slope down — add a heavier one.'}</div>`}
+    ${rd ? `<div class="sub">Bar speed ${rd.word} (${rd.diff > 0 ? '+' : ''}${rd.diff.toFixed(0)}% at ${wt(d.fit.heavy)})${rd.storedE1 ? ` · usual e1RM ${wt(rd.storedE1, 0)}` : ''}</div>` : d ? '<div class="sub">No stored profile yet — finishing today saves one.</div>' : ''}
+    ${sg ? `<div class="row between" style="margin-top:6px;gap:8px"><span>Set ${sg.si + 1}: <b>${wt(sg.kg)} × ${sg.r}</b> <span class="sub">@ RIR ${sg.t}</span></span>
+      <button class="btn xs primary" data-lvuse="${ei}">Use it</button></div>` : ''}
+    ${lvChart(e)}
+    <div class="row between" style="margin-top:4px"><span class="sub" style="font-size:11px">A guide from the phone's sensor, not a measurement.</span>
+      ${pts.length ? `<button class="btn xs ghost" data-lvclear="${ei}">Clear points</button>` : ''}</div>
+  </div>`;
+}
+function lvUse(ei) {
+  const ex = S.active && S.active.exercises[ei];
+  const sg = ex && lvSuggest(ex);
+  if (!sg) return;
+  const ref = ex.sets[sg.si], refW = ref.w;
+  ex.sets.forEach((s, i) => {
+    if (s.done || isWarm(s) || !isPRSet(s) || i < sg.si) return;
+    s.w = i === sg.si || !(refW > 0) || !(s.w > 0) ? sg.kg : roundLoadFor(sg.kg * s.w / refW, ex.leaf);
+    delete s.auto;
+  });
+  if (ex.auto) ex.auto.day = Math.round(lvDay(ex).mid * 10) / 10;
+  save(); render(); toast(`Working sets set from today's e1RM`, 'green');
+}
+/* At finish, today's line joins the stored profile for the variant: a running
+   mean with the count capped at 5, so it follows the lifter over time. */
+function harvestLvp(entries) {
+  entries.forEach(e => {
+    const d = lvDay(e);
+    if (!d) return;
+    const key = exKey(e), all = S.settings.lvProfiles = S.settings.lvProfiles || {};
+    const old = all[key], n = old ? Math.min(old.n || 1, 4) : 0;
+    all[key] = {
+      a: old ? (old.a * n + d.fit.a) / (n + 1) : d.fit.a,
+      b: old ? (old.b * n + d.fit.b) / (n + 1) : d.fit.b,
+      n: Math.min(n + 1, 5), e1: Math.round(d.mid * 10) / 10, at: Date.now(), lift: d.liftId,
+    };
+  });
+}
+/* Calibrate — about 8 minutes: a measured ramp for this variant, and an
+   optional set to failure for the limit speed and fatigue rate. */
+const CAL_PCTS = [40, 55, 70, 80, 88];
+function openCalibrate(ei) {
+  const ex = S.active && S.active.exercises[ei];
+  if (!ex) return;
+  const liftId = slewLiftFor(ex.leaf);
+  if (!liftId) return toast('No velocity model for this movement yet');
+  const key = exKey(ex);
+  const est = autoE1(key) || (statsFor(key) ? statsFor(key).best.e1 : 0);
+  ex.cal = ex.cal || { e1: est || 0, steps: [], fail: null };
+  const c = ex.cal;
+  const draw = () => {
+    const loads = c.e1 ? CAL_PCTS.map(p => roundLoadFor(c.e1 * p / 100, ex.leaf)) : [];
+    const pts = c.steps.filter(Boolean);
+    const f = lvFit(pts);
+    return `<div class="sub" style="margin-top:0">A measured ramp builds your own load-velocity profile for ${esc(exFull(ex))}. Phone on the bar, 2–3 fast reps per step, full rest. Skip anything that doesn't feel right.</div>
+      <div class="field" style="margin-top:10px"><label for="calE1">Rough max today (${U()})</label>
+        <input id="calE1" type="number" inputmode="decimal" step="2.5" value="${c.e1 ? nice(dw(c.e1)) : ''}" placeholder="e.g. 150"></div>
+      ${loads.map((kg, i) => `<div class="row between" style="padding:6px 0;border-bottom:1px solid var(--line)">
+        <span>${CAL_PCTS[i]}% · <b>${wt(kg)}</b></span>
+        <span class="mono sub">${c.steps[i] ? `${c.steps[i].v.toFixed(2)} m/s${c.steps[i].place === 'pocket' ? ' · pocket' : ''}` : ''}</span>
+        <button class="btn xs ${c.steps[i] ? 'ghost' : ''}" data-calstep="${i}">${c.steps[i] ? 'Redo' : 'Measure'}</button></div>`).join('')}
+      ${loads.length ? `<div class="row between" style="padding:8px 0"><span>Optional: one set to failure at ~${wt(roundLoadFor(c.e1 * 0.75, ex.leaf))}<br><span class="sub">measures your limit speed and how fast you slow down</span></span>
+        <button class="btn xs ${c.fail ? 'ghost' : ''}" data-calfail="1">${c.fail ? 'Redo' : 'Measure'}</button></div>` : ''}
+      <div class="sub" style="margin-top:6px">${f ? `Line through ${f.n} points — ready to save.` : `${pts.length} of at least 3 steps measured.`}</div>`;
+  };
+  modal({
+    title: `Calibrate · ${exName(ex)}`, body: draw(),
+    foot: `<button class="btn ghost" data-close>Later</button><button class="btn primary" id="calSave">Save profile</button>`,
+    onOpen: bg => {
+      const reopen = () => { closeAllModals(); openCalibrate(ei); };
+      const wire = () => {
+        const inp = $('#calE1', bg);
+        if (inp) inp.onchange = () => { c.e1 = +inp.value > 0 ? toKg(+inp.value) : 0; c.steps = []; save(); $('.modal-body', bg).innerHTML = draw(); wire(); };
+        bg.querySelectorAll('[data-calstep]').forEach(b => b.onclick = () => {
+          const i = +b.dataset.calstep, kg = roundLoadFor(c.e1 * CAL_PCTS[i] / 100, ex.leaf);
+          closeAllModals();
+          openVbtRecord(ei, { title: `Calibrate · step ${i + 1} of ${CAL_PCTS.length}`, note: `<b>${wt(kg)}</b> — 2–3 fast reps.`,
+            onRecorded: v => { if (v.reps.length) c.steps[i] = { kg, v: v.best, place: v.place }; save(); reopen(); } });
+        });
+        bg.querySelectorAll('[data-calfail]').forEach(b => b.onclick = () => {
+          const kg = roundLoadFor(c.e1 * 0.75, ex.leaf);
+          closeAllModals();
+          openVbtRecord(ei, { title: 'Calibrate · set to failure', note: `<b>${wt(kg)}</b> — reps until one won't go up. Safeties set.`,
+            onRecorded: (v, est) => {
+              c.fail = { kg, reps: v.reps.map(r => r.v), place: v.place, v0: est && est.measuredV0 ? est.measuredV0 : null };
+              save(); reopen();
+            } });
+        });
+      };
+      wire();
+      $('#calSave', bg).onclick = () => {
+        const f = lvFit(c.steps.filter(Boolean));
+        if (!f && !c.fail) return toast('Measure at least three steps first');
+        if (f) {
+          const mvt = mvtFor(liftId), e1 = (mvt - f.a) / f.b;
+          S.settings.lvProfiles = S.settings.lvProfiles || {};
+          S.settings.lvProfiles[key] = { a: f.a, b: f.b, n: 3, e1: e1 > 0 ? Math.round(e1 * 10) / 10 : null, at: Date.now(), lift: liftId, cal: true };
+        }
+        if (c.fail && c.fail.place !== 'pocket') {
+          if (c.fail.v0) addMvtObservation(liftId, c.fail.v0);
+          const fp = c.fail.reps.length >= 3 ? Slew.fitProfile(c.fail.reps, 10, slewProfile(liftId)) : null;
+          if (fp && fp.vlF) saveSlewProfile(liftId, { vlF: fp.vlF, vlFCal: true, slope: fp.slope, cal: Date.now() });
+        }
+        delete ex.cal;
+        save(); closeAllModals(); render();
+        toast('Velocity profile saved for ' + exName(ex), 'green');
+      };
+    },
+  });
 }
 
 const PROFILE_FIELDS = ['handle', 'sex', 'dob', 'heightCm', 'bodyweight', 'activity', 'nutritionGoal'];
@@ -10103,7 +10387,12 @@ function historyE1(key, before) {
 }
 /* The day's e1 for a key. History is the only input today; item 7's VBT
    profile-mode e1RM for today blends in here and nowhere else. */
-function autoE1(key) { return historyE1(key); }
+/* The working number. While the live session has a day's e1RM from a warm-up
+   profile (D1), it's averaged in — half weight, because a phone is noisy. */
+function autoE1(key) {
+  const h = historyE1(key), d = vbtDayE1(key);
+  return d && h ? (h + d) / 2 : d || h;
+}
 
 /* Stalled: over the last five non-off sessions, none of the last four beat
    the first by more than 1 %. Off days are invisible to it, so they neither
@@ -11025,6 +11314,10 @@ function wireActive(v) {
   });
 
   v.querySelectorAll('[data-vbt]').forEach(b => b.onclick = () => openVbtRecord(+b.dataset.vbt));
+  v.querySelectorAll('[data-lvuse]').forEach(b => b.onclick = () => lvUse(+b.dataset.lvuse));
+  v.querySelectorAll('[data-lvclear]').forEach(b => b.onclick = () => confirmDlg('Clear today\'s warm-up profile points?', () => {
+    const ex = a.exercises[+b.dataset.lvclear]; delete ex.lvp; save(); render();
+  }, 'Clear'));
 
   v.querySelectorAll('[data-addset]').forEach(b => b.onclick = () => {
     const ex = a.exercises[+b.dataset.addset];
@@ -11096,6 +11389,8 @@ function wireActive(v) {
           <div class="row" style="gap:8px"><input type="text" inputmode="numeric" id="exCap" class="grow" value="${fmtSec(ex.cap || 60)}" placeholder="1:00">
           <button class="btn ghost" id="exCapOn">${ex.cap > 0 ? 'Update' : 'Apply'}</button>${ex.cap > 0 ? '<button class="btn ghost" id="exCapOff">Remove</button>' : ''}</div>
           <div class="sub" style="margin-top:4px">A time cap keeps its own records and never counts toward e1RM.</div></div>` : ''}
+        ${vbtAvailable() && kind === 'reps' && slewLiftFor(ex.leaf) ? `<button class="btn wide ghost" id="exCal" style="margin-bottom:8px">Calibrate bar speed — about 8 min</button>
+          <div class="sub" style="margin:-2px 0 10px">A measured warm-up ramp builds your own velocity profile. Optional — everything works without it.</div>` : ''}
         ${canSeries ? `<button class="btn wide ghost" id="exSeries" style="margin-bottom:8px">${ex.series ? 'Back to normal sets' : 'Log as stone series'}</button>
           <div class="sub" style="margin:-2px 0 10px">Each set is one stone, made or missed, with a series time.</div>` : ''}
         <button class="btn wide ghost" id="exUp" style="margin-bottom:8px">Move up</button>
@@ -11110,6 +11405,8 @@ function wireActive(v) {
         };
         const keepNote = () => { ex.notes = $('#exNote', bg).value.trim(); };
         const capOn = $('#exCapOn', bg), capOff = $('#exCapOff', bg), serBtn = $('#exSeries', bg);
+        const calBtn = $('#exCal', bg);
+        if (calBtn) calBtn.onclick = () => { keepNote(); closeModal(); openCalibrate(ei); };
         if (capOn) capOn.onclick = () => {
           const sec = parseTime($('#exCap', bg).value);
           if (!(sec > 0)) return toast('Enter a time cap, like 1:00');

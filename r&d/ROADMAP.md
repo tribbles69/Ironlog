@@ -297,7 +297,7 @@ show a dry-run report before anything is written.
 
 ## C. Competition — the edge nobody else has
 
-### [x] C1. Welcome / first-run screen — shipped 0.36.0 (strongman has no event type until C2)
+### [x] C1. Welcome / first-run screen — shipped 0.36.0 (strongman and para choices open their event types since 0.37.0 / 0.38.0)
 - Sets units, lifts, event goals.
 - Explains: data stays on the device, backs up to your own drive, AI is optional
   and uses your own key.
@@ -375,7 +375,7 @@ backwards from an event date in C2, feeding the autoregulated programming.
 
 ## D. Strong additions
 
-### [ ] D1. VBT overhaul — two modes plus calibration
+### [x] D1. VBT overhaul — two modes plus calibration — code shipped 0.42.0 (spec: `r&d/specs/vbt-overhaul-spec.md`) **(check on phone; validation against a transducer still to do — `r&d/notes/vbt-validation.md`)**
 Write `r&d/specs/vbt-overhaul-spec.md` before building. Two modes, chosen per
 exercise in a session:
 
