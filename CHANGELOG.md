@@ -13,6 +13,16 @@ rather than guessed.
 
 ---
 
+## 0.44.1 — 25 Sep 2026
+- **Heart rate now says why there's no number.** Instead of just "no
+  signal", it tells you whether the watch is connected but sending nothing
+  (it isn't broadcasting heart rate) or sending readings with no pulse
+  (check it's snug on the wrist).
+- **Watches that go quiet after connecting** get one automatic retry of the
+  heart-rate feed.
+- **Clearer Galaxy Watch help.** Samsung watches need a heart-rate broadcast
+  app running on the watch; the help now says so and how to find one.
+
 ## 0.44.0 — 25 Sep 2026
 - **Connect your smartwatch on the cardio setup screen.** A new Heart rate
   section shows what's connected and your live bpm before you start, and
