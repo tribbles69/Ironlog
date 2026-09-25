@@ -13,6 +13,18 @@ rather than guessed.
 
 ---
 
+## 0.49.1 — 25 Sep 2026
+- **More room for your sets.** The bar pinned at the top of a workout is now
+  one slim row: the clock, sets done, 🎤 and Finish, plus the rest timer when
+  it's running. The session name, Off day, Discard, place and "How it feels"
+  scroll away with the page.
+- **Ironlog 98:** the IRONLOG clock banner hides during a workout, since the
+  pinned row already shows the time and sets. Settings and Profile are still
+  in the Tools menu.
+- **Put away for now:** the ±2.5 kg, ±rep and Copy down buttons under each
+  exercise are hidden while their replacement is designed. "⇆ Each side"
+  stays.
+
 ## 0.49.0 — 25 Sep 2026
 - **Recovery heatmap.** The muscle map (Stats → Muscles) has a new Recovery
   view. It shows which muscles are fresh and which are still carrying the

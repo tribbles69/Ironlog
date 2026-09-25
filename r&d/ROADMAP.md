@@ -239,6 +239,7 @@ The biggest documented strongman gap (Blast #96, #109; research).
 - Feeds strongman events in C2.
 
 ### [x] B2. Last session inline and fast entry — shipped 0.29.0
+**Parked in 0.49.1:** the step buttons (±weight, ±rep) and Copy down are hidden (`FAST_BAR = false` in `index.html`) while Aaron designs a replacement. Prev fill and tick-to-log still work.
 The single most-requested general feature (Blast #113, #42, #43; research).
 - Show last time's weight × reps @ RIR beside each set.
 - Tap to fill; copy a value down to the remaining sets.

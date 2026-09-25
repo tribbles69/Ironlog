@@ -266,6 +266,11 @@ h3{font-size:13.5px;margin:0 0 8px}
   border:1px solid rgba(255,92,53,.3);border-radius:14px;padding:12px 14px;margin-bottom:13px;
 }
 .timer{font-size:26px;font-weight:750;letter-spacing:-1px;font-variant-numeric:tabular-nums}
+.timerbar.compact{padding:8px 12px;margin-bottom:8px}
+.timerbar.compact .timer{font-size:22px;line-height:1}
+.timerbar.compact .restbar{margin-top:8px;padding-top:8px}
+.wo-meta{margin:0 2px 13px}
+.wo-meta #woName{min-width:0;flex:1}
 .restbar{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:6px}
 .restbar > .grow{min-width:0}
 .wn-entry{margin-bottom:14px}
@@ -923,6 +928,11 @@ html[data-skin="win98"] .timerbar{
   top:calc(var(--w-title-h) + var(--w-menu-h) + var(--w-lcd-h) + 4px);
 }
 html[data-skin="win98"][data-w98-min] .timerbar{top:calc(var(--w-title-h) + 4px)}
+/* a live workout needs the screen: the LCD banner repeats the clock and the
+   set count the pinned bar already shows, so it steps aside */
+html[data-skin="win98"][data-w98-work] #topbar{display:none}
+html[data-skin="win98"][data-w98-work]:not([data-w98-min]) .timerbar{top:calc(var(--w-title-h) + var(--w-menu-h) + 4px)}
+html[data-skin="win98"] .timerbar.compact{padding:8px 10px}
 
 /* An exercise gets its own title bar, the way a window does — but only the name
    row. The equipment chip, the PR banner and the note belong to the client area
@@ -1957,7 +1967,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.49.0';
+const APP_VERSION = '0.49.1';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4149,6 +4159,7 @@ function render() {
   else if (page === 'workout') v.innerHTML = viewWorkout();
   else if (page === 'analytics') v.innerHTML = viewAnalytics();
   else if (page === 'meets') v.innerHTML = viewMeets();
+  document.documentElement.toggleAttribute('data-w98-work', page === 'workout' && !!S.active && S.active.kind !== 'cardio');
   wire();
   a11yPass(v);
   maybeWhatsNew();
@@ -5114,8 +5125,12 @@ function curSet(e, ei) {
   return i < 0 ? e.sets.length - 1 : i;
 }
 function wStep() { return U() === 'lb' ? 5 : 2.5; }
+/* Step buttons and Copy down are parked (off) while Aaron designs their
+   replacement; the per-side toggle that shares the bar stays. */
+const FAST_BAR = false;
 function fastBar(e, ei) {
   const k = kindOf(e);
+  if (!FAST_BAR) return sidesAllowed(e) ? `<div class="fastbar"><span class="grow"></span><button class="btn xs ${e.sides ? 'primary' : 'ghost'}" data-sides="${ei}" aria-pressed="${e.sides ? 'true' : 'false'}" title="Log left and right separately">⇆ Each side</button></div>` : '';
   if (!['reps', 'cap', 'series'].includes(k)) return '';
   const st = `${nice(wStep())} ${U()}`;
   return `<div class="fastbar">
@@ -5147,30 +5162,30 @@ function activeWorkout() {
   const a = S.active;
   const { vol, setsDone, setsTotal } = liveTotals();
 
+  /* Only what's needed between sets stays pinned: the clock, the count,
+     voice, Finish and the rest timer. The session's name, off day, place and
+     feel scroll away with the page. */
   return `
-  <div class="timerbar">
-    <div class="row between">
-      <div class="grow">
-        <div class="eyebrow">In progress</div>
-        <div class="timer" id="timer">${elapsed()}</div>
-      </div>
-      <div class="right">
-        <div class="sub">${setsDone}/${setsTotal} sets · ${wt(vol, 0)}</div>
-        <button class="btn primary sm" id="finishBtn" style="margin-top:6px">Finish</button>
-      </div>
-    </div>
-    <div class="row" style="margin-top:11px;gap:8px">
-      <input id="woName" value="${esc(a.name)}" style="font-weight:650" aria-label="Session name">
-      <button class="btn sm ${a.off ? 'primary' : 'ghost'}" id="offBtn" title="Off day — kept out of progression and stall checks">${a.off ? '✓ Off day' : 'Off day'}</button>
-      <button class="btn sm danger" id="discardBtn">Discard</button>
-    </div>
-    ${runInLine(a.date, true)}
-    ${placeChip()}
-    <button class="btn xs ${hasFeel(a) ? 'primary' : 'ghost'} wide" id="feelBtn" style="margin-top:8px">${hasFeel(a) ? `Feels: ${esc(feelWords(a) || 'note')}` : 'How it feels today…'}</button>
-    <div class="row" style="margin-top:8px">
-      <button class="btn sm wide" id="voiceBtn">🎤 Log a set</button>
+  <div class="timerbar compact">
+    <div class="row" style="gap:10px;align-items:center">
+      <div class="timer" id="timer" aria-label="Session time">${elapsed()}</div>
+      <div class="sub grow" style="min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${setsDone}/${setsTotal} sets · ${wt(vol, 0)}</div>
+      <button class="btn sm ghost" id="voiceBtn" aria-label="Log a set by voice" title="Log a set by voice">🎤</button>
+      <button class="btn primary sm" id="finishBtn">Finish</button>
     </div>
     <div id="restHost">${restBarHtml()}</div>
+  </div>
+  <div class="wo-meta">
+    <div class="row" style="gap:6px">
+      <input id="woName" value="${esc(a.name)}" style="font-weight:650" aria-label="Session name">
+      <button class="btn xs ${a.off ? 'primary' : 'ghost'}" id="offBtn" title="Off day — kept out of progression and stall checks">${a.off ? '✓ Off day' : 'Off day'}</button>
+      <button class="btn xs danger" id="discardBtn">Discard</button>
+    </div>
+    ${runInLine(a.date, true)}
+    <div class="row wrap" style="gap:6px;margin-top:6px;align-items:center">
+      ${placeChip()}
+      <button class="btn xs ${hasFeel(a) ? 'primary' : 'ghost'}" id="feelBtn">${hasFeel(a) ? `Feels: ${esc(feelWords(a) || 'note')}` : 'How it feels today…'}</button>
+    </div>
   </div>
 
   ${a.exercises.map((e, ei) => exerciseCard(e, ei)).join('')}
@@ -10507,7 +10522,7 @@ function swapForPlace(e) {
 function placeChip() {
   if (!places().length) return '';
   const pl = curPlace(), need = S.active ? S.active.exercises.filter(e => e.leaf && !leafHere(e.leaf)).length : 0;
-  return `<div class="row" style="gap:8px;margin-top:8px;align-items:center">
+  return `<div class="row" style="gap:8px;align-items:center">
     <button class="btn xs ghost" id="placeBtn" aria-label="Where you're training: ${esc(pl ? pl.name : 'anywhere')}. Change">📍 ${esc(pl ? pl.name : 'Anywhere')} ▾</button>
     ${need ? `<span class="sub" style="color:var(--gold)">${need} exercise${need === 1 ? ' needs' : 's need'} kit that isn't here</span>` : ''}</div>`;
 }
