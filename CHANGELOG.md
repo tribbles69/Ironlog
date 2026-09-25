@@ -13,6 +13,19 @@ rather than guessed.
 
 ---
 
+## 0.38.0 — 25 Sep 2026
+- **Para powerlifting.** A new event type for WPPO bench press meets:
+  - **Classes:** pick your class from the WPPO list for your sex.
+  - **Attempts:** planned in whole kilograms. Meet day adds an optional
+    fourth **record attempt** with its own lights; it's marked clearly and
+    never counts toward your result.
+  - **Warnings** if an attempt goes down, isn't a whole kilogram, rises less
+    than 1 kg after a good lift, or a record attempt is less than 0.5 kg over
+    your best.
+  - **Results:** your best lift and the total of your good lifts. A good
+    record attempt is used when you save results as a tested single.
+- Para powerlifting is also a choice on the welcome screen.
+
 ## 0.37.0 — 24 Sep 2026
 - **Meet day.** Each event has a Meet day screen:
   - **Warm-ups:** enter when your flight starts and where you are in the

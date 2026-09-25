@@ -118,9 +118,29 @@ with the field size entered once. Total points are shown.
 Strongman can be added from *Add event*, and the welcome's "Strongman" choice
 now opens it.
 
+### 5. Para powerlifting (roadmap C3, added in 0.38.0)
+
+This is an event type (`para`) using the WPPO rules as the roadmap lists them.
+
+- **Bench press only.** The class is picked from the WPPO list for your sex in
+  the profile:
+  - men: 49, 54, 59, 65, 72, 80, 88, 97, 107, 107+ kg;
+  - women: 41, 45, 50, 55, 61, 67, 73, 79, 86, 86+ kg.
+- **Attempts are planned in whole kilograms** (`attemptRound`). On meet day
+  there are three attempts plus an optional **record attempt**, with its
+  own lights.
+- **Warnings, which never block:**
+  - an attempt can't be lighter than the one before;
+  - a para attempt is whole kilograms;
+  - after a good lift the next is at least +1 kg;
+  - a record attempt is at least +0.5 kg over the best good lift.
+- **Results:** the best lift, and the total of good lifts (the sum of the
+  good attempts among the three). The record attempt counts toward neither.
+  *Save results as tested singles* uses it when it was good and heavier.
+- No DOTS or GL.
+
 ## Not in this change
 
-- Para powerlifting rules (C3; it will reuse the meet-day tools).
 - Other lifters' attempts or a live scoreboard.
 - Equipped GL coefficients.
 - Automatic next-attempt picks.
