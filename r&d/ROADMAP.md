@@ -367,7 +367,7 @@ assisted, one-sided set-up** that annotate a set **without** splitting the PR
 leaf, plus an optional quick pain/fatigue flag on a set or session. Validate the
 list with adaptive lifters (Aaron's community) before finalising.
 
-### [ ] C6. Training blocks counting down to a meet
+### [x] C6. Training blocks counting down to a meet — shipped 0.41.0 (spec: `r&d/specs/blocks-spec.md`)
 Block templates (e.g. accumulation → intensification → peak → taper) laid out
 backwards from an event date in C2, feeding the autoregulated programming.
 

@@ -415,6 +415,12 @@ tr.pr td input{background:rgba(255,197,66,.1);border-color:rgba(255,197,66,.35)}
 .setno.flagged::after{content:'';position:absolute;top:-3px;right:-3px;width:9px;height:9px;border-radius:50%;background:var(--gold);border:2px solid var(--card)}
 .feeltag{color:var(--gold);font-size:12px}
 .chip.feel{color:var(--gold);border-color:rgba(255,197,66,.35)}
+.runin-line{border-left:3px solid;border-radius:0 10px 10px 0;background:rgba(255,255,255,.03);padding:7px 11px;margin:0 0 12px;font-size:13px}
+#view .ex-card ~ .runin-line{margin-top:8px}
+.runin-bar{position:relative;display:flex;gap:2px;height:14px;border-radius:7px;overflow:visible}
+.runin-bar i{display:block;border-radius:3px;opacity:.85}
+.runin-now{position:absolute;top:-4px;bottom:-4px;width:3px;border-radius:2px;background:var(--txt);box-shadow:0 0 0 2px var(--card)}
+.runin-key{display:inline-block;width:8px;height:8px;border-radius:2px;margin-right:4px;vertical-align:middle}
 .sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 /* PR timeline on the movement page */
 .prtl{border-left:2px solid rgba(255,197,66,.35);margin:6px 0 0 5px;padding-left:12px}
@@ -1887,7 +1893,7 @@ function exInfo(name) {
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
 
-const APP_VERSION = '0.40.0';
+const APP_VERSION = '0.41.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4292,6 +4298,7 @@ function viewHome() {
   <h1>${greet}</h1>
   <div class="sub" style="margin-bottom:14px">${new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}${streak() > 1 ? ` · 🔥 ${streak()} day check-in streak` : ''}</div>
   ${backupCard()}
+  ${runInLine(today())}
 
   <div class="hero">
     <div class="row between">
@@ -4971,6 +4978,7 @@ function activeWorkout() {
       <button class="btn sm ${a.off ? 'primary' : 'ghost'}" id="offBtn" title="Off day — kept out of progression and stall checks">${a.off ? '✓ Off day' : 'Off day'}</button>
       <button class="btn sm danger" id="discardBtn">Discard</button>
     </div>
+    ${runInLine(a.date, true)}
     <button class="btn xs ${hasFeel(a) ? 'primary' : 'ghost'} wide" id="feelBtn" style="margin-top:8px">${hasFeel(a) ? `Feels: ${esc(feelWords(a) || 'note')}` : 'How it feels today…'}</button>
     <div class="row" style="margin-top:8px">
       <button class="btn sm wide" id="voiceBtn">🎤 Log a set</button>
@@ -6968,6 +6976,7 @@ function meetCard(m, ps) {
     </div>
     ${bwRunInLine(m)}
     <button class="btn wide" data-meetday="${m.id}" style="margin-bottom:14px">${days <= 7 ? '▶ ' : ''}Meet day — warm-ups, attempts, checklist</button>
+    ${runInSection(m)}
 
     <div class="stats grid3" style="margin-bottom:14px">
       <div class="stat"><div class="k">Goal total</div><div class="v">${goalTotal ? w(goalTotal, 0) : '—'}</div>
@@ -7384,6 +7393,7 @@ function strongmanCard(m) {
     </div>
     ${bwRunInLine(m)}
     <button class="btn wide" data-meetday="${m.id}" style="margin-bottom:14px">${days <= 7 ? '▶ ' : ''}Meet day — results, checklist</button>
+    ${runInSection(m)}
     <div class="eyebrow" style="margin-bottom:6px">Events${pts ? ` · ${pts} points` : ''}</div>
     ${evs.length ? evs.map(ev => {
       const best = smBest(ev), last = smLastTrained(ev);
@@ -7469,6 +7479,126 @@ function openStrongmanMeet(id) {
         S.meets.push(m);
         save(); closeAllModals(); render(); toast('Show saved', 'green');
       };
+    },
+  });
+}
+
+/* ============================================================
+   RUN-IN BLOCKS — roadmap C6, r&d/specs/blocks-spec.md
+   An event's run-in is a list of {kind, weeks}, laid out backwards from the
+   meet date at read time, so moving the meet moves the plan. The block a date
+   falls in steers autoregulation: its RIR, and whether loads are set at all.
+   ============================================================ */
+const BLOCK_KINDS = {
+  accumulation: { label: 'Accumulation', rir: 3, reps: '8–12', auto: true, color: 'var(--blue)', tip: 'build volume — more sets, moderate weights' },
+  intensification: { label: 'Intensification', rir: 2, reps: '3–6', auto: true, color: 'var(--purple)', tip: 'heavier, fewer reps, volume coming down' },
+  peak: { label: 'Peak', rir: 1, reps: '1–3', auto: false, color: 'var(--gold)', tip: 'heavy singles and doubles at the planned weights' },
+  taper: { label: 'Taper', rir: null, reps: '', auto: false, color: 'var(--green)', tip: 'keep the weights, about half the sets — arrive fresh' },
+  deload: { label: 'Deload', rir: 4, reps: '', auto: false, color: 'var(--dim)', tip: 'lighter and easier; let it recover' },
+};
+const BLOCK_TEMPLATES = [
+  ['16 weeks', [['accumulation', 6], ['intensification', 5], ['peak', 3], ['taper', 2]]],
+  ['12 weeks', [['accumulation', 4], ['intensification', 4], ['peak', 3], ['taper', 1]]],
+  ['8 weeks', [['accumulation', 3], ['intensification', 3], ['peak', 1], ['taper', 1]]],
+  ['Strongman 10', [['accumulation', 4], ['intensification', 3], ['peak', 2], ['taper', 1]]],
+];
+/* Dates for each block: the last ends the day before the meet. */
+function blockDates(m) {
+  const out = [];
+  let end = parseISO(m.date); end.setDate(end.getDate() - 1);
+  for (let i = (m.blocks || []).length - 1; i >= 0; i--) {
+    const b = m.blocks[i];
+    const start = new Date(end); start.setDate(start.getDate() - b.weeks * 7 + 1);
+    out.unshift({ ...b, start: iso(start), end: iso(end), i });
+    end = new Date(start); end.setDate(end.getDate() - 1);
+  }
+  return out;
+}
+/* The block a date falls in, from the nearest upcoming event with a run-in. */
+function activeBlock(date = today()) {
+  const meets = S.meets.filter(m => (m.blocks || []).length && m.date > date).sort((a, b) => a.date < b.date ? -1 : 1);
+  for (const m of meets) {
+    const bs = blockDates(m);
+    const b = bs.find(x => x.start <= date && date <= x.end);
+    if (b) {
+      const week = Math.floor(daysBetween(b.start, date) / 7) + 1;
+      return { meet: m, block: b, kind: BLOCK_KINDS[b.kind] || BLOCK_KINDS.accumulation, week, next: bs[b.i + 1] || null, days: daysBetween(date, m.date) };
+    }
+  }
+  return null;
+}
+function runInLine(date, withTip) {
+  const a = activeBlock(date);
+  if (!a) return '';
+  return `<div class="runin-line" style="border-color:${a.kind.color}">
+    <b style="color:${a.kind.color}">${esc(a.kind.label)}</b> · week ${a.week} of ${a.block.weeks}${a.kind.rir != null ? ` · target RIR ${a.kind.rir}` : ''}${a.kind.reps ? ` · ${a.kind.reps} reps` : ''}
+    · ${a.days} day${a.days === 1 ? '' : 's'} to ${esc(a.meet.name)}
+    ${withTip ? `<div class="sub">${esc(a.kind.tip)}${a.kind.auto ? '' : ' — loads stay as planned'}</div>` : ''}
+  </div>`;
+}
+function runInSection(m) {
+  const bs = blockDates(m);
+  if (!bs.length) return `<button class="btn wide ghost" data-runin="${m.id}" style="margin-bottom:14px">Plan the run-in — blocks counting down to this event</button>`;
+  const first = parseISO(bs[0].start).getTime(), last = parseISO(m.date).getTime(), span = Math.max(1, last - first);
+  const now = Date.now();
+  const pos = clamp((now - first) / span, 0, 1);
+  const a = activeBlock(today());
+  const mine = a && a.meet.id === m.id ? a : null;
+  return `<div style="margin-bottom:14px">
+    <div class="row between" style="margin-bottom:6px"><span class="eyebrow">Run-in · ${bs.reduce((n, b) => n + b.weeks, 0)} weeks</span>
+      <button class="btn xs ghost" data-runin="${m.id}">Edit</button></div>
+    <div class="runin-bar" role="img" aria-label="${esc(bs.map(b => `${(BLOCK_KINDS[b.kind] || {}).label} ${b.weeks} weeks from ${fmtDate(b.start)}`).join(', '))}">
+      ${bs.map(b => `<i style="flex:${b.weeks};background:${(BLOCK_KINDS[b.kind] || BLOCK_KINDS.accumulation).color}" title="${esc((BLOCK_KINDS[b.kind] || {}).label)} · ${fmtDate(b.start)} – ${fmtDate(b.end)}"></i>`).join('')}
+      ${now >= first && now <= last ? `<span class="runin-now" style="left:${(pos * 100).toFixed(1)}%"></span>` : ''}
+    </div>
+    <div class="row wrap" style="gap:4px 10px;margin-top:6px">${bs.map(b => `<span class="sub" style="font-size:11px"><i class="runin-key" style="background:${(BLOCK_KINDS[b.kind] || {}).color}"></i>${esc((BLOCK_KINDS[b.kind] || {}).label)} ${b.weeks}w</span>`).join('')}</div>
+    <div class="sub" style="margin-top:6px">${mine
+      ? `Now: <b>${esc(mine.kind.label)}</b>, week ${mine.week} of ${mine.block.weeks}${mine.next ? ` · ${esc((BLOCK_KINDS[mine.next.kind] || {}).label)} from ${fmtDate(mine.next.start)}` : ' · then the meet'}`
+      : today() < bs[0].start ? `Starts ${fmtDate(bs[0].start)} (${daysBetween(today(), bs[0].start)} days)` : ''}</div>
+  </div>`;
+}
+function openBlocks(id) {
+  const m = S.meets.find(x => x.id === id);
+  if (!m) return;
+  let bl = (m.blocks || []).map(b => ({ ...b }));
+  if (!bl.length) {
+    const wk = Math.max(0, Math.floor(daysBetween(today(), m.date) / 7));
+    const tpl = eventType(m).events ? BLOCK_TEMPLATES[3] : BLOCK_TEMPLATES.find(([, b]) => b.reduce((n, x) => n + x[1], 0) <= Math.max(wk, 8)) || BLOCK_TEMPLATES[2];
+    bl = tpl[1].map(([kind, weeks]) => ({ kind, weeks }));
+  }
+  const draw = () => {
+    const probe = { date: m.date, blocks: bl };
+    const ds = blockDates(probe);
+    const total = bl.reduce((n, b) => n + b.weeks, 0);
+    return `<div class="sub" style="margin-top:0">Laid out backwards from ${esc(m.name)} on ${fmtDate(m.date)}. Accumulation and intensification set your loads from RIR; peak, taper and deload keep the planned weights.</div>
+      <div class="seg" style="margin:10px 0" role="group" aria-label="Templates">${BLOCK_TEMPLATES.map(([n], i) => `<button data-tpl="${i}">${esc(n)}</button>`).join('')}</div>
+      ${bl.map((b, i) => `<div class="row" style="gap:6px;align-items:center;margin-bottom:6px">
+        <select data-bk="${i}" class="grow" aria-label="Block ${i + 1} kind">${Object.entries(BLOCK_KINDS).map(([k, v]) => `<option value="${k}" ${b.kind === k ? 'selected' : ''}>${v.label}</option>`).join('')}</select>
+        <button class="btn sm ghost" data-bw="${i}.-1" aria-label="One week fewer">−</button>
+        <span class="mono" style="min-width:34px;text-align:center">${b.weeks}w</span>
+        <button class="btn sm ghost" data-bw="${i}.1" aria-label="One week more">+</button>
+        <button class="btn sm ghost" data-brmv="${i}" aria-label="Remove block">×</button>
+      </div>
+      <div class="sub" style="margin:-2px 0 8px;font-size:11.5px">${ds[i] ? `${fmtDate(ds[i].start)} – ${fmtDate(ds[i].end)}` : ''}</div>`).join('')}
+      <button class="btn sm wide ghost" id="bAdd">+ Add a block</button>
+      <div class="sub" style="margin-top:10px">${total} weeks · starts ${ds[0] ? fmtDate(ds[0].start) : '—'}${ds[0] && ds[0].start < today() ? ' — already under way, which is fine' : ''}</div>`;
+  };
+  modal({
+    title: `Run-in · ${m.name}`, body: draw(),
+    foot: `${(m.blocks || []).length ? '<button class="btn danger" id="bClear">Remove</button>' : ''}<button class="btn primary" id="bSave">Save</button>`,
+    onOpen: bg => {
+      const redraw = () => { $('.modal-body', bg).innerHTML = draw(); wire(); };
+      const wire = () => {
+        bg.querySelectorAll('[data-tpl]').forEach(b => b.onclick = () => { bl = BLOCK_TEMPLATES[+b.dataset.tpl][1].map(([kind, weeks]) => ({ kind, weeks })); redraw(); });
+        bg.querySelectorAll('[data-bk]').forEach(s => s.onchange = () => { bl[+s.dataset.bk].kind = s.value; redraw(); });
+        bg.querySelectorAll('[data-bw]').forEach(b => b.onclick = () => { const [i, d] = b.dataset.bw.split('.').map(Number); bl[i].weeks = clamp(bl[i].weeks + d, 1, 12); redraw(); });
+        bg.querySelectorAll('[data-brmv]').forEach(b => b.onclick = () => { bl.splice(+b.dataset.brmv, 1); redraw(); });
+        $('#bAdd', bg).onclick = () => { bl.unshift({ kind: 'accumulation', weeks: 3 }); redraw(); };
+      };
+      wire();
+      $('#bSave', bg).onclick = () => { if (bl.length) m.blocks = bl; else delete m.blocks; save(); closeModal(); render(); toast(bl.length ? 'Run-in saved' : 'Run-in removed', 'green'); };
+      const clr = $('#bClear', bg);
+      if (clr) clr.onclick = () => { delete m.blocks; save(); closeModal(); render(); toast('Run-in removed'); };
     },
   });
 }
@@ -9484,6 +9614,7 @@ function wire() {
   });
     $('#editPriority').onclick = openPriority;
     v.querySelectorAll('[data-meetday]').forEach(b => b.onclick = () => openMeetDay(b.dataset.meetday));
+    v.querySelectorAll('[data-runin]').forEach(b => b.onclick = () => openBlocks(b.dataset.runin));
     v.querySelectorAll('[data-strat]').forEach(b => b.onclick = () => {
       const [id, k] = b.dataset.strat.split(':');
       const mt = S.meets.find(x => x.id === id);
@@ -9916,13 +10047,19 @@ function openExerciseCheck(csvText) {
 const AUTO = { window: 3, stallN: 5, stepCap: 0.075, defaultRir: 2 };
 /* Blocks shaped on purpose keep the plan's weights. */
 const FIXED_BLOCK = /deload|prep|peak|test|meet|taper|opener|recovery|light|wedding|holiday|last heavy|speed|technique|re-entry|transition/i;
-function autoBlock(wo) { return !!(wo && wo.prog && wo.block && !FIXED_BLOCK.test(wo.block)); }
+function autoBlock(wo) {
+  if (!wo) return false;
+  // a meet run-in (C6) is the lifter's own intent and wins over a program's week name
+  const a = wo.date ? activeBlock(wo.date) : null;
+  if (a) return a.kind.auto && (!wo.prog || !!(wo.block && !FIXED_BLOCK.test(wo.block)));
+  return !!(wo.prog && wo.block && !FIXED_BLOCK.test(wo.block));
+}
 
 /* Whole numbers only: "stop 1 shy", "RIR 2", "@2" in the program note, else 2. */
-function targetRirFor(e) {
+function targetRirFor(e, blockRir) {
   const n = String((e && e.notes) || '').toLowerCase();
   const m = n.match(/stop (\d) shy/) || n.match(/rir\s*(\d)/) || n.match(/@\s*(\d)\b/);
-  return m ? +m[1] : AUTO.defaultRir;
+  return m ? +m[1] : blockRir != null ? blockRir : AUTO.defaultRir;   // the note, then the run-in block (C6), then 2
 }
 /* The inverse of e1rm(): the load that makes `reps` at `rir` worth `e1`. */
 function loadFor(e1, reps, rir) {
@@ -9982,12 +10119,13 @@ function stallFor(key) {
    e1 at its reps and target RIR; every other set keeps the plan's ratio. */
 function applyAuto(wo) {
   if (!autoBlock(wo)) return;
+  const ab = activeBlock(wo.date || today());
   wo.exercises.forEach(e => {
     if (!e.leaf || kindOf(e) !== 'reps') return;
     const work = e.sets.filter(s => isWorking(s) && s.w > 0 && s.r > 0);
     if (!work.length) return;
     const top = work.reduce((a, b) => b.w > a.w ? b : a);
-    const t = targetRirFor(e);
+    const t = targetRirFor(e, ab ? ab.kind.rir : null);
     const e1 = autoE1(exKey(e));
     e.auto = { t, e1: e1 ? Math.round(e1 * 10) / 10 : null, planTop: top.w, topR: top.r };
     work.forEach(s => { s.planW = s.w; s.auto = true; });

@@ -13,6 +13,22 @@ rather than guessed.
 
 ---
 
+## 0.41.0 — 25 Sep 2026
+- **Plan the run-in to a meet.** On an event, "Plan the run-in" lays
+  training blocks out backwards from the meet date: accumulation,
+  intensification, peak and taper, with an optional deload.
+  - Start from a 16, 12 or 8-week template (or a strongman one), then change
+    any block or its length.
+  - Moving the meet date moves the whole plan.
+- **Blocks steer your loads.**
+  - During accumulation (target RIR 3) and intensification (RIR 2),
+    planned sessions get their weights set from your RIR. That includes
+    sessions you planned yourself, not just ones from a program.
+  - Peak, taper and deload weeks keep the weights you planned.
+- **See where you are.** The event card shows a timeline with a marker for
+  today. Home and the workout screen show the current block, the week,
+  the target RIR and rep range, and days to the meet.
+
 ## 0.40.0 — 25 Sep 2026
 - **Adaptation modifiers.** The modifier picker has a new Adaptations
   section: seated, strapped in, grip aid / hand strap, assisted set-up,
