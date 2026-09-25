@@ -361,7 +361,7 @@ Done in code:
 7. Voice logging (🎤) still works with TalkBack on.
 Note anything read badly or out of order.
 
-### [ ] C5. Adaptation modifiers and pain / fatigue notes
+### [x] C5. Adaptation modifiers and pain / fatigue notes — shipped 0.40.0 (**the adaptation list is provisional: check it with adaptive lifters**, then edit `group: "adaptation"` entries in `r&d/data/exercises.json`)
 Extends the modifier chips. Structured modifiers such as **seated, strapped,
 assisted, one-sided set-up** that annotate a set **without** splitting the PR
 leaf, plus an optional quick pain/fatigue flag on a set or session. Validate the
