@@ -433,6 +433,7 @@ tr.pr td input{background:rgba(255,197,66,.1);border-color:rgba(255,197,66,.35)}
 .hrbox{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:12px}
 .dot-on{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(61,220,132,.2)}
 .rangeline{margin-top:6px}
+.fdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px}
 .placewarn{display:flex;gap:8px;align-items:center;margin-top:8px;padding:8px 10px;border-radius:10px;border:1px solid rgba(255,197,66,.35);background:rgba(255,197,66,.07);color:var(--gold);font-size:13px}
 .pickitem.na{opacity:.45}
 .eqi.na{opacity:.3}
@@ -1921,8 +1922,42 @@ function exInfo(name) {
   };
 }
 function exMuscles(name) { const i = exInfo(name); return i && i.m; }
+/* Catalogue muscle words → map keys, for the last-resort split. */
+const CAT_MUSCLE = {
+  glutes: 'glutes', 'gluteus medius': 'glutes', quadriceps: 'quads', hamstrings: 'hams', biceps: 'biceps', brachialis: 'biceps',
+  triceps: 'triceps', core: 'abs', obliques: 'abs', 'rectus abdominis': 'abs', 'lower abdominals': 'abs',
+  'front deltoids': 'fdelts', deltoids: 'sdelts', 'side deltoids': 'sdelts', 'rear deltoids': 'upperback',
+  'spinal erectors': 'erectors', 'quadratus lumborum': 'erectors', lats: 'lats', traps: 'traps', 'lower traps': 'traps',
+  forearms: 'forearms', grip: 'forearms', brachioradialis: 'forearms', 'mid-back': 'upperback', 'upper back': 'upperback',
+  pectorals: 'chest', 'upper pectorals': 'chest', 'lower pectorals': 'chest', 'upper chest': 'chest',
+  calves: 'calves', soleus: 'calves', gastrocnemius: 'calves',
+};
+/* The muscle split for a leaf (D7). Its own name, then the movement's, then
+   its aliases (same equipment first) — the hand-set table is keyed by the
+   names people type, not by catalogue names — and last the catalogue's
+   primary / secondary muscles, marked derived. */
+var _lmCache = new Map();   // var: bustCatalogue may run before this line during load
+function leafMuscles(leaf) {
+  if (!leaf || !leaf.movement) return null;
+  const k = leafKey(leaf);
+  if (_lmCache.has(k)) return _lmCache.get(k);
+  const m = movementById(leaf.movement);
+  const names = [displayName(leaf), m && m.name,
+    ...((m && m.aliases) || []).slice().sort((a, b) => (b.equipment === leaf.equipment) - (a.equipment === leaf.equipment)).map(a => a.name)].filter(Boolean);
+  let out = null;
+  for (const n of names) { const i = exInfo(n); if (i && i.m) { out = { m: i.m, tuned: i.tuned, via: n }; break; } }
+  if (!out && m) {
+    const acc = {};
+    (m.primary || []).forEach(x => { const key = CAT_MUSCLE[x]; if (key) acc[key] = (acc[key] || 0) + 1; });
+    (m.secondary || []).forEach(x => { const key = CAT_MUSCLE[x]; if (key) acc[key] = (acc[key] || 0) + 0.4; });
+    const tot = Object.values(acc).reduce((a, b) => a + b, 0);
+    if (tot) out = { m: Object.fromEntries(Object.entries(acc).map(([x, v]) => [x, v / tot])), tuned: false, via: 'catalogue' };
+  }
+  _lmCache.set(k, out);
+  return out;
+}
 
-const APP_VERSION = '0.48.0';
+const APP_VERSION = '0.49.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -1975,7 +2010,7 @@ const EXERCISE_CATALOGUE = {"schemaVersion":2,"note":"Movement catalogue for the
    import resolution non-deterministic, so this throws rather than picking a
    winner. Better a loud failure at boot than a silently wrong PR history. */
 let _cat = null;
-function bustCatalogue() { _cat = null; }
+function bustCatalogue() { _cat = null; if (typeof _lmCache !== "undefined") _lmCache.clear(); }
 function catalogue() {
   if (_cat) return _cat;
   const C = EXERCISE_CATALOGUE, V = C.vocabularies || {};
@@ -3285,6 +3320,86 @@ function muscleScores() {
     .sort((a, b) => b.score - a.score);
 }
 
+/* ---------------- RECOVERY (D7) ----------------
+   How much recent training is still in each muscle: working sets × effort by
+   RIR × the movement's muscle share, decayed by the hours since. Derived at
+   read time. r&d/specs/recovery-spec.md. */
+const RECOVERY = { tauBig: 36, tauSmall: 24, days: 7, fresh: 0.5, levels: [0.5, 1.25, 2.25, 3.25, 4.5] };   // ~effective hard sets still in the muscle
+const RECOVERY_WORDS = ['fresh', 'lightly worked', 'recovering', 'tired', 'fatigued', 'smashed'];
+const BIG_MUSCLES = ['quads', 'hams', 'glutes', 'erectors', 'lats', 'chest', 'upperback'];
+const muscleTau = k => BIG_MUSCLES.includes(k) ? RECOVERY.tauBig : RECOVERY.tauSmall;
+function setEffort(s) {
+  if (isWarm(s)) return 0;
+  let f = 0.8;
+  if (s.rpe != null) { const rir = rpeToRir(s.rpe); f = rir <= 1 ? 1 : rir <= 2 ? 0.85 : rir <= 3 ? 0.7 : 0.55; }
+  return isDrop(s) ? f * 0.6 : f;
+}
+function woTime(wo) { return wo.end || wo.start || parseISO(wo.date).getTime() + 12 * 3600e3; }
+function fatigueMap(now = Date.now()) {
+  const since = now - RECOVERY.days * 864e5, out = {};
+  const list = S.workouts.filter(w => w.status === 'completed' && w.kind !== 'cardio' && woTime(w) >= since && woTime(w) <= now);
+  if (S.active && S.active.kind !== 'cardio' && S.active.exercises) list.push({ ...S.active, end: now, live: true });
+  list.forEach(wo => {
+    const hrs = Math.max(0, (now - woTime(wo)) / 36e5);
+    (wo.exercises || []).forEach(e => {
+      const lm = e.leaf ? leafMuscles(e.leaf) : (exInfo(exName(e)) ? { m: exMuscles(exName(e)), tuned: exInfo(exName(e)).tuned } : null);
+      const m = lm && lm.m;
+      if (!m) return;
+      const eff = e.sets.filter(s => (wo.live ? s.done : s.done !== false) && (s.r > 0 || s.sec > 0 || s.m > 0)).reduce((a, s) => a + setEffort(s), 0);
+      if (!eff) return;
+      const tuned = !!lm.tuned;
+      Object.entries(m).forEach(([k, share]) => {
+        if (!MUSCLES[k]) return;
+        const f = eff * share * Math.exp(-hrs / muscleTau(k));
+        const o = out[k] = out[k] || { key: k, name: MUSCLES[k], f: 0, derived: 0, from: [] };
+        o.f += f; if (!tuned) o.derived += f;
+        o.from.push({ name: exFull(e), date: wo.date, live: !!wo.live, f });
+      });
+    });
+  });
+  Object.values(out).forEach(o => {
+    o.level = RECOVERY.levels.filter(x => o.f >= x).length;
+    o.word = RECOVERY_WORDS[o.level];
+    o.hours = o.f <= RECOVERY.fresh ? 0 : Math.ceil(muscleTau(o.key) * Math.log(o.f / RECOVERY.fresh));
+    o.estimate = o.f > 0 && o.derived / o.f > 0.3;
+    o.from.sort((a, b) => b.f - a.f);
+  });
+  return out;
+}
+function trainedRecently() {
+  const since = Date.now() - RECOVERY.days * 864e5;
+  return S.workouts.some(w => w.status === 'completed' && w.kind !== 'cardio' && woTime(w) >= since) || !!(S.active && S.active.kind !== 'cardio');
+}
+function mapMode() {
+  const m = S.settings.mapMode;
+  if (m === 'strength' || m === 'recovery') return m;
+  return trainedRecently() ? 'recovery' : 'strength';
+}
+function recoveryTap(o) {
+  if (!o || !o.level) return 'fresh';
+  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const from = [...new Set(o.from.map(x => `${x.name} (${x.live ? 'today' : days[parseISO(x.date).getDay()]})`))].slice(0, 3).join(', ');
+  return `${o.word} · fresh in ~${o.hours} h — ${from}${o.estimate ? ' · estimate — muscle split not checked' : ''}`;
+}
+/* Picker: the most-worked primary muscle of a leaf. */
+function leafFatigue(leaf, fm) {
+  const lm = leafMuscles(leaf), m = lm && lm.m;
+  if (!m) return null;
+  const prim = Object.entries(m).sort((a, b) => b[1] - a[1]).filter(([, sh], i) => i === 0 || sh >= 0.25).map(([k]) => k);
+  return prim.map(k => fm[k]).filter(Boolean).sort((a, b) => b.level - a.level)[0] || null;
+}
+function fatigueDot(o) {
+  if (!o) return '';
+  const c = o.level >= 3 ? 'var(--red)' : o.level >= 1 ? 'var(--gold)' : 'var(--green)';
+  return `<span class="fdot" style="background:${c}" role="img" aria-label="${esc(o.name)} ${esc(o.word)}" title="${esc(o.name)}: ${esc(o.word)}"></span>`;
+}
+function fatigueSummary(fm) {
+  const by = lv => Object.values(fm).filter(lv).sort((a, b) => b.f - a.f).map(o => o.name);
+  const hot = by(o => o.level >= 3), mid = by(o => o.level >= 1 && o.level < 3);
+  if (!hot.length && !mid.length) return '';
+  return [hot.length ? `Still tired: ${hot.join(', ')}` : '', mid.length ? `Recovering: ${mid.join(', ')}` : ''].filter(Boolean).join(' · ');
+}
+
 /* ---------------- muscle map (skins) ----------------
    The body is painted from a skin sheet: one PNG holding every muscle at every
    tier, pre-positioned on the body, so drawing a region is just copying its
@@ -3352,9 +3467,9 @@ function skinTierOf(score) {
 }
 
 /* Which cell to use for each layer of a view, and at what opacity. */
-function skinPlan(view, scores) {
+function skinPlan(view, scores, base) {
   const vals = Object.values(scores);
-  const overall = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  const overall = base !== undefined ? base : vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
   return SKIN_LAYOUT[view].map((layer, col) => {
     const sc = layer === 'base' ? overall : (scores[layer] != null ? scores[layer] : null);
     const tier = skinTierOf(sc);
@@ -3390,15 +3505,21 @@ function muscleAt(im, plan, fx, fy) {
 
 function viewMuscleMap() {
   const ms = muscleScores();
-  if (!ms.length) return '';
+  if (!ms.length && !trainedRecently()) return '';
   const def = BODY_SKINS.find(s => s.id === bodySkinId());
   const skinName = def ? def.name : 'Custom';
+  const mode = ms.length ? mapMode() : 'recovery';
+  const fm = mode === 'recovery' ? fatigueMap() : null;
+  const est = fm ? Object.values(fm).filter(o => o.level && o.estimate).length : 0;
   return `
   <div class="card" style="margin-bottom:13px">
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px">
       <div class="eyebrow">Muscle map</div>
       <button class="chip" id="bodySkinBtn" style="cursor:pointer">Skin: ${esc(skinName)} ▾</button>
     </div>
+    ${ms.length ? `<div class="seg" id="mapMode" style="margin-bottom:10px">
+      <button data-mm="strength" class="${mode === 'strength' ? 'on' : ''}">Strength</button><button data-mm="recovery" class="${mode === 'recovery' ? 'on' : ''}">Recovery</button></div>` : ''}
+    ${fm ? `<div class="sub" style="margin-bottom:8px">${esc(fatigueSummary(fm) || 'Everything fresh — nothing trained hard in the last few days.')}</div>` : ''}
     <div class="row" style="gap:14px;align-items:flex-start">
       <div class="grow" style="text-align:center">
         <canvas data-bodyview="front" style="width:100%;height:auto;aspect-ratio:1/2;display:block;cursor:pointer"></canvas>
@@ -3409,13 +3530,21 @@ function viewMuscleMap() {
         <div class="sub" style="margin-top:4px">Back</div>
       </div>
     </div>
-    ${def && def.legend ? `<div class="row" style="gap:5px;margin-top:12px;flex-wrap:wrap">
+    ${def && def.legend && mode === 'recovery' ? `<div class="row" style="gap:5px;margin-top:12px;flex-wrap:wrap">
+      <span class="row" style="gap:4px;align-items:center;font-size:10.5px;color:var(--dim)">
+        <i style="width:9px;height:9px;border-radius:2px;background:#4a5263;display:inline-block"></i>Fresh</span>
+      ${['Light', 'Recovering', 'Tired', 'Fatigued', 'Smashed'].map((t, i) => `<span class="row" style="gap:4px;align-items:center;font-size:10.5px;color:var(--dim)">
+        <i style="width:9px;height:9px;border-radius:2px;background:${def.legend[i]};display:inline-block"></i>${t}</span>`).join('')}
+    </div>` : ''}
+    ${def && def.legend && mode !== 'recovery' ? `<div class="row" style="gap:5px;margin-top:12px;flex-wrap:wrap">
       ${TIERS.map((t, i) => `<span class="row" style="gap:4px;align-items:center;font-size:10.5px;color:var(--dim)">
         <i style="width:9px;height:9px;border-radius:2px;background:${def.legend[i]};display:inline-block"></i>${t}</span>`).join('')}
       <span class="row" style="gap:4px;align-items:center;font-size:10.5px;color:var(--dim)">
         <i style="width:9px;height:9px;border-radius:2px;background:#4a5263;display:inline-block"></i>Not ranked</span>
     </div>` : ''}
-    <div class="sub" style="margin-top:8px">Tap a muscle for its score.</div>
+    <div class="sub" style="margin-top:8px">${mode === 'recovery'
+      ? `Tap a muscle for what's in it and when it's fresh. Last 7 days, weighted by RIR — a guide, not a measurement${est ? `; ${est} muscle${est === 1 ? '' : 's'} lean on estimated lift splits` : ''}.`
+      : 'Tap a muscle for its score.'}</div>
   </div>`;
 }
 
@@ -3424,18 +3553,27 @@ function wireMuscleMap(v) {
   const canvases = [...v.querySelectorAll('canvas[data-bodyview]')];
   const btn = $('#bodySkinBtn', v);
   if (btn) btn.onclick = openBodySkins;
+  v.querySelectorAll('[data-mm]').forEach(b => b.onclick = () => { S.settings.mapMode = b.dataset.mm; save(); render(); });
   if (!canvases.length) return;
   const scores = {};
-  muscleScores().forEach(m => { scores[m.key] = m.score; });
+  const ms0 = muscleScores();
+  ms0.forEach(m => { scores[m.key] = m.score; });
+  const mode = ms0.length ? mapMode() : 'recovery';
+  const fm = mode === 'recovery' ? fatigueMap() : null;
+  const vals = Object.values(scores);
+  const strengthBase = vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+  // recovery reuses the tier rows as intensity: level 1..5 -> tier 1..5, fresh -> none
+  const paintScores = fm ? Object.fromEntries(Object.values(fm).filter(o => o.level > 0).map(o => [o.key, (o.level - 1) * 20 + 10])) : scores;
   const id = bodySkinId();
   skinImage(id).then(im => {
     canvases.forEach(cv => {
-      const plan = skinPlan(cv.dataset.bodyview, scores);
+      const plan = skinPlan(cv.dataset.bodyview, paintScores, fm ? strengthBase : undefined);
       paintBody(cv, im, plan);
       cv.onclick = e => {
         const r = cv.getBoundingClientRect();
         const key = muscleAt(im, plan, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
         if (!key) return;
+        if (fm) return toast(`${MUSCLES[key]} · ${recoveryTap(fm[key])}`);
         const m = muscleScores().find(x => x.key === key);
         if (!m) return toast(`${MUSCLES[key]} — no ranked lift trains it yet`);
         const i = clamp(Math.floor(m.score / 20), 0, 4);
@@ -4758,6 +4896,7 @@ function pickExercise(cb) {
   const recent = S.workouts.filter(w => w.status === 'completed').slice(-12).reverse()
     .flatMap(w => w.exercises.filter(e => e.leaf).map(e => ({ key: exKey(e), leaf: e.leaf, name: exName(e) })))
     .filter(x => !seenRecent.has(x.key) && seenRecent.add(x.key)).slice(0, 8);
+  const fm = fatigueMap();
   const draw = (q) => {
     const all = allExercises();
     const ql = (q || '').toLowerCase();
@@ -4766,6 +4905,8 @@ function pickExercise(cb) {
     const groups = {};
     list.forEach(x => { const c = categoryOf(x.leaf); (groups[c] = groups[c] || []).push(x); });
     let html = curPlace() ? `<div class="sub" style="padding:4px 16px 2px">At ${esc(placeName())} — greyed needs kit that isn't here.</div>` : '';
+    const fsum = fatigueSummary(fm);   // D7: what's still tired, so the pick can go elsewhere
+    if (fsum && !q) html += `<div class="sub" style="padding:4px 16px 2px">${esc(fsum)}</div>`;
     if (!q && recent.length) {
       html += `<div style="padding:8px 16px 4px" class="eyebrow">Recent</div>`;
       html += recent.map(item).join('');
@@ -4797,7 +4938,7 @@ function pickExercise(cb) {
     const meta = [v, st ? `PR ${wt(st.bestW.w)} × ${st.bestW.r} · ${st.sessions} sessions` : 'No history']
       .filter(Boolean).join(' · ');
     return `<div class="pickitem ${movableHere(x.leaf) ? '' : 'na'}" data-pick="${esc(x.key)}">
-      <div class="grow"><div class="n">${esc(x.name)}</div><div class="m">${esc(meta)}</div>${eqRow(x)}</div>
+      <div class="grow"><div class="n">${fatigueDot(leafFatigue(x.leaf, fm))}${esc(x.name)}</div><div class="m">${esc(meta)}</div>${eqRow(x)}</div>
       <span class="dimmer">›</span></div>`;
   };
   modal({
@@ -5747,7 +5888,7 @@ function sessionMuscles(wo) {
     // a plank is core work; counting only sets with reps left timed holds out of the map
     const sets = e.sets.filter(s => isWorking(s) && (s.r > 0 || s.sec > 0 || s.m > 0));
     if (!sets.length) return;
-    const m = exMuscles(exName(e));
+    const lm = e.leaf ? leafMuscles(e.leaf) : null, m = lm ? lm.m : exMuscles(exName(e));
     if (!m) { unknown++; return; }
     const rpes = sets.map(s => s.rpe).filter(r => r >= 1 && r <= 10);
     let hard;                                              // 0 = easy, 1 = maximal
@@ -6449,9 +6590,10 @@ function viewAnalytics() {
 
   ${analyticsTab === 'exercises' ? '' : (() => {
       const ranks = allRanks(), ms = muscleScores(), bw = bodyweightKg();
-      if (!bw) return `<div class="card"><div class="eyebrow" style="margin-bottom:6px">Rankings</div>
+      const recOnly = analyticsTab === 'muscles' ? viewMuscleMap() : '';   // recovery needs no ranks (D7)
+      if (!bw) return `${recOnly}<div class="card"><div class="eyebrow" style="margin-bottom:6px">Rankings</div>
       <div class="sub">Log a check-in with your bodyweight — every standard is a multiple of it.</div></div>`;
-      if (!ranks.length) return `<div class="card"><div class="empty">Nothing ranked yet — rankings cover the lifts with a strength standard.</div></div>`;
+      if (!ranks.length) return `${recOnly}<div class="card"><div class="empty">Nothing ranked yet — rankings cover the lifts with a strength standard.</div></div>`;
       const bar = (score, color) => `<div class="bar"><i style="width:${Math.max(2, score).toFixed(1)}%;background:${color}"></i></div>`;
       if (analyticsTab === 'rankings') return `
   <div class="card flush" style="margin-bottom:13px">

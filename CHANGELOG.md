@@ -13,6 +13,21 @@ rather than guessed.
 
 ---
 
+## 0.49.0 — 25 Sep 2026
+- **Recovery heatmap.** The muscle map (Stats → Muscles) has a new Recovery
+  view. It shows which muscles are fresh and which are still carrying the
+  last few days' training, from Light to Smashed.
+- **Tap a muscle** to see how tired it is, roughly when it'll be fresh, and
+  which sessions it's from.
+- **The exercise picker shows it too.** A line at the top lists what's still
+  tired, and each lift has a coloured dot: green fresh, gold recovering, red
+  tired.
+- **Fixed:** some lifts had no muscle breakdown at all because their names
+  didn't match, among them standing calf raises and seated cable rows. They
+  now count in the heatmap and the full share image.
+- It's a guide, based on your sets, RIR and time since. Some lifts still use
+  estimated muscle splits, and the map says when.
+
 ## 0.48.0 — 25 Sep 2026
 - **Places.** Set up where you train, such as Home, Gym or a hotel, with the
   kit each one has. Find it in Settings → Places, with presets to start
