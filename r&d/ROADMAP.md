@@ -375,7 +375,7 @@ backwards from an event date in C2, feeding the autoregulated programming.
 
 ## D. Strong additions
 
-### [ ] D1. VBT overhaul — two modes plus calibration
+### [x] D1. VBT overhaul — two modes plus calibration — code shipped 0.42.0 (spec: `r&d/specs/vbt-overhaul-spec.md`) **(check on phone; validation against a transducer still to do — `r&d/notes/vbt-validation.md`)**
 Write `r&d/specs/vbt-overhaul-spec.md` before building. Two modes, chosen per
 exercise in a session:
 
