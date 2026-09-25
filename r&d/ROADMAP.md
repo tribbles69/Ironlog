@@ -441,7 +441,7 @@ autoregulated programming, doesn't replace it.
 inventory (shared with B4); the picker greys what isn't available there, and
 any program or AI suggestion respects it.
 
-### [ ] D7. Recovery / fatigue heatmap on the skins
+### [x] D7. Recovery / fatigue heatmap on the skins — shipped 0.49.0, **provisional** (spec `r&d/specs/recovery-spec.md`; Strength / Recovery switch on the muscle map, picker dots; muscle shares for the program's lifts listed in `r&d/notes/muscle-shares-check.md` — trust once that list is checked)
 (Blast #117 — Blast users call it the feature they miss most.) Extend the body
 heatmap to show which muscle groups are fresh vs fatigued. Also show it where
 exercises are picked when building a session or program. Only trust it once
