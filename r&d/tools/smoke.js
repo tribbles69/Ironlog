@@ -458,8 +458,11 @@ window.smoke = async function smoke(opts) {
     const blank = withIcons.filter(r => r.querySelectorAll('.eqi').length !== r.querySelectorAll('.eqi svg').length);
     if (blank.length) throw new Error(`${blank.length} row(s) have equipment slots with no icon in them`);
     // tapping an icon picks that equipment, not the row's default
-    const multi = withIcons.find(r => r.querySelectorAll('.eqi').length > 1);
-    const off = [...multi.querySelectorAll('.eqi')].find(e => !e.classList.contains('on'));
+    // an icon that isn't current and is at the current place (D6 greys the rest)
+    const pickable = e => !e.classList.contains('on') && !e.classList.contains('na');
+    const multi = withIcons.find(r => [...r.querySelectorAll('.eqi')].some(pickable));
+    if (!multi) throw new Error('no row has a second icon that can be picked here');
+    const off = [...multi.querySelectorAll('.eqi')].find(pickable);
     off.click(); await wait(200);
     if (!got) throw new Error('tapping an equipment icon picked nothing');
     if (got.equipment !== off.dataset.pickeq.split('|')[1]) {
