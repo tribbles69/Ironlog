@@ -564,7 +564,7 @@ features.
 ### [ ] E7. Small extras
 - Machine settings note or photo per variant, e.g. "seat 4, pad 6" (Blast #29).
 - Swap an exercise across past sessions, with a preview (Blast #69).
-- OLED true-black theme (Blast #77).
+- OLED true-black — moved into E10.
 - Setting for the workout timer at the top or bottom — machine phone holders
   cover the bottom (Blast #108).
 - Custom trackers: unit + target, e.g. water, sleep (Blast #59, #15).
@@ -579,6 +579,28 @@ Strava (Blast #115) · Whoop (#111) · translations (#116, #85) · reorder and s
 routines (#80, #9) · separate muscle heads for arms (#63) · picture
 instructions (#21) · suspension trainer, rings and jump rope exercises (#105,
 #93, #40).
+
+### [ ] E10. More themes — dark mode, Frutiger Metro, Ceefax
+Added 2026-09-27 at Aaron's request. Ironlog already has two skins (default and
+98) — check how they're switched and styled before adding more, and turn that
+into a proper theme layer (colour/type tokens per theme) so a new theme is one
+block of CSS, not edits scattered through `index.html`.
+- **Dark mode:** a dark version of the default look, with **Auto** (follow the
+  phone's system setting) as an option. Include an **OLED true-black** variant
+  (Blast #77, was in E7).
+- **Frutiger Metro:** Windows 8 / Windows Phone "Metro" era — flat solid-colour
+  live tiles, big thin lowercase headings, one bold accent colour, no gradients
+  or shadows, edge-to-edge panels. Home as a tile grid is the showpiece.
+- **Ceefax:** BBC teletext look — black background, the eight teletext colours,
+  chunky monospace/block font, double-height headers, page numbers ("P100")
+  in the header bar, block-mosaic graphics for charts where practical.
+- **Every theme must still pass C4:** contrast (WCAG AA), 40 px workout
+  controls, TalkBack labels — re-run the axe check per theme. Ceefax's font
+  and colours need particular care for readability mid-set.
+- Theme choice in Settings (and on the welcome screen, C1); stored in
+  `settings`, applied before first paint so there's no flash of the wrong theme.
+- Muscle map skins (0.23.0) are separate from themes — check they read well on
+  dark backgrounds.
 
 ---
 
