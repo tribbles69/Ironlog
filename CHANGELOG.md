@@ -13,6 +13,26 @@ rather than guessed.
 
 ---
 
+## 0.50.0 — 27 Sep 2026
+- **New Body page** (Stats → Body; in Ironlog 98 it's also under View → Body)
+  with four sections.
+- **Bodyweight:** your check-in weigh-ins with a 7-day average line, plus the
+  change over the last week and month.
+- **Body fat from calipers:** Jackson–Pollock 3 or 7-site, or
+  Durnin–Womersley 4-site.
+  - Enter up to three readings per site and they're averaged. Each site
+    says where to pinch.
+  - You get the body-fat %, your raw skinfold total, and your lean and fat
+    mass from the nearest weigh-in.
+- **Measurements:** neck, chest, waist, hips, and left and right arms,
+  forearms, thighs and calves, plus sites you name yourself.
+  - They're in cm, or inches if you use lb.
+  - A table shows your latest and the change, with a chart for each site.
+- **Progress photos:** front, back and sides, with a side-by-side compare.
+  They stay on your phone and are never exported or synced.
+- Measurements and caliper tests are included in backups and Google Drive
+  sync.
+
 ## 0.49.1 — 25 Sep 2026
 - **More room for your sets.** The bar pinned at the top of a workout is now
   one slim row: the clock, sets done, 🎤 and Finish, plus the rest timer when

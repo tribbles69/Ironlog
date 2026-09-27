@@ -527,7 +527,7 @@ Store, **Health Connect** (bodyweight, HR, body-comp scans in; sessions out —
 Blast #58, #12), and a **Wear OS companion** (current set and rest countdown on
 the watch, tick sets from the wrist). A PWA can't do any of these.
 
-### [ ] E4. Body composition page
+### [x] E4. Body composition page — shipped 0.50.0 (spec `r&d/specs/body-comp-spec.md`; Stats → Body: bodyweight with 7-day average from check-ins, JP3 / JP7 / DW4 calipers with Siri and the raw sum, measurements with L/R and custom sites, progress photos on the device only; **check one caliper result by hand**)
 Write `r&d/specs/body-comp-spec.md` before building.
 - **Bodyweight:** build on the existing check-in weight (`ci.weight`, read by
   `bodyweightKg()` for DOTS) — don't create a second store. 7-day rolling

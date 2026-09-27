@@ -438,6 +438,9 @@ tr.pr td input{background:rgba(255,197,66,.1);border-color:rgba(255,197,66,.35)}
 .hrbox{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:12px}
 .dot-on{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(61,220,132,.2)}
 .rangeline{margin-top:6px}
+.phthumb{position:relative;width:84px;height:112px;padding:0;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--bg2);cursor:pointer}
+.phthumb img{width:100%;height:100%;object-fit:cover;display:block}
+.phthumb span{position:absolute;left:0;right:0;bottom:0;font-size:10px;padding:2px 4px;background:rgba(0,0,0,.6);color:#fff}
 .fdot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:7px;vertical-align:1px}
 .placewarn{display:flex;gap:8px;align-items:center;margin-top:8px;padding:8px 10px;border-radius:10px;border:1px solid rgba(255,197,66,.35);background:rgba(255,197,66,.07);color:var(--gold);font-size:13px}
 .pickitem.na{opacity:.45}
@@ -1293,6 +1296,8 @@ const DEFAULT_STATE = {
   programs: [],   // ids of installed training programs
   programStarts: {},  // program id -> the start date it was installed against
   imports: [],    // {id,source,at,sessions,replaced:[backfills it displaced]} — so an import can be taken back out
+  measures: [],   // {id,date,cm:{site:cm},custom:{name:cm},mt} — E4 body measurements
+  calipers: [],   // {id,date,method:'jp3'|'jp7'|'dw4',sex,age,mm:{site:[readings]},mt} — E4; results derived when shown
 };
 
 /* Persistence runs through IndexedDB — it's async (so the call sites below don't
@@ -1451,7 +1456,7 @@ const SYNC_FILE = 'Ironlog backup.json', SYNC_FORMAT = 'ironlog-sync', SYNC_V = 
 // collection -> how a record is keyed
 const SYNC_SETS = {
   workouts: x => x.id, goals: x => x.id, meets: x => x.id, imports: x => x.id,
-  checkins: x => x.date,
+  checkins: x => x.date, measures: x => x.id, calipers: x => x.id,
   customEx: x => (typeof x === 'string' ? x : JSON.stringify(x)), programs: x => String(x),
 };
 const SYNC_MAPS = ['exAliases', 'programStarts'];
@@ -1967,7 +1972,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.49.1';
+const APP_VERSION = '0.50.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -6599,11 +6604,11 @@ function viewAnalytics() {
   ${mainLiftChart()}
 
   <div class="seg" id="anTabs" style="margin-bottom:13px">
-    ${[['exercises', 'Exercises'], ['rankings', 'Rankings'], ['muscles', 'Muscles']]
+    ${[['exercises', 'Exercises'], ['rankings', 'Rankings'], ['muscles', 'Muscles'], ['body', 'Body']]
       .map(([k, l]) => `<button data-antab="${k}" class="${analyticsTab === k ? 'on' : ''}">${l}</button>`).join('')}
   </div>
 
-  ${analyticsTab === 'exercises' ? '' : (() => {
+  ${analyticsTab === 'exercises' ? '' : analyticsTab === 'body' ? viewBody() : (() => {
       const ranks = allRanks(), ms = muscleScores(), bw = bodyweightKg();
       const recOnly = analyticsTab === 'muscles' ? viewMuscleMap() : '';   // recovery needs no ranks (D7)
       if (!bw) return `${recOnly}<div class="card"><div class="eyebrow" style="margin-bottom:6px">Rankings</div>
@@ -10228,6 +10233,7 @@ function wire() {
     v.querySelectorAll('[data-sort]').forEach(b => b.onclick = () => { analyticsSort = b.dataset.sort; render(); });
     v.querySelectorAll('[data-antab]').forEach(b => b.onclick = () => { analyticsTab = b.dataset.antab; render(); window.scrollTo(0, 0); });
     wireMuscleMap(v);
+    if (analyticsTab === 'body') wireBody(v);
   }
 
   if (page === 'meets') {
@@ -12934,6 +12940,442 @@ function importJSONFile(f) {
   rd.readAsText(f);
 }
 
+
+/* ============================================================
+   BODY COMP — roadmap E4 (r&d/specs/body-comp-spec.md)
+   Bodyweight is the check-in weight (no second store). Caliper tests keep
+   only raw readings, sex and age; density, BF% and masses are worked out
+   when shown. Photos live outside S, on this device only.
+   ============================================================ */
+const CAL_SITES = {
+  chest: ['Chest', 'Diagonal fold halfway between the front of the armpit and the nipple (a third of the way for women)'],
+  abdomen: ['Abdomen', 'Vertical fold 2 cm to the right of the navel'],
+  thigh: ['Thigh', 'Vertical fold on the front of the thigh, midway between the hip crease and the top of the kneecap'],
+  triceps: ['Triceps', 'Vertical fold on the back of the upper arm, midway between shoulder and elbow'],
+  suprailiac: ['Suprailiac', 'Diagonal fold just above the front of the hip bone'],
+  midaxillary: ['Midaxillary', 'Vertical fold on the side of the chest, level with the bottom of the breastbone'],
+  subscapular: ['Subscapular', 'Diagonal fold just below the lower tip of the shoulder blade'],
+  biceps: ['Biceps', 'Vertical fold on the front of the upper arm, midway between shoulder and elbow'],
+};
+/* Durnin & Womersley (1974), [c, m] by age band. */
+const DW_BANDS = {
+  male: [[17, 1.1620, 0.0630], [20, 1.1631, 0.0632], [30, 1.1422, 0.0544], [40, 1.1620, 0.0700], [50, 1.1715, 0.0779]],
+  female: [[17, 1.1549, 0.0678], [20, 1.1599, 0.0717], [30, 1.1423, 0.0632], [40, 1.1333, 0.0612], [50, 1.1339, 0.0645]],
+};
+const CAL_METHODS = {
+  jp3: { name: 'Jackson–Pollock 3-site', short: 'JP3',
+    sites: sex => sex === 'female' ? ['triceps', 'suprailiac', 'thigh'] : ['chest', 'abdomen', 'thigh'],
+    bd: (s, age, sex) => sex === 'female'
+      ? 1.0994921 - 0.0009929 * s + 0.0000023 * s * s - 0.0001392 * age
+      : 1.10938 - 0.0008267 * s + 0.0000016 * s * s - 0.0002574 * age },
+  jp7: { name: 'Jackson–Pollock 7-site', short: 'JP7',
+    sites: () => ['chest', 'midaxillary', 'triceps', 'subscapular', 'abdomen', 'suprailiac', 'thigh'],
+    bd: (s, age, sex) => sex === 'female'
+      ? 1.097 - 0.00046971 * s + 0.00000056 * s * s - 0.00012828 * age
+      : 1.112 - 0.00043499 * s + 0.00000055 * s * s - 0.00028826 * age },
+  dw4: { name: 'Durnin–Womersley 4-site', short: 'DW4',
+    sites: () => ['biceps', 'triceps', 'subscapular', 'suprailiac'],
+    bd: (s, age, sex) => {
+      const bands = DW_BANDS[sex === 'female' ? 'female' : 'male'];
+      const b = bands.filter(x => age >= x[0]).pop() || bands[0];
+      return b[1] - b[2] * Math.log10(s);
+    } },
+};
+const siri = bd => 495 / bd - 450;
+const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
+/* The nearest check-in weight within three days of a date, or null. */
+function weightNear(date) {
+  let best = null;
+  S.checkins.forEach(c => {
+    if (!(c.weight > 0)) return;
+    const d = Math.abs(daysBetween(c.date, date));
+    if (d <= 3 && (!best || d < best.d)) best = { d, kg: c.weight };
+  });
+  return best ? best.kg : null;
+}
+function caliperCalc(t) {
+  const M = CAL_METHODS[t.method];
+  if (!M) return null;
+  const sites = M.sites(t.sex);
+  const means = sites.map(s => { const r = ((t.mm || {})[s] || []).filter(x => x > 0); return r.length ? mean(r) : null; });
+  if (means.some(x => x == null)) return { sites, means, complete: false };
+  const sum = means.reduce((a, b) => a + b, 0);
+  const bd = M.bd(sum, t.age || 0, t.sex);
+  const bf = siri(bd);
+  const w = weightNear(t.date);
+  return { sites, means, complete: true, sum, bd, bf, odd: !(bf >= 3 && bf <= 50), young: t.method === 'dw4' && t.age < 17,
+    wKg: w, fatKg: w ? w * bf / 100 : null, leanKg: w ? w * (1 - bf / 100) : null };
+}
+
+/* Lengths: stored cm; shown in inches for lb users. */
+const lenU = () => U() === 'lb' ? 'in' : 'cm';
+const dlen = cm => U() === 'lb' ? cm / 2.54 : cm;
+const toCm = v => U() === 'lb' ? v * 2.54 : v;
+const MEAS_SITES = [['neck', 'Neck'], ['chest', 'Chest'], ['waist', 'Waist'], ['hips', 'Hips'],
+  ['arm', 'Upper arm', true], ['forearm', 'Forearm', true], ['thigh', 'Thigh', true], ['calf', 'Calf', true]];
+const measKeys = () => MEAS_SITES.flatMap(([k, , lr]) => lr ? [k + '_l', k + '_r'] : [k]);
+function measLabel(k) {
+  if (k.startsWith('x:')) return k.slice(2);
+  const [base, side] = k.split('_'), s = MEAS_SITES.find(x => x[0] === base);
+  return (s ? s[1] : base) + (side ? (side === 'l' ? ' (L)' : ' (R)') : '');
+}
+/* Every site's series: standard keys, then custom ones as "x:name". */
+function measSeries() {
+  const out = {};
+  [...S.measures].sort((a, b) => a.date < b.date ? -1 : 1).forEach(m => {
+    Object.entries(m.cm || {}).forEach(([k, v]) => { if (v > 0) (out[k] = out[k] || []).push({ date: m.date, v, id: m.id }); });
+    Object.entries(m.custom || {}).forEach(([k, v]) => { if (v > 0) (out['x:' + k] = out['x:' + k] || []).push({ date: m.date, v, id: m.id }); });
+  });
+  return out;
+}
+/* 7-day rolling mean of the weigh-ins ending each weigh-in day. */
+function bwSeries() {
+  const pts = S.checkins.filter(c => c.weight > 0).sort((a, b) => a.date < b.date ? -1 : 1).map(c => ({ date: c.date, v: c.weight }));
+  const avg = pts.map(p => {
+    const win = pts.filter(q => { const d = daysBetween(q.date, p.date); return d >= 0 && d < 7; });
+    return { date: p.date, v: mean(win.map(q => q.v)) };
+  });
+  return { pts, avg };
+}
+function avgOn(avg, date) {
+  const before = avg.filter(p => p.date <= date);
+  return before.length ? before[before.length - 1] : null;
+}
+
+let bodyMeasSite = 'waist';
+function viewBody() {
+  const signed = (v, dp = 1) => (v > 0 ? '+' : v < 0 ? '−' : '±') + Math.abs(v).toFixed(dp);
+  // 1. bodyweight
+  const { pts, avg } = bwSeries();
+  const last = pts[pts.length - 1], lastAvg = avg[avg.length - 1];
+  const chg = days => { if (!lastAvg) return null; const then = avgOn(avg, addDaysISO(lastAvg.date, -days)); return then && then.date !== lastAvg.date ? lastAvg.v - then.v : null; };
+  const c7 = chg(7), c30 = chg(30);
+  const bwCard = `<div class="card" style="margin-bottom:13px">
+    <div class="row between" style="margin-bottom:8px"><div class="eyebrow">Bodyweight</div><button class="btn xs" id="bdWeight">+ Log weight</button></div>
+    ${pts.length ? `<div class="stats grid3" style="margin-bottom:8px">
+        <div class="stat"><div class="k">Latest</div><div class="v">${wt(last.v)}</div><div class="d">${esc(relDay(last.date))}</div></div>
+        <div class="stat"><div class="k">7-day avg</div><div class="v">${wt(lastAvg.v)}</div><div class="d">${c7 != null ? `${signed(dw(c7))} ${U()} / 7 d` : '—'}</div></div>
+        <div class="stat"><div class="k">30 days</div><div class="v" style="font-size:17px">${c30 != null ? `${signed(dw(c30))} ${U()}` : '—'}</div><div class="d">change in avg</div></div>
+      </div>
+      ${chartMulti([{ label: 'Weigh-ins', color: 'var(--dim2)', points: pts.map(p => ({ date: p.date, v: dw(p.v) })) },
+        { label: '7-day average', color: 'var(--accent)', points: avg.map(p => ({ date: p.date, v: dw(p.v) })) }], { fmt: v => nice(v) })}`
+      : '<div class="sub">No weigh-ins yet. They come from your check-ins — log one here or from Home.</div>'}
+  </div>`;
+
+  // 2. body fat
+  const tests = [...S.calipers].sort((a, b) => a.date < b.date ? 1 : -1).map(t2 => ({ t: t2, r: caliperCalc(t2) })).filter(x => x.r && x.r.complete);
+  const lastT = tests[0];
+  const method = lastT ? lastT.t.method : null;
+  const same = tests.filter(x => x.t.method === method).reverse();
+  const bfCard = `<div class="card" style="margin-bottom:13px">
+    <div class="row between" style="margin-bottom:8px"><div class="eyebrow">Body fat · calipers</div><button class="btn xs" id="bdCal">+ New test</button></div>
+    ${lastT ? `<div class="stats grid3" style="margin-bottom:8px">
+        <div class="stat"><div class="k">Body fat</div><div class="v">${lastT.r.bf.toFixed(1)}<small>%</small></div><div class="d">${esc(CAL_METHODS[method].short)} · ${esc(relDay(lastT.t.date))}</div></div>
+        <div class="stat"><div class="k">Skinfolds</div><div class="v">${Math.round(lastT.r.sum)}<small>mm</small></div><div class="d">sum of ${lastT.r.sites.length}</div></div>
+        <div class="stat"><div class="k">Lean / fat</div><div class="v" style="font-size:16px">${lastT.r.leanKg ? `${nice(dw(lastT.r.leanKg))} / ${nice(dw(lastT.r.fatKg))}` : '—'}</div><div class="d">${lastT.r.leanKg ? U() : 'no weigh-in within 3 days'}</div></div>
+      </div>
+      ${lastT.r.odd ? '<div class="sub" style="color:var(--gold);margin-bottom:6px">That result is outside 3–50% — check the readings.</div>' : ''}
+      ${same.length > 1 ? `<div class="grid2" style="gap:8px">
+        <div><div class="sub">Body fat %</div>${chart(same.map(x => ({ date: x.t.date, v: x.r.bf })), { h: 110, fmt: v => v.toFixed(1) })}</div>
+        <div><div class="sub">Skinfold sum (mm)</div>${chart(same.map(x => ({ date: x.t.date, v: x.r.sum })), { h: 110, color: 'var(--blue)', fmt: v => Math.round(v) })}</div>
+      </div>` : ''}
+      <div class="sub" style="margin:8px 0 4px">The skinfold sum is the raw measurement — the % comes from a population equation that may not fit you. Watch both.</div>
+      ${tests.slice(0, 8).map(x => `<button class="exline wide" data-cal-edit="${esc(x.t.id)}" style="width:100%;background:none;border:0;color:inherit;text-align:left">
+        <span class="dimmer">${fmtDate(x.t.date)}</span><span class="mono">${x.r.bf.toFixed(1)}% · ${Math.round(x.r.sum)} mm · ${esc(CAL_METHODS[x.t.method].short)}</span></button>`).join('')}`
+      : '<div class="sub">No caliper tests yet. Jackson–Pollock 3 or 7-site, or Durnin–Womersley 4-site; up to three readings a site, averaged.</div>'}
+  </div>`;
+
+  // 3. measurements
+  const ser = measSeries();
+  const keys = [...measKeys().filter(k => ser[k]), ...Object.keys(ser).filter(k => k.startsWith('x:'))];
+  const baseOf = k => k.replace(/_[lr]$/, '');
+  const siteOpts = [...new Set(keys.map(baseOf))];
+  if (!siteOpts.includes(bodyMeasSite) && siteOpts.length) bodyMeasSite = siteOpts[0];
+  const plotKeys = keys.filter(k => baseOf(k) === bodyMeasSite);
+  const L = v => nice(dlen(v));
+  const measCard = `<div class="card" style="margin-bottom:13px">
+    <div class="row between" style="margin-bottom:8px"><div class="eyebrow">Measurements · ${lenU()}</div><button class="btn xs" id="bdMeas">+ Add</button></div>
+    ${keys.length ? `<table class="vartable"><thead><tr><th style="text-align:left">Site</th><th class="r">Latest</th><th class="r">Last change</th><th class="r">Since first</th></tr></thead><tbody>
+      ${keys.map(k => { const s = ser[k], a = s[s.length - 1], p = s[s.length - 2], f = s[0];
+        return `<tr><td>${esc(measLabel(k))}</td><td class="r mono">${L(a.v)}</td><td class="r mono dimmer">${p ? signed(dlen(a.v - p.v)) : '—'}</td><td class="r mono dimmer">${s.length > 1 ? signed(dlen(a.v - f.v)) : '—'}</td></tr>`; }).join('')}
+      </tbody></table>
+      <div class="row" style="gap:8px;margin:10px 0 4px;align-items:center"><label class="sub" for="bdSite">Chart</label>
+        <select id="bdSite" style="flex:1">${siteOpts.map(k => `<option value="${esc(k)}" ${k === bodyMeasSite ? 'selected' : ''}>${esc(measLabel(k).replace(' (L)', ''))}</option>`).join('')}</select></div>
+      ${chartMulti(plotKeys.map(k => ({ label: measLabel(k), points: ser[k].map(p => ({ date: p.date, v: dlen(p.v) })) })), { h: 130 })}
+      <div class="sub" style="margin-top:6px">${[...S.measures].sort((a, b) => a.date < b.date ? 1 : -1).slice(0, 6).map(m => `<button class="btn xs ghost" data-meas-edit="${esc(m.id)}" style="margin:2px">${fmtDate(m.date, { day: 'numeric', month: 'short' })}</button>`).join('')}</div>`
+      : '<div class="sub">No measurements yet. Any subset each time — waist alone is fine.</div>'}
+  </div>`;
+
+  // 4. photos (filled in by wireBody from IndexedDB)
+  const photoCard = `<div class="card" style="margin-bottom:13px">
+    <div class="row between" style="margin-bottom:8px"><div class="eyebrow">Progress photos</div>
+      <span class="row" style="gap:6px"><button class="btn xs ghost" id="bdCompare">Compare</button><button class="btn xs" id="bdPhoto">+ Add</button></span></div>
+    <div id="bdPhotos" class="sub">Loading…</div>
+    <div class="sub" style="margin-top:8px">Photos stay on this phone — never in exports, CSV or Drive sync.</div>
+    <input type="file" id="bdPhotoFile" accept="image/*" style="display:none">
+  </div>`;
+  return bwCard + bfCard + measCard + photoCard;
+}
+function addDaysISO(s, n) { const d = parseISO(s); d.setDate(d.getDate() + n); return iso(d); }   // local date, not UTC
+
+function wireBody(v) {
+  const on = (sel, fn) => { const el = $(sel, v); if (el) el.onclick = fn; };
+  on('#bdWeight', () => openCheckin(today()));
+  on('#bdCal', () => openCaliper());
+  on('#bdMeas', () => openMeasure());
+  v.querySelectorAll('[data-cal-edit]').forEach(b => b.onclick = () => openCaliper(b.dataset.calEdit));
+  v.querySelectorAll('[data-meas-edit]').forEach(b => b.onclick = () => openMeasure(b.dataset.measEdit));
+  const site = $('#bdSite', v); if (site) site.onchange = () => { bodyMeasSite = site.value; render(); };
+  const file = $('#bdPhotoFile', v);
+  on('#bdPhoto', () => openPhotoAdd(file));
+  on('#bdCompare', () => openPhotoCompare());
+  paintPhotos($('#bdPhotos', v));
+}
+
+/* ---- caliper test form ---- */
+function openCaliper(id) {
+  const old = id ? S.calipers.find(x => x.id === id) : null;
+  const age0 = ageFrom(S.settings.dob);
+  const t0 = old ? structuredClone(old) : { id: uid(), date: today(), method: (S.calipers.slice(-1)[0] || {}).method || 'jp3', sex: S.settings.sex === 'female' ? 'female' : 'male', age: age0 || null, mm: {} };
+  const draw = () => {
+    const M = CAL_METHODS[t0.method], sites = M.sites(t0.sex);
+    return `<div class="grid2">
+        <div class="field"><label for="clDate">Date</label><input type="date" id="clDate" value="${t0.date}"></div>
+        <div class="field"><label for="clMethod">Method</label><select id="clMethod">${Object.entries(CAL_METHODS).map(([k, m]) => `<option value="${k}" ${k === t0.method ? 'selected' : ''}>${esc(m.name)}</option>`).join('')}</select></div>
+      </div>
+      <div class="grid2">
+        <div class="field"><label for="clSex">Equation for</label><select id="clSex"><option value="male" ${t0.sex !== 'female' ? 'selected' : ''}>Male</option><option value="female" ${t0.sex === 'female' ? 'selected' : ''}>Female</option></select></div>
+        <div class="field"><label for="clAge">Age</label><input type="number" inputmode="numeric" id="clAge" value="${t0.age || ''}" placeholder="years"></div>
+      </div>
+      <div class="sub" style="margin:2px 0 8px">Right side of the body, standing relaxed. Pinch, place the caliper 1 cm from your fingers, read after about 2 s. Up to three readings a site — they're averaged.</div>
+      ${sites.map(s => { const r = (t0.mm[s] || []); return `<div class="field" style="margin-bottom:8px"><label>${esc(CAL_SITES[s][0])} <span class="dimmer" style="font-weight:400">mm</span></label>
+        <div class="sub" style="margin:-2px 0 4px;font-size:12px">${esc(CAL_SITES[s][1])}</div>
+        <div class="row" style="gap:6px">${[0, 1, 2].map(i => `<input type="number" step="0.5" inputmode="decimal" data-cl="${s}" data-i="${i}" value="${r[i] || ''}" placeholder="${i ? 'optional' : 'mm'}" aria-label="${esc(CAL_SITES[s][0])} reading ${i + 1}" style="min-width:0">`).join('')}</div></div>`; }).join('')}
+      <div id="clOut" class="card tight" style="margin-top:6px"></div>`;
+  };
+  modal({
+    title: old ? 'Caliper test' : 'New caliper test',
+    body: draw(),
+    foot: `${old ? '<button class="btn danger" id="clDel">Delete</button>' : ''}<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="clSave">Save</button>`,
+    onOpen: bg => {
+      const read = () => {
+        t0.date = $('#clDate', bg).value || t0.date;
+        t0.method = $('#clMethod', bg).value; t0.sex = $('#clSex', bg).value;
+        t0.age = +$('#clAge', bg).value || null;
+        const mm = {};
+        bg.querySelectorAll('[data-cl]').forEach(inp => {
+          const val = +inp.value; if (!(val > 0)) return;
+          (mm[inp.dataset.cl] = mm[inp.dataset.cl] || []).push(val);
+        });
+        t0.mm = mm;
+      };
+      const out = () => {
+        const r = caliperCalc(t0), o = $('#clOut', bg);
+        if (!o) return;
+        o.innerHTML = !r || !r.complete ? '<span class="sub">Fill every site to see the result.</span>'
+          : `<b>${r.bf.toFixed(1)}%</b> body fat · <span class="mono">${Math.round(r.sum * 10) / 10} mm</span> sum · density ${r.bd.toFixed(4)}
+            ${r.leanKg ? `<div class="sub">Lean ${wt(r.leanKg)} · fat ${wt(r.fatKg)} (at ${wt(r.wKg)})</div>` : '<div class="sub">No weigh-in within 3 days — lean and fat mass need one.</div>'}
+            ${r.odd ? '<div class="sub" style="color:var(--gold)">Outside 3–50% — check the readings.</div>' : ''}
+            ${r.young ? '<div class="sub" style="color:var(--gold)">Durnin–Womersley is for 17 and over — using the 17–19 band.</div>' : ''}`;
+      };
+      const bind = () => {
+        bg.querySelectorAll('input, select').forEach(el => { el.oninput = () => { read(); out(); }; });
+        ['#clMethod', '#clSex'].forEach(sel => { $(sel, bg).onchange = () => { read(); $('.modal-body', bg).innerHTML = draw(); bind(); out(); }; });
+      };
+      bind(); out();
+      const del = $('#clDel', bg);
+      if (del) del.onclick = () => confirmDlg('Delete this caliper test?', () => { S.calipers = S.calipers.filter(x => x.id !== t0.id); save(); closeAllModals(); render(); }, 'Delete');
+      $('#clSave', bg).onclick = () => {
+        read();
+        if (!(t0.age > 0)) return toast('Enter an age — the equations need it');
+        const bad = Object.values(t0.mm).flat().find(x => x < 2 || x > 80);
+        if (bad) return toast(`${bad} mm is outside 2–80 — check that reading`);
+        const r = caliperCalc(t0);
+        if (!r || !r.complete) return toast('Fill in every site for this method');
+        t0.mt = Date.now();
+        S.calipers = S.calipers.filter(x => x.id !== t0.id); S.calipers.push(t0);
+        save(); closeModal(); render(); toast(`${r.bf.toFixed(1)}% body fat saved`, 'green');
+      };
+    },
+  });
+}
+
+/* ---- measurement form ---- */
+function openMeasure(id) {
+  const old = id ? S.measures.find(x => x.id === id) : null;
+  const m0 = old ? structuredClone(old) : { id: uid(), date: today(), cm: {}, custom: {} };
+  const prevCustom = [...new Set(S.measures.flatMap(m => Object.keys(m.custom || {})))];
+  const customs = [...new Set([...prevCustom, ...Object.keys(m0.custom || {})])];
+  const inp = (key, label, val) => `<div class="field" style="margin:0"><label for="ms_${esc(key)}">${esc(label)}</label>
+    <input type="number" step="0.1" inputmode="decimal" id="ms_${esc(key)}" data-ms="${esc(key)}" value="${val ? nice(dlen(val)) : ''}" placeholder="${lenU()}"></div>`;
+  modal({
+    title: old ? 'Measurements' : 'Add measurements',
+    body: `<div class="field"><label for="msDate">Date</label><input type="date" id="msDate" value="${m0.date}"></div>
+      <div class="sub" style="margin-bottom:8px">In ${lenU()}. Fill any you took; leave the rest blank. Relaxed, tape snug not tight, same time of day each time.</div>
+      ${MEAS_SITES.map(([k, lab, lr]) => lr
+        ? `<div class="grid2" style="gap:8px;margin-bottom:8px">${inp(k + '_l', lab + ' — left', m0.cm[k + '_l'])}${inp(k + '_r', lab + ' — right', m0.cm[k + '_r'])}</div>`
+        : `<div style="margin-bottom:8px">${inp(k, lab, m0.cm[k])}</div>`).join('')}
+      <div class="eyebrow" style="margin:10px 0 6px">Your own sites</div>
+      <div id="msCustom">${customs.map(n => `<div style="margin-bottom:8px">${inp('x:' + n, n, (m0.custom || {})[n])}</div>`).join('')}</div>
+      <div class="row" style="gap:8px"><input id="msNew" class="grow" placeholder="New site, e.g. shoulders" maxlength="24"><button class="btn sm" id="msAdd">Add</button></div>`,
+    foot: `${old ? '<button class="btn danger" id="msDel">Delete</button>' : ''}<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="msSave">Save</button>`,
+    onOpen: bg => {
+      $('#msAdd', bg).onclick = () => {
+        const n = $('#msNew', bg).value.trim();
+        if (!n) return;
+        if ([...bg.querySelectorAll('[data-ms]')].some(el => el.dataset.ms === 'x:' + n)) return toast('Already there');
+        const d = document.createElement('div'); d.style.marginBottom = '8px'; d.innerHTML = inp('x:' + n, n, null);
+        $('#msCustom', bg).appendChild(d); $('#msNew', bg).value = '';
+        d.querySelector('input').focus();
+      };
+      const del = $('#msDel', bg);
+      if (del) del.onclick = () => confirmDlg('Delete these measurements?', () => { S.measures = S.measures.filter(x => x.id !== m0.id); save(); closeAllModals(); render(); }, 'Delete');
+      $('#msSave', bg).onclick = () => {
+        const cm = {}, custom = {};
+        bg.querySelectorAll('[data-ms]').forEach(el => {
+          const v = +el.value; if (!(v > 0)) return;
+          const c = Math.round(toCm(v) * 10) / 10, k = el.dataset.ms;
+          if (k.startsWith('x:')) custom[k.slice(2)] = c; else cm[k] = c;
+        });
+        if (!Object.keys(cm).length && !Object.keys(custom).length) return toast('Enter at least one measurement');
+        const rec = { id: m0.id, date: $('#msDate', bg).value || m0.date, cm, custom, mt: Date.now() };
+        S.measures = S.measures.filter(x => x.id !== rec.id); S.measures.push(rec);
+        save(); closeModal(); render(); toast('Measurements saved', 'green');
+      };
+    },
+  });
+}
+
+/* ---- progress photos: this device only ---- */
+const PHOTO_INDEX = 'ironlog.photos';
+const PHOTO_POSES = [['front', 'Front'], ['back', 'Back'], ['left', 'Left side'], ['right', 'Right side']];
+const _photoUrls = new Map();
+async function photoIndex() {
+  const raw = await storeGet(PHOTO_INDEX);
+  try { const a = typeof raw === 'string' ? JSON.parse(raw) : raw; return Array.isArray(a) ? a : []; } catch (e) { return []; }
+}
+async function photoUrl(id) {
+  if (_photoUrls.has(id)) return _photoUrls.get(id);
+  let blob = null;
+  try { blob = await idb('readonly', st => st.get('ironlog.photo.' + id)); } catch (e) { /* no IDB */ }
+  if (!(blob instanceof Blob)) return null;
+  const u = URL.createObjectURL(blob);
+  _photoUrls.set(id, u);
+  return u;
+}
+async function shrinkPhoto(file) {
+  const src = URL.createObjectURL(file);
+  try {
+    const im = await loadImage(src);
+    const k = Math.min(1, 1280 / Math.max(im.naturalWidth, im.naturalHeight));
+    const c = document.createElement('canvas');
+    c.width = Math.round(im.naturalWidth * k); c.height = Math.round(im.naturalHeight * k);
+    c.getContext('2d').drawImage(im, 0, 0, c.width, c.height);
+    const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.85));
+    return { blob, w: c.width, h: c.height };
+  } finally { URL.revokeObjectURL(src); }
+}
+async function savePhoto(file, pose, date) {
+  const { blob, w, h } = await shrinkPhoto(file);
+  if (!blob) throw new Error('could not read the image');
+  const id = uid();
+  await idb('readwrite', st => st.put(blob, 'ironlog.photo.' + id));
+  const idx = await photoIndex();
+  idx.push({ id, date, pose, w, h });
+  await idb('readwrite', st => st.put(JSON.stringify(idx), PHOTO_INDEX));
+  return id;
+}
+async function deletePhoto(id) {
+  await idb('readwrite', st => st.delete('ironlog.photo.' + id));
+  const idx = (await photoIndex()).filter(p => p.id !== id);
+  await idb('readwrite', st => st.put(JSON.stringify(idx), PHOTO_INDEX));
+  const u = _photoUrls.get(id); if (u) { URL.revokeObjectURL(u); _photoUrls.delete(id); }
+}
+async function paintPhotos(host) {
+  if (!host) return;
+  const idx = (await photoIndex()).sort((a, b) => a.date < b.date ? 1 : -1);
+  if (!document.body.contains(host)) return;
+  if (!idx.length) { host.innerHTML = 'No photos yet. Front, back and sides, same light and distance each time, make the comparison honest.'; return; }
+  const byDate = {};
+  idx.forEach(p => { (byDate[p.date] = byDate[p.date] || []).push(p); });
+  host.innerHTML = Object.entries(byDate).slice(0, 12).map(([d, ps]) => `<div style="margin-bottom:8px"><div class="sub">${fmtDate(d)}</div>
+    <div class="row wrap" style="gap:6px;margin-top:4px">${ps.map(p => `<button class="phthumb" data-photo="${esc(p.id)}" aria-label="${esc((PHOTO_POSES.find(x => x[0] === p.pose) || [0, p.pose])[1])}, ${fmtDate(d)}"><img alt=""><span>${esc((PHOTO_POSES.find(x => x[0] === p.pose) || [0, p.pose])[1])}</span></button>`).join('')}</div></div>`).join('');
+  host.querySelectorAll('[data-photo]').forEach(async b => {
+    const u = await photoUrl(b.dataset.photo);
+    if (u) b.querySelector('img').src = u;
+    b.onclick = () => openPhotoView(idx.find(p => p.id === b.dataset.photo));
+  });
+}
+function openPhotoAdd(fileInput) {
+  let pose = 'front';
+  modal({
+    title: 'Add a progress photo',
+    body: `<div class="field"><label for="phDate">Date</label><input type="date" id="phDate" value="${today()}"></div>
+      <div class="seg" id="phPose" style="margin-bottom:10px">${PHOTO_POSES.map(([k, l]) => `<button data-pose="${k}" class="${k === pose ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <div class="sub">Taken or picked from your gallery. Shrunk to 1280 px and kept only on this phone.</div>`,
+    foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="phPick">Take or choose photo</button>`,
+    onOpen: bg => {
+      bg.querySelectorAll('[data-pose]').forEach(b => b.onclick = () => { pose = b.dataset.pose; bg.querySelectorAll('[data-pose]').forEach(o => o.classList.toggle('on', o === b)); });
+      $('#phPick', bg).onclick = () => {
+        const date = $('#phDate', bg).value || today();
+        fileInput.onchange = async () => {
+          const f = fileInput.files[0]; fileInput.value = '';
+          if (!f) return;
+          try { await savePhoto(f, pose, date); closeAllModals(); render(); toast('Photo saved on this phone', 'green'); }
+          catch (e) { toast(`Couldn't save the photo — ${(e && e.message) || 'storage unavailable'}`); }
+        };
+        fileInput.click();
+      };
+    },
+  });
+}
+async function openPhotoView(p) {
+  if (!p) return;
+  const u = await photoUrl(p.id);
+  modal({
+    title: `${(PHOTO_POSES.find(x => x[0] === p.pose) || [0, p.pose])[1]} · ${fmtDate(p.date)}`,
+    body: u ? `<img src="${u}" alt="Progress photo" style="display:block;width:100%;border-radius:10px">` : '<div class="empty">This photo is missing from storage.</div>',
+    foot: `<button class="btn danger" id="phDel">Delete</button><button class="btn primary" data-close>Close</button>`,
+    onOpen: bg => {
+      $('#phDel', bg).onclick = () => confirmDlg('Delete this photo? It only exists on this phone.', async () => { await deletePhoto(p.id); closeAllModals(); render(); }, 'Delete');
+    },
+  });
+}
+async function openPhotoCompare() {
+  const idx = (await photoIndex()).sort((a, b) => a.date < b.date ? -1 : 1);
+  if (idx.length < 2) return toast('Add at least two photos to compare');
+  let pose = (PHOTO_POSES.find(([k]) => idx.filter(p => p.pose === k).length >= 2) || PHOTO_POSES[0])[0];
+  const dates = () => idx.filter(p => p.pose === pose);
+  let a = null, b = null;
+  const pickDefaults = () => { const ds = dates(); a = ds[0] ? ds[0].id : null; b = ds.length > 1 ? ds[ds.length - 1].id : null; };
+  pickDefaults();
+  const opts = sel => dates().map(p => `<option value="${esc(p.id)}" ${p.id === sel ? 'selected' : ''}>${fmtDate(p.date)}</option>`).join('');
+  const draw = () => `<div class="seg" id="pcPose" style="margin-bottom:10px">${PHOTO_POSES.map(([k, l]) => `<button data-pose="${k}" class="${k === pose ? 'on' : ''}">${l}</button>`).join('')}</div>
+    ${dates().length < 2 ? '<div class="empty">Fewer than two photos of this pose.</div>' : `<div class="grid2" style="gap:8px">
+      <div><select id="pcA" aria-label="Earlier photo">${opts(a)}</select><img id="pcImgA" alt="Earlier photo" style="display:block;width:100%;margin-top:6px;border-radius:8px"></div>
+      <div><select id="pcB" aria-label="Later photo">${opts(b)}</select><img id="pcImgB" alt="Later photo" style="display:block;width:100%;margin-top:6px;border-radius:8px"></div></div>`}`;
+  modal({
+    title: 'Compare photos',
+    body: draw(),
+    foot: `<button class="btn primary" data-close>Done</button>`,
+    onOpen: bg => {
+      const paint = async () => {
+        const ia = $('#pcImgA', bg), ib = $('#pcImgB', bg);
+        if (ia && a) ia.src = await photoUrl(a) || '';
+        if (ib && b) ib.src = await photoUrl(b) || '';
+      };
+      const bind = () => {
+        bg.querySelectorAll('[data-pose]').forEach(x => x.onclick = () => { pose = x.dataset.pose; pickDefaults(); $('.modal-body', bg).innerHTML = draw(); bind(); });
+        const sa = $('#pcA', bg), sb = $('#pcB', bg);
+        if (sa) sa.onchange = () => { a = sa.value; paint(); };
+        if (sb) sb.onchange = () => { b = sb.value; paint(); };
+        paint();
+      };
+      bind();
+    },
+  });
+}
+
 /* ============================================================
    CSV EXPORT AND ROUND-TRIP IMPORT — roadmap B7
    One row per set, readable in a spreadsheet, and exact: importing it back
@@ -13185,6 +13627,7 @@ const W98_MENUS = [
     ['Workout', () => go('workout')],
     ['Stats', () => go('analytics')],
     ['Events', () => go('meets')],
+    ['Body', () => { analyticsTab = 'body'; go('analytics'); }],
   ] },
   { label: 'Tools', items: [
     ['Settings…', () => openSettings()],
