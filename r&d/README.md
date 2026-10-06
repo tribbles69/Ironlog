@@ -27,6 +27,7 @@ All run from the repo root.
 | `node "r&d/tools/lint-scope.js"` | Finds undeclared identifiers across all script blocks |
 | `node "r&d/tools/validate-exercises.js"` | Checks `data/exercises.json` against the program and the phase 1 spec |
 | `node "r&d/tools/build-catalogue.cjs"` | Inlines `data/exercises.json` into `index.html` |
+| `python3 "r&d/tools/build-program.py"` | Rebuilds `program.json` (RIR-only, no weights) from `data/hunchback-pplul-77wk.txt`; prints the `PROGRAM_MANIFEST` line to paste into `index.html` |
 | `NODE_PATH=$(npm root -g) node "r&d/tools/skin-sheet.mjs"` | Redraws the shipped template skin and the paint guide (needs Playwright) |
 | `node "r&d/tools/build-slew.cjs" ../slew-v2` | Regenerates `slew-core.js` from the Slew source |
 

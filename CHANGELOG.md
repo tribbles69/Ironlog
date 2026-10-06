@@ -13,6 +13,21 @@ rather than guessed.
 
 ---
 
+## 0.51.0 — 6 Oct 2026
+- **Hunchback Hercules rebuilt fresh from the PDF.** Every session, set and
+  note re-read from the source, so the odd sets and muddled notes from the old
+  copy are gone (calf raises get their AMRAP set back, test and taper weeks
+  have proper names, supersets are marked in the notes).
+- **No weights in the plan — RIR decides.** Each set has its own target RIR,
+  shown in the RIR box: top sets lower, back-offs higher, AMRAPs stop 1 shy,
+  light and taper weeks easy. When you start a session the weights come from
+  your recent RIR-logged lifts; with no history yet, log the first set with
+  RIR and the rest of that lift follows from it.
+- **Reinstall fresh from today** (Settings → Training program) swaps your
+  planned sessions for a clean copy. Sessions you've trained and your meets
+  are kept.
+- Installing a program no longer adds sessions on dates already gone.
+
 ## 0.50.0 — 27 Sep 2026
 - **New Body page** (Stats → Body; in Ironlog 98 it's also under View → Body)
   with four sections.

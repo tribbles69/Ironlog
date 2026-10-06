@@ -141,25 +141,27 @@ console.log(`\n  ${names.length} names / ${totalEntries} entries resolved — ` 
             `${names.filter(n => resolve(n).via === 'alias').length} via alias, ` +
             `${names.filter(n => resolve(n).via === 'name').length} via name`);
 
-/* --------------------------------------------- 3. figures quoted in the document */
-console.log('\n=== 3. FIGURES QUOTED IN THE PHASE 1 DOCUMENT ===');
-let sets = 0, zeroRep = 0, calfLast = 0, mcpZeros = 0, mcpAllZero = 0, amrapNote = 0, amrapReal = 0;
-P.workouts.forEach(w => w.exercises.forEach(e => {
-  sets += e.sets.length;
-  const z = e.sets.filter(s => s.r === 0).length;
-  zeroRep += z;
-  if (/amrap/i.test(e.notes || '')) { amrapNote++; if (!z) amrapReal++; }
-  if (e.name === 'Smith Calf Raise') e.sets.forEach((s, i) => { if (s.r === 0 && i === e.sets.length - 1) calfLast++; });
-  if (e.name === 'Machine Chest Press' && z) { mcpZeros += z; if (e.sets.every(s => s.r === 0)) mcpAllZero++; }
-}));
-ok(P.workouts.length === 327, 'program sessions = 327');
-ok(totalEntries === 1400, 'program exercise entries = 1400');
-ok(sets === 4409, 'program sets = 4409');
-ok(zeroRep === 143, 'zero-rep sets = 143 (the spec originally said 346)');
-ok(calfLast === 100, 'Smith Calf Raise zero-rep sets that are the last set = 100');
-ok(mcpZeros === 43 && mcpAllZero === 12, 'Machine Chest Press = 43 zeros across 12 entirely-zero entries');
-ok(amrapNote === 355, 'entries mentioning AMRAP in notes = 355');
-ok(amrapReal === 243, 'of those, storing a real rep count = 243');
+/* --------------------------------------------- 3. the program file
+   The phase 1 figures (327 sessions, 4409 sets, 143 zero-rep sets standing in
+   for AMRAPs) described the first auto-converted program. 0.51.0 rebuilt it
+   with r&d/tools/build-program.py: no weights, a target RIR on every set, and
+   AMRAPs as a set type instead of r: 0. These check that shape. */
+console.log('\n=== 3. THE PROGRAM FILE ===');
+let sets = 0, weighted = 0, zeroRep = 0, badT = 0, amraps = 0, amrapWithReps = 0;
+P.workouts.forEach(w => w.exercises.forEach(e => e.sets.forEach(s => {
+  sets++;
+  if (s.w != null) weighted++;
+  if (s.r === 0) zeroRep++;
+  if (!(Number.isInteger(s.t) && s.t >= 0 && s.t <= 5)) badT++;
+  if (s.type === 'amrap') { amraps++; if (s.r != null) amrapWithReps++; }
+})));
+ok(P.loads === 'rir', 'program declares loads: "rir"');
+ok(P.workouts.length === 333, 'program sessions = 333');
+ok(totalEntries > 1300, `program exercise entries = ${totalEntries}`);
+ok(weighted === 0, `no planned weights (${weighted} of ${sets} sets carry one)`);
+ok(badT === 0, `every set has a whole-number target RIR (${badT} without)`);
+ok(zeroRep === 0, 'no zero-rep sets — AMRAPs are a set type now');
+ok(amraps > 0 && amrapWithReps === 0, `AMRAP sets have no rep count (${amraps} AMRAPs)`);
 // 104 in phase 1, + 12 strongman movements in B1 (r&d/specs/strongman-spec.md), + 3 in D2 (Larsen, TruSquat, pendulum)
 ok(M.length === 119, 'catalogue movements = 119 (104 + 12 strongman + 3 strength library)');
 ok(M.filter(m => m.attachments).length === 29, 'movements with attachments = 29');

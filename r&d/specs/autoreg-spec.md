@@ -97,3 +97,29 @@ via `rirToRpe`, as ever.
 - VBT input (item 7) — `autoE1()` is the hook.
 - Changing `program.json` itself. The plan keeps its weights; they're the
   fallback and they still drive the fixed blocks.
+
+---
+
+## Plans with no weights (0.51.0)
+
+A program with `"loads": "rir"` carries no weights at all (`w: null`). Each set
+has its own target RIR `t`, and an AMRAP that runs at the previous set's weight
+is marked `like: "prev"`. Installed sessions keep `loads: "rir"`, the set role
+(`top` / `backoff` / `amrap`), `t` and `like`.
+
+- **Every block autoregulates** — there are no planned weights to keep, so the
+  fixed-block rule doesn't apply. Light weeks are light through their RIR
+  (3–4). A meet run-in block (C6) whose kind turns autoregulation off still
+  wins.
+- **Starting:** each set's load is `load(e1, s.r, s.t)` from the working e1.
+  No history: weights stay blank (the field shows last time's number) until
+  the first RIR-logged set, then set-to-set adjustment fills the rest.
+- **Set to set:** each open auto set is re-read from today's e1 at its own
+  reps and RIR, capped at ±7.5 % per step when it already has a weight.
+- The RIR box's placeholder is the set's own `t`.
+
+The Hunchback Hercules program is built this way by
+`r&d/tools/build-program.py` from `r&d/data/hunchback-pplul-77wk.txt`. Top-set
+RIR follows the doc's RPE anchors (volume 8 → RIR 2, strength 9 → RIR 1);
+back-off RIR is worked out from the doc's top/back-off gap at build time, capped
+at 4; accessories RIR 2; AMRAPs stop 1 shy.

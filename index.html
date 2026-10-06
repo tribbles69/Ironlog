@@ -1234,12 +1234,12 @@ html[data-skin="win98"] .summary-hero .t{font-family:var(--w-mono)}
      inlined because it is generated: a build artefact in the middle of
      index.html makes every diff of this file unreadable. -->
 <script src="slew-core.js"></script>
-<script>/* Auto-generated from Hunchback_Hercules_PPLUL_77wk.pdf — do not hand-edit.
+<script>/* Auto-generated from Hunchback_Hercules_PPLUL_77wk.pdf by r&d/tools/build-program.py — do not hand-edit.
    Loaded by index.html; installed from Settings → Training program. */
 /* The program itself lives in program.json — 334 KB that only someone who
    installs it ever needs to download. This manifest is what Settings renders,
    so the row costs nothing until the file is actually wanted. */
-const PROGRAM_MANIFEST = {"id": "hunchback-hercules-pplul-77", "name": "Hunchback Hercules · PPLUL", "subtitle": "77 weeks · 13 Jul 2026 – 2 Jan 2028 · 93 kg Raw Classic", "sessions": 327, "meets": 2, "from": "2026-07-13", "to": "2027-12-20"};
+const PROGRAM_MANIFEST = {"id": "hunchback-hercules-pplul-77", "name": "Hunchback Hercules · PPLUL", "subtitle": "77 weeks · 13 Jul 2026 – 2 Jan 2028 · 93 kg Raw Classic · RIR-driven", "sessions": 333, "meets": 2, "from": "2026-07-13", "to": "2027-12-30"};
 </script>
 <script>/* ============================================================
    IRONLOG — powerlifting logger
@@ -1972,7 +1972,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.50.0';
+const APP_VERSION = '0.51.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -5334,7 +5334,7 @@ function exerciseCard(e, ei) {
   const stall = kind === 'reps' ? stallFor(exKey(e)) : null;
   const autoLine = e.auto || stall ? `<div class="row wrap" style="gap:6px;margin-top:6px">
       ${e.auto ? `<span class="chip blue" title="Loads set from RIR">⟳ AUTO · target RIR ${e.auto.t}</span>
-        <span class="sub">${e.auto.day ? `today e1 ${wt(e.auto.day)}` : e.auto.e1 ? `working e1 ${wt(e.auto.e1)}` : 'plan weights until RIR is logged'}</span>` : ''}
+        <span class="sub">${e.auto.day ? `today e1 ${wt(e.auto.day)}` : e.auto.e1 ? `working e1 ${wt(e.auto.e1)}` : e.auto.rir ? 'log the first set with RIR — the rest follow from it' : 'plan weights until RIR is logged'}</span>` : ''}
       ${stall ? `<span class="chip" style="color:var(--gold)" title="No e1RM gain over the last ${stall.n} sessions — consider a deload or a variation">⚠ Stalled · ${stall.n} sessions</span>` : ''}
     </div>` : '';
   const rirPh = e.auto ? String(e.auto.t) : '—';
@@ -5399,7 +5399,7 @@ function exerciseCard(e, ei) {
       <td class="c-pl">${s.w > 0 ? `<button class="plbtn" data-plates="${ei}.${si}" title="Plates">▤</button>` : ''}</td>
       <td>${sidesOn && s.sides ? `<span class="mono sidecount" data-sc="${ei}.${si}" title="Counted: the weaker side">${s.r || '—'}</span>`
         : `<input type="number" inputmode="numeric" data-f="r" data-k="${ei}.${si}" value="${s.r || ''}" placeholder="${s.setType === 'amrap' ? 'max' : p && p.r > 0 ? p.r : '0'}">`}</td>
-      <td><input type="number" step="1" inputmode="numeric" data-f="rpe" data-k="${ei}.${si}" value="${s.rpe == null ? '' : rpeToRir(s.rpe)}" placeholder="${rirPh}"></td>
+      <td><input type="number" step="1" inputmode="numeric" data-f="rpe" data-k="${ei}.${si}" value="${s.rpe == null ? '' : rpeToRir(s.rpe)}" placeholder="${s.t != null && !s.done ? s.t : rirPh}"></td>
       ${chk}
     </tr>${sidesOn && s.sides ? sideRow(e, ei, si, s, p) : ''}`;
   }).join('');
@@ -8206,17 +8206,26 @@ function installProgram(P, startDate) {
   }
   const slots = {};
   let added = 0;
+  const from = today();
   P.workouts.forEach((w, i) => {
     const date = sessionDate(P, w, start);
     const slot = (slots[date] = (slots[date] || 0) + 1);
     const id = progWorkoutId(P, w, date, slot);
     // both forms, so a plan installed before 0.10 is not installed twice over
     if (existing.has(id) || existing.has(legacyProgWorkoutId(P, i))) return;
+    if (date < from) return;   // a session already gone by isn't a plan any more
     S.workouts.push({
       id, date, name: w.name, status: 'planned', prog: P.id, block: w.block,
+      ...(P.loads === 'rir' ? { loads: 'rir' } : {}),
       exercises: w.exercises.map(e => ({
         leaf: (resolveName(e.name) || {}).leaf || completeLeaf(customMovementFor(e.name), null), legacyName: e.name, notes: e.notes || '', mods: modsFromNote(e.notes),
-        sets: e.sets.map(s => ({ w: s.w, r: s.r, rpe: null, done: false, setType: 'working' })),
+        sets: e.sets.map(s => {
+          const o = { w: s.w || 0, r: s.r, rpe: null, done: false,
+                      setType: ['top', 'backoff', 'amrap'].includes(s.type) ? s.type : 'working' };
+          if (s.t != null) o.t = s.t;          // this set's target RIR
+          if (s.like === 'prev') o.like = 'prev';   // an AMRAP at the weight of the set before it
+          return o;
+        }),
       })),
     });
     added++;
@@ -8307,6 +8316,7 @@ async function openProgram() {
         <div class="hr"></div>
         <p class="sub" style="margin-top:0">Removing clears only the <b>planned</b> sessions — sessions you've already
         trained stay in your history and analytics.</p>
+        <button class="btn wide" id="pgFresh" style="margin-bottom:8px">Reinstall fresh from today</button>
         <button class="btn danger wide" id="pgRemove">Remove planned sessions</button>`
       : `<p class="sub">Installs <b>${P.workouts.length}</b> planned sessions${(P.meets || []).length ? ` and ${P.meets.length} meets` : ''},
          and sets your priority lifts to ${esc((P.priority || []).join(', '))}.</p>
@@ -8320,6 +8330,14 @@ async function openProgram() {
         closeAllModals(); render();
         toast(`${n} sessions added to your calendar`, 'green');
       };
+      const fr = $('#pgFresh', bg);
+      if (fr) fr.onclick = () => confirmDlg(
+        `Replace your ${st.planned} planned sessions with a clean copy of ${P.name}, from today on? Anything you've already trained is kept.`,
+        () => {
+          // planned sessions only — trained ones and the meets (with anything typed into them) stay
+          S.workouts = S.workouts.filter(w => !(w.prog === P.id && w.status === 'planned'));
+          const n = installProgram(P); closeAllModals(); render(); toast(`${n} sessions reinstalled`, 'green'); },
+        'Reinstall');
       const rm = $('#pgRemove', bg);
       if (rm) rm.onclick = () => confirmDlg(
         `Remove ${st.planned} planned sessions from ${P.name}? Completed sessions are kept.`,
@@ -11146,6 +11164,10 @@ const AUTO = { window: 3, stallN: 5, stepCap: 0.075, defaultRir: 2 };
 const FIXED_BLOCK = /deload|prep|peak|test|meet|taper|opener|recovery|light|wedding|holiday|last heavy|speed|technique|re-entry|transition/i;
 function autoBlock(wo) {
   if (!wo) return false;
+  if (wo.loads === 'rir') {                 // no planned weights at all: RIR is the only way to a load
+    const a = wo.date ? activeBlock(wo.date) : null;
+    return !a || a.kind.auto;
+  }
   // a meet run-in (C6) is the lifter's own intent and wins over a program's week name
   const a = wo.date ? activeBlock(wo.date) : null;
   if (a) return a.kind.auto && (!wo.prog || !!(wo.block && !FIXED_BLOCK.test(wo.block)));
@@ -11222,6 +11244,7 @@ function stallFor(key) {
 function applyAuto(wo) {
   if (!autoBlock(wo)) return;
   const ab = activeBlock(wo.date || today());
+  if (wo.loads === 'rir') return applyAutoRir(wo, ab);
   wo.exercises.forEach(e => {
     if (!e.leaf || kindOf(e) !== 'reps') return;
     const work = e.sets.filter(s => isWorking(s) && s.w > 0 && s.r > 0);
@@ -11237,6 +11260,33 @@ function applyAuto(wo) {
   });
 }
 
+/* A plan with no weights (program `loads: "rir"`): each set carries its own
+   target RIR (`s.t`), and its load is read straight off the working e1 at its
+   reps and that RIR. No history yet → the weights stay blank (the field shows
+   last time's number) and set-to-set adjustment fills them from the first
+   RIR-logged set. */
+function setLoadFor(e, x, e1) {
+  return roundLoadFor(loadFor(e1, x.r, x.t != null ? x.t : e.auto.t), e.leaf);
+}
+function likePrev(e) {
+  e.sets.forEach((x, i) => { if (x.like === 'prev' && x.auto && !x.done && i > 0 && e.sets[i - 1].w > 0) x.w = e.sets[i - 1].w; });
+}
+function applyAutoRir(wo, ab) {
+  wo.exercises.forEach(e => {
+    if (!e.leaf || kindOf(e) !== 'reps') return;
+    const work = e.sets.filter(s => isWorking(s) && !(s.w > 0) && (s.r > 0 || s.like === 'prev'));
+    if (!work.length) return;
+    const first = work.find(s => s.r > 0) || work[0];
+    const t = first.t != null ? first.t : targetRirFor(e, ab ? ab.kind.rir : null);
+    const e1 = autoE1(exKey(e));
+    e.auto = { t, e1: e1 ? Math.round(e1 * 10) / 10 : null, rir: true, topR: first.r };
+    work.forEach(s => { s.auto = true; });
+    if (!e1) return;
+    work.forEach(s => { if (s.r > 0) s.w = setLoadFor(e, s, e1); });
+    likePrev(e);
+  });
+}
+
 /* After a working set is ticked with RIR: re-set the remaining auto sets
    from today's own e1, capped per step. Returns what moved, for the toast. */
 function autoAdjust(e, s) {
@@ -11244,6 +11294,17 @@ function autoAdjust(e, s) {
   const day = median(e.sets.filter(x => x.done && isPRSet(x) && x.w > 0 && x.r > 0 && x.rpe >= 5).map(x => e1rm(x.w, x.r, x.rpe)));
   if (!day) return null;
   e.auto.day = Math.round(day * 10) / 10;
+  if (e.auto.rir) {
+    let moved = null;
+    e.sets.forEach(x => {
+      if (x.done || !x.auto || !(x.r > 0)) return;
+      const want = loadFor(day, x.r, x.t != null ? x.t : e.auto.t);
+      const capped = x.w > 0 ? roundLoadFor(clamp(want, x.w * (1 - AUTO.stepCap), x.w * (1 + AUTO.stepCap)), e.leaf) : roundLoadFor(want, e.leaf);
+      if (capped !== x.w) { moved = moved || { from: x.w || 0, to: capped }; x.w = capped; }
+    });
+    likePrev(e);
+    return moved;
+  }
   const dayTop = loadFor(day, e.auto.topR, e.auto.t);
   let moved = null;
   e.sets.forEach(x => {
