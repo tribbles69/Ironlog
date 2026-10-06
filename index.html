@@ -1972,7 +1972,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.51.0';
+const APP_VERSION = '0.51.1';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -9418,18 +9418,47 @@ function attachVbt(ei, v, est) {
    the day's e1RM, shown as a range because a phone is not a transducer.
    Pocket readings are shown but never fitted.
    ============================================================ */
-function lvFit(points) {
-  const pts = (points || []).filter(p => p.place !== 'pocket' && p.kg > 0 && p.v > 0);
-  if (pts.length < 3) return null;
-  const kgs = pts.map(p => p.kg), maxKg = Math.max(...kgs), minKg = Math.min(...kgs);
-  if ((maxKg - minKg) / maxKg < 0.15) return null;   // too narrow a ramp to draw a line through
-  const n = pts.length, mx = kgs.reduce((a, b) => a + b, 0) / n, my = pts.reduce((a, p) => a + p.v, 0) / n;
+function lvLine(pts) {
+  const n = pts.length, mx = pts.reduce((a, p) => a + p.kg, 0) / n, my = pts.reduce((a, p) => a + p.v, 0) / n;
   let sxy = 0, sxx = 0;
   pts.forEach(p => { sxy += (p.kg - mx) * (p.v - my); sxx += (p.kg - mx) ** 2; });
-  const b = sxy / sxx, a = my - b * mx;
-  if (!(b < 0)) return null;                          // faster as it gets heavier: a bad recording
+  const b = sxx ? sxy / sxx : 0, a = my - b * mx;
   const rse = n > 2 ? Math.sqrt(pts.reduce((s, p) => s + (p.v - (a + b * p.kg)) ** 2, 0) / (n - 2)) : 0;
-  return { a, b, n, rse, heavy: maxKg, light: minKg };
+  return { a, b, rse };
+}
+/* Outliers: heavier can't be faster. A point more than LV_SLACK m/s faster
+   than a lighter one breaks that — usually a first warm-up rep that wasn't
+   moved with intent, or the next one ramped up. Of the points in such a clash,
+   the one whose removal leaves the tightest line is left out; repeat while a
+   clash remains and more than three points are left. Points that only bend
+   the line (the heaviest warm-up slowing down a lot) are real and stay. */
+const LV_SLACK = 0.05;
+function lvOutliers(pts) {
+  let keep = pts.slice();
+  const out = [];
+  while (keep.length > 3) {
+    const sus = new Set();
+    keep.forEach(p => keep.forEach(q => { if (q.kg > p.kg && q.v > p.v + LV_SLACK) { sus.add(p); sus.add(q); } }));
+    if (!sus.size) break;
+    let best = null;
+    sus.forEach(p => {
+      const rest = keep.filter(x => x !== p), f = lvLine(rest);
+      if (!best || f.rse < best.rse) best = { p, rse: f.rse };
+    });
+    keep = keep.filter(x => x !== best.p);
+    out.push(best.p);
+  }
+  return { keep, out };
+}
+function lvFit(points) {
+  const all = (points || []).filter(p => p.place !== 'pocket' && p.kg > 0 && p.v > 0);
+  if (all.length < 3) return null;
+  const { keep: pts, out } = lvOutliers(all);
+  const kgs = pts.map(p => p.kg), maxKg = Math.max(...kgs), minKg = Math.min(...kgs);
+  if ((maxKg - minKg) / maxKg < 0.15) return null;   // too narrow a ramp to draw a line through
+  const { a, b, rse } = lvLine(pts);
+  if (!(b < 0)) return null;                          // faster as it gets heavier: a bad recording
+  return { a, b, n: pts.length, rse, heavy: maxKg, light: minKg, out };
 }
 /* The day's e1RM for an entry: where today's line meets the MVT, as a range. */
 function lvDay(e) {
@@ -9440,6 +9469,7 @@ function lvDay(e) {
   const mid = (mvt - f.a) / f.b;
   if (!(mid > f.heavy)) return null;                  // the line says the heaviest warm-up was already a max: not believable
   const pctHeavy = f.heavy / mid * 100;
+  if (pctHeavy < 35) return null;                     // nearly flat: reaching a max from here is guesswork
   const half = 4 + (f.rse / Math.abs(f.b)) / mid * 100 + Math.max(0, 80 - pctHeavy) * 0.5;
   return { mid, lo: mid * (1 - half / 100), hi: mid * (1 + half / 100), half, pctHeavy, mvt, fit: f, liftId };
 }
@@ -9510,7 +9540,7 @@ function lvChart(e) {
     ${d ? `<rect x="${X(d.lo).toFixed(1)}" y="${(Y(mvt) - 5).toFixed(1)}" width="${Math.max(2, X(d.hi) - X(d.lo)).toFixed(1)}" height="10" class="lv-band"/>` : ''}
     ${stored ? line(stored.a, stored.b, 'lv-stored', true) : ''}
     ${d ? line(d.fit.a, d.fit.b, 'lv-today') : ''}
-    ${pts.map(p => `<circle cx="${X(p.kg).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="4" class="${p.place === 'pocket' ? 'lv-pt hollow' : 'lv-pt'}"/>`).join('')}
+    ${pts.map(p => `<circle cx="${X(p.kg).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="4" class="${p.place === 'pocket' || (d && d.fit.out.includes(p)) ? 'lv-pt hollow' : 'lv-pt'}"/>`).join('')}
   </svg>`;
 }
 function lvPanel(e, ei) {
@@ -9519,13 +9549,15 @@ function lvPanel(e, ei) {
   const liftId = e.leaf ? slewLiftFor(e.leaf) : null;
   if (!liftId) return `<div class="vbtstrip"><div class="sub">Warm-up profile needs a lift Ironlog has a velocity model for (squat, bench, deadlift, press, rows).</div></div>`;
   const d = lvDay(e), rd = lvReadiness(e), sg = lvSuggest(e);
+  const lvFitNow = lvFit(pts), lvOut = (lvFitNow && lvFitNow.out) || [];
   const personal = ((S.settings.slewProfiles || {})[liftId] || {}).v0Obs;
   const bar = pts.filter(p => p.place !== 'pocket').length;
   return `<div class="vbtstrip lvpanel">
     <div class="row between"><b>Warm-up profile</b><span class="sub" style="font-size:11px">${esc(liftId)} · limit ${mvtFor(liftId).toFixed(2)} m/s ${personal && personal.length ? '(yours)' : '(population)'}</span></div>
-    ${pts.length ? `<div class="row wrap" style="gap:5px;margin:6px 0">${pts.map(p => `<span class="chip${p.place === 'pocket' ? '' : ' blue'}" title="${p.place === 'pocket' ? 'pocket — not fitted' : ''}">${nice(dw(p.kg))} · ${p.v.toFixed(2)}</span>`).join('')}</div>` : ''}
+    ${pts.length ? `<div class="row wrap" style="gap:5px;margin:6px 0">${pts.map(p => { const o = lvOut.includes(p); return `<span class="chip${p.place === 'pocket' || o ? '' : ' blue'}" title="${p.place === 'pocket' ? 'pocket — not fitted' : o ? 'left out — faster than a lighter warm-up' : ''}"${o ? ' style="text-decoration:line-through;opacity:.6"' : ''}>${nice(dw(p.kg))} · ${p.v.toFixed(2)}</span>`; }).join('')}</div>` : ''}
+    ${lvOut.length ? `<div class="sub" style="margin-bottom:4px">Left out ${lvOut.map(p => `${nice(dw(p.kg))} ${U()} · ${p.v.toFixed(2)}`).join(', ')} — faster than a lighter warm-up, so the line ignores ${lvOut.length > 1 ? 'them' : 'it'}.</div>` : ''}
     ${d ? `<div style="font-size:15px;margin:4px 0">e1RM today <b>${nice(dw(d.lo, 0))}–${nice(dw(d.hi, 0))}</b> ${U()} <span class="sub">±${d.half.toFixed(0)}%${d.pctHeavy < 80 ? ` · heaviest warm-up ${d.pctHeavy.toFixed(0)}% — go a little heavier to tighten it` : ''}</span></div>`
-      : `<div class="sub" style="margin:4px 0">${bar < 3 ? `Measure ${3 - bar} more warm-up${3 - bar === 1 ? '' : 's'} on the bar — 1–2 fast reps each, rising weight.` : 'The warm-ups are too close together or the line doesn\'t slope down — add a heavier one.'}</div>`}
+      : `<div class="sub" style="margin:4px 0">${bar < 3 ? `Measure ${3 - bar} more warm-up${3 - bar === 1 ? '' : 's'} on the bar — 1–2 fast reps each, rising weight.` : 'The warm-ups are too close together, or the speed barely drops across them — add a heavier one.'}</div>`}
     ${rd ? `<div class="sub">Bar speed ${rd.word} (${rd.diff > 0 ? '+' : ''}${rd.diff.toFixed(0)}% at ${wt(d.fit.heavy)})${rd.storedE1 ? ` · usual e1RM ${wt(rd.storedE1, 0)}` : ''}</div>` : d ? '<div class="sub">No stored profile yet — finishing today saves one.</div>' : ''}
     ${sg ? `<div class="row between" style="margin-top:6px;gap:8px"><span>Set ${sg.si + 1}: <b>${wt(sg.kg)} × ${sg.r}</b> <span class="sub">@ RIR ${sg.t}</span></span>
       <button class="btn xs primary" data-lvuse="${ei}">Use it</button></div>` : ''}

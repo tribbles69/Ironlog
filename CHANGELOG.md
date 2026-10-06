@@ -13,6 +13,13 @@ rather than guessed.
 
 ---
 
+## 0.51.1 — 6 Oct 2026
+- **Warm-up profile ignores a rogue rep.** A warm-up that moved faster than a
+  lighter one (a first set you didn't push, say) is left out of the line. It
+  shows struck through, with a note saying why.
+- If the remaining warm-ups barely slow down, no e1RM is shown instead of a
+  silly one. Add a heavier warm-up to get a reading.
+
 ## 0.51.0 — 6 Oct 2026
 - **Hunchback Hercules rebuilt fresh from the PDF.** Every session, set and
   note re-read from the source, so the odd sets and muddled notes from the old

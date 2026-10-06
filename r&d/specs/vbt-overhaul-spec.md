@@ -116,3 +116,11 @@ validated app, and the error recorded.
 - Camera VBT.
 - Bluetooth transducers.
 - Using VBT to auto-fill RIR beyond what Measure already does.
+
+### Outliers (0.51.1)
+`lvFit` leaves out points that break "heavier can't be faster": a point more
+than 0.05 m/s faster than a lighter one. Of the clashing points, the one whose
+removal leaves the tightest line goes; repeat while a clash remains and more
+than three points are left. Left-out points are struck through in the chips
+and hollow on the chart. `lvDay` also returns nothing when the heaviest
+warm-up is under 35 % of the projected max (a near-flat line).
