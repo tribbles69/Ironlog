@@ -18,6 +18,10 @@ rather than guessed.
   already gets plenty from the two heavy pull days. To update sessions you've
   already installed, use Settings → Training program → Manage → Reinstall fresh
   from today (anything you've trained is kept).
+- **WDC Records, Pull days:** A-week Pull drops the shrugs and the trap bar
+  hold (the pull's lockout already out-loads a shrug) for a heavier
+  chest-supported row and lat pulldowns. B-week Pull now starts with the grip
+  hold while you're fresh, and the shrugs there go up to 12 reps.
 
 ## 0.52.0 — 19 Oct 2026
 - **New program: WDC Records · A/B PPLUL.** Eight weeks built around the

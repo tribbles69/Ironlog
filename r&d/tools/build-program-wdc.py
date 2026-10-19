@@ -93,11 +93,12 @@ def a_week(wk):
         ex('Rope Pushdown', reps(3, 10, 1), 'superset with Low to High Cable Fly'),
     ])
     pull = ('Pull', [
+        # No shrugs or grip hold here (19 Oct): the pull's lockout out-loads any
+        # shrug, and grip work after it only measures fatigue.
         ex('Rack Pull', trap_sets, trap_note + ' Straps on.', equipment='trap_bar'),
-        ex('Trap Bar Deadlift', hold(2), 'Max-time hold at lockout, heaviest you pulled today minus 10%. Straps off: grip work.', iso=True),
-        ex('Barbell Shrug', reps(3, 5, t)),
-        ex('Seated Cable Row', reps(3, 8, 2), 'superset with Hammer Curl'),
-        ex('Hammer Curl', reps(2, 10, 1), 'superset with Seated Cable Row'),
+        ex('Chest Supported Row', reps(4, 6, t)),
+        ex('Lat Pulldown', reps(3, 8, 2), 'superset with Hammer Curl'),
+        ex('Hammer Curl', reps(2, 10, 1), 'superset with Lat Pulldown'),
     ])
     legs = ('Legs', [
         ex('Hack Squat', reps(4, 5, t)),
@@ -134,11 +135,11 @@ def b_week(wk):
         ex('DB Lat Raise', reps(n, 15, 1), 'superset with Overhead Tricep Extension'),
     ])
     pull = ('Pull', [
-        ex('Lat Pulldown', reps(n, 10, t)),
-        ex('Seated Cable Row', reps(n, 10, t)),
-        ex('Smith Shrug', reps(n, 10, t)),
+        ex('Deadlift', hold(2), 'GRIP, done first while fresh: double-overhand hold at bodyweight on the bar, max time. No straps, no hook.', iso=True),
+        ex('Lat Pulldown', reps(n, 10, t), 'straps if grip is gone'),
+        ex('Seated Cable Row', reps(n, 10, t), 'straps if grip is gone'),
+        ex('Smith Shrug', reps(n, 12, t), 'traps volume day'),
         ex('Face Pull', reps(n, 15, 1), 'two D-handles', attachment='dual_handle'),
-        ex('Deadlift', hold(2), 'GRIP: double-overhand hold at bodyweight on the bar, max time. No straps, no hook.', iso=True),
     ])
     legs = ('Legs', [
         ex('Sled Leg Press', top_then_backoff(6, t, n - 1, 8, t + 1), 'main lift'),
