@@ -18,7 +18,7 @@ Rules agreed in that chat:
 Run from the repo root:  python3 "r&d/tools/build-program-wdc.py"
 Then paste the printed manifest over PROGRAM_MANIFEST in index.html.
 """
-import json, os
+import json, os, datetime
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
 CAT = json.load(open(os.path.join(ROOT, 'r&d', 'data', 'exercises.json')))
@@ -30,6 +30,9 @@ for m in CAT['movements']:
         BY_NAME.setdefault(a['name'].lower(), m)
 
 WEEKS = 8
+# Fixed start so installing lands sessions on real dates with no question.
+# Aaron chose to start (and test) the week of 19 Oct 2026, going into a bulk.
+START = datetime.date(2026, 10, 19)   # a Monday
 
 
 def ex(name, sets, notes='', equipment=None, attachment=None, iso=False):
@@ -172,13 +175,13 @@ workouts = []
 for wk in range(1, WEEKS + 1):
     days = a_week(wk) if wk % 2 else b_week(wk)
     for d, (label, exs) in enumerate(days, 1):
-        workouts.append({'week': wk, 'day': d, 'name': f'Wk {wk} · {label}', 'block': block(wk), 'exercises': exs})
+        date = START + datetime.timedelta(days=(wk - 1) * 7 + (d - 1))
+        workouts.append({'date': date.isoformat(), 'name': f'Wk {wk} · {label}', 'block': block(wk), 'exercises': exs})
 
 program = {
     'id': 'wdc-records-ab-1',
     'name': 'WDC Records · A/B PPLUL',
-    'subtitle': '8 weeks · 16 in trap 500 kg / 21 in Viking 400 kg · 90 kg class · RIR-driven',
-    'weekdays': [1, 2, 3, 4, 5],
+    'subtitle': '8 weeks from 19 Oct · bulk · 16 in trap 500 kg / 21 in Viking 400 kg · 90 kg class · RIR-driven',
     'loads': 'rir',
     'meets': [],
     'workouts': workouts,
