@@ -13,6 +13,11 @@ rather than guessed.
 
 ---
 
+## 0.52.2 — 19 Oct 2026
+- **WDC Records, A-week Legs:** hack squat swapped for Smith squat 4×5 (the
+  gym has no hack squat). Leg press stays the B-week main lift. Reinstall
+  fresh from today to pick it up.
+
 ## 0.52.1 — 19 Oct 2026
 - **WDC Records:** back extensions are gone from A-week Friday. Your lower back
   already gets plenty from the two heavy pull days. To update sessions you've
