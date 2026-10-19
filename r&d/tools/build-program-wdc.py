@@ -101,7 +101,7 @@ def a_week(wk):
         ex('Hammer Curl', reps(2, 10, 1), 'superset with Lat Pulldown'),
     ])
     legs = ('Legs', [
-        ex('Hack Squat', reps(4, 5, t)),
+        ex('Back Squat', reps(4, 5, t), 'Smith, full depth. Gym has no hack squat.', equipment='smith'),
         ex('Farmers Carry', carry(3, 20, 1), 'heavy, 20 m'),
         ex('Smith Calf Raise', reps(3, 8, 1), 'superset with Tibialis Raise'),
         ex('Tibialis Raise', reps(3, 12, 1), 'superset with Smith Calf Raise'),
