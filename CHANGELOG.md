@@ -13,6 +13,21 @@ rather than guessed.
 
 ---
 
+## 0.52.0 — 19 Oct 2026
+- **New program: WDC Records · A/B PPLUL.** Eight weeks built around the
+  16 in trap bar and 21 in Viking deadlift records, with big back work, incline
+  on A-week Monday and overhead press on A-week Thursday. It starts the week of
+  19 Oct with the baseline tests, through to 11 Dec. Install it from
+  Settings → Training program.
+- Programs can now plan **holds** (timed or max time) and **carries** (with the
+  distance filled in), and can say which equipment a lift uses — a trap bar
+  rack pull and a Smith incline land as those, not the barbell defaults.
+- **Old program, still removable.** Hunchback Hercules shows under the new one
+  in Settings with a Remove button for its planned sessions. Anything you've
+  trained stays.
+- Fixed: exercises a program adds that aren't in the catalogue (Landmine Press,
+  Tibialis Raise) now show their proper name.
+
 ## 0.51.1 — 6 Oct 2026
 - **Warm-up profile ignores a rogue rep.** A warm-up that moved faster than a
   lighter one (a first set you didn't push, say) is left out of the line. It
