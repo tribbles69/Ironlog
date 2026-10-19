@@ -116,7 +116,6 @@ def a_week(wk):
         ex('Rack Pull', vik_sets, vik_note + ' Straps on.'),
         ex('Rack Pull', hold(3, 5), 'ISOMETRIC: bar under the pins at the 21 in start height, pull as hard as you can for 5 s. No plates needed. Rest 2 min.', iso=True),
         ex('Hip Thrust', reps(3, 5, 1), equipment='smith'),
-        ex('Back Extension', reps(3, 10, 2)),
     ])
     return [push, pull, legs, upper, lower]
 

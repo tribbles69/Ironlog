@@ -13,6 +13,12 @@ rather than guessed.
 
 ---
 
+## 0.52.1 — 19 Oct 2026
+- **WDC Records:** back extensions are gone from A-week Friday. Your lower back
+  already gets plenty from the two heavy pull days. To update sessions you've
+  already installed, use Settings → Training program → Manage → Reinstall fresh
+  from today (anything you've trained is kept).
+
 ## 0.52.0 — 19 Oct 2026
 - **New program: WDC Records · A/B PPLUL.** Eight weeks built around the
   16 in trap bar and 21 in Viking deadlift records, with big back work, incline
