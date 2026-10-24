@@ -1,0 +1,8349 @@
+{
+ "id": "hunchback-hercules-general-strength",
+ "name": "Hunchback Hercules · General Strength",
+ "subtitle": "18 weeks · PPLUL A/B · trap bar, Smith squat, strict press total · RIR-driven",
+ "priority": [
+  "Smith Squat",
+  "Strict Press",
+  "Trap Bar Deadlift"
+ ],
+ "meets": [],
+ "loads": "rir",
+ "weekdays": [
+  1,
+  2,
+  3,
+  4,
+  5
+ ],
+ "workouts": [
+  {
+   "week": 1,
+   "day": 1,
+   "name": "Wk 1 · Push A",
+   "block": "A - HEAVY",
+   "exercises": [
+    {
+     "name": "Strict Press",
+     "notes": "main lift · rest 3 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "or Machine Chest Press if wrists complain",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rope Pushdown",
+     "notes": "superset with DB Lat Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "DB Lat Raise",
+     "notes": "superset with Rope Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 1,
+   "day": 2,
+   "name": "Wk 1 · Pull A",
+   "block": "A - HEAVY",
+   "exercises": [
+    {
+     "name": "Seated Cable Row",
+     "notes": "superset with Face Pull",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with cable row",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Shrug",
+     "notes": "tracked secondary",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Lat Pulldown",
+     "notes": "long range: full stretch at the top",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 1,
+   "day": 3,
+   "name": "Wk 1 · Legs A",
+   "block": "A - HEAVY",
+   "exercises": [
+    {
+     "name": "Smith Squat",
+     "notes": "main lift · to your filmed depth standard · squat shoes · rest 3–4 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Leg Extension",
+     "notes": "superset with Leg Curl",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Leg Curl",
+     "notes": "superset with Leg Extension",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Calf Raise",
+     "notes": "2 s pause at stretch",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 1,
+   "day": 4,
+   "name": "Wk 1 · Upper A",
+   "block": "A - HEAVY",
+   "exercises": [
+    {
+     "name": "Flat DB Press",
+     "notes": "tracked secondary press · rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    },
+    {
+     "name": "Smith Close Grip Bench",
+     "notes": "triceps focus · rest 2 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Cable Crossover",
+     "notes": "superset with Face Pull · work from the stretched position",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with Cable Crossover",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 1,
+   "day": 5,
+   "name": "Wk 1 · Lower A",
+   "block": "A - HEAVY",
+   "exercises": [
+    {
+     "name": "Trap Bar Deadlift",
+     "notes": "main lift · strip plates rather than reload · rest 3–4 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Romanian Deadlift",
+     "notes": "the variant you tolerate; swap equipment freely",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Leg Curl",
+     "notes": "superset with Hip Adduction",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Hip Adduction",
+     "notes": "superset with Leg Curl",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 2,
+   "day": 1,
+   "name": "Wk 2 · Push B",
+   "block": "B - VOLUME",
+   "exercises": [
+    {
+     "name": "Strict Press",
+     "notes": "technique volume · rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Machine Chest Press",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Tricep Bar Pushdown",
+     "notes": "superset with Cable Lat Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Cable Lat Raise",
+     "notes": "superset with Tricep Bar Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 2,
+   "day": 2,
+   "name": "Wk 2 · Pull B",
+   "block": "B - VOLUME",
+   "exercises": [
+    {
+     "name": "Lat Pulldown",
+     "notes": "superset with Face Pull",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with Lat Pulldown",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Chest Supported Row",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "DB Hammer Curl",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 2,
+   "day": 3,
+   "name": "Wk 2 · Legs B",
+   "block": "B - VOLUME",
+   "exercises": [
+    {
+     "name": "Smith Squat",
+     "notes": "technique · 2 s pause at depth · squat shoes · rest 2.5 min · drop a set if the session runs past 45 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Split Squat",
+     "notes": "heels elevated · per leg",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Leg Extension",
+     "notes": "superset with Smith Calf Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Calf Raise",
+     "notes": "superset with Leg Extension",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 2,
+   "day": 4,
+   "name": "Wk 2 · Upper B",
+   "block": "B - VOLUME",
+   "exercises": [
+    {
+     "name": "Smith Shoulder Press",
+     "notes": "rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rope Pushdown",
+     "notes": "superset with Rear Delt Fly",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rear Delt Fly",
+     "notes": "superset with Rope Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 2,
+   "day": 5,
+   "name": "Wk 2 · Lower B",
+   "block": "B - VOLUME",
+   "exercises": [
+    {
+     "name": "Trap Bar Deadlift",
+     "notes": "technique · 2 s pause just below the knee · rest 2.5 min · drop a set if the session runs past 45 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Hip Thrust",
+     "notes": "tracked secondary",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Suitcase Carry",
+     "notes": "2 × ~30 m per side, moderate · skip after any back or shoulder flare",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 3,
+   "day": 1,
+   "name": "Wk 3 · Push A",
+   "block": "A - HEAVY",
+   "exercises": [
+    {
+     "name": "Strict Press",
+     "notes": "main lift · rest 3 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "or Machine Chest Press if wrists complain",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rope Pushdown",
+     "notes": "superset with DB Lat Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "DB Lat Raise",
+     "notes": "superset with Rope Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 3,
+   "day": 2,
+   "name": "Wk 3 · Pull A",
+   "block": "A - HEAVY",
+   "exercises": [
+    {
+     "name": "Seated Cable Row",
+     "notes": "superset with Face Pull",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with cable row",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Shrug",
+     "notes": "tracked secondary",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Lat Pulldown",
+     "notes": "long range: full stretch at the top",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 3,
+   "day": 3,
+   "name": "Wk 3 · Legs A",
+   "block": "A - HEAVY",
+   "exercises": [
+    {
+     "name": "Smith Squat",
+     "notes": "main lift · to your filmed depth standard · squat shoes · rest 3–4 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Leg Extension",
+     "notes": "superset with Leg Curl",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Leg Curl",
+     "notes": "superset with Leg Extension",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Calf Raise",
+     "notes": "2 s pause at stretch",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 3,
+   "day": 4,
+   "name": "Wk 3 · Upper A",
+   "block": "A - HEAVY",
+   "exercises": [
+    {
+     "name": "Flat DB Press",
+     "notes": "tracked secondary press · rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    },
+    {
+     "name": "Smith Close Grip Bench",
+     "notes": "triceps focus · rest 2 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Cable Crossover",
+     "notes": "superset with Face Pull · work from the stretched position",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with Cable Crossover",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 3,
+   "day": 5,
+   "name": "Wk 3 · Lower A",
+   "block": "A - HEAVY",
+   "exercises": [
+    {
+     "name": "Trap Bar Deadlift",
+     "notes": "main lift · strip plates rather than reload · rest 3–4 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Romanian Deadlift",
+     "notes": "the variant you tolerate; swap equipment freely",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Leg Curl",
+     "notes": "superset with Hip Adduction",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Hip Adduction",
+     "notes": "superset with Leg Curl",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 4,
+   "day": 1,
+   "name": "Wk 4 · Push B",
+   "block": "B - VOLUME",
+   "exercises": [
+    {
+     "name": "Strict Press",
+     "notes": "technique volume · rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Machine Chest Press",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Tricep Bar Pushdown",
+     "notes": "superset with Cable Lat Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Cable Lat Raise",
+     "notes": "superset with Tricep Bar Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 4,
+   "day": 2,
+   "name": "Wk 4 · Pull B",
+   "block": "B - VOLUME",
+   "exercises": [
+    {
+     "name": "Lat Pulldown",
+     "notes": "superset with Face Pull",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with Lat Pulldown",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Chest Supported Row",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "DB Hammer Curl",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 4,
+   "day": 3,
+   "name": "Wk 4 · Legs B",
+   "block": "B - VOLUME",
+   "exercises": [
+    {
+     "name": "Smith Squat",
+     "notes": "technique · 2 s pause at depth · squat shoes · rest 2.5 min · drop a set if the session runs past 45 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Split Squat",
+     "notes": "heels elevated · per leg",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Leg Extension",
+     "notes": "superset with Smith Calf Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Calf Raise",
+     "notes": "superset with Leg Extension",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 4,
+   "day": 4,
+   "name": "Wk 4 · Upper B",
+   "block": "B - VOLUME",
+   "exercises": [
+    {
+     "name": "Smith Shoulder Press",
+     "notes": "rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rope Pushdown",
+     "notes": "superset with Rear Delt Fly",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rear Delt Fly",
+     "notes": "superset with Rope Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 4,
+   "day": 5,
+   "name": "Wk 4 · Lower B",
+   "block": "B - VOLUME",
+   "exercises": [
+    {
+     "name": "Trap Bar Deadlift",
+     "notes": "technique · 2 s pause just below the knee · rest 2.5 min · drop a set if the session runs past 45 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Hip Thrust",
+     "notes": "tracked secondary",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Suitcase Carry",
+     "notes": "2 × ~30 m per side, moderate · skip after any back or shoulder flare",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 5,
+   "day": 1,
+   "name": "Wk 5 · Push A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Strict Press",
+     "notes": "main lift · rest 3 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "or Machine Chest Press if wrists complain",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rope Pushdown",
+     "notes": "superset with DB Lat Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "DB Lat Raise",
+     "notes": "superset with Rope Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 5,
+   "day": 2,
+   "name": "Wk 5 · Pull A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "Seated Cable Row",
+     "notes": "superset with Face Pull",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with cable row",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Shrug",
+     "notes": "tracked secondary",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Lat Pulldown",
+     "notes": "long range: full stretch at the top",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 5,
+   "day": 3,
+   "name": "Wk 5 · Legs A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Squat",
+     "notes": "main lift · to your filmed depth standard · squat shoes · rest 3–4 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    },
+    {
+     "name": "Leg Extension",
+     "notes": "superset with Leg Curl",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Leg Curl",
+     "notes": "superset with Leg Extension",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Calf Raise",
+     "notes": "2 s pause at stretch",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 5,
+   "day": 4,
+   "name": "Wk 5 · Upper A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "tracked secondary press · rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    },
+    {
+     "name": "Smith Close Grip Bench",
+     "notes": "triceps focus · rest 2 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Cable Crossover",
+     "notes": "superset with Face Pull · work from the stretched position",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with Cable Crossover",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 5,
+   "day": 5,
+   "name": "Wk 5 · Lower A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Trap Bar Deadlift",
+     "notes": "main lift · strip plates rather than reload · rest 3–4 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    },
+    {
+     "name": "Romanian Deadlift",
+     "notes": "the variant you tolerate; swap equipment freely",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Leg Curl",
+     "notes": "superset with Hip Adduction",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Hip Adduction",
+     "notes": "superset with Leg Curl",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 6,
+   "day": 1,
+   "name": "Wk 6 · Push B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Strict Press",
+     "notes": "technique volume · rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Machine Chest Press",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Tricep Bar Pushdown",
+     "notes": "superset with Cable Lat Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Cable Lat Raise",
+     "notes": "superset with Tricep Bar Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 6,
+   "day": 2,
+   "name": "Wk 6 · Pull B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "Lat Pulldown",
+     "notes": "superset with Face Pull",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with Lat Pulldown",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Chest Supported Row",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "DB Hammer Curl",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 6,
+   "day": 3,
+   "name": "Wk 6 · Legs B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Squat",
+     "notes": "technique · 2 s pause at depth · squat shoes · rest 2.5 min · drop a set if the session runs past 45 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Split Squat",
+     "notes": "heels elevated · per leg",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Leg Extension",
+     "notes": "superset with Smith Calf Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Calf Raise",
+     "notes": "superset with Leg Extension",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 6,
+   "day": 4,
+   "name": "Wk 6 · Upper B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Shoulder Press",
+     "notes": "rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rope Pushdown",
+     "notes": "superset with Rear Delt Fly",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rear Delt Fly",
+     "notes": "superset with Rope Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 6,
+   "day": 5,
+   "name": "Wk 6 · Lower B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Trap Bar Deadlift",
+     "notes": "technique · 2 s pause just below the knee · rest 2.5 min · drop a set if the session runs past 45 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Hip Thrust",
+     "notes": "tracked secondary",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Suitcase Carry",
+     "notes": "2 × ~30 m per side, moderate · skip after any back or shoulder flare",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 7,
+   "day": 1,
+   "name": "Wk 7 · Push A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Strict Press",
+     "notes": "main lift · rest 3 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "or Machine Chest Press if wrists complain",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rope Pushdown",
+     "notes": "superset with DB Lat Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "DB Lat Raise",
+     "notes": "superset with Rope Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 7,
+   "day": 2,
+   "name": "Wk 7 · Pull A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "Seated Cable Row",
+     "notes": "superset with Face Pull",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with cable row",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Shrug",
+     "notes": "tracked secondary",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Lat Pulldown",
+     "notes": "long range: full stretch at the top",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 7,
+   "day": 3,
+   "name": "Wk 7 · Legs A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Squat",
+     "notes": "main lift · to your filmed depth standard · squat shoes · rest 3–4 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    },
+    {
+     "name": "Leg Extension",
+     "notes": "superset with Leg Curl",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Leg Curl",
+     "notes": "superset with Leg Extension",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Calf Raise",
+     "notes": "2 s pause at stretch",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 7,
+   "day": 4,
+   "name": "Wk 7 · Upper A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "tracked secondary press · rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    },
+    {
+     "name": "Smith Close Grip Bench",
+     "notes": "triceps focus · rest 2 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Cable Crossover",
+     "notes": "superset with Face Pull · work from the stretched position",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with Cable Crossover",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 7,
+   "day": 5,
+   "name": "Wk 7 · Lower A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Trap Bar Deadlift",
+     "notes": "main lift · strip plates rather than reload · rest 3–4 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    },
+    {
+     "name": "Romanian Deadlift",
+     "notes": "the variant you tolerate; swap equipment freely",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Leg Curl",
+     "notes": "superset with Hip Adduction",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Hip Adduction",
+     "notes": "superset with Leg Curl",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 8,
+   "day": 1,
+   "name": "Wk 8 · Push B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Strict Press",
+     "notes": "technique volume · rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Machine Chest Press",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Tricep Bar Pushdown",
+     "notes": "superset with Cable Lat Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Cable Lat Raise",
+     "notes": "superset with Tricep Bar Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 8,
+   "day": 2,
+   "name": "Wk 8 · Pull B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "Lat Pulldown",
+     "notes": "superset with Face Pull",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with Lat Pulldown",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Chest Supported Row",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "DB Hammer Curl",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 8,
+   "day": 3,
+   "name": "Wk 8 · Legs B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Squat",
+     "notes": "technique · 2 s pause at depth · squat shoes · rest 2.5 min · drop a set if the session runs past 45 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Split Squat",
+     "notes": "heels elevated · per leg",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Leg Extension",
+     "notes": "superset with Smith Calf Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Calf Raise",
+     "notes": "superset with Leg Extension",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 8,
+   "day": 4,
+   "name": "Wk 8 · Upper B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Shoulder Press",
+     "notes": "rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rope Pushdown",
+     "notes": "superset with Rear Delt Fly",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rear Delt Fly",
+     "notes": "superset with Rope Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 8,
+   "day": 5,
+   "name": "Wk 8 · Lower B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Trap Bar Deadlift",
+     "notes": "technique · 2 s pause just below the knee · rest 2.5 min · drop a set if the session runs past 45 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Hip Thrust",
+     "notes": "tracked secondary",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Suitcase Carry",
+     "notes": "2 × ~30 m per side, moderate · skip after any back or shoulder flare",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 9,
+   "day": 1,
+   "name": "Wk 9 · Test · Smith Squat",
+   "block": "TEST 1",
+   "exercises": [
+    {
+     "name": "Smith Squat",
+     "notes": "test single @ RIR 1: same bar, plates and shoes every test · or estimate from a heavy triple's RIR · film for depth",
+     "sets": [
+      {
+       "w": null,
+       "r": 1,
+       "type": "top",
+       "t": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 9,
+   "day": 2,
+   "name": "Wk 9 · Light pull",
+   "block": "TEST 1",
+   "exercises": [
+    {
+     "name": "Lat Pulldown",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 9,
+   "day": 3,
+   "name": "Wk 9 · Test · Trap Bar Deadlift",
+   "block": "TEST 1",
+   "exercises": [
+    {
+     "name": "Trap Bar Deadlift",
+     "notes": "test single @ RIR 1: same bar, plates and shoes every test · or estimate from a heavy triple's RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 1,
+       "type": "top",
+       "t": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 9,
+   "day": 4,
+   "name": "Wk 9 · Light lower",
+   "block": "TEST 1",
+   "exercises": [
+    {
+     "name": "Leg Extension",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Leg Curl",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 9,
+   "day": 5,
+   "name": "Wk 9 · Test · Strict Press",
+   "block": "TEST 1",
+   "exercises": [
+    {
+     "name": "Strict Press",
+     "notes": "test single @ RIR 1: same bar, plates and shoes every test · or estimate from a heavy triple's RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 1,
+       "type": "top",
+       "t": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 10,
+   "day": 1,
+   "name": "Wk 10 · Push A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Strict Press",
+     "notes": "main lift · rest 3 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "or Machine Chest Press if wrists complain",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rope Pushdown",
+     "notes": "superset with DB Lat Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "DB Lat Raise",
+     "notes": "superset with Rope Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 10,
+   "day": 2,
+   "name": "Wk 10 · Pull A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "Seated Cable Row",
+     "notes": "superset with Face Pull",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with cable row",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Shrug",
+     "notes": "tracked secondary",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Lat Pulldown",
+     "notes": "long range: full stretch at the top",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 10,
+   "day": 3,
+   "name": "Wk 10 · Legs A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Squat",
+     "notes": "main lift · to your filmed depth standard · squat shoes · rest 3–4 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Leg Extension",
+     "notes": "superset with Leg Curl",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Leg Curl",
+     "notes": "superset with Leg Extension",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Calf Raise",
+     "notes": "2 s pause at stretch",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 10,
+   "day": 4,
+   "name": "Wk 10 · Upper A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "tracked secondary press · rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    },
+    {
+     "name": "Smith Close Grip Bench",
+     "notes": "triceps focus · rest 2 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Cable Crossover",
+     "notes": "superset with Face Pull · work from the stretched position",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with Cable Crossover",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 10,
+   "day": 5,
+   "name": "Wk 10 · Lower A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Trap Bar Deadlift",
+     "notes": "main lift · strip plates rather than reload · rest 3–4 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Romanian Deadlift",
+     "notes": "the variant you tolerate; swap equipment freely",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Leg Curl",
+     "notes": "superset with Hip Adduction",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Hip Adduction",
+     "notes": "superset with Leg Curl",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 11,
+   "day": 1,
+   "name": "Wk 11 · Push B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Strict Press",
+     "notes": "technique volume · rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Machine Chest Press",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Tricep Bar Pushdown",
+     "notes": "superset with Cable Lat Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Cable Lat Raise",
+     "notes": "superset with Tricep Bar Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 11,
+   "day": 2,
+   "name": "Wk 11 · Pull B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "Lat Pulldown",
+     "notes": "superset with Face Pull",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with Lat Pulldown",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Chest Supported Row",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "DB Hammer Curl",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 11,
+   "day": 3,
+   "name": "Wk 11 · Legs B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Squat",
+     "notes": "technique · 2 s pause at depth · squat shoes · rest 2.5 min · drop a set if the session runs past 45 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Split Squat",
+     "notes": "heels elevated · per leg",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Leg Extension",
+     "notes": "superset with Smith Calf Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Calf Raise",
+     "notes": "superset with Leg Extension",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 11,
+   "day": 4,
+   "name": "Wk 11 · Upper B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Shoulder Press",
+     "notes": "rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rope Pushdown",
+     "notes": "superset with Rear Delt Fly",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rear Delt Fly",
+     "notes": "superset with Rope Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 11,
+   "day": 5,
+   "name": "Wk 11 · Lower B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Trap Bar Deadlift",
+     "notes": "technique · 2 s pause just below the knee · rest 2.5 min · drop a set if the session runs past 45 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Hip Thrust",
+     "notes": "tracked secondary",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Suitcase Carry",
+     "notes": "2 × ~30 m per side, moderate · skip after any back or shoulder flare",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 12,
+   "day": 1,
+   "name": "Wk 12 · Push A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Strict Press",
+     "notes": "main lift · rest 3 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "or Machine Chest Press if wrists complain",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rope Pushdown",
+     "notes": "superset with DB Lat Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "DB Lat Raise",
+     "notes": "superset with Rope Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 12,
+   "day": 2,
+   "name": "Wk 12 · Pull A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "Seated Cable Row",
+     "notes": "superset with Face Pull",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with cable row",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Shrug",
+     "notes": "tracked secondary",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Lat Pulldown",
+     "notes": "long range: full stretch at the top",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 12,
+   "day": 3,
+   "name": "Wk 12 · Legs A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Squat",
+     "notes": "main lift · to your filmed depth standard · squat shoes · rest 3–4 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Leg Extension",
+     "notes": "superset with Leg Curl",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Leg Curl",
+     "notes": "superset with Leg Extension",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Calf Raise",
+     "notes": "2 s pause at stretch",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 12,
+   "day": 4,
+   "name": "Wk 12 · Upper A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "tracked secondary press · rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    },
+    {
+     "name": "Smith Close Grip Bench",
+     "notes": "triceps focus · rest 2 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Cable Crossover",
+     "notes": "superset with Face Pull · work from the stretched position",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with Cable Crossover",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 12,
+   "day": 5,
+   "name": "Wk 12 · Lower A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Trap Bar Deadlift",
+     "notes": "main lift · strip plates rather than reload · rest 3–4 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Romanian Deadlift",
+     "notes": "the variant you tolerate; swap equipment freely",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Leg Curl",
+     "notes": "superset with Hip Adduction",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Hip Adduction",
+     "notes": "superset with Leg Curl",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 13,
+   "day": 1,
+   "name": "Wk 13 · Push B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Strict Press",
+     "notes": "technique volume · rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Machine Chest Press",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Tricep Bar Pushdown",
+     "notes": "superset with Cable Lat Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Cable Lat Raise",
+     "notes": "superset with Tricep Bar Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 13,
+   "day": 2,
+   "name": "Wk 13 · Pull B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "Lat Pulldown",
+     "notes": "superset with Face Pull",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with Lat Pulldown",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Chest Supported Row",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "DB Hammer Curl",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 13,
+   "day": 3,
+   "name": "Wk 13 · Legs B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Squat",
+     "notes": "technique · 2 s pause at depth · squat shoes · rest 2.5 min · drop a set if the session runs past 45 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Split Squat",
+     "notes": "heels elevated · per leg",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Leg Extension",
+     "notes": "superset with Smith Calf Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Calf Raise",
+     "notes": "superset with Leg Extension",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 13,
+   "day": 4,
+   "name": "Wk 13 · Upper B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Shoulder Press",
+     "notes": "rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rope Pushdown",
+     "notes": "superset with Rear Delt Fly",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rear Delt Fly",
+     "notes": "superset with Rope Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 13,
+   "day": 5,
+   "name": "Wk 13 · Lower B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Trap Bar Deadlift",
+     "notes": "technique · 2 s pause just below the knee · rest 2.5 min · drop a set if the session runs past 45 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Hip Thrust",
+     "notes": "tracked secondary",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Suitcase Carry",
+     "notes": "2 × ~30 m per side, moderate · skip after any back or shoulder flare",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 14,
+   "day": 1,
+   "name": "Wk 14 · Push A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Strict Press",
+     "notes": "main lift · rest 3 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "or Machine Chest Press if wrists complain",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rope Pushdown",
+     "notes": "superset with DB Lat Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "DB Lat Raise",
+     "notes": "superset with Rope Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 14,
+   "day": 2,
+   "name": "Wk 14 · Pull A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "Seated Cable Row",
+     "notes": "superset with Face Pull",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with cable row",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Shrug",
+     "notes": "tracked secondary",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Lat Pulldown",
+     "notes": "long range: full stretch at the top",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 14,
+   "day": 3,
+   "name": "Wk 14 · Legs A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Squat",
+     "notes": "main lift · to your filmed depth standard · squat shoes · rest 3–4 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    },
+    {
+     "name": "Leg Extension",
+     "notes": "superset with Leg Curl",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Leg Curl",
+     "notes": "superset with Leg Extension",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Calf Raise",
+     "notes": "2 s pause at stretch",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 14,
+   "day": 4,
+   "name": "Wk 14 · Upper A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "tracked secondary press · rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    },
+    {
+     "name": "Smith Close Grip Bench",
+     "notes": "triceps focus · rest 2 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Cable Crossover",
+     "notes": "superset with Face Pull · work from the stretched position",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with Cable Crossover",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 14,
+   "day": 5,
+   "name": "Wk 14 · Lower A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Trap Bar Deadlift",
+     "notes": "main lift · strip plates rather than reload · rest 3–4 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    },
+    {
+     "name": "Romanian Deadlift",
+     "notes": "the variant you tolerate; swap equipment freely",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Leg Curl",
+     "notes": "superset with Hip Adduction",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Hip Adduction",
+     "notes": "superset with Leg Curl",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 15,
+   "day": 1,
+   "name": "Wk 15 · Push B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Strict Press",
+     "notes": "technique volume · rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Machine Chest Press",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Tricep Bar Pushdown",
+     "notes": "superset with Cable Lat Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Cable Lat Raise",
+     "notes": "superset with Tricep Bar Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 15,
+   "day": 2,
+   "name": "Wk 15 · Pull B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "Lat Pulldown",
+     "notes": "superset with Face Pull",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with Lat Pulldown",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Chest Supported Row",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "DB Hammer Curl",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 15,
+   "day": 3,
+   "name": "Wk 15 · Legs B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Squat",
+     "notes": "technique · 2 s pause at depth · squat shoes · rest 2.5 min · drop a set if the session runs past 45 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Split Squat",
+     "notes": "heels elevated · per leg",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Leg Extension",
+     "notes": "superset with Smith Calf Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Calf Raise",
+     "notes": "superset with Leg Extension",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 15,
+   "day": 4,
+   "name": "Wk 15 · Upper B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Shoulder Press",
+     "notes": "rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rope Pushdown",
+     "notes": "superset with Rear Delt Fly",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rear Delt Fly",
+     "notes": "superset with Rope Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 15,
+   "day": 5,
+   "name": "Wk 15 · Lower B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Trap Bar Deadlift",
+     "notes": "technique · 2 s pause just below the knee · rest 2.5 min · drop a set if the session runs past 45 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Hip Thrust",
+     "notes": "tracked secondary",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Suitcase Carry",
+     "notes": "2 × ~30 m per side, moderate · skip after any back or shoulder flare",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 16,
+   "day": 1,
+   "name": "Wk 16 · Push A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Strict Press",
+     "notes": "main lift · rest 3 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "or Machine Chest Press if wrists complain",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rope Pushdown",
+     "notes": "superset with DB Lat Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "DB Lat Raise",
+     "notes": "superset with Rope Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 16,
+   "day": 2,
+   "name": "Wk 16 · Pull A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "Seated Cable Row",
+     "notes": "superset with Face Pull",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with cable row",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Shrug",
+     "notes": "tracked secondary",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Lat Pulldown",
+     "notes": "long range: full stretch at the top",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 16,
+   "day": 3,
+   "name": "Wk 16 · Legs A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Squat",
+     "notes": "main lift · to your filmed depth standard · squat shoes · rest 3–4 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    },
+    {
+     "name": "Leg Extension",
+     "notes": "superset with Leg Curl",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Leg Curl",
+     "notes": "superset with Leg Extension",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Calf Raise",
+     "notes": "2 s pause at stretch",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 16,
+   "day": 4,
+   "name": "Wk 16 · Upper A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "tracked secondary press · rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    },
+    {
+     "name": "Smith Close Grip Bench",
+     "notes": "triceps focus · rest 2 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Cable Crossover",
+     "notes": "superset with Face Pull · work from the stretched position",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with Cable Crossover",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 16,
+   "day": 5,
+   "name": "Wk 16 · Lower A",
+   "block": "A - HEAVY + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Trap Bar Deadlift",
+     "notes": "main lift · strip plates rather than reload · rest 3–4 min · log RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 2,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    },
+    {
+     "name": "Romanian Deadlift",
+     "notes": "the variant you tolerate; swap equipment freely",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Leg Curl",
+     "notes": "superset with Hip Adduction",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Hip Adduction",
+     "notes": "superset with Leg Curl",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 17,
+   "day": 1,
+   "name": "Wk 17 · Push B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Strict Press",
+     "notes": "technique volume · rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 4,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Machine Chest Press",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Tricep Bar Pushdown",
+     "notes": "superset with Cable Lat Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Cable Lat Raise",
+     "notes": "superset with Tricep Bar Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 17,
+   "day": 2,
+   "name": "Wk 17 · Pull B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "Lat Pulldown",
+     "notes": "superset with Face Pull",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "superset with Lat Pulldown",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Chest Supported Row",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "DB Hammer Curl",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 17,
+   "day": 3,
+   "name": "Wk 17 · Legs B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Squat",
+     "notes": "technique · 2 s pause at depth · squat shoes · rest 2.5 min · drop a set if the session runs past 45 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Split Squat",
+     "notes": "heels elevated · per leg",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    },
+    {
+     "name": "Leg Extension",
+     "notes": "superset with Smith Calf Raise",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Smith Calf Raise",
+     "notes": "superset with Leg Extension",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 17,
+   "day": 4,
+   "name": "Wk 17 · Upper B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "External Rotation",
+     "notes": "mobility warm-up · light cable, per arm · then wall slides ×10 · no dislocates, no end-range pulling",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Shoulder Press",
+     "notes": "rest 2.5 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Flat DB Press",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rope Pushdown",
+     "notes": "superset with Rear Delt Fly",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Rear Delt Fly",
+     "notes": "superset with Rope Pushdown",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 17,
+   "day": 5,
+   "name": "Wk 17 · Lower B",
+   "block": "B - VOLUME + MOBILITY",
+   "exercises": [
+    {
+     "name": "Goblet Squat",
+     "notes": "mobility warm-up · heels raised · 3 × 20–30 s hold at depth · then pain-free wall ankle rocks ×10 per side, never forced to end range",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Trap Bar Deadlift",
+     "notes": "technique · 2 s pause just below the knee · rest 2.5 min · drop a set if the session runs past 45 min",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Smith Hip Thrust",
+     "notes": "tracked secondary",
+     "sets": [
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 6,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Suitcase Carry",
+     "notes": "2 × ~30 m per side, moderate · skip after any back or shoulder flare",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "working",
+       "t": 3
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 18,
+   "day": 1,
+   "name": "Wk 18 · Test · Smith Squat",
+   "block": "TEST 2",
+   "exercises": [
+    {
+     "name": "Smith Squat",
+     "notes": "test single @ RIR 1: same bar, plates and shoes every test · or estimate from a heavy triple's RIR · film for depth",
+     "sets": [
+      {
+       "w": null,
+       "r": 1,
+       "type": "top",
+       "t": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 18,
+   "day": 2,
+   "name": "Wk 18 · Light pull",
+   "block": "TEST 2",
+   "exercises": [
+    {
+     "name": "Lat Pulldown",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Face Pull",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 15,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 18,
+   "day": 3,
+   "name": "Wk 18 · Test · Trap Bar Deadlift",
+   "block": "TEST 2",
+   "exercises": [
+    {
+     "name": "Trap Bar Deadlift",
+     "notes": "test single @ RIR 1: same bar, plates and shoes every test · or estimate from a heavy triple's RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 1,
+       "type": "top",
+       "t": 1
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 18,
+   "day": 4,
+   "name": "Wk 18 · Light lower",
+   "block": "TEST 2",
+   "exercises": [
+    {
+     "name": "Leg Extension",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    },
+    {
+     "name": "Leg Curl",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 4
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 4
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 18,
+   "day": 5,
+   "name": "Wk 18 · Test · Strict Press",
+   "block": "TEST 2",
+   "exercises": [
+    {
+     "name": "Strict Press",
+     "notes": "test single @ RIR 1: same bar, plates and shoes every test · or estimate from a heavy triple's RIR",
+     "sets": [
+      {
+       "w": null,
+       "r": 1,
+       "type": "top",
+       "t": 1
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
