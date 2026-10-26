@@ -555,6 +555,13 @@ Write `r&d/specs/mobility-spec.md` before building.
   optionally via the phone's inclinometer), Thomas test, wall shoulder flexion —
   charted per test and side.
 - Loaded-stretch drills log as normal lifting sets so PRs still work.
+- **Balance test** (added 2026-10-26 at Aaron's request): single-leg stand,
+  eyes closed. Press and hold a big pad when the foot lifts, release when it
+  touches down; time shown to 0.1 s. Pick the standing leg, auto-switch after
+  each attempt, ignore anything under 1 s, buzz on start and stop (reuse `Cue`,
+  `Awake`). Best per leg, history charted per side, left/right imbalance shown
+  like D4. Optional eyes-open mode as a separate test. A working prototype of
+  the interaction exists as a standalone artifact ("Stork Stand").
 
 ### [ ] E6. Supplements and blood work
 Supplement schedule, reminders and adherence history, viewable alongside
