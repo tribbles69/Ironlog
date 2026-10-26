@@ -13,6 +13,14 @@ rather than guessed.
 
 ---
 
+## 0.52.3 — 26 Oct 2026
+- **WDC Records, Legs:** Smith calf raises are now single leg on both A and
+  B weeks, left leg first with the right matching its reps. They open per side
+  so the left/right gap shows on the calf raise page. Remove and reinstall the
+  program in Settings → Training program to pick it up (sessions you've
+  already done stay as they are).
+- Programs can now set a lift to single-sided when it allows it.
+
 ## 0.52.2 — 19 Oct 2026
 - **WDC Records, A-week Legs:** hack squat swapped for Smith squat 4×5 (the
   gym has no hack squat). Leg press stays the B-week main lift. Reinstall

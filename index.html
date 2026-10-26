@@ -1974,7 +1974,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.52.2';
+const APP_VERSION = '0.52.3';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -8225,14 +8225,16 @@ function installProgram(P, startDate) {
       ...(P.loads === 'rir' ? { loads: 'rir' } : {}),
       exercises: w.exercises.map(e => {
         const hit = resolveName(e.name);
-        /* A program may pin the equipment or attachment (a trap bar rack pull,
+        /* A program may pin the equipment, attachment or execution (a trap bar rack pull,
            a Smith incline). Only axes the movement actually allows are taken —
            anything else falls back to the movement's default, never a guess. */
         const leaf = hit
-          ? ((e.equipment || e.attachment)
+          ? ((e.equipment || e.attachment || e.execution)
               ? completeLeaf(hit.movement, {
                   equipment: hit.movement.equipment.includes(e.equipment) ? e.equipment : hit.leaf.equipment,
-                  attachment: e.attachment || hit.leaf.attachment })
+                  attachment: e.attachment || hit.leaf.attachment,
+                  /* and execution (a single-leg calf raise), if the movement allows it */
+                  execution: (hit.movement.execution || []).includes(e.execution) ? e.execution : hit.leaf.execution })
               : hit.leaf)
           : completeLeaf(ensureCustomMovement(e.name), null);   // registered, so it has a name and a page
         const out = { leaf, legacyName: e.name, notes: e.notes || '', mods: modsFromNote(e.notes),

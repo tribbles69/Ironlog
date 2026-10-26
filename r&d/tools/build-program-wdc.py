@@ -12,6 +12,7 @@ Rules agreed in that chat:
   - Trap bar and leg press never share a day, so B Legs is leg-press focused
     and the fast trap bar pulls live on B Lower.
   - 45-minute sessions. No weights in the plan: RIR decides (loads: "rir").
+  - 26 Oct 2026: calf raises go single leg (left weaker on balance work).
   - The gym caps out near 225 kg, so the record heights are trained as raised
     pulls up to the cap, then isometrics into the pins.
 
@@ -35,15 +36,18 @@ WEEKS = 8
 START = datetime.date(2026, 10, 19)   # a Monday
 
 
-def ex(name, sets, notes='', equipment=None, attachment=None, iso=False):
+def ex(name, sets, notes='', equipment=None, attachment=None, iso=False, execution=None):
     m = BY_NAME.get(name.lower())
     if equipment and m and equipment not in m['equipment']:
         raise SystemExit(f'{name}: {equipment} not allowed ({m["equipment"]})')
-    if (equipment or attachment) and not m:
+    if execution and m and execution not in m.get('execution', []):
+        raise SystemExit(f'{name}: {execution} not allowed ({m.get("execution")})')
+    if (equipment or attachment or execution) and not m:
         raise SystemExit(f'{name}: custom movement cannot pin equipment')
     e = {'name': name, 'notes': notes, 'sets': sets}
     if equipment: e['equipment'] = equipment
     if attachment: e['attachment'] = attachment
+    if execution: e['execution'] = execution
     if iso: e['iso'] = True
     return e
 
@@ -103,7 +107,7 @@ def a_week(wk):
     legs = ('Legs', [
         ex('Back Squat', reps(4, 5, t), 'Smith, full depth. Gym has no hack squat.', equipment='smith'),
         ex('Farmers Carry', carry(3, 20, 1), 'heavy, 20 m'),
-        ex('Smith Calf Raise', reps(3, 8, 1), 'superset with Tibialis Raise'),
+        ex('Smith Calf Raise', reps(3, 8, 1), 'single leg, left first; right matches the left’s reps. Superset with Tibialis Raise', execution='unilateral'),
         ex('Tibialis Raise', reps(3, 12, 1), 'superset with Smith Calf Raise'),
     ])
     upper = ('Upper', [
@@ -145,7 +149,7 @@ def b_week(wk):
         ex('Sled Leg Press', top_then_backoff(6, t, n - 1, 8, t + 1), 'main lift'),
         ex('Leg Extension', reps(n, 10, 1), 'superset with Leg Curl'),
         ex('Leg Curl', reps(n, 10, 1), 'superset with Leg Extension'),
-        ex('Smith Calf Raise', reps(n, 10, 1)),
+        ex('Smith Calf Raise', reps(n, 10, 1), 'single leg, left first; right matches the left’s reps', execution='unilateral'),
         ex('Hip Adduction', reps(2, 12, 1), 'superset with Hip Abduction'),
         ex('Hip Abduction', reps(2, 12, 1), 'superset with Hip Adduction'),
     ])
