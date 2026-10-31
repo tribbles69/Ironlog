@@ -638,6 +638,23 @@ Write `r&d/specs/body-comp-spec.md` before building.
 
 ### [ ] E5. Mobility training
 Write `r&d/specs/mobility-spec.md` before building.
+- **Starting point (added 2026-10-31):** Aaron's daily morning routine,
+  transcribed to `r&d/data/routines/morning-stretch.json` — 8 zones, 25
+  stretches (the sheet says 24; it lists 25), ~30 min. Ship it as the first
+  built-in routine and use it to shape the data model:
+  - zones with an estimated time each; items with targets, position, cue text
+  - dose types: hold (s), hold range (60–90 s), hold × sets, hold × reps
+    (chin tuck 5 s × 8), plain reps (cat-cow), per side, and a follow-on
+    ("then both knees 30 s")
+  - a **flag** line for priority items, an **alt** swap (pigeon → lying glute
+    stretch), and a **benchmark** that feeds the ROM tests below (standing
+    forward fold reach: knee → mid-shin → ankle → toes → floor, weekly)
+  - tick-off per stretch as it's done, like the sheet's checkboxes, and a
+    record of the routine done that day
+  - **Review the content against the hypermobility rule below before it
+    ships:** most of it is passive static stretching (pigeon, prone quad,
+    wrist stretches, deep squat hold), which this item says to go easy on.
+    Aaron decides what stays, gets an alt, or becomes a loaded version.
 - Saved routines (evening routine, pre-lift warm-up, "strength at length"
   block) of timed holds and rep-based drills, per side where relevant.
 - Guided player with hold countdowns, side switches, contract-relax cues —
