@@ -225,6 +225,10 @@ h3{font-size:13.5px;margin:0 0 8px}
 .ci-tile .v{font-size:15px;font-weight:750;margin-top:2px}
 
 .goal{padding:11px 0;border-bottom:1px solid var(--line)}
+.goal .bar{position:relative}
+.goal .bar .mk{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--txt);opacity:.55}
+.goalex{display:flex;align-items:center;gap:5px;margin-top:1px}
+.goalex svg{width:15px;height:15px;flex:none}
 .goal:last-child{border-bottom:none;padding-bottom:0}
 .goal:first-child{padding-top:0}
 
@@ -2054,7 +2058,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.62.2';
+const APP_VERSION = '0.62.3';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4955,23 +4959,43 @@ function goalCurrent(g) {
   if (g.type === 'sessions') return S.workouts.filter(w => w.status === 'completed' && (!g.since || w.date >= g.since)).length;
   return g.current || 0;
 }
+/* What a lift goal is a goal FOR: the movement with its equipment always
+   spelled out (a goal row has no picker beside it to show the default), plus
+   any grip or one-arm detail, and the equipment's glyph. */
+function goalLiftLine(key) {
+  const leaf = keyLeaf(key);
+  const eq = EQ_LABEL[leaf.equipment] || leaf.equipment || '';
+  const bits = [eq, ...variantLabel(leaf).split(', ').filter(b => b && b !== eq)].filter(Boolean);
+  const what = bits.length ? bits.join(', ') : '';
+  return `<div class="sub goalex">${EQ_ICON[leaf.equipment] || ''}<span>${esc(displayName(leaf))}${what ? ` · ${esc(what[0].toUpperCase() + what.slice(1))}` : ''}</span></div>`;
+}
 function goalRow(g) {
   const cur = goalCurrent(g);
   const start = g.startVal ?? 0;
-  const denom = (g.target - start) || 1;
-  const pct = ((cur - start) / denom) * 100;
+  /* A strength goal fills to how much of the target you can already lift —
+     175 of 200 is most of the way there, not 0% because that is where you
+     stood when you set it. Where you started is a mark on the bar, and the
+     gain since is in words. Bodyweight can run either way (a cut or a bulk),
+     so it still measures from the start. */
+  const fromStart = g.type === 'bodyweight';
+  const pct = fromStart ? ((cur - start) / ((g.target - start) || 1)) * 100 : (cur / (g.target || 1)) * 100;
   const isCount = g.type === 'sessions';
   const f = v => isCount ? Math.round(v) : wt(v);
   const left = g.deadline ? daysBetween(today(), g.deadline) : null;
+  const showStart = !fromStart && !isCount && start > 0 && start < g.target;
+  const gain = showStart && cur > start ? ` · +${wt(cur - start)} since you set it` : '';
+  const mark = showStart ? clamp(start / g.target * 100, 0, 100) : null;
+  const b = bar(pct, fromStart ? 'blue' : '');
   return `<div class="goal" data-goal="${g.id}">
     <div class="row between" style="margin-bottom:6px">
       <div class="grow"><div style="font-weight:650;font-size:14px">${esc(g.name)}</div>
-        <div class="sub">${f(cur)} of ${f(g.target)}${left !== null ? ` · ${left >= 0 ? left + ' days left' : 'past deadline'}` : ''}</div></div>
+        ${g.type === 'lift' && g.exercise ? goalLiftLine(g.exercise) : ''}
+        <div class="sub">${f(cur)} of ${f(g.target)}${gain}${left !== null ? ` · ${left >= 0 ? left + ' days left' : 'past deadline'}` : ''}</div></div>
       <div class="right">
         <div style="font-weight:750;font-size:15px;${pct >= 100 ? 'color:var(--green)' : ''}">${Math.round(clamp(pct, 0, 999))}%</div>
       </div>
     </div>
-    ${bar(pct, g.type === 'bodyweight' ? 'blue' : '')}
+    ${mark != null ? b.replace('</i>', `</i><b class="mk" style="left:${mark}%" title="Where you started: ${esc(wt(start))}"></b>`) : b}
   </div>`;
 }
 

@@ -13,6 +13,11 @@ rather than guessed.
 
 ---
 
+## 0.62.3 — 31 Oct 2026
+- Goal bars now fill. A lift goal shows how much of the target you can already lift, so 175 of 200 is 88% rather than 0%. A small mark on the bar shows where you were when you set the goal, and the line underneath says how much you've gained since.
+- Lift goals now say which lift they're for, with the equipment and its little icon, for example "Back Squat · Barbell".
+- Bodyweight goals still count from where you started, because they can go up or down.
+
 ## 0.62.2 — 31 Oct 2026
 - Clearer exercise lists when picking a lift for a goal, your priority lifts, or a single-lift meet. Each entry now says which version it is ("Bench Press — machine", "Deadlift — trap bar"), so you no longer get the same name three times. The lifts you've done are at the top under Your lifts, and the rest are grouped by body part.
 - Goals no longer offer cardio machines as a 1RM lift.
