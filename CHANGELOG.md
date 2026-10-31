@@ -13,6 +13,11 @@ rather than guessed.
 
 ---
 
+## 0.62.2 — 31 Oct 2026
+- Clearer exercise lists when picking a lift for a goal, your priority lifts, or a single-lift meet. Each entry now says which version it is ("Bench Press — machine", "Deadlift — trap bar"), so you no longer get the same name three times. The lifts you've done are at the top under Your lifts, and the rest are grouped by body part.
+- Goals no longer offer cardio machines as a 1RM lift.
+- Fixed: in the Windows 98 skin, drop-down boxes showed a grey field with a big arrow in the middle. They're back to a black field with a small arrow on the right.
+
 ## 0.62.1 — 31 Oct 2026
 - The app no longer zooms. Pinch and double-tap zoom are off, and it opens at the right size instead of slightly zoomed in. Text still follows your phone's font size setting.
 - Fixed: the Settings buttons at the bottom no longer run off the right edge. They wrap onto a second line on narrow phones.
