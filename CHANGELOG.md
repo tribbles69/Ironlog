@@ -13,6 +13,20 @@ rather than guessed.
 
 ---
 
+## 0.62.0 — 31 Oct 2026
+- **Blood pressure on Health:** log readings with an optional pulse, arm
+  and note. You get the latest, a 7-day average and a chart. Each reading is
+  coloured against the NHS bands for home readings: low, ideal, raised or
+  high.
+- **Blood glucose on Health:** log readings in mmol/L (or mg/dL; switch it
+  under Targets), noting when you took them: fasting, before a meal, 2 hours
+  after, or bedtime. Each one is checked against your own targets, and the
+  page shows the share in target over the last 14 days. Anything under 4 is
+  always flagged as low.
+- The glucose targets start at the NHS general ones. If your diabetes team
+  gave you different targets, set those instead. It's all for reference,
+  not medical advice.
+
 ## 0.61.0 — 31 Oct 2026
 - **Mobility tests on Health:** forward fold reach (the weekly benchmark
   from your stretch routine), knee to wall, straight-leg raise, the Thomas

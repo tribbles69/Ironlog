@@ -495,6 +495,26 @@ window.smoke = async function smoke(opts) {
     return `${mobTotal(r)} items`;
   });
 
+  /* Blood pressure and glucose (D16): bands, units and the Health cards. */
+  await step('flow: blood pressure and glucose', async () => {
+    close();
+    if (bpBand(118, 76).id !== 'ideal' || bpBand(138, 82).id !== 'high' || bpBand(85, 55).id !== 'low') throw new Error('BP bands');
+    if (gluBand(3.6, 'before').id !== 'low' || gluBand(8.8, 'after').id !== 'in' || gluBand(7.6, 'before').id !== 'over') throw new Error('glucose bands');
+    const bp0 = (S.bp || []).length, g0 = (S.glucose || []).length, unit = S.settings.glucoseUnit;
+    S.bp = [...(S.bp || []), { id: 'smoke-bp', date: today(), time: '08:00', sys: 120, dia: 78, mt: 1 }];
+    S.glucose = [...(S.glucose || []), { id: 'smoke-glu', date: today(), time: '08:00', mmol: 5.5, ctx: 'fasting', mt: 1 }];
+    S.settings.glucoseUnit = 'mgdl';
+    go('health'); await wait(60);
+    const txt = (document.querySelector('#hlGlu') || {}).textContent || '';
+    S.settings.glucoseUnit = unit;
+    S.bp = S.bp.filter(x => x.id !== 'smoke-bp'); S.glucose = S.glucose.filter(x => x.id !== 'smoke-glu');
+    if (!document.querySelector('#hlBp')) throw new Error('no BP card');
+    if (!txt.includes('99')) throw new Error('mg/dL not shown (5.5 mmol/L = 99)');
+    if (S.bp.length !== bp0 || S.glucose.length !== g0) throw new Error('cleanup');
+    render();
+    return 'bands, units, cards';
+  });
+
   await step('flow: cardio machines', async () => {
     close(); S.active = null; save();
     const base = { lo: 120, hi: 140, ceiling: 170, interval: 30, preset: 'custom', warmMin: 0 };

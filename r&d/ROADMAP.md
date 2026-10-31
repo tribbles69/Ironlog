@@ -661,7 +661,7 @@ Write `r&d/specs/mobility-spec.md` before building.
   like D4. Optional eyes-open mode as a separate test. A working prototype of
   the interaction exists as a standalone artifact ("Stork Stand").
 
-### [ ] D16. Blood pressure and blood glucose on Health
+### [x] D16. Blood pressure and blood glucose on Health — shipped 0.62.0 (spec `r&d/specs/health-page-spec.md` → Vitals)
 Added 2026-10-31 at Aaron's request — for diabetic lifters especially. Write
 the spec into `r&d/specs/health-page-spec.md` first.
 - **Blood pressure:** systolic / diastolic, optional pulse, arm and note;

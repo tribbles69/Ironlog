@@ -258,7 +258,8 @@ h3{font-size:13.5px;margin:0 0 8px}
 .dot.done{background:var(--green)}
 .dot.plan{background:var(--blue)}
 .dot.event{background:var(--gold)}
-#hlBw,#hlBf,#hlMeas,#hlPhoto{scroll-margin-top:72px}   /* clear the sticky top bar (Health tiles) */
+#hlBw,#hlBf,#hlMeas,#hlPhoto,#hlBp,#hlGlu,#hlMob{scroll-margin-top:72px}
+.seg.wrap{flex-wrap:wrap;height:auto}   /* clear the sticky top bar (Health tiles) */
 .mobrow{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line)}
 .mobrow.skip{opacity:.6}
 .mobtick{flex:none;min-width:40px;min-height:40px;border-radius:10px;border:1px solid var(--line2);background:var(--bg2);color:var(--bg);font-weight:800;font-size:18px;cursor:pointer}
@@ -1323,6 +1324,8 @@ const DEFAULT_STATE = {
   measures: [],   // {id,date,cm:{site:cm},custom:{name:cm},mt} — E4 body measurements
   calipers: [],   // {id,date,method:'jp3'|'jp7'|'dw4',sex,age,mm:{site:[readings]},mt} — E4; results derived when shown
   mobTests: [],   // {id,date,test,side:'L'|'R'|null,v,mt} — E5 mobility and balance tests (MOB_TESTS)
+  bp: [],         // {id,date,time,sys,dia,pulse?,arm?,note?,mt} — D16 blood pressure, mmHg
+  glucose: [],    // {id,date,time,mmol,ctx,note?,mt} — D16 blood glucose, always stored in mmol/L
 };
 
 /* Persistence runs through IndexedDB — it's async (so the call sites below don't
@@ -1517,7 +1520,7 @@ const SYNC_FILE = 'Ironlog backup.json', SYNC_FORMAT = 'ironlog-sync', SYNC_V = 
 // collection -> how a record is keyed
 const SYNC_SETS = {
   workouts: x => x.id, goals: x => x.id, meets: x => x.id, imports: x => x.id,
-  checkins: x => x.date, measures: x => x.id, calipers: x => x.id, mobTests: x => x.id,
+  checkins: x => x.date, measures: x => x.id, calipers: x => x.id, mobTests: x => x.id, bp: x => x.id, glucose: x => x.id,
   customEx: x => (typeof x === 'string' ? x : JSON.stringify(x)), programs: x => String(x),
 };
 const SYNC_MAPS = ['exAliases', 'programStarts'];
@@ -2036,7 +2039,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.61.0';
+const APP_VERSION = '0.62.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4670,6 +4673,8 @@ function viewHealth() {
   <div class="sub" style="margin-bottom:14px">Bodyweight, body fat, measurements and photos — kept on this phone.</div>
   ${healthSummary()}
   ${viewBody()}
+  ${bpCard()}
+  ${gluCard()}
   ${mobTestsCard()}
   <div class="card" style="margin-bottom:13px">
     <div class="eyebrow" style="margin-bottom:6px">Physique</div>
@@ -10685,6 +10690,7 @@ function wire() {
 
   if (page === 'health') {
     wireBody(v);
+    wireVitals(v);
     wireMobTests(v);
     v.querySelectorAll('[data-hl]').forEach(b => b.onclick = () => { const c = $('#' + b.dataset.hl); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
     v.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => openTool(b.dataset.tool));
@@ -12429,6 +12435,200 @@ function openBalanceTest() {
       bind();
     },
   });
+}
+
+/* ---------------- blood pressure and blood glucose (D16, health-page-spec §Vitals) ----------------
+   Two stores: S.bp { id, date, time, sys, dia, pulse?, arm?, note?, mt } and
+   S.glucose { id, date, time, mmol, ctx, note?, mt }. Glucose is always
+   stored in mmol/L; mg/dL is display only. Bands are NHS reference figures,
+   shown as reference, never as advice. */
+const BP_BANDS = [
+  { id: 'veryhigh', label: 'Very high', color: 'var(--red)', test: (s, d) => s >= 180 || d >= 120 },
+  { id: 'high', label: 'High', color: 'var(--red)', test: (s, d) => s >= 135 || d >= 85 },
+  { id: 'raised', label: 'Raised', color: 'var(--gold)', test: (s, d) => s > 120 || d > 80 },
+  { id: 'low', label: 'Low', color: 'var(--blue)', test: (s, d) => s <= 90 || d <= 60 },
+  { id: 'ideal', label: 'Ideal', color: 'var(--green)', test: () => true },
+];
+function bpBand(s, d) { return BP_BANDS.find(b => b.test(s, d)); }
+const GLU_CTX = [['fasting', 'Fasting / waking'], ['before', 'Before a meal'], ['after', '2 h after a meal'], ['bedtime', 'Bedtime'], ['other', 'Other']];
+const GLU_DEFAULT_TARGETS = { before: [4, 7], after: [5, 9] };   // NHS general targets; a diabetes team may set others
+const MGDL_PER_MMOL = 18.016;
+function gluUnit() { return S.settings.glucoseUnit === 'mgdl' ? 'mgdl' : 'mmol'; }
+function gluShow(mmol) { return gluUnit() === 'mgdl' ? String(Math.round(mmol * MGDL_PER_MMOL)) : (Math.round(mmol * 10) / 10).toFixed(1); }
+function gluLabel() { return gluUnit() === 'mgdl' ? 'mg/dL' : 'mmol/L'; }
+function gluToMmol(v) { return gluUnit() === 'mgdl' ? v / MGDL_PER_MMOL : v; }
+function gluTargets() { const t = S.settings.glucoseTargets || {}; return { before: t.before || GLU_DEFAULT_TARGETS.before, after: t.after || GLU_DEFAULT_TARGETS.after }; }
+function gluRange(ctx) { const t = gluTargets(); return ctx === 'after' ? t.after : t.before; }
+/* Under 4 mmol/L is always low, whatever the targets say. */
+function gluBand(mmol, ctx) {
+  const [lo, hi] = gluRange(ctx);
+  if (mmol < 4) return { id: 'low', label: 'Low', color: 'var(--blue)' };
+  if (mmol < lo) return { id: 'under', label: 'Below target', color: 'var(--blue)' };
+  if (mmol > hi) return { id: 'over', label: 'Above target', color: 'var(--gold)' };
+  return { id: 'in', label: 'In target', color: 'var(--green)' };
+}
+const nowHM = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
+const byWhen = (a, b) => (a.date + (a.time || '')) < (b.date + (b.time || '')) ? -1 : 1;
+const bandChip = b => `<span class="chip" style="border-color:${b.color};color:${b.color}">${esc(b.label)}</span>`;
+
+function bpCard() {
+  const rs = [...(S.bp || [])].sort(byWhen), last = rs[rs.length - 1];
+  const wk = rs.filter(r => daysBetween(r.date, today()) <= 6 && daysBetween(r.date, today()) >= 0);
+  const avg = k => Math.round(wk.reduce((a, r) => a + r[k], 0) / wk.length);
+  const days = [...new Set(rs.map(r => r.date))];
+  const dayMean = (d, k) => { const x = rs.filter(r => r.date === d); return x.reduce((a, r) => a + r[k], 0) / x.length; };
+  return `<div class="card" id="hlBp" style="margin-bottom:13px">
+    <div class="row between" style="margin-bottom:8px"><div class="eyebrow">Blood pressure</div><button class="btn xs" id="bpAdd">+ Reading</button></div>
+    ${last ? `<div class="stats grid2" style="margin-bottom:8px">
+        <div class="stat"><div class="k">Latest</div><div class="v">${last.sys}/${last.dia}</div><div class="d">${bandChip(bpBand(last.sys, last.dia))} ${esc(relDay(last.date))}${last.time ? ' ' + esc(last.time) : ''}</div></div>
+        <div class="stat"><div class="k">7-day average</div><div class="v">${wk.length ? `${avg('sys')}/${avg('dia')}` : '—'}</div><div class="d">${wk.length ? `${bandChip(bpBand(avg('sys'), avg('dia')))} ${wk.length} reading${wk.length === 1 ? '' : 's'}` : 'none this week'}</div></div>
+      </div>
+      ${bpBand(last.sys, last.dia).id === 'veryhigh' ? '<div class="sub" style="color:var(--red);margin-bottom:6px">A reading this high: if you also feel unwell — chest pain, breathlessness, a bad headache, blurred vision — get urgent medical help (NHS 111, or 999 in an emergency). If you feel fine, rest 5 minutes and measure again.</div>' : ''}
+      ${days.length > 1 ? chartMulti([{ label: 'Systolic', color: 'var(--accent)', points: days.map(d => ({ date: d, v: dayMean(d, 'sys') })) },
+        { label: 'Diastolic', color: 'var(--blue)', points: days.map(d => ({ date: d, v: dayMean(d, 'dia') })) }], { h: 130, fmt: v => Math.round(v) }) : ''}
+      ${rs.slice(-8).reverse().map(r => `<button class="exline" data-bp="${esc(r.id)}" style="width:100%;background:none;border:0;color:inherit;text-align:left">
+        <span class="dimmer">${fmtDate(r.date, { day: 'numeric', month: 'short' })}${r.time ? ' ' + esc(r.time) : ''}</span>
+        <span class="mono">${r.sys}/${r.dia}${r.pulse ? ` · ${r.pulse} bpm` : ''} ${bandChip(bpBand(r.sys, r.dia))}</span></button>`).join('')}`
+      : '<div class="sub">No readings yet. Sit for 5 minutes first, arm supported at heart height; two readings a minute apart is better than one.</div>'}
+    <div class="sub" style="margin-top:8px">NHS bands for home readings: low 90/60 or under, ideal up to 120/80, raised above that, high from 135/85. Reference, not a diagnosis.</div>
+  </div>`;
+}
+function gluCard() {
+  const rs = [...(S.glucose || [])].sort(byWhen), last = rs[rs.length - 1];
+  const f14 = rs.filter(r => daysBetween(r.date, today()) <= 13 && daysBetween(r.date, today()) >= 0);
+  const inT = f14.filter(r => gluBand(r.mmol, r.ctx).id === 'in').length, lows = f14.filter(r => r.mmol < 4).length;
+  const t = gluTargets(), ctxName = c => (GLU_CTX.find(x => x[0] === c) || [c, c])[1];
+  const series = (name, ctxs, color) => {
+    const x = rs.filter(r => ctxs.includes(r.ctx)), ds = [...new Set(x.map(r => r.date))];
+    return { label: name, color, points: ds.map(d => { const y = x.filter(r => r.date === d); return { date: d, v: +gluShow(y.reduce((a, r) => a + r.mmol, 0) / y.length) }; }) };
+  };
+  return `<div class="card" id="hlGlu" style="margin-bottom:13px">
+    <div class="row between" style="margin-bottom:8px"><div class="eyebrow">Blood glucose · ${gluLabel()}</div>
+      <span class="row" style="gap:6px"><button class="btn xs ghost" id="gluTargets">Targets</button><button class="btn xs" id="gluAdd">+ Reading</button></span></div>
+    ${last ? `<div class="stats grid2" style="margin-bottom:8px">
+        <div class="stat"><div class="k">Latest</div><div class="v">${gluShow(last.mmol)}<small>${gluLabel()}</small></div><div class="d">${bandChip(gluBand(last.mmol, last.ctx))} ${esc(ctxName(last.ctx).toLowerCase())}</div></div>
+        <div class="stat"><div class="k">In target · 14 days</div><div class="v">${f14.length ? Math.round(inT / f14.length * 100) + '<small>%</small>' : '—'}</div><div class="d">${f14.length} reading${f14.length === 1 ? '' : 's'}${lows ? ` · <b style="color:var(--blue)">${lows} low</b>` : ''}</div></div>
+      </div>
+      ${rs.length > 1 ? chartMulti([series('Before meals', ['fasting', 'before', 'bedtime', 'other'], 'var(--accent)'), series('After meals', ['after'], 'var(--purple)')], { h: 130, fmt: v => gluUnit() === 'mgdl' ? Math.round(v) : v.toFixed(1) }) : ''}
+      ${rs.slice(-8).reverse().map(r => `<button class="exline" data-glu="${esc(r.id)}" style="width:100%;background:none;border:0;color:inherit;text-align:left">
+        <span class="dimmer">${fmtDate(r.date, { day: 'numeric', month: 'short' })}${r.time ? ' ' + esc(r.time) : ''} · ${esc(ctxName(r.ctx).toLowerCase())}</span>
+        <span class="mono">${gluShow(r.mmol)} ${bandChip(gluBand(r.mmol, r.ctx))}</span></button>`).join('')}`
+      : '<div class="sub">No readings yet. Add a reading with its context — before or after a meal — so it\'s judged against the right target.</div>'}
+    <div class="sub" style="margin-top:8px">Your targets: ${gluShow(t.before[0])}–${gluShow(t.before[1])} before meals, ${gluShow(t.after[0])}–${gluShow(t.after[1])} two hours after. Under ${gluShow(4)} is always shown as low. The defaults are NHS general targets — your diabetes team's targets come first; set them under Targets. Reference, not advice.</div>
+  </div>`;
+}
+
+function openBp(id) {
+  const old = id ? (S.bp || []).find(x => x.id === id) : null;
+  const r = old ? { ...old } : { id: uid(), date: today(), time: nowHM() };
+  modal({
+    title: old ? 'Blood pressure reading' : 'New blood pressure reading',
+    body: `<div class="grid2">
+        <div class="field"><label for="bpD">Date</label><input type="date" id="bpD" value="${esc(r.date)}" max="${today()}"></div>
+        <div class="field"><label for="bpT">Time</label><input type="time" id="bpT" value="${esc(r.time || '')}"></div>
+        <div class="field"><label for="bpS">Systolic (top)</label><input type="number" inputmode="numeric" id="bpS" value="${r.sys || ''}" placeholder="e.g. 122"></div>
+        <div class="field"><label for="bpDi">Diastolic (bottom)</label><input type="number" inputmode="numeric" id="bpDi" value="${r.dia || ''}" placeholder="e.g. 78"></div>
+        <div class="field"><label for="bpP">Pulse — optional</label><input type="number" inputmode="numeric" id="bpP" value="${r.pulse || ''}"></div>
+        <div class="field"><label for="bpA">Arm — optional</label><select id="bpA"><option value="">—</option><option value="L" ${r.arm === 'L' ? 'selected' : ''}>Left</option><option value="R" ${r.arm === 'R' ? 'selected' : ''}>Right</option></select></div>
+      </div>
+      <div class="field"><label for="bpN">Note — optional</label><input id="bpN" value="${esc(r.note || '')}" maxlength="80" placeholder="e.g. after training, missed tablet"></div>`,
+    foot: `${old ? '<button class="btn danger" id="bpDel">Delete</button>' : ''}<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="bpSave">Save</button>`,
+    onOpen: bg => {
+      bg.querySelectorAll('input').forEach(selectOnFocus);
+      const del = $('#bpDel', bg);
+      if (del) del.onclick = () => confirmDlg('Delete this reading?', () => { S.bp = S.bp.filter(x => x.id !== r.id); save(); closeAllModals(); render(); });
+      $('#bpSave', bg).onclick = () => {
+        const n = s => { const v = parseInt($(s, bg).value, 10); return Number.isFinite(v) ? v : null; };
+        const sys = n('#bpS'), dia = n('#bpDi'), pulse = n('#bpP');
+        if (!(sys >= 50 && sys <= 300 && dia >= 30 && dia <= 200 && sys > dia)) return toast('Check the numbers — the top one is higher, e.g. 122 / 78');
+        Object.assign(r, { date: $('#bpD', bg).value || today(), time: $('#bpT', bg).value || '', sys, dia, mt: Date.now() });
+        if (pulse > 0) r.pulse = pulse; else delete r.pulse;
+        const arm = $('#bpA', bg).value; if (arm) r.arm = arm; else delete r.arm;
+        const note = $('#bpN', bg).value.trim(); if (note) r.note = note; else delete r.note;
+        S.bp = (S.bp || []).filter(x => x.id !== r.id); S.bp.push(r);
+        save(); closeModal(); render();
+        const b = bpBand(sys, dia);
+        toast(`${sys}/${dia} · ${b.label}`, b.id === 'ideal' ? 'green' : '');
+      };
+    },
+  });
+}
+function openGlucose(id) {
+  const old = id ? (S.glucose || []).find(x => x.id === id) : null;
+  const r = old ? { ...old } : { id: uid(), date: today(), time: nowHM(), ctx: 'before' };
+  let ctx = r.ctx || 'before';
+  modal({
+    title: old ? 'Glucose reading' : 'New glucose reading',
+    body: `<div class="grid2">
+        <div class="field"><label for="glD">Date</label><input type="date" id="glD" value="${esc(r.date)}" max="${today()}"></div>
+        <div class="field"><label for="glT">Time</label><input type="time" id="glT" value="${esc(r.time || '')}"></div>
+      </div>
+      <div class="field"><label for="glV">Reading (${gluLabel()})</label><input type="number" inputmode="decimal" step="${gluUnit() === 'mgdl' ? 1 : 0.1}" id="glV" value="${r.mmol ? gluShow(r.mmol) : ''}"></div>
+      <div class="field"><label>When</label><div class="seg wrap" id="glCtx">${GLU_CTX.map(([k, l]) => `<button data-v="${k}" class="${ctx === k ? 'on' : ''}">${esc(l)}</button>`).join('')}</div></div>
+      <div class="field"><label for="glN">Note — optional</label><input id="glN" value="${esc(r.note || '')}" maxlength="80" placeholder="e.g. after training, corrected"></div>`,
+    foot: `${old ? '<button class="btn danger" id="glDel">Delete</button>' : ''}<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="glSave">Save</button>`,
+    onOpen: bg => {
+      bg.querySelectorAll('input').forEach(selectOnFocus);
+      bg.querySelectorAll('#glCtx button').forEach(b => b.onclick = () => { ctx = b.dataset.v; bg.querySelectorAll('#glCtx button').forEach(x => x.classList.toggle('on', x === b)); a11yPass(bg); });
+      const del = $('#glDel', bg);
+      if (del) del.onclick = () => confirmDlg('Delete this reading?', () => { S.glucose = S.glucose.filter(x => x.id !== r.id); save(); closeAllModals(); render(); });
+      $('#glSave', bg).onclick = () => {
+        const v = parseFloat($('#glV', bg).value), mmol = Number.isFinite(v) ? gluToMmol(v) : null;
+        if (!(mmol >= 0.5 && mmol <= 40)) return toast(`Enter a reading in ${gluLabel()}`);
+        Object.assign(r, { date: $('#glD', bg).value || today(), time: $('#glT', bg).value || '', mmol: Math.round(mmol * 100) / 100, ctx, mt: Date.now() });
+        const note = $('#glN', bg).value.trim(); if (note) r.note = note; else delete r.note;
+        S.glucose = (S.glucose || []).filter(x => x.id !== r.id); S.glucose.push(r);
+        save(); closeModal(); render();
+        const b = gluBand(r.mmol, ctx);
+        toast(`${gluShow(r.mmol)} ${gluLabel()} · ${b.label}`, b.id === 'in' ? 'green' : '');
+      };
+    },
+  });
+}
+function openGluTargets() {
+  const t = gluTargets();
+  let unit = gluUnit();
+  const show = mm => unit === 'mgdl' ? Math.round(mm * MGDL_PER_MMOL) : (Math.round(mm * 10) / 10);
+  const body = () => `<div class="field"><label>Units</label><div class="seg" id="gtU">
+        <button data-v="mmol" class="${unit === 'mmol' ? 'on' : ''}">mmol/L</button><button data-v="mgdl" class="${unit === 'mgdl' ? 'on' : ''}">mg/dL</button></div></div>
+      <div class="grid2">
+        <div class="field"><label for="gtB0">Before meals — from</label><input type="number" inputmode="decimal" id="gtB0" value="${show(t.before[0])}"></div>
+        <div class="field"><label for="gtB1">to</label><input type="number" inputmode="decimal" id="gtB1" value="${show(t.before[1])}"></div>
+        <div class="field"><label for="gtA0">2 h after meals — from</label><input type="number" inputmode="decimal" id="gtA0" value="${show(t.after[0])}"></div>
+        <div class="field"><label for="gtA1">to</label><input type="number" inputmode="decimal" id="gtA1" value="${show(t.after[1])}"></div>
+      </div>
+      <div class="sub">Fasting, bedtime and other readings use the before-meals target. Defaults are NHS general targets (4–7 before meals, 5–9 after); targets vary, so use the ones your diabetes team gave you. Under 4 mmol/L is always shown as low.</div>
+      <button class="btn xs ghost" id="gtReset" style="margin-top:8px">Back to the NHS defaults</button>`;
+  modal({
+    title: 'Glucose targets',
+    body: body(),
+    foot: '<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="gtSave">Save</button>',
+    onOpen: bg => {
+      const read = () => { const g = s => { const v = parseFloat($(s, bg).value); return Number.isFinite(v) ? (unit === 'mgdl' ? v / MGDL_PER_MMOL : v) : null; };
+        return { before: [g('#gtB0'), g('#gtB1')], after: [g('#gtA0'), g('#gtA1')] }; };
+      const bind = () => {
+        bg.querySelectorAll('#gtU button').forEach(b => b.onclick = () => { const cur = read(); if (cur.before.every(x => x > 0) && cur.after.every(x => x > 0)) Object.assign(t, cur); unit = b.dataset.v; $('.modal-body', bg).innerHTML = body(); bind(); });
+        $('#gtReset', bg).onclick = () => { t.before = GLU_DEFAULT_TARGETS.before; t.after = GLU_DEFAULT_TARGETS.after; $('.modal-body', bg).innerHTML = body(); bind(); };
+        bg.querySelectorAll('input').forEach(selectOnFocus);
+      };
+      bind();
+      $('#gtSave', bg).onclick = () => {
+        const n = read(), ok = p => p[0] > 0 && p[1] > p[0] && p[1] < 40;
+        if (!ok(n.before) || !ok(n.after)) return toast('Each target needs a low below its high');
+        const r2 = p => p.map(x => Math.round(x * 10) / 10);
+        S.settings.glucoseUnit = unit;
+        S.settings.glucoseTargets = { before: r2(n.before), after: r2(n.after) };
+        save(); closeModal(); render(); toast('Targets saved', 'green');
+      };
+    },
+  });
+}
+function wireVitals(v) {
+  const a = $('#bpAdd', v); if (a) a.onclick = () => openBp();
+  const g = $('#gluAdd', v); if (g) g.onclick = () => openGlucose();
+  const t = $('#gluTargets', v); if (t) t.onclick = openGluTargets;
+  v.querySelectorAll('[data-bp]').forEach(b => b.onclick = () => openBp(b.dataset.bp));
+  v.querySelectorAll('[data-glu]').forEach(b => b.onclick = () => openGlucose(b.dataset.glu));
 }
 
 /* Home: today's routine, while mobility is part of the routine (anything in
