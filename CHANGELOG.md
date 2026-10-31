@@ -13,6 +13,10 @@ rather than guessed.
 
 ---
 
+## 0.63.0 — 31 Oct 2026
+- New: Coach report, under Tools → Share. Pick the last 4, 8 or 12 weeks (or your own dates) and get a read-only summary for a coach: sessions per week, volume, bodyweight and check-in averages, your main lifts' best estimated 1RM against before, PRs, and every session's sets. Send it as text in a message, save it as a PDF, or save the raw JSON. Warm-ups, notes and check-ins can each be left out.
+- New: share a PR as an image. Each PR on the session-complete screen has a Share button, and so does each row of a lift's PR timeline in Stats. The card shows the lift, the number big, how much it beat your previous best, and your estimated 1RM line with the new PR in gold.
+
 ## 0.62.3 — 31 Oct 2026
 - Goal bars now fill. A lift goal shows how much of the target you can already lift, so 175 of 200 is 88% rather than 0%. A small mark on the bar shows where you were when you set the goal, and the line underneath says how much you've gained since.
 - Lift goals now say which lift they're for, with the equipment and its little icon, for example "Back Squat · Barbell".

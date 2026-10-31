@@ -580,6 +580,22 @@ window.smoke = async function smoke(opts) {
     return `share cards ${quick.width}x${quick.height} and ${full.width}x${full.height}`;
   });
 
+  await step('flow: coach report and PR card (E1, E2)', async () => {
+    openTool('report'); await wait(200);
+    if (modalTitle() !== 'Coach report') throw new Error(`report opened "${modalTitle()}"`);
+    const prev = document.querySelector('#rpPrev').textContent;
+    close(); await wait(60);
+    const R = reportData('2000-01-01', today(), { warm: false, notes: true, checkins: true });
+    const txt = reportText(R), html = reportHtml(R);
+    if (!txt.startsWith('TRAINING REPORT') || !html.includes('<h1>')) throw new Error('report text/html malformed');
+    const wo = S.workouts.find(w => w.status === 'completed' && w.exercises.some(e => e.leaf));
+    if (!wo) return `report ${R.count} sessions (no session for a PR card)`;
+    const e = wo.exercises.find(x => x.leaf), s = e.sets[0] || { w: 100, r: 5 };
+    const c = prCardCanvas({ name: exName(e), key: exKey(e), w: s.w || 100, r: s.r || 5, e1: e1rm(s.w || 100, s.r || 5) }, wo);
+    if (c.width !== 1080 || c.height !== 1350) throw new Error('PR card wrong size');
+    return `report ${R.count} sessions, ${txt.split('\n').length} lines, preview ${prev.length} chars; PR card ${c.width}x${c.height}`;
+  });
+
   await step('food removed: tab gone, old route lands home', async () => {
     close();
     if (document.querySelector('#nav [data-page="food"]')) throw new Error('Food tab still in the nav');
