@@ -1892,12 +1892,15 @@ const NUTRITION_GOAL = {
   gain: { pct: 0.10, label: 'Gain' },
 };
 
-/* Mifflin-St Jeor — the usual estimate, and an estimate is all it is. */
+/* Mifflin-St Jeor — the usual estimate, and an estimate is all it is. One copy:
+   the profile and the Tools TDEE calculator (D11) both come through here. */
+function bmrMifflin(kg, cm, age, sex) {
+  if (!(kg > 0) || !(cm > 0) || !(age >= 0)) return 0;
+  return Math.round(10 * kg + 6.25 * cm - 5 * age + (sex === 'female' ? -161 : 5));
+}
 function bmrKcal() {
-  const kg = bodyweightKg(), cm = +S.settings.heightCm || 0, age = ageFrom(S.settings.dob);
-  if (!kg || !cm || age == null) return 0;
-  const base = 10 * kg + 6.25 * cm - 5 * age;
-  return Math.round(base + (S.settings.sex === 'female' ? -161 : 5));
+  const age = ageFrom(S.settings.dob);
+  return age == null ? 0 : bmrMifflin(bodyweightKg(), +S.settings.heightCm || 0, age, S.settings.sex);
 }
 
 /* Protein and fat are set per kilo of bodyweight and carbohydrate takes what is
@@ -1980,7 +1983,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.55.0';
+const APP_VERSION = '0.56.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4585,20 +4588,192 @@ function viewHealth() {
   ${viewBody()}`;
 }
 
-/* Tools (D12): reachable from the top bar in both skins. D11 adds the
-   calculators to this sheet. */
+/* ============================================================
+   TOOLS — calculators (D11, r&d/specs/calculators-spec.md)
+   Reachable from the top bar in both skins (D12). Every field is prefilled
+   from what's stored and stays editable; nothing is saved.
+   ============================================================ */
+const TOOLS = [
+  ['Lifting', [
+    ['plates', 'Plate loader', 'Target weight → plates per side'],
+    ['ramp', 'Warm-up ramp', 'Sets up to a working weight'],
+    ['e1rm', 'e1RM and rep maxes', 'From any set'],
+    ['pct', '%1RM ↔ RIR chart', 'What a weight is worth at each rep count'],
+    ['points', 'DOTS / IPF GL points', 'For a total at a bodyweight'],
+    ['rpe', 'RPE ↔ RIR table', 'For coaches who think in RPE'],
+  ]],
+  ['Energy', [['tdee', 'TDEE', 'Maintenance calories, Mifflin-St Jeor and Katch-McArdle']]],
+  ['Physique', [
+    ['potential', 'Max muscular potential', "Casey Butt's formula, from height, wrist and ankle"],
+    ['ffmi', 'FFMI', 'Fat-free mass index'],
+  ]],
+];
 function openTools() {
   modal({
     title: 'Tools',
-    body: `<div class="sub" style="margin:0 0 10px">Calculators that use what you've logged. Nothing here is saved unless you say so.</div>
-      <button class="btn wide" id="tlPlates" style="margin-bottom:8px">Plate loader</button>
-      <button class="btn wide" id="tlRamp">Warm-up ramp</button>`,
+    body: `<div class="sub" style="margin:0 0 6px">Calculators that start from what you've logged. Change any number to try a what-if — nothing here is saved.</div>
+      ${TOOLS.map(([group, items]) => `<div class="eyebrow" style="margin:12px 0 4px">${group}</div>
+        ${items.map(([id, name, note]) => `<button class="axrow" data-tool="${id}"><span class="lbl">${esc(name)} <span class="dimmer">${esc(note)}</span></span></button>`).join('')}`).join('')}`,
     foot: `<button class="btn primary wide" data-close>Done</button>`,
+    onOpen: bg => bg.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => openTool(b.dataset.tool)),
+  });
+}
+
+/* What's stored, for prefilling. Each is null when there's nothing. */
+function latestBF() {
+  const t = [...(S.calipers || [])].sort((a, b) => a.date < b.date ? 1 : -1).map(caliperCalc).find(r => r && r.complete && !r.odd);
+  return t ? t.bf : null;
+}
+function latestMeasCm(name) {
+  const ser = measSeries();
+  const k = Object.keys(ser).find(x => x.toLowerCase().replace(/^x:/, '').replace(/\s*\((l|r)\)$/, '') === name);
+  const pts = k ? ser[k] : null;
+  return pts && pts.length ? pts[pts.length - 1].v : null;
+}
+const IN_PER_CM = 1 / 2.54;   // LB_PER_KG is declared with the importers
+
+/* Casey Butt: maximum lean body mass (lb) for a drug-free lifter, inches in.
+   Constants as commonly published — see the spec for the check. */
+function buttLbmLb(hIn, wristIn, ankleIn, bf) {
+  return hIn ** 1.5 * (Math.sqrt(wristIn) / 22.667 + Math.sqrt(ankleIn) / 17.0104) * (1 + bf / 224);
+}
+
+/* One sheet per calculator. fields: [id, label, value, opts]; calc reads the
+   numbers and returns result HTML. */
+function calcSheet(title, intro, fields, calc, foot) {
+  const fieldHtml = ([id, label, val, o]) => {
+    const op = o || {};
+    if (op.options) return `<div class="field"><label for="cf_${id}">${label}</label><select id="cf_${id}">${op.options.map(([v, t]) => `<option value="${esc(v)}" ${String(v) === String(val) ? 'selected' : ''}>${esc(t)}</option>`).join('')}</select></div>`;
+    return `<div class="field"><label for="cf_${id}">${label}</label><input id="cf_${id}" type="number" inputmode="decimal" step="${op.step || 'any'}" min="0" value="${val == null || val === '' ? '' : esc(String(val))}" placeholder="${esc(op.ph || '')}"></div>`;
+  };
+  modal({
+    title,
+    body: `${intro ? `<div class="sub" style="margin:0 0 10px">${intro}</div>` : ''}
+      <div class="grid2" style="gap:0 10px">${fields.map(fieldHtml).join('')}</div>
+      <div id="cfOut" aria-live="polite" style="margin-top:6px"></div>
+      ${foot ? `<div class="sub" style="margin-top:10px">${foot}</div>` : ''}`,
+    foot: `<button class="btn ghost" id="cfBack">All tools</button><button class="btn primary" data-close>Done</button>`,
     onOpen: bg => {
-      $('#tlPlates', bg).onclick = () => { closeModal(); openPlates(0); };
-      $('#tlRamp', bg).onclick = () => { closeModal(); openRamp('Warm-up', 0); };
+      const read = () => Object.fromEntries(fields.map(([id, , , o]) => {
+        const el = $('#cf_' + id, bg), v = el ? el.value : '';
+        return [id, o && o.options ? v : (v === '' ? null : parseFloat(v))];
+      }));
+      const run = () => { let h; try { h = calc(read()); } catch (e) { h = ''; } $('#cfOut', bg).innerHTML = h || ''; };
+      bg.querySelectorAll('input,select').forEach(el => { el.oninput = run; el.onchange = run; });
+      $('#cfBack', bg).onclick = () => { closeModal(); openTools(); };
+      run();
     },
   });
+}
+function calcTable(head, rows) {
+  return `<table class="settable"><thead><tr>${head.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+    <tbody>${rows.map(r => `<tr>${r.map((c, i) => `<td class="${i ? 'mono' : ''}">${c}</td>`).join('')}</tr>`).join('')}</tbody></table>`;
+}
+const calcNeed = what => `<div class="sub">Enter ${what}.</div>`;
+
+function openTool(id) {
+  closeModal();
+  const bw = bodyweightKg(), sex = S.settings.sex === 'female' ? 'female' : 'male';
+  const age = ageFrom(S.settings.dob), hCm = +S.settings.heightCm || null, bf = latestBF();
+  const dW = kg => kg ? nice(dw(kg)) : '', dL = cm => cm ? nice(dlen(cm)) : '';
+  const sexOpts = [['male', 'Male'], ['female', 'Female']];
+  const fromW = v => v > 0 ? toKg(v) : 0, fromL = v => v > 0 ? toCm(v) : 0;
+  const lenHint = !hCm ? ' Height, date of birth and sex come from your profile.' : '';
+
+  if (id === 'plates') { openPlates(0); return; }
+  if (id === 'ramp') { openRamp('Warm-up', 0); return; }
+
+  if (id === 'e1rm') {
+    const k = mainLiftKeys()[0], h = k ? historyFor(k) : [], last = h[h.length - 1];
+    return calcSheet('e1RM and rep maxes', last ? `Started from your last ${esc(leafName(k))} set.` : '', [
+      ['w', `Weight (${U()})`, last ? dW(last.w) : ''], ['r', 'Reps', last ? last.r : '', { step: 1 }],
+      ['rir', 'RIR (reps left)', last && last.rpe != null ? rpeToRir(last.rpe) : 0, { step: 1 }],
+    ], v => {
+      if (!(v.w > 0) || !(v.r > 0)) return calcNeed('a weight and reps');
+      const rir = Math.max(0, v.rir || 0), e1 = e1rm(fromW(v.w), v.r, rirToRpe(rir));
+      return `<div class="stat" style="margin-bottom:10px"><div class="k">Estimated 1RM</div><div class="v">${w(e1)}</div></div>
+        ${calcTable(['Reps', `at RIR ${rir}`, 'at RIR 0'], [1, 2, 3, 4, 5, 6, 8, 10, 12].map(r => [r, wt(loadFor(e1, r, rir)), wt(loadFor(e1, r, 0))]))}`;
+    }, 'Epley with your RIR added to the reps, capped at 12 — the same estimate the app plans with.');
+  }
+
+  if (id === 'pct') {
+    return calcSheet('%1RM ↔ RIR chart', 'The percentage of your 1RM that each rep count takes at each RIR.', [
+      ['e1', `Your 1RM (${U()}) — optional, adds weights`, ''],
+    ], v => {
+      const e1 = fromW(v.e1), rirs = [0, 1, 2, 3, 4];
+      return calcTable(['Reps', ...rirs.map(r => `RIR ${r}`)], [1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(r => [r, ...rirs.map(rr => {
+        const p = loadFor(100, r, rr);
+        return `${Math.round(p)}%${e1 ? `<div class="dimmer" style="font-size:10.5px">${wt(e1 * p / 100)}</div>` : ''}`;
+      })]));
+    }, 'Epley with RIR added to the reps, capped at 12 — the model the app plans with. Real lifters vary, especially on high reps.');
+  }
+
+  if (id === 'points') {
+    const ps = priorityStats();
+    return calcSheet('DOTS / IPF GL points', '', [
+      ['t', `Total (${U()})`, ps.total ? dW(ps.total) : ''], ['bw', `Bodyweight (${U()})`, dW(bw)],
+      ['sex', 'Sex', sex, { options: sexOpts }], ['bo', 'Event', 'full', { options: [['full', 'Full power'], ['bench', 'Bench only']] }],
+    ], v => {
+      if (!(v.t > 0) || !(v.bw > 0)) return calcNeed('a total and a bodyweight');
+      const t = fromW(v.t), b = fromW(v.bw);
+      return `<div class="stats grid2"><div class="stat"><div class="k">DOTS</div><div class="v">${nice(dots(t, b, v.sex))}</div></div>
+        <div class="stat"><div class="k">IPF GL</div><div class="v">${nice(glPoints(t, b, v.sex, v.bo === 'bench'))}</div><div class="d">${v.bo === 'bench' ? 'bench only' : 'classic'}</div></div></div>`;
+    }, ps.total ? 'Total from your tested priority lifts.' : 'Log tests of your priority lifts on Calendar → Events and the total fills in.');
+  }
+
+  if (id === 'rpe') {
+    return calcSheet('RPE ↔ RIR table', 'Ironlog stores RPE and shows RIR. RPE 10 is a true max; each step down is one more rep left.', [], () =>
+      calcTable(['RPE', 'RIR', 'Means'], [10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6, 5].map(r => [r, rpeToRir(r), {
+        10: 'Nothing left', 9.5: 'Maybe more weight, no more reps', 9: '1 rep left', 8.5: '1, maybe 2 left', 8: '2 left',
+        7.5: '2, maybe 3 left', 7: '3 left', 6.5: '3–4 left', 6: '4 left', 5: '5+ left — warm-up territory' }[r]])));
+  }
+
+  if (id === 'tdee') {
+    return calcSheet('TDEE', `Maintenance calories: your resting rate times how active you are.${lenHint}`, [
+      ['kg', `Bodyweight (${U()})`, dW(bw)], ['h', `Height (${lenU()})`, dL(hCm)], ['age', 'Age', age ?? '', { step: 1 }],
+      ['sex', 'Sex', sex, { options: sexOpts }], ['bf', 'Body fat % — optional', bf != null ? nice(bf) : ''],
+      ['act', 'Activity', S.settings.activity || 'moderate', { options: Object.entries(ACTIVITY).map(([k, a]) => [k, `${a.label} — ${a.note}`]) }],
+    ], v => {
+      const kg = fromW(v.kg), cm = fromL(v.h), act = ACTIVITY[v.act] || ACTIVITY.moderate;
+      const mif = bmrMifflin(kg, cm, v.age, v.sex);
+      const kat = v.bf > 0 && v.bf < 70 && kg ? Math.round(370 + 21.6 * kg * (1 - v.bf / 100)) : 0;
+      if (!mif && !kat) return calcNeed('bodyweight, height and age');
+      const row = (name, bmr) => `<div class="stat"><div class="k">${name}</div><div class="v">${Math.round(bmr * act.mult)}<small>kcal</small></div><div class="d">resting ${bmr} kcal</div></div>`;
+      return `<div class="stats grid2">${mif ? row('Mifflin-St Jeor', mif) : ''}${kat ? row('Katch-McArdle', kat) : ''}</div>
+        ${kat ? '<div class="sub" style="margin-top:8px">Katch-McArdle uses your lean mass, so it suits lifters better when the body fat % is right.</div>' : ''}`;
+    }, 'Estimates, not measurements — a couple of weeks of steady bodyweight on a known intake is the real answer.');
+  }
+
+  if (id === 'potential' || id === 'ffmi') {
+    const wr = latestMeasCm('wrist'), an = latestMeasCm('ankle');
+    const caveat = 'An estimate from drug-free elite bodybuilders of typical proportions. For adaptive or short-stature lifters it\'s a rough ceiling, not a verdict.';
+    const measHint = !wr || !an ? ` Add "wrist" and "ankle" as measurement sites on Health and they'll fill in.` : '';
+    if (id === 'potential') return calcSheet('Max muscular potential', `Casey Butt's formula. Wrist at the bony bump on the outside, ankle at its narrowest.${measHint}`, [
+      ['h', `Height (${lenU()})`, dL(hCm)], ['wr', `Wrist (${lenU()})`, dL(wr)], ['an', `Ankle (${lenU()})`, dL(an)],
+    ], v => {
+      const h = fromL(v.h), wrc = fromL(v.wr), anc = fromL(v.an);
+      if (!h || !wrc || !anc) return calcNeed('height, wrist and ankle');
+      return calcTable(['Body fat', 'Max lean mass', 'Max bodyweight'], [5, 8, 10, 12, 15, 20].map(b => {
+        const lbm = buttLbmLb(h * IN_PER_CM, wrc * IN_PER_CM, anc * IN_PER_CM, b) / LB_PER_KG;
+        return [`${b}%`, wt(lbm), wt(lbm / (1 - b / 100))];
+      }));
+    }, caveat);
+    return calcSheet('FFMI', `Fat-free mass index: lean mass for your height.${measHint}`, [
+      ['kg', `Bodyweight (${U()})`, dW(bw)], ['h', `Height (${lenU()})`, dL(hCm)], ['bf', 'Body fat %', bf != null ? nice(bf) : ''],
+      ['wr', `Wrist (${lenU()}) — optional`, dL(wr)], ['an', `Ankle (${lenU()}) — optional`, dL(an)],
+    ], v => {
+      const kg = fromW(v.kg), cm = fromL(v.h);
+      if (!kg || !cm || !(v.bf > 0 && v.bf < 70)) return calcNeed('bodyweight, height and body fat %');
+      const m = cm / 100, ffm = kg * (1 - v.bf / 100), ffmi = ffm / (m * m), norm = ffmi + 6.1 * (1.8 - m);
+      const wrc = fromL(v.wr), anc = fromL(v.an);
+      const pot = wrc && anc ? buttLbmLb(cm * IN_PER_CM, wrc * IN_PER_CM, anc * IN_PER_CM, v.bf) / LB_PER_KG : 0;
+      return `<div class="stats grid3">
+          <div class="stat"><div class="k">Lean mass</div><div class="v">${w(ffm)}</div></div>
+          <div class="stat"><div class="k">FFMI</div><div class="v">${nice(ffmi)}</div></div>
+          <div class="stat"><div class="k">Normalised</div><div class="v">${nice(norm)}</div><div class="d">to 1.80 m</div></div></div>
+        ${pot ? `<div class="sub" style="margin-top:8px">Butt's maximum lean mass at ${nice(v.bf)}% body fat: <b>${wt(pot)}</b> — you're at <b>${Math.round(ffm / pot * 100)}%</b> of it.</div>` : ''}`;
+    }, `Normalised FFMI after Kouri et al. (1995). ${caveat}`);
+  }
 }
 
 function last7() {

@@ -13,6 +13,18 @@ rather than guessed.
 
 ---
 
+## 0.56.0 — 31 Oct 2026
+- **Tools** (the spanner in the top bar) now has calculators, each started
+  from what you've logged and free to change for what-ifs. Nothing is saved:
+  - e1RM and a rep-max table from any set
+  - a %1RM ↔ RIR chart
+  - DOTS and IPF GL points
+  - an RPE ↔ RIR table
+  - TDEE (Mifflin-St Jeor, plus Katch-McArdle when you know your body fat)
+  - maximum muscular potential (Casey Butt)
+  - FFMI
+- The physique numbers are estimates, and the tools say so.
+
 ## 0.55.0 — 31 Oct 2026
 - **Chains, bands, slingshot and equipped now have their own PRs.** Before,
   a bench with chains counted toward your raw bench PR. Now each gets a PR

@@ -523,7 +523,7 @@ numbers** — do it on its own, deliberately, and tell Aaron what moved. Add ban
 tension and chain weight fields at the same time (Blast #112, recast for
 accommodating resistance).
 
-### [ ] D11. Tools page (calculators)
+### [x] D11. Tools page (calculators) — shipped 0.56.0 (spec `r&d/specs/calculators-spec.md`; adaptive TDEE left out — no food intake to read since A1; Butt constants checked against secondary sources only)
 The 98 skin's menu bar already has a Tools menu; the default skin gets a top-bar Tools button (D12). Every
 calculator **prefills from stored data** (bodyweight, height, age, sex, BF% and
 measurements once E4 exists), stays editable for what-ifs, and saves nothing
