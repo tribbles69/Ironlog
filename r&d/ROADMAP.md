@@ -310,7 +310,7 @@ phone.
 generalising the Liftoff importer. Map to leaves via the exercise data check and
 show a dry-run report before anything is written.
 
-### [ ] B9. Let any equipment be picked for any movement
+### [x] B9. Let any equipment be picked for any movement — shipped 0.53.0 (spec 1a updated; the Check exercise data report and JSON/Drive import never rejected these leaves, so only the picker and the name importer changed)
 Added 2026-10-31. Today the equipment picker (`openAxisPicker`) greys **and
 disables** equipment a movement doesn't list — spec 1a in
 `r&d/specs/exercise-system.md`. Aaron's call: grey is fine as a hint, but it
