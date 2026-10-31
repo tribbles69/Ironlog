@@ -575,7 +575,7 @@ body data. Write `r&d/specs/health-page-spec.md` before building.
 - Same rules as everywhere: C4 accessibility, both skins, data stays on the
   device and is in JSON export / Drive sync.
 
-### [ ] D14. A proper landing page
+### [x] D14. A proper landing page — shipped 0.58.0 as the **in-app Home** (Aaron, 2026-10-31: not a separate public site; spec `r&d/specs/home-landing-spec.md`). App URL, scope and service worker untouched
 Added 2026-10-31. A public page that explains what Ironlog is before someone
 installs it: who it's for (powerlifting, strongman, strengthlifting, adaptive
 lifters), the free / local-only / bring-your-own-AI-key model, a few
