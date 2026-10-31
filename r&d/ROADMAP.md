@@ -231,7 +231,7 @@ top-3 lifts appear on every tab.
   'exercises'` branch).
 - Each other tab opens with its own content; nothing above the switch except
   the page title.
-- If D12 moves Body out of Stats, drop the Body tab here at the same time.
+- If D13 moves Body out of Stats, drop the Body tab here at the same time.
 
 ---
 
@@ -510,7 +510,7 @@ tension and chain weight fields at the same time (Blast #112, recast for
 accommodating resistance).
 
 ### [ ] D11. Tools page (calculators)
-The 98 skin's menu bar already has a Tools menu, so that's the way in. Every
+The 98 skin's menu bar already has a Tools menu; the default skin gets a top-bar Tools button (D12). Every
 calculator **prefills from stored data** (bodyweight, height, age, sex, BF% and
 measurements once E4 exists), stays editable for what-ifs, and saves nothing
 unless asked. Write `r&d/specs/calculators-spec.md` before building. Reuse the
@@ -543,7 +543,37 @@ maths that's already in the app — `bmrKcal` / `suggestedTargets`, `e1rm`,
 - DOTS / IPF GL points calculator.
 - RPE ↔ RIR mapping table for coaches who think in RPE.
 
-### [ ] D12. Health page — everything about the body in one place
+### [ ] D12. Layout rework — Home · Calendar · Train · Stats · Health
+Decided 2026-10-31. **Do this before D13 (Health) and E5 (Mobility)** — they
+need somewhere to live. Write `r&d/specs/layout-spec.md` first; it covers both
+skins (the 98 menu bar mirrors the same pages).
+
+Bottom bar goes from Home · Calendar · Workout · Stats · Events to:
+**Home · Calendar · Train · Stats · Health.** Still five tabs.
+- **Workout → Train,** with three starts: **Lift** (today's *Start empty
+  workout* / planned sessions), **Cardio** (opens the machine picker, D15) and
+  **Mobility** (pick a routine, E5). A mobility routine is a session kind like
+  cardio: it shows in the calendar and history and has its own player.
+- **Events → into Calendar.** An event is a dated item on the calendar
+  (blocks already count down to it, C6); opening it gives the full meet-day
+  tools from C2/C3 unchanged. Add an "Add event" entry on the Calendar page and
+  keep a list of upcoming events there. When an event is close (say ≤ 14
+  days), Home shows a countdown card that opens meet-day. Nothing in C2/C3
+  is removed — only where it's reached from.
+- **Health gets the freed slot** (D13). Stats goes back to training only:
+  Exercises / Rankings / Muscles; the Body tab leaves (with A7's fix).
+- **Tools (D11) goes in the top bar** next to profile and settings, so the
+  default skin can reach it too (today only the 98 menu has it).
+- **Home** adds a line for today's mobility routine (e.g. "Morning stretch
+  8 / 25", tap to resume) alongside the check-in and today's training.
+- **Old routes keep working:** `go('meets')` opens Calendar's events,
+  `go('workout')` opens Train, `analyticsTab === 'body'` opens Health — like
+  the existing `food → home` redirect in `go()`. A live session still resumes
+  from Train exactly as it does from Workout now.
+- C4 rules: nav labels, `aria-current`, 40 px targets; re-run the axe check
+  in both skins.
+
+### [ ] D13. Health page — everything about the body in one place
 Added 2026-10-31. A page of its own (not a tab under Stats) for health and
 body data. Write `r&d/specs/health-page-spec.md` before building.
 - **Moves in from Stats → Body (E4):** bodyweight with the 7-day average,
@@ -555,12 +585,13 @@ body data. Write `r&d/specs/health-page-spec.md` before building.
   physique calculators (prefilled from this data).
 - Top of the page: latest bodyweight, latest BF% / skinfold sum, and the
   trend since the last check, each tapping through to its full history.
-- Way in: Home and the menu (decide the nav slot in the spec — don't add a
-  sixth bottom tab without asking Aaron). Old links to Stats → Body go here.
+- Way in: its own bottom-bar tab (D12). Old links to Stats → Body go here.
+- Also holds the mobility **tests** from E5 (ROM, balance, forward-fold
+  benchmark); the routines themselves run from Train.
 - Same rules as everywhere: C4 accessibility, both skins, data stays on the
   device and is in JSON export / Drive sync.
 
-### [ ] D13. A proper landing page
+### [ ] D14. A proper landing page
 Added 2026-10-31. A public page that explains what Ironlog is before someone
 installs it: who it's for (powerlifting, strongman, strengthlifting, adaptive
 lifters), the free / local-only / bring-your-own-AI-key model, a few
@@ -574,12 +605,12 @@ screenshots, and a clear **Install** button with Android steps.
 - Plain static HTML/CSS, fast, no tracking. Links to the changelog, privacy /
   data note and the GitHub repo.
 
-### [ ] D14. More cardio machines for the HR-zone session
+### [ ] D15. More cardio machines for the HR-zone session
 Added 2026-10-31. The HR cardio session (0.19.0, `r&d/specs/cardio-spec.md`)
 is treadmill-only: its cues are speed and incline (`CARDIO_DEF`, `CARDIO`
 limits in km/h and %). Add other machines, each with its own thing to cue.
 Update the spec first — its "Other machines" note is where this was parked.
-- **Pick the machine at setup**; each logs as its own exercise leaf (check
+- **Pick the machine at setup** (Train → Cardio, D12); each logs as its own exercise leaf (check
   `EX_DB` for existing cardio entries before adding new ones) with HR trace,
   duration and whatever the machine reads out.
 - **What gets cued, per machine** (the knob the lifter turns by hand — none of
@@ -638,6 +669,8 @@ Write `r&d/specs/body-comp-spec.md` before building.
 
 ### [ ] E5. Mobility training
 Write `r&d/specs/mobility-spec.md` before building.
+- Routines start from **Train → Mobility**; tests and their charts live on
+  **Health** (D12, D13).
 - **Starting point (added 2026-10-31):** Aaron's daily morning routine,
   transcribed to `r&d/data/routines/morning-stretch.json` — 8 zones, 25
   stretches (the sheet says 24; it lists 25), ~30 min. Ship it as the first
