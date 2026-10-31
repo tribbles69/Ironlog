@@ -13,6 +13,11 @@ rather than guessed.
 
 ---
 
+## 0.62.1 — 31 Oct 2026
+- The app no longer zooms. Pinch and double-tap zoom are off, and it opens at the right size instead of slightly zoomed in. Text still follows your phone's font size setting.
+- Fixed: the Settings buttons at the bottom no longer run off the right edge. They wrap onto a second line on narrow phones.
+- Fixed: in the Windows 98 skin, the top bar no longer pushes the page wider than the screen. On narrow phones the clock drops the day name.
+
 ## 0.62.0 — 31 Oct 2026
 - **Blood pressure on Health:** log readings with an optional pulse, arm
   and note. You get the latest, a 7-day average and a chart. Each reading is

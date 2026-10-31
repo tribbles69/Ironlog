@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#0d0f14">
 <meta name="color-scheme" content="dark">
 <meta name="mobile-web-app-capable" content="yes">
@@ -49,6 +49,10 @@ try {
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
+/* An app, not a page: no pinch or double-tap zoom (Aaron's call, 0.62.1), no
+   Android font boosting, and nothing wider than the screen can drag the
+   layout out sideways. Text size follows the phone's own font setting. */
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation;overflow-x:hidden}
 body{
   background:var(--bg);
   color:var(--txt);
@@ -636,7 +640,7 @@ svg.chart{display:block;width:100%;height:auto;overflow:visible}
 }
 .modal-head h2{margin:0;font-size:16px}
 .modal-body{padding:16px;overflow-y:auto;-webkit-overflow-scrolling:touch}
-.modal-foot{padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);display:flex;gap:9px;flex:none}
+.modal-foot{padding:12px 16px calc(12px + env(safe-area-inset-bottom));border-top:1px solid var(--line);display:flex;flex-wrap:wrap;gap:9px;flex:none}
 .modal-foot .btn{flex:1}
 @media(min-width:620px){
   .modal-bg{align-items:center}
@@ -867,6 +871,7 @@ html[data-skin="win98"] .icon-btn:active{box-shadow:var(--w-sink)}
 
 #w98-lcd{
   text-align:right;font-family:var(--w-mono);line-height:1.15;padding-right:4px;
+  min-width:0;overflow:hidden;white-space:nowrap;
 }
 #w98-lcd .clock{
   display:inline-block;padding:2px 8px;
@@ -1225,6 +1230,12 @@ html[data-skin="win98"] .summary-hero .t{font-family:var(--w-mono)}
   html[data-skin="win98"]{--w-title-h:26px;--w-menu-h:24px;--w-lcd-h:54px}
   #w98-menu .mlab{padding:0 8px;font-size:12px}
   #w98-lcd .clock{font-size:14px;padding:1px 6px}
+  #w98-lcd .clock .dow{display:none}
+  html[data-skin="win98"] .tb-left{padding-left:6px}
+  html[data-skin="win98"] .brand{font-size:17px}
+}
+@media(max-width:350px){
+  #w98-lcd{display:none}
   html[data-skin="win98"] #view{padding:8px}
 }
 </style>
@@ -2039,7 +2050,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.62.0';
+const APP_VERSION = '0.62.1';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
