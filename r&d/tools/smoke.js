@@ -102,7 +102,7 @@ window.smoke = async function smoke(opts) {
   }
 
   // ---------------------------------------------------------------- views
-  for (const p of ['home', 'calendar', 'workout', 'analytics', 'meets']) {
+  for (const p of ['home', 'calendar', 'workout', 'analytics', 'meets', 'health']) {
     await step(`view: ${p}`, async () => {
       go(p); await wait(120);
       const len = document.querySelector('#view').innerHTML.length;

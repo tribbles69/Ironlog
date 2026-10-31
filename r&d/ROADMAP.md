@@ -486,7 +486,7 @@ exercises are picked when building a session or program. Only trust it once
 muscle shares for commonly trained lifts have been checked — derived shares are
 placeholders.
 
-### [ ] D12. Layout rework — Home · Calendar · Train · Stats · Health
+### [x] D12. Layout rework — Home · Calendar · Train · Stats · Health — shipped 0.54.0 (spec `r&d/specs/layout-spec.md`; Mobility start and the Home mobility line wait for E5, the machine picker for D15)
 Decided 2026-10-31. **Do this before D13 (Health) and E5 (Mobility)** — they
 need somewhere to live. Write `r&d/specs/layout-spec.md` first; it covers both
 skins (the 98 menu bar mirrors the same pages).
