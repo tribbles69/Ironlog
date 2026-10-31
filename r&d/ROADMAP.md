@@ -553,6 +553,34 @@ screenshots, and a clear **Install** button with Android steps.
 - Plain static HTML/CSS, fast, no tracking. Links to the changelog, privacy /
   data note and the GitHub repo.
 
+### [ ] D14. More cardio machines for the HR-zone session
+Added 2026-10-31. The HR cardio session (0.19.0, `r&d/specs/cardio-spec.md`)
+is treadmill-only: its cues are speed and incline (`CARDIO_DEF`, `CARDIO`
+limits in km/h and %). Add other machines, each with its own thing to cue.
+Update the spec first — its "Other machines" note is where this was parked.
+- **Pick the machine at setup**; each logs as its own exercise leaf (check
+  `EX_DB` for existing cardio entries before adding new ones) with HR trace,
+  duration and whatever the machine reads out.
+- **What gets cued, per machine** (the knob the lifter turns by hand — none of
+  these have a control API either):
+  - Exercise bike / spin bike — resistance level, or cadence (rpm)
+  - Air / assault bike — rpm or watts
+  - Rower — stroke rate (spm) or 500 m split
+  - Ski erg — stroke rate or split
+  - Elliptical / cross-trainer — resistance and incline, or strides per minute
+  - Stair climber / stepper — level or steps per minute
+  - Walking / running outdoors — pace (no incline)
+  - **Other** — a plain "harder / easier" cue for anything not listed
+- Same engine for all: settle period, smoothed HR, hysteresis, hard HR ceiling,
+  voice + beeps (`Cue`), screen awake (`Awake`). Only the cue wording, the
+  step size and the limits change per machine — keep them in one table, not
+  per-machine code paths.
+- Remember the last setup **per machine** in `settings.cardio`, so a bike
+  session doesn't load treadmill speeds.
+- Optional manual readouts at the end (distance, kcal, avg watts) — never
+  required.
+- Real-gym check per machine goes on the A4 list.
+
 ---
 
 ## E. Later — little demand found
