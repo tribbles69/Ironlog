@@ -13,6 +13,21 @@ rather than guessed.
 
 ---
 
+## 0.59.0 — 31 Oct 2026
+- **Cardio on any machine:** pick the machine when you start a cardio
+  session. Choices: treadmill, exercise bike, air bike, rower, ski erg,
+  elliptical, stair climber, walking or running outdoors, or Other.
+- Each one is cued in its own terms: resistance or cadence on a bike, stroke
+  rate or split on a rower, pace outdoors. On *Other* the cues are just "go a
+  little harder" or "ease off". The warm-up, the target zone and the heart
+  rate ceiling work the same everywhere.
+- Your setup is remembered per machine, so a bike session never starts at
+  treadmill speeds.
+- At the end you can type in what the machine's screen says (distance,
+  calories, average watts). It's optional.
+- Rower, ski erg, air bike, outdoor walk/run and "other cardio" are new
+  exercises in the library.
+
 ## 0.58.0 — 31 Oct 2026
 - **Home explains Ironlog** to anyone opening it in a browser or before the
   first logged session: who it's for, that it's free, that your log stays on

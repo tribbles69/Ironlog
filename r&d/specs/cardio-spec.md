@@ -1,4 +1,4 @@
-# Ironlog — Cardio session: HR-zone treadmill coaching
+# Ironlog — Cardio session: HR-zone coaching (treadmill, then every machine — D15)
 
 Roadmap item 3. Written against 0.18.0. Line numbers drift — grep.
 
@@ -178,9 +178,72 @@ chart, max HR and the list of speed/incline changes.
 
 - The premium Haiku trend coach (roadmap "Later") — only once this loop is
   proven in the gym.
-- Other machines. Bike/rower/elliptical have no speed to cue; the session is
-  treadmill-only for now.
 - HR on lifting sessions.
+
+---
+
+## Machines (roadmap D15, 0.59.0)
+
+The same engine coaches every machine. Only the cue wording, step size and
+limits change, and they all live in **one table**, `CARDIO_MACHINES`. There
+are no per-machine code paths. Each machine lists its **knobs**, the numbers
+the lifter turns by hand:
+
+| knob field | meaning |
+|---|---|
+| `unit`, `fmt` | how the number reads (`km/h`, `%`, level, `rpm`, `W`, `spm`, `/500m` as m:ss, `/km` as m:ss) |
+| `bounds` | hard limits; at a bound the cue is silent |
+| `harder` | `+1` if a bigger number is harder, `−1` if smaller is (split, pace) |
+| `perBpm`, `round`, `step` | the cue step: miss × perBpm, rounded, clamped to `step` [min, max] |
+| `fine` | the −/+ button step |
+| `ceil` | how far the ceiling cue eases off |
+| `def` | the starting value the first time |
+
+| machine | leaf | knobs (cue choice) | warm-up ramps | live distance |
+|---|---|---|---|---|
+| Treadmill | `treadmill` | speed km/h, incline % | speed, 0.5 km/h steps | from speed |
+| Exercise / spin bike | `stationary-bike` | resistance level, cadence rpm | level, 1 step | — |
+| Air / assault bike | `air-bike` (new) | rpm, watts | rpm, 5 steps | — |
+| Rower | `rowing-machine` | stroke rate spm, split /500 m | stroke rate, 1 step | — |
+| Ski erg | `ski-erg` (new) | stroke rate spm, split /500 m | stroke rate, 1 step | — |
+| Elliptical | `elliptical` | resistance, incline level, strides/min | resistance, 1 step | — |
+| Stair climber | `stair-climber` | level, steps/min | level, 1 step | — |
+| Walk / run outdoors | `outdoor-walk-run` (new) | pace /km | pace, 30 s steps | from pace |
+| Other | `other-cardio` (new) | effort 1–10 — cues say *"Go a little harder" / "Ease off a little"* | — | — |
+
+The values for each knob are in the table in `index.html`. They're first
+guesses, to check in the gym (A4).
+
+**The engine, generalised.** `cardioDecide` works on `cfg.cue` (the chosen
+knob) and the machine's **primary** knob, the first in its list:
+- the ceiling eases off the primary knob by its `ceil` in the easier
+  direction. On the treadmill that's still speed − 0.5, as before;
+- the warm-up ramps the primary knob from `warm` to `work` in `warmStep`
+  steps, in the harder direction;
+- the zone cue moves `cfg.cue` by `harder × dir × step`.
+
+**Setup.** Train → Cardio opens the setup with a machine picker at the top.
+The fields below it are that machine's: warm-up from / target for the
+primary knob, warm-up minutes, a start value for each other knob, and which
+knob the cues change. `settings.cardio` keeps the heart-rate settings shared
+(the person's HR doesn't depend on the machine), and per machine
+`byMachine[id] = { cue, warmMin, warm, work, start: {knob: value} }`, so a
+bike session never loads treadmill speeds. A pre-0.59 flat treadmill setup
+is read as `byMachine.treadmill`.
+
+**Saved session.** `cardio.machine` (absent = treadmill), `cardio.start`
+(`{knob: value}`), and `changes[]` entries carrying every knob's value: the
+treadmill's are still `{t, speed, incline, cued}`, so old sessions read
+unchanged. `startSpeed` / `startIncline` stay on treadmill sessions.
+
+**Readouts at the end, optional.** The *Session complete* sheet asks for
+whatever the machine displays: distance (where there's no live distance),
+kcal, and average watts on bikes, rowers and ski ergs. Saved as
+`summary.readout`; a typed distance becomes `summary.distKm`. Never required.
+
+**Display.** The live view's −/+ row lists the machine's knobs. History, the
+session sheet and the share card show distance and average speed only when
+there is a distance, plus any readouts.
 
 ## Verification
 

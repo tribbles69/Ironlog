@@ -472,6 +472,37 @@ window.smoke = async function smoke(opts) {
     return `${withIcons.length}/${rows.length} rows show equipment`;
   });
 
+  /* Every cardio machine (D15): a low heart rate cues harder, a high one
+     easier, in the knob's own direction (a split gets smaller to go harder),
+     and a session on each starts, renders and finishes. */
+  await step('flow: cardio machines', async () => {
+    close(); S.active = null; save();
+    const base = { lo: 120, hi: 140, ceiling: 170, interval: 30, preset: 'custom', warmMin: 0 };
+    const st = (v, hr) => ({ el: 600, hr5: hr, hr20: hr, v, lastCheck: 500, lastChange: 400, lastCeil: null, warmStep: 0, warmDone: true });
+    const bad = [];
+    Object.entries(CARDIO_MACHINES).forEach(([id, M]) => {
+      Object.entries(M.knobs).forEach(([k, K]) => {
+        const v = {}; Object.entries(M.knobs).forEach(([k2, K2]) => { v[k2] = K2.def; });
+        const up = cardioDecide({ ...base, machine: id, cue: k }, st(v, 110)).cue;
+        const down = cardioDecide({ ...base, machine: id, cue: k }, st(v, 150)).cue;
+        if (!up || Math.sign(up.target - K.def) !== K.harder) bad.push(`${id}.${k} low HR`);
+        if (!down || Math.sign(down.target - K.def) !== -K.harder) bad.push(`${id}.${k} high HR`);
+      });
+      startCardio({ ...base, machine: id, cue: cardioPrimary(M), warm: M.knobs[cardioPrimary(M)].def, work: M.knobs[cardioPrimary(M)].def, start: {} });
+      render();
+      if (!document.querySelector('#cdClock')) bad.push(`${id} live view`);
+      S.active.cardio.t0 -= 60000;
+      finishCardio();
+      close();
+      const wo = S.workouts.filter(w => w.kind === 'cardio').slice(-1)[0];
+      if (!wo || wo.cardio.machine !== id) bad.push(`${id} not saved`);
+      else { cardioBlock(wo, true); cardioCardCanvas(wo); S.workouts = S.workouts.filter(w => w !== wo); }
+    });
+    S.active = null; save(); render();
+    if (bad.length) throw new Error(bad.join(', '));
+    return `${Object.keys(CARDIO_MACHINES).length} machines`;
+  });
+
   await step('flow: equipment chip and picker', async () => {
     close(); S.active = null; save();
     newBlank();

@@ -961,6 +961,84 @@
       "verified": false
     },
     {
+      "id": "air-bike",
+      "name": "Air Bike",
+      "category": "cardio",
+      "type": "cardio",
+      "equipment": ["machine"],
+      "defaultEquipment": "machine",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes"],
+      "secondary": ["hamstrings", "deltoids", "triceps"],
+      "aliases": [
+        { "name": "Air Bike" },
+        { "name": "Assault Bike" },
+        { "name": "Echo Bike" },
+        { "name": "Airdyne" },
+        { "name": "Fan Bike" }
+      ],
+      "metric": "time",
+      "verified": false
+    },
+    {
+      "id": "ski-erg",
+      "name": "Ski Erg",
+      "category": "cardio",
+      "type": "cardio",
+      "equipment": ["machine"],
+      "defaultEquipment": "machine",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["lats", "triceps"],
+      "secondary": ["core", "glutes", "deltoids"],
+      "aliases": [
+        { "name": "Ski Erg" },
+        { "name": "SkiErg" },
+        { "name": "Ski Ergometer" }
+      ],
+      "metric": "time",
+      "verified": false
+    },
+    {
+      "id": "outdoor-walk-run",
+      "name": "Walk / Run Outdoors",
+      "category": "cardio",
+      "type": "cardio",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "calves"],
+      "secondary": ["glutes", "hamstrings"],
+      "aliases": [
+        { "name": "Walk / Run Outdoors" },
+        { "name": "Outdoor Run" },
+        { "name": "Outdoor Walk" },
+        { "name": "Run Outdoors" },
+        { "name": "Walk Outdoors" }
+      ],
+      "metric": "time",
+      "verified": false
+    },
+    {
+      "id": "other-cardio",
+      "name": "Other Cardio",
+      "category": "cardio",
+      "type": "cardio",
+      "equipment": ["machine"],
+      "defaultEquipment": "machine",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps"],
+      "secondary": ["glutes"],
+      "aliases": [
+        { "name": "Other Cardio" }
+      ],
+      "metric": "time",
+      "verified": false
+    },
+    {
       "id": "bench-press",
       "name": "Bench Press",
       "category": "chest",

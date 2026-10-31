@@ -200,6 +200,10 @@ these come back; report anything that fails):
    CSV*; Copy report and paste it to Claude.
 7. **Focus:** type a weight, dismiss the keyboard with Back, type again — no
    stray digits in the field.
+8. **Cardio machines (0.59.0):** run a short session on each machine you
+   use (bike, rower, elliptical, stairs…). Are the cue steps sensible — not
+   too timid, not too big — and do the limits match the machine? Note any
+   number that felt wrong; they all live in `CARDIO_MACHINES`.
 
 ### [x] A5. Checks against Blast's bugs — checked 0.27.1 (superset item waits for B3)
 Blast shipped these; make sure Ironlog doesn't have them. Tick each.
@@ -589,7 +593,7 @@ screenshots, and a clear **Install** button with Android steps.
 - Plain static HTML/CSS, fast, no tracking. Links to the changelog, privacy /
   data note and the GitHub repo.
 
-### [ ] D15. More cardio machines for the HR-zone session
+### [x] D15. More cardio machines for the HR-zone session — shipped 0.59.0 (spec `r&d/specs/cardio-spec.md` → Machines; one `CARDIO_MACHINES` table; step sizes and limits for everything but the treadmill are first guesses — gym check on A4)
 Added 2026-10-31. The HR cardio session (0.19.0, `r&d/specs/cardio-spec.md`)
 is treadmill-only: its cues are speed and incline (`CARDIO_DEF`, `CARDIO`
 limits in km/h and %). Add other machines, each with its own thing to cue.
