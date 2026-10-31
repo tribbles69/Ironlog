@@ -475,6 +475,26 @@ window.smoke = async function smoke(opts) {
   /* Every cardio machine (D15): a low heart rate cues harder, a high one
      easier, in the knob's own direction (a split gets smaller to go harder),
      and a session on each starts, renders and finishes. */
+  /* Mobility (E5): ticking writes today's session, untick-all removes it, and
+     the player, Home line and calendar card all render. */
+  await step('flow: mobility routine', async () => {
+    close();
+    const r = BUILTIN_ROUTINES[0];
+    if (!r) throw new Error('no built-in routine');
+    const d = today(), before = S.workouts.length;
+    const ids = r.zones[0].items.map(x => x.id);
+    ids.forEach(id => mobTick(r.id, id, true, d));
+    const wo = mobSession(r.id, d);
+    if (!wo || Object.keys(wo.mobility.done).length !== ids.length) throw new Error('ticks not saved');
+    openMobility(r.id); await wait(80);
+    if (document.querySelectorAll('.mobrow').length !== r.zones.flatMap(z => z.items).length) throw new Error('player rows');
+    close(); go('home'); await wait(60);
+    if (!document.querySelector('[data-mobopen]')) throw new Error('no Home line');
+    ids.forEach(id => mobTick(r.id, id, false, d));
+    if (mobSession(r.id, d) || S.workouts.length !== before) throw new Error('untick-all left a session');
+    return `${mobTotal(r)} items`;
+  });
+
   await step('flow: cardio machines', async () => {
     close(); S.active = null; save();
     const base = { lo: 120, hi: 140, ceiling: 170, interval: 30, preset: 'custom', warmMin: 0 };

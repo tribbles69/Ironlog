@@ -2,106 +2,516 @@
   "id": "morning-stretch",
   "name": "Full Body Stretch",
   "subtitle": "Daily morning protocol · head to toe",
-  "source": "Aaron's own routine sheet (morning_stretch_routine.html, added 2026-10-31). Seed data for E5 — not yet reviewed against the hypermobility rules in E5.",
+  "source": "Aaron's own routine sheet (morning_stretch_routine.html, added 2026-10-31). First built-in routine (E5, 0.60.0). Hypermobility review 2026-10-31: Aaron chose \"propose swaps\" — five passive end-range items carry an active or loaded swap, on by default, switchable per item.",
   "estMin": 30,
   "units": "hold = seconds; perSide = do each side; reps = repetitions; sets = repeats of the hold",
   "zones": [
     {
-      "n": 1, "name": "Neck & Jaw", "estMin": 3,
+      "n": 1,
+      "name": "Neck & Jaw",
+      "estMin": 3,
       "items": [
-        { "name": "Neck Side Tilt", "targets": ["SCM", "scalenes", "lateral neck"], "hold": 30, "perSide": true, "position": "seated or standing",
-          "cue": "Sit tall. Ear toward shoulder, let gravity do it — no pulling with the hands. Switch sides." },
-        { "name": "Neck Rotation", "targets": ["deep cervical rotators", "upper traps"], "hold": 20, "perSide": true,
-          "cue": "Chin level, rotate to look over each shoulder. Hold at end range without forcing." },
-        { "name": "Chin Tuck", "targets": ["suboccipitals", "deep neck flexors"], "hold": 5, "reps": 8,
+        {
+          "name": "Neck Side Tilt",
+          "targets": [
+            "SCM",
+            "scalenes",
+            "lateral neck"
+          ],
+          "hold": 30,
+          "perSide": true,
+          "position": "seated or standing",
+          "cue": "Sit tall. Ear toward shoulder, let gravity do it — no pulling with the hands. Switch sides.",
+          "id": "neck-side-tilt",
+          "joints": [
+            "neck"
+          ]
+        },
+        {
+          "name": "Neck Rotation",
+          "targets": [
+            "deep cervical rotators",
+            "upper traps"
+          ],
+          "hold": 20,
+          "perSide": true,
+          "cue": "Chin level, rotate to look over each shoulder. Hold at end range without forcing.",
+          "id": "neck-rotation",
+          "joints": [
+            "neck"
+          ]
+        },
+        {
+          "name": "Chin Tuck",
+          "targets": [
+            "suboccipitals",
+            "deep neck flexors"
+          ],
+          "hold": 5,
+          "reps": 8,
           "cue": "Draw the chin straight back (not down). Hold 5 s, release.",
-          "flag": "Priority for kyphosis — daily" }
+          "flag": "Priority for kyphosis — daily",
+          "id": "chin-tuck",
+          "joints": [
+            "neck"
+          ]
+        }
       ]
     },
     {
-      "n": 2, "name": "Thoracic Spine & Chest", "estMin": 5,
+      "n": 2,
+      "name": "Thoracic Spine & Chest",
+      "estMin": 5,
       "items": [
-        { "name": "Cat-Cow", "targets": ["spinal articulation", "thoracic mobility"], "reps": 10, "position": "all fours",
+        {
+          "name": "Cat-Cow",
+          "targets": [
+            "spinal articulation",
+            "thoracic mobility"
+          ],
+          "reps": 10,
+          "position": "all fours",
           "cue": "Inhale into cow, exhale into cat. Slowly, one vertebra at a time.",
-          "flag": "Gentle — don't force thoracic extension past a comfortable range" },
-        { "name": "Thoracic Extension over Rolled Towel", "targets": ["thoracic extensors", "anterior chest"], "holdRange": [60, 90], "position": "floor",
+          "flag": "Gentle — don't force thoracic extension past a comfortable range",
+          "id": "cat-cow",
+          "joints": [
+            "wrists"
+          ]
+        },
+        {
+          "name": "Thoracic Extension over Rolled Towel",
+          "targets": [
+            "thoracic extensors",
+            "anterior chest"
+          ],
+          "holdRange": [
+            60,
+            90
+          ],
+          "position": "floor",
           "cue": "Towel or foam roller across the upper back at the apex of the curve. Arms crossed or overhead. Move it up and down in small steps.",
-          "flag": "Most important stretch in the routine for kyphosis — take your time" },
-        { "name": "Doorway Chest Stretch", "targets": ["pec major", "pec minor", "anterior deltoid"], "hold": 30, "sets": 2, "position": "doorframe",
-          "cue": "Forearms on the frame at 90°, step through. Chin tucked. Try low, mid and high arm heights." },
-        { "name": "Thread the Needle", "targets": ["thoracic rotation", "rhomboids", "rear delt"], "hold": 30, "perSide": true, "position": "all fours",
-          "cue": "Slide one arm under the body, rotate until the shoulder meets the floor. Breathe, switch." }
+          "flag": "Most important stretch in the routine for kyphosis — take your time",
+          "id": "thoracic-extension-over-rolled-towel",
+          "joints": []
+        },
+        {
+          "name": "Doorway Chest Stretch",
+          "targets": [
+            "pec major",
+            "pec minor",
+            "anterior deltoid"
+          ],
+          "hold": 30,
+          "sets": 2,
+          "position": "doorframe",
+          "cue": "Forearms on the frame at 90°, step through. Chin tucked. Try low, mid and high arm heights.",
+          "id": "doorway-chest-stretch",
+          "joints": [
+            "shoulders"
+          ]
+        },
+        {
+          "name": "Thread the Needle",
+          "targets": [
+            "thoracic rotation",
+            "rhomboids",
+            "rear delt"
+          ],
+          "hold": 30,
+          "perSide": true,
+          "position": "all fours",
+          "cue": "Slide one arm under the body, rotate until the shoulder meets the floor. Breathe, switch.",
+          "id": "thread-the-needle",
+          "joints": [
+            "wrists",
+            "shoulders"
+          ]
+        }
       ]
     },
     {
-      "n": 3, "name": "Shoulders & Arms", "estMin": 4,
+      "n": 3,
+      "name": "Shoulders & Arms",
+      "estMin": 4,
       "items": [
-        { "name": "Cross-Body Shoulder Stretch", "targets": ["posterior delt", "rhomboid", "teres minor"], "hold": 30, "perSide": true,
-          "cue": "Pull the arm across with the other hand at the elbow. Keep the shoulder down." },
-        { "name": "Overhead Triceps Stretch", "targets": ["triceps long head", "lat insertion"], "hold": 30, "perSide": true,
-          "cue": "Hand behind head, other hand eases the elbow back. Ribs down." },
-        { "name": "Wrist Flexor & Extensor Stretch", "targets": ["forearm flexors", "forearm extensors", "wrist"], "hold": 20, "sets": 2, "perSide": true, "positions": ["flexors", "extensors"],
-          "cue": "Arm out in front. Flexors: pull the fingers back. Extensors: push the fingers down. Both sides." }
+        {
+          "name": "Cross-Body Shoulder Stretch",
+          "targets": [
+            "posterior delt",
+            "rhomboid",
+            "teres minor"
+          ],
+          "hold": 30,
+          "perSide": true,
+          "cue": "Pull the arm across with the other hand at the elbow. Keep the shoulder down.",
+          "id": "cross-body-shoulder-stretch",
+          "joints": [
+            "shoulders"
+          ]
+        },
+        {
+          "name": "Overhead Triceps Stretch",
+          "targets": [
+            "triceps long head",
+            "lat insertion"
+          ],
+          "hold": 30,
+          "perSide": true,
+          "cue": "Hand behind head, other hand eases the elbow back. Ribs down.",
+          "id": "overhead-triceps-stretch",
+          "joints": [
+            "shoulders",
+            "elbows"
+          ]
+        },
+        {
+          "name": "Wrist Flexor & Extensor Stretch",
+          "targets": [
+            "forearm flexors",
+            "forearm extensors",
+            "wrist"
+          ],
+          "hold": 20,
+          "sets": 2,
+          "perSide": true,
+          "positions": [
+            "flexors",
+            "extensors"
+          ],
+          "cue": "Arm out in front. Flexors: pull the fingers back. Extensors: push the fingers down. Both sides.",
+          "id": "wrist-flexor-and-extensor-stretch",
+          "joints": [
+            "wrists",
+            "elbows"
+          ],
+          "swap": {
+            "name": "Wrist circles and light wrist curls",
+            "reps": 10,
+            "perSide": true,
+            "cue": "Slow full circles, 5 each way. Then a light dumbbell or band: 10 curls palm up and 10 palm down, full range, slow.",
+            "why": "Strength through the range rather than hanging on the end of it.",
+            "default": true
+          }
+        }
       ]
     },
     {
-      "n": 4, "name": "Lumbar & Core", "estMin": 4,
+      "n": 4,
+      "name": "Lumbar & Core",
+      "estMin": 4,
       "items": [
-        { "name": "Supine Knee-to-Chest", "targets": ["lumbar erectors", "QL", "glute"], "hold": 30, "perSide": true, "then": { "name": "both knees", "hold": 30 }, "position": "floor",
-          "cue": "One knee in, other leg flat. Then both knees together, rock gently side to side." },
-        { "name": "Supine Spinal Twist", "targets": ["QL", "lumbar rotators", "obliques", "IT band"], "hold": 45, "perSide": true, "position": "floor",
-          "cue": "Knee across the body, opposite arm out flat. Look away from the knee. Don't force the knee down." },
-        { "name": "Child's Pose", "targets": ["lumbar", "lats", "thoracic", "hips"], "hold": 60, "position": "floor",
-          "cue": "Hips back to heels, arms forward. Walk the hands to each side for the lats." }
+        {
+          "name": "Supine Knee-to-Chest",
+          "targets": [
+            "lumbar erectors",
+            "QL",
+            "glute"
+          ],
+          "hold": 30,
+          "perSide": true,
+          "then": {
+            "name": "both knees",
+            "hold": 30
+          },
+          "position": "floor",
+          "cue": "One knee in, other leg flat. Then both knees together, rock gently side to side.",
+          "id": "supine-knee-to-chest",
+          "joints": [
+            "hips"
+          ]
+        },
+        {
+          "name": "Supine Spinal Twist",
+          "targets": [
+            "QL",
+            "lumbar rotators",
+            "obliques",
+            "IT band"
+          ],
+          "hold": 45,
+          "perSide": true,
+          "position": "floor",
+          "cue": "Knee across the body, opposite arm out flat. Look away from the knee. Don't force the knee down.",
+          "id": "supine-spinal-twist",
+          "joints": []
+        },
+        {
+          "name": "Child's Pose",
+          "targets": [
+            "lumbar",
+            "lats",
+            "thoracic",
+            "hips"
+          ],
+          "hold": 60,
+          "position": "floor",
+          "cue": "Hips back to heels, arms forward. Walk the hands to each side for the lats.",
+          "id": "child-s-pose",
+          "joints": [
+            "knees",
+            "shoulders"
+          ]
+        }
       ]
     },
     {
-      "n": 5, "name": "Hips & Hip Flexors", "estMin": 5,
+      "n": 5,
+      "name": "Hips & Hip Flexors",
+      "estMin": 5,
       "items": [
-        { "name": "Kneeling Hip Flexor Lunge", "targets": ["psoas", "iliacus", "rectus femoris"], "hold": 45, "perSide": true, "position": "kneeling",
+        {
+          "name": "Kneeling Hip Flexor Lunge",
+          "targets": [
+            "psoas",
+            "iliacus",
+            "rectus femoris"
+          ],
+          "hold": 45,
+          "perSide": true,
+          "position": "kneeling",
           "cue": "Back knee down, hips forward gently, torso upright, slight posterior pelvic tilt.",
-          "flag": "Matters for the squat — tight hip flexors feed anterior pelvic tilt under load" },
-        { "name": "Pigeon Pose (modified)", "targets": ["piriformis", "glute med/min", "external hip rotators"], "hold": 60, "perSide": true, "position": "floor",
+          "flag": "Matters for the squat — tight hip flexors feed anterior pelvic tilt under load",
+          "id": "kneeling-hip-flexor-lunge",
+          "joints": [
+            "knees"
+          ]
+        },
+        {
+          "name": "Pigeon Pose (modified)",
+          "targets": [
+            "piriformis",
+            "glute med/min",
+            "external hip rotators"
+          ],
+          "hold": 60,
+          "perSide": true,
+          "position": "floor",
           "cue": "Shin forward across the body, hips sink toward the floor, hands support. If too intense, do a lying glute stretch instead.",
-          "alt": "Lying glute stretch" },
-        { "name": "Butterfly Stretch", "targets": ["adductors", "groin"], "hold": 45, "position": "seated",
-          "cue": "Soles together, sit tall, elbows ease the knees down. Heels closer = more intense." },
-        { "name": "Deep Squat Hold", "targets": ["hip flexors", "adductors", "ankles", "thoracic"], "hold": 60, "position": "bodyweight",
+          "alt": "Lying glute stretch",
+          "id": "pigeon-pose-modified",
+          "joints": [
+            "knees",
+            "hips"
+          ],
+          "swap": {
+            "name": "90/90 hip switches",
+            "reps": 8,
+            "perSide": true,
+            "cue": "Sit with both knees bent at 90°, hands behind you, chest tall. Rotate both knees to the other side and back. Slow, no bouncing.",
+            "why": "Active hip rotation at range — no sinking into the end of the joint.",
+            "default": true
+          }
+        },
+        {
+          "name": "Butterfly Stretch",
+          "targets": [
+            "adductors",
+            "groin"
+          ],
+          "hold": 45,
+          "position": "seated",
+          "cue": "Soles together, sit tall, elbows ease the knees down. Heels closer = more intense.",
+          "id": "butterfly-stretch",
+          "joints": [
+            "hips"
+          ]
+        },
+        {
+          "name": "Deep Squat Hold",
+          "targets": [
+            "hip flexors",
+            "adductors",
+            "ankles",
+            "thoracic"
+          ],
+          "hold": 60,
+          "position": "bodyweight",
           "cue": "Shoulder-width, toes slightly out, as deep as possible. Hold a doorframe or pole if needed. Elbows press knees out.",
-          "flag": "Transfers directly to squat depth and hip stability" }
+          "flag": "Transfers directly to squat depth and hip stability",
+          "id": "deep-squat-hold",
+          "joints": [
+            "knees",
+            "hips",
+            "ankles"
+          ],
+          "swap": {
+            "name": "Goblet squat hold",
+            "hold": 20,
+            "sets": 3,
+            "cue": "Light kettlebell or dumbbell at the chest. Sit to depth and stay braced — knees out, keep the tension, don't relax into the bottom.",
+            "why": "Loaded and active at the bottom instead of hanging on the joints.",
+            "default": true
+          }
+        }
       ]
     },
     {
-      "n": 6, "name": "Hamstrings & Posterior Chain", "estMin": 5,
+      "n": 6,
+      "name": "Hamstrings & Posterior Chain",
+      "estMin": 5,
       "items": [
-        { "name": "Supine Hamstring Stretch", "targets": ["hamstrings", "biceps femoris"], "hold": 45, "perSide": true, "position": "floor",
-          "cue": "Hold behind the thigh or calf, not the knee. Straighten as far as it goes; flex the foot for the calf." },
-        { "name": "Standing Forward Fold (progressive)", "targets": ["hamstrings", "glutes", "lumbar", "calves"], "hold": 60, "position": "standing",
+        {
+          "name": "Supine Hamstring Stretch",
+          "targets": [
+            "hamstrings",
+            "biceps femoris"
+          ],
+          "hold": 45,
+          "perSide": true,
+          "position": "floor",
+          "cue": "Hold behind the thigh or calf, not the knee. Straighten as far as it goes; flex the foot for the calf.",
+          "id": "supine-hamstring-stretch",
+          "joints": []
+        },
+        {
+          "name": "Standing Forward Fold (progressive)",
+          "targets": [
+            "hamstrings",
+            "glutes",
+            "lumbar",
+            "calves"
+          ],
+          "hold": 60,
+          "position": "standing",
           "cue": "Feet together, hang. Each exhale, straighten the legs a little more.",
-          "flag": "Benchmark — track weekly (reach: mid-shin → floor)", "test": { "name": "Forward fold reach", "scale": ["knee", "mid-shin", "ankle", "toes", "floor"] } },
-        { "name": "Seated Single-Leg Forward Fold", "targets": ["hamstring", "calf", "QL"], "hold": 40, "perSide": true, "position": "seated on floor",
-          "cue": "One leg straight, other bent in. Reach toward the foot without rounding the lower back to cheat." }
+          "flag": "Benchmark — track weekly (reach: mid-shin → floor)",
+          "test": {
+            "name": "Forward fold reach",
+            "scale": [
+              "knee",
+              "mid-shin",
+              "ankle",
+              "toes",
+              "floor"
+            ]
+          },
+          "id": "standing-forward-fold-progressive",
+          "joints": [],
+          "swap": {
+            "name": "Slow Romanian deadlift",
+            "reps": 8,
+            "sets": 2,
+            "cue": "Light bar or dumbbells. 3 s down to where the hamstrings stop you, back flat, then stand up. The weekly reach test stays as it is (Health).",
+            "why": "Hamstring length under load and control.",
+            "default": true
+          }
+        },
+        {
+          "name": "Seated Single-Leg Forward Fold",
+          "targets": [
+            "hamstring",
+            "calf",
+            "QL"
+          ],
+          "hold": 40,
+          "perSide": true,
+          "position": "seated on floor",
+          "cue": "One leg straight, other bent in. Reach toward the foot without rounding the lower back to cheat.",
+          "id": "seated-single-leg-forward-fold",
+          "joints": []
+        }
       ]
     },
     {
-      "n": 7, "name": "Quads & Knees", "estMin": 3,
+      "n": 7,
+      "name": "Quads & Knees",
+      "estMin": 3,
       "items": [
-        { "name": "Standing Quad Stretch", "targets": ["rectus femoris", "vastus lateralis"], "hold": 30, "perSide": true, "position": "standing, wall for balance",
-          "cue": "Foot to glute, knees together, stand tall. Use the wall — hypermobility." },
-        { "name": "Prone Quad Stretch", "targets": ["quads", "hip flexor", "knee"], "hold": 30, "perSide": true, "position": "floor",
-          "cue": "Face down, pull one foot toward the glute. Hips stay down." }
+        {
+          "name": "Standing Quad Stretch",
+          "targets": [
+            "rectus femoris",
+            "vastus lateralis"
+          ],
+          "hold": 30,
+          "perSide": true,
+          "position": "standing, wall for balance",
+          "cue": "Foot to glute, knees together, stand tall. Use the wall — hypermobility.",
+          "id": "standing-quad-stretch",
+          "joints": [
+            "knees"
+          ]
+        },
+        {
+          "name": "Prone Quad Stretch",
+          "targets": [
+            "quads",
+            "hip flexor",
+            "knee"
+          ],
+          "hold": 30,
+          "perSide": true,
+          "position": "floor",
+          "cue": "Face down, pull one foot toward the glute. Hips stay down.",
+          "id": "prone-quad-stretch",
+          "joints": [
+            "knees"
+          ],
+          "swap": {
+            "name": "Active prone knee bend",
+            "hold": 5,
+            "reps": 8,
+            "perSide": true,
+            "cue": "Face down. Curl the heel toward the glute with the hamstrings only — no pulling with the hand. Squeeze 5 s at the top, lower slowly.",
+            "why": "Works the range under your own control instead of pulling the knee into it.",
+            "default": true
+          }
+        }
       ]
     },
     {
-      "n": 8, "name": "Calves, Ankles & Feet", "estMin": 3,
+      "n": 8,
+      "name": "Calves, Ankles & Feet",
+      "estMin": 3,
       "items": [
-        { "name": "Standing Calf Stretch", "targets": ["gastrocnemius"], "hold": 30, "perSide": true, "position": "against wall",
-          "cue": "Back leg straight, heel down throughout." },
-        { "name": "Bent-Knee Calf Stretch", "targets": ["soleus", "Achilles"], "hold": 30, "perSide": true, "position": "against wall",
+        {
+          "name": "Standing Calf Stretch",
+          "targets": [
+            "gastrocnemius"
+          ],
+          "hold": 30,
+          "perSide": true,
+          "position": "against wall",
+          "cue": "Back leg straight, heel down throughout.",
+          "id": "standing-calf-stretch",
+          "joints": [
+            "ankles"
+          ]
+        },
+        {
+          "name": "Bent-Knee Calf Stretch",
+          "targets": [
+            "soleus",
+            "Achilles"
+          ],
+          "hold": 30,
+          "perSide": true,
+          "position": "against wall",
           "cue": "Same position, back knee slightly bent — shifts it to the soleus.",
-          "flag": "Tight soleus is a hidden limiter on squat depth" },
-        { "name": "Ankle Circles & Toe Spreads", "targets": ["ankle", "plantar fascia", "intrinsic foot"], "reps": 10, "perSide": true, "note": "10 circles each direction, then spread toes and hold 5 s", "position": "seated" }
+          "flag": "Tight soleus is a hidden limiter on squat depth",
+          "id": "bent-knee-calf-stretch",
+          "joints": [
+            "ankles"
+          ]
+        },
+        {
+          "name": "Ankle Circles & Toe Spreads",
+          "targets": [
+            "ankle",
+            "plantar fascia",
+            "intrinsic foot"
+          ],
+          "reps": 10,
+          "perSide": true,
+          "note": "10 circles each direction, then spread toes and hold 5 s",
+          "position": "seated",
+          "id": "ankle-circles-and-toe-spreads",
+          "joints": [
+            "ankles"
+          ]
+        }
       ]
     }
-  ]
+  ],
+  "joints": "Joint tags drive Mobility player → Options → Go easy on: a protected joint uses the item's swap, else skips it."
 }

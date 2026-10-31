@@ -13,6 +13,23 @@ rather than guessed.
 
 ---
 
+## 0.60.0 — 31 Oct 2026
+- **Mobility:** Train has a 🧘 Mobility button, and your Full Body Stretch
+  (25 stretches, about 30 minutes) is built in. Tick stretches off as you
+  go, or press *Start guided* to run it hands-free. It counts each hold
+  down, says when to switch sides, waits for you on rep sets, and moves on to
+  the next stretch by itself.
+- **Hypermobility swaps:** five stretches that hang on the end of a joint
+  are swapped by default for an active or loaded version. These are prone
+  quad, the wrist stretches, pigeon, the deep squat hold and the forward
+  fold. *Original* switches any of them back.
+- **Go easy on** (Options in the routine): pick joints to protect, and
+  their stretches use the swap or are skipped.
+- Each day's stretching goes into your log. It shows on the calendar as a
+  purple dot, and Home shows today's progress ("8 / 25") with a button to
+  carry on. It never stops you starting a lifting session, and it doesn't
+  count as a training session in your stats.
+
 ## 0.59.0 — 31 Oct 2026
 - **Cardio on any machine:** pick the machine when you start a cardio
   session. Choices: treadmill, exercise bike, air bike, rower, ski erg,
