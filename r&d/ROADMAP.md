@@ -516,7 +516,7 @@ Bottom bar goes from Home · Calendar · Workout · Stats · Events to:
 - C4 rules: nav labels, `aria-current`, 40 px targets; re-run the axe check
   in both skins.
 
-### [ ] D10. Fix `prKey` / `splitsPR`, with band and chain fields
+### [x] D10. Fix `prKey` / `splitsPR`, with band and chain fields — shipped 0.55.0 (`exKey` on `prKey`; `chainKg` / `bandKg` per entry; what moved is shown once after the update and in Check exercise data — **Aaron: read that notice on the phone**)
 `prKey()` is dead code, so chains, bands, slingshot and equipped currently share
 a PR pool with the raw lift. Real bug, but fixing it **changes existing PR
 numbers** — do it on its own, deliberately, and tell Aaron what moved. Add band
