@@ -557,7 +557,7 @@ maths that's already in the app — `bmrKcal` / `suggestedTargets`, `e1rm`,
 - DOTS / IPF GL points calculator.
 - RPE ↔ RIR mapping table for coaches who think in RPE.
 
-### [ ] D13. Health page — everything about the body in one place
+### [x] D13. Health page — everything about the body in one place — shipped 0.57.0 (spec `r&d/specs/health-page-spec.md`; recovery map stays on Stats → Muscles with a link from Health; E5 tests and E6 land here when built)
 Added 2026-10-31. A page of its own (not a tab under Stats) for health and
 body data. Write `r&d/specs/health-page-spec.md` before building.
 - **Moves in from Stats → Body (E4):** bodyweight with the 7-day average,

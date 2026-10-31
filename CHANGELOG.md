@@ -13,6 +13,16 @@ rather than guessed.
 
 ---
 
+## 0.57.0 — 31 Oct 2026
+- **Health page:** three tiles at the top show your bodyweight (7-day
+  average and weekly change), latest body fat with the skinfold sum, and
+  your waist. Tap one to jump to its history.
+- Body fat changes are compared only with your previous test of the same
+  method, so JP3 and JP7 results aren't mixed.
+- Health also links to the FFMI and muscular potential calculators, filled
+  in from your numbers, and to the recovery map on Stats. If you add "wrist"
+  and "ankle" as measurement sites, the potential calculator uses them.
+
 ## 0.56.0 — 31 Oct 2026
 - **Tools** (the spanner in the top bar) now has calculators, each started
   from what you've logged and free to change for what-ifs. Nothing is saved:

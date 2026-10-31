@@ -258,6 +258,7 @@ h3{font-size:13.5px;margin:0 0 8px}
 .dot.done{background:var(--green)}
 .dot.plan{background:var(--blue)}
 .dot.event{background:var(--gold)}
+#hlBw,#hlBf,#hlMeas,#hlPhoto{scroll-margin-top:72px}   /* clear the sticky top bar (Health tiles) */
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .cal-legend{display:flex;gap:14px;justify-content:center;margin-top:12px;font-size:11px;color:var(--dim2)}
 .cal-legend span{display:flex;align-items:center;gap:5px}
@@ -1983,7 +1984,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.56.0';
+const APP_VERSION = '0.57.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4580,12 +4581,45 @@ function calSwitch() {
   </div>`;
 }
 
-/* Health (D12): the body page that was Stats → Body, until D13 builds it out. */
+/* Health (D12, D13 — r&d/specs/health-page-spec.md): a summary row whose tiles
+   scroll to their cards, then the body cards (viewBody, unchanged), then the
+   calculators that use this data. Reads the same stores; stores nothing new. */
+function healthSummary() {
+  const sg = (v, unit) => v == null ? '' : `${v > 0 ? '▲' : v < 0 ? '▼' : '±'} ${nice(Math.abs(v))}${unit}`;
+  // bodyweight: the 7-day average and its change over a week
+  const { avg } = bwSeries(), a = avg[avg.length - 1];
+  const a7 = a ? avgOn(avg, addDaysISO(a.date, -7)) : null;
+  const bw = a ? { v: wt(a.v), d: a7 && a7.date !== a.date ? `${sg(dw(a.v - a7.v), U())} / 7 d` : '7-day avg' } : null;
+  // body fat: newest complete test, against the one before it of the same method
+  const tests = [...(S.calipers || [])].sort((x, y) => x.date < y.date ? 1 : -1)
+    .map(t => ({ t, r: caliperCalc(t) })).filter(x => x.r && x.r.complete);
+  const t0 = tests[0], t1 = t0 && tests.slice(1).find(x => x.t.method === t0.t.method);
+  const bf = t0 ? { v: `${t0.r.bf.toFixed(1)}%`, d: `${Math.round(t0.r.sum)} mm${t1 ? ` · ${sg(+(t0.r.bf - t1.r.bf).toFixed(1), '%')}` : ''}` } : null;
+  // waist, or else whichever site was measured last
+  const ser = measSeries();
+  const site = ser.waist ? 'waist' : Object.keys(ser).sort((x, y) => ser[x].slice(-1)[0].date < ser[y].slice(-1)[0].date ? 1 : -1)[0];
+  const ms = site ? ser[site] : null, m0 = ms && ms[ms.length - 1], m1 = ms && ms[ms.length - 2];
+  const meas = m0 ? { k: measLabel(site), v: `${nice(dlen(m0.v))}${lenU()}`, d: m1 ? sg(+dlen(m0.v - m1.v).toFixed(1), lenU()) : esc(relDay(m0.date)) } : null;
+  const tile = (target, k, x, empty) => `<button class="stat" data-hl="${target}" aria-label="${esc(k)}: ${x ? esc(x.v) : esc(empty)} — open" style="text-align:left;cursor:pointer;font:inherit;color:inherit">
+    <div class="k">${esc(k)}</div><div class="v" style="font-size:18px">${x ? x.v : '—'}</div><div class="d">${x ? x.d : esc(empty)}</div></button>`;
+  return `<div class="stats grid3" style="margin-bottom:13px">
+    ${tile('hlBw', 'Bodyweight', bw, 'No weigh-ins')}
+    ${tile('hlBf', 'Body fat', bf, 'No tests')}
+    ${tile('hlMeas', meas ? meas.k : 'Waist', meas, 'No measurements')}
+  </div>`;
+}
 function viewHealth() {
   return `
   <h1>Health</h1>
-  <div class="sub" style="margin-bottom:14px">Bodyweight, body fat, measurements and photos.</div>
-  ${viewBody()}`;
+  <div class="sub" style="margin-bottom:14px">Bodyweight, body fat, measurements and photos — kept on this phone.</div>
+  ${healthSummary()}
+  ${viewBody()}
+  <div class="card" style="margin-bottom:13px">
+    <div class="eyebrow" style="margin-bottom:6px">Physique</div>
+    <div class="sub" style="margin-bottom:8px">Calculators that start from the numbers above. Estimates — see the notes in each.</div>
+    <div class="row" style="gap:8px"><button class="btn sm grow" data-tool="ffmi">FFMI</button><button class="btn sm grow" data-tool="potential">Max muscular potential</button></div>
+  </div>
+  <button class="btn wide ghost" id="hlRecovery" style="margin-bottom:13px">Recovery map — on Stats → Muscles</button>`;
 }
 
 /* ============================================================
@@ -10568,7 +10602,12 @@ function wire() {
     v.querySelectorAll('[data-meetday]').forEach(b => b.onclick = () => openMeetDay(b.dataset.meetday));
   }
 
-  if (page === 'health') wireBody(v);
+  if (page === 'health') {
+    wireBody(v);
+    v.querySelectorAll('[data-hl]').forEach(b => b.onclick = () => { const c = $('#' + b.dataset.hl); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
+    v.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => openTool(b.dataset.tool));
+    $('#hlRecovery').onclick = () => { analyticsTab = 'muscles'; go('analytics'); };
+  }
 
   if (page === 'workout') {
     if (!S.active) {
@@ -13518,7 +13557,7 @@ function viewBody() {
   const last = pts[pts.length - 1], lastAvg = avg[avg.length - 1];
   const chg = days => { if (!lastAvg) return null; const then = avgOn(avg, addDaysISO(lastAvg.date, -days)); return then && then.date !== lastAvg.date ? lastAvg.v - then.v : null; };
   const c7 = chg(7), c30 = chg(30);
-  const bwCard = `<div class="card" style="margin-bottom:13px">
+  const bwCard = `<div class="card" id="hlBw" style="margin-bottom:13px">
     <div class="row between" style="margin-bottom:8px"><div class="eyebrow">Bodyweight</div><button class="btn xs" id="bdWeight">+ Log weight</button></div>
     ${pts.length ? `<div class="stats grid3" style="margin-bottom:8px">
         <div class="stat"><div class="k">Latest</div><div class="v">${wt(last.v)}</div><div class="d">${esc(relDay(last.date))}</div></div>
@@ -13535,7 +13574,7 @@ function viewBody() {
   const lastT = tests[0];
   const method = lastT ? lastT.t.method : null;
   const same = tests.filter(x => x.t.method === method).reverse();
-  const bfCard = `<div class="card" style="margin-bottom:13px">
+  const bfCard = `<div class="card" id="hlBf" style="margin-bottom:13px">
     <div class="row between" style="margin-bottom:8px"><div class="eyebrow">Body fat · calipers</div><button class="btn xs" id="bdCal">+ New test</button></div>
     ${lastT ? `<div class="stats grid3" style="margin-bottom:8px">
         <div class="stat"><div class="k">Body fat</div><div class="v">${lastT.r.bf.toFixed(1)}<small>%</small></div><div class="d">${esc(CAL_METHODS[method].short)} · ${esc(relDay(lastT.t.date))}</div></div>
@@ -13561,7 +13600,7 @@ function viewBody() {
   if (!siteOpts.includes(bodyMeasSite) && siteOpts.length) bodyMeasSite = siteOpts[0];
   const plotKeys = keys.filter(k => baseOf(k) === bodyMeasSite);
   const L = v => nice(dlen(v));
-  const measCard = `<div class="card" style="margin-bottom:13px">
+  const measCard = `<div class="card" id="hlMeas" style="margin-bottom:13px">
     <div class="row between" style="margin-bottom:8px"><div class="eyebrow">Measurements · ${lenU()}</div><button class="btn xs" id="bdMeas">+ Add</button></div>
     ${keys.length ? `<table class="vartable"><thead><tr><th style="text-align:left">Site</th><th class="r">Latest</th><th class="r">Last change</th><th class="r">Since first</th></tr></thead><tbody>
       ${keys.map(k => { const s = ser[k], a = s[s.length - 1], p = s[s.length - 2], f = s[0];
@@ -13575,7 +13614,7 @@ function viewBody() {
   </div>`;
 
   // 4. photos (filled in by wireBody from IndexedDB)
-  const photoCard = `<div class="card" style="margin-bottom:13px">
+  const photoCard = `<div class="card" id="hlPhoto" style="margin-bottom:13px">
     <div class="row between" style="margin-bottom:8px"><div class="eyebrow">Progress photos</div>
       <span class="row" style="gap:6px"><button class="btn xs ghost" id="bdCompare">Compare</button><button class="btn xs" id="bdPhoto">+ Add</button></span></div>
     <div id="bdPhotos" class="sub">Loading…</div>
