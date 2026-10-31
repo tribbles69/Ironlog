@@ -1030,11 +1030,15 @@ html[data-skin="win98"] textarea:focus{
 }
 html[data-skin="win98"] input::placeholder,
 html[data-skin="win98"] textarea::placeholder{color:#6b6b6b}
-/* the base sheet paints the select arrow with two gradients; keep the geometry,
-   repaint it light so it reads on a black field */
+/* the base sheet paints the select arrow with two gradients; repaint it light
+   so it reads on a black field. The `background` shorthand above reset the
+   geometry, so it is restated here — without it the gradients tile the whole
+   field grey with one big triangle in the middle. */
 html[data-skin="win98"] select{
   background-image:linear-gradient(45deg,transparent 50%,var(--w-face) 50%),
                    linear-gradient(135deg,var(--w-face) 50%,transparent 50%);
+  background-position:calc(100% - 16px) 50%,calc(100% - 11px) 50%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat;
 }
 
 /* ---------- 7. the set table ----------
@@ -2050,7 +2054,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.62.1';
+const APP_VERSION = '0.62.2';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -2071,6 +2075,39 @@ function allExercises() {
   S.workouts.forEach(wo => wo.exercises.forEach(e => e.leaf && add(e.leaf)));
   if (S.active) S.active.exercises.forEach(e => e.leaf && add(e.leaf));
   return [...map.values()].sort((a, b) => a.name.localeCompare(b.name));
+}
+/* The options for an exercise <select>. One movement can be several leaves —
+   dumbbell, close grip, a variant you logged — and a list of bare names showed
+   them as "Bench Press, Bench Press, Bench Press". So each option says what
+   sets it apart, the lifts you have actually done come first, and the rest are
+   grouped by category (a native select has no search; groups are what keep a
+   long list findable). `top` keys are pinned to the first group too. */
+function exOptionsHtml(list, selected, top = []) {
+  const logged = new Set();
+  const note = e => e.leaf && logged.add(leafKey(e.leaf));
+  S.workouts.forEach(wo => (wo.exercises || []).forEach(note));
+  if (S.active) S.active.exercises.forEach(note);
+  const label = new Map(list.map(x => { const v = variantLabel(x.leaf); return [x.key, v ? `${x.name} — ${v}` : x.name]; }));
+  /* variantLabel only names what differs from the movement's defaults, so two
+     leaves can still read the same; spell out the axes that differ. */
+  const byLabel = {};
+  list.forEach(x => (byLabel[label.get(x.key)] = byLabel[label.get(x.key)] || []).push(x));
+  Object.values(byLabel).filter(g => g.length > 1).forEach(g => {
+    const axes = ['equipment', 'execution', 'attachment'].filter(a => new Set(g.map(x => x.leaf[a])).size > 1);
+    g.forEach(x => label.set(x.key, `${x.name} — ${axes.map(a => EQ_LABEL[x.leaf[a]] || ATT_LABEL[x.leaf[a]] || x.leaf[a]).join(', ')}`));
+  });
+  const opt = x => `<option value="${esc(x.key)}"${x.key === selected ? ' selected' : ''}>${esc(label.get(x.key))}</option>`;
+  const byName = (a, b) => label.get(a.key).localeCompare(label.get(b.key));
+  if (list.length <= 12) return list.slice().sort(byName).map(opt).join('');
+  const pinned = new Set(top);
+  const mine = list.filter(x => pinned.has(x.key) || logged.has(x.key))
+    .sort((a, b) => (pinned.has(a.key) ? top.indexOf(a.key) : 99) - (pinned.has(b.key) ? top.indexOf(b.key) : 99) || byName(a, b));
+  const mineKeys = new Set(mine.map(x => x.key));
+  const groups = {};
+  list.filter(x => !mineKeys.has(x.key)).forEach(x => { const c = categoryOf(x.leaf); (groups[c] = groups[c] || []).push(x); });
+  let html = mine.length ? `<optgroup label="Your lifts">${mine.map(opt).join('')}</optgroup>` : '';
+  Object.keys(groups).sort().forEach(c => { html += `<optgroup label="${esc(c)}">${groups[c].sort(byName).map(opt).join('')}</optgroup>`; });
+  return html;
 }
 function categoryOf(leafOrName) {
   if (leafOrName && leafOrName.movement) {
@@ -4373,7 +4410,7 @@ function openWelcome(step = 1) {
   const ex = allExercises().filter(x => x.leaf.equipment === 'barbell');
   const p = priorityKeys();
   const sel = (i, label) => `<div class="field" style="margin-bottom:8px"><label>${label}</label>
-    <select id="wlPri${i}">${ex.map(x => `<option value="${esc(x.key)}"${x.key === p[i] ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>`;
+    <select id="wlPri${i}">${exOptionsHtml(ex, p[i], p)}</select></div>`;
   let pick = S.settings.trainingFor || 'general';
   return modal({
     title: 'What are you training for?', sticky: true,
@@ -4993,7 +5030,7 @@ function openCheckin(date = today()) {
 /* ---------------- goal modal ---------------- */
 function openGoal(id) {
   const g = S.goals.find(x => x.id === id) || { id: uid(), type: 'lift', name: '', exercise: priorityKeys()[0], target: '', deadline: '' };
-  const exList = allExercises();
+  const exList = allExercises().filter(x => categoryOf(x.leaf) !== 'Cardio');   // a 1RM goal needs a lift
   modal({
     title: id ? 'Edit goal' : 'New goal',
     body: `
@@ -5006,7 +5043,7 @@ function openGoal(id) {
           <option value="custom"${g.type === 'custom' ? ' selected' : ''}>Custom (manual)</option>
         </select></div>
       <div class="field" id="gExWrap"><label>Exercise</label>
-        <select id="gEx">${exList.map(x => `<option value="${esc(x.key)}"${x.key === g.exercise ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>
+        <select id="gEx">${exOptionsHtml(exList, g.exercise, priorityKeys())}</select></div>
       <div class="field"><label>Goal name</label>
         <input id="gName" value="${esc(g.name)}" placeholder="e.g. 200kg squat"></div>
       <div class="grid2">
@@ -8487,7 +8524,7 @@ function openChooseLift(type) {
     title: 'Which lift?',
     body: `<div class="sub" style="margin-top:0;margin-bottom:12px">${esc(type.blurb)}</div>
       <div class="field"><label>Contested lift</label>
-        <select id="slLift">${ordered.map(x => `<option value="${esc(x.key)}">${esc(x.name)}</option>`).join('')}</select></div>`,
+        <select id="slLift">${exOptionsHtml(ordered, ordered[0] && ordered[0].key, ordered.filter(x => common.includes(x.leaf.movement)).map(x => x.key))}</select></div>`,
     foot: `<button class="btn ghost" data-close>Back</button><button class="btn primary" id="slGo">Continue</button>`,
     onOpen: bg => { $('#slGo', bg).onclick = () => {
       const leaf = keyLeaf($('#slLift', bg).value);
@@ -8507,7 +8544,7 @@ function openPriority() {
   const ex = allExercises().filter(x => x.leaf.equipment === 'barbell');
   const p = priorityKeys();
   const sel = (i, label) => `<div class="field"><label>${label}</label>
-    <select id="pri${i}">${ex.map(x => `<option value="${esc(x.key)}"${x.key === p[i] ? ' selected' : ''}>${esc(x.name)}</option>`).join('')}</select></div>`;
+    <select id="pri${i}">${exOptionsHtml(ex, p[i], p)}</select></div>`;
   modal({
     title: 'Priority lifts',
     body: `<p class="sub" style="margin-top:0">These three drive your total, DOTS and meet attempt planning.</p>
