@@ -40,7 +40,8 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    E — unless Aaron says otherwise.
    Within a section, the **order on the page** is the order of work; item
    numbers are labels and don't always run in sequence (D12 was moved up
-   2026-10-31, D8–D9 moved to the end of D).
+   2026-10-31, D8–D9 moved to the end of D; E5 and the new D16 moved ahead of
+   D8 the same day).
 2. **Check the code before trusting a status here.** Some items were marked from
    memory of planning chats, not from the code. If something is already built,
    tick it, note the version, and move on.
@@ -621,6 +622,60 @@ Update the spec first — its "Other machines" note is where this was parked.
   required.
 - Real-gym check per machine goes on the A4 list.
 
+### [ ] E5. Mobility training — moved up 2026-10-31 (Aaron); routines shipped 0.60.0, tests next (spec `r&d/specs/mobility-spec.md`)
+Write `r&d/specs/mobility-spec.md` before building.
+- Routines start from **Train → Mobility**; tests and their charts live on
+  **Health** (D12, D13).
+- **Starting point (added 2026-10-31):** Aaron's daily morning routine,
+  transcribed to `r&d/data/routines/morning-stretch.json` — 8 zones, 25
+  stretches (the sheet says 24; it lists 25), ~30 min. Ship it as the first
+  built-in routine and use it to shape the data model:
+  - zones with an estimated time each; items with targets, position, cue text
+  - dose types: hold (s), hold range (60–90 s), hold × sets, hold × reps
+    (chin tuck 5 s × 8), plain reps (cat-cow), per side, and a follow-on
+    ("then both knees 30 s")
+  - a **flag** line for priority items, an **alt** swap (pigeon → lying glute
+    stretch), and a **benchmark** that feeds the ROM tests below (standing
+    forward fold reach: knee → mid-shin → ankle → toes → floor, weekly)
+  - tick-off per stretch as it's done, like the sheet's checkboxes, and a
+    record of the routine done that day
+  - **Review the content against the hypermobility rule below before it
+    ships:** most of it is passive static stretching (pigeon, prone quad,
+    wrist stretches, deep squat hold), which this item says to go easy on.
+    Aaron decides what stays, gets an alt, or becomes a loaded version.
+- Saved routines (evening routine, pre-lift warm-up, "strength at length"
+  block) of timed holds and rep-based drills, per side where relevant.
+- Guided player with hold countdowns, side switches, contract-relax cues —
+  reuse `Cue`, isometric timing and `Awake`.
+- Hypermobility-aware: mark joints to leave alone (e.g. wrists) and have
+  routines skip or swap them. Loaded end-range work over passive stretching.
+- ROM tests over time: knee-to-wall (cm), straight-leg raise (degrees,
+  optionally via the phone's inclinometer), Thomas test, wall shoulder flexion —
+  charted per test and side.
+- Loaded-stretch drills log as normal lifting sets so PRs still work.
+- **Balance test** (added 2026-10-26 at Aaron's request): single-leg stand,
+  eyes closed. Press and hold a big pad when the foot lifts, release when it
+  touches down; time shown to 0.1 s. Pick the standing leg, auto-switch after
+  each attempt, ignore anything under 1 s, buzz on start and stop (reuse `Cue`,
+  `Awake`). Best per leg, history charted per side, left/right imbalance shown
+  like D4. Optional eyes-open mode as a separate test. A working prototype of
+  the interaction exists as a standalone artifact ("Stork Stand").
+
+### [ ] D16. Blood pressure and blood glucose on Health
+Added 2026-10-31 at Aaron's request — for diabetic lifters especially. Write
+the spec into `r&d/specs/health-page-spec.md` first.
+- **Blood pressure:** systolic / diastolic, optional pulse, arm and note;
+  several readings a day. Charted, with the latest and a 7-day average.
+- **Blood glucose:** stored in mmol/L (Aaron's call), shown in mmol/L or
+  mg/dL by a setting. Each reading has a context: fasting, before a meal,
+  2 h after, bedtime, other.
+- **Reference bands (Aaron's call: NHS):** BP coloured against the NHS
+  bands (low, ideal, raised, high). Glucose against targets the lifter sets
+  per context, with NHS general targets as the defaults, and a low under 4
+  always flagged. Labelled as reference, not advice: a diabetes team may set
+  other targets.
+- Same rules as Health: on the device, in JSON export and Drive sync, C4.
+
 ### [ ] D8. AI on the user's own key
 No Ironlog AI server and no paid tier.
 - A Settings field for the user's own Anthropic API key, stored only on the
@@ -673,45 +728,6 @@ Write `r&d/specs/body-comp-spec.md` before building.
 - **Progress photos** (Blast #95, #11): front/back/sides, side-by-side compare,
   kept on the device.
 - Charts via `chartMulti`; IndexedDB + JSON export/import (schema bump).
-
-### [ ] E5. Mobility training
-Write `r&d/specs/mobility-spec.md` before building.
-- Routines start from **Train → Mobility**; tests and their charts live on
-  **Health** (D12, D13).
-- **Starting point (added 2026-10-31):** Aaron's daily morning routine,
-  transcribed to `r&d/data/routines/morning-stretch.json` — 8 zones, 25
-  stretches (the sheet says 24; it lists 25), ~30 min. Ship it as the first
-  built-in routine and use it to shape the data model:
-  - zones with an estimated time each; items with targets, position, cue text
-  - dose types: hold (s), hold range (60–90 s), hold × sets, hold × reps
-    (chin tuck 5 s × 8), plain reps (cat-cow), per side, and a follow-on
-    ("then both knees 30 s")
-  - a **flag** line for priority items, an **alt** swap (pigeon → lying glute
-    stretch), and a **benchmark** that feeds the ROM tests below (standing
-    forward fold reach: knee → mid-shin → ankle → toes → floor, weekly)
-  - tick-off per stretch as it's done, like the sheet's checkboxes, and a
-    record of the routine done that day
-  - **Review the content against the hypermobility rule below before it
-    ships:** most of it is passive static stretching (pigeon, prone quad,
-    wrist stretches, deep squat hold), which this item says to go easy on.
-    Aaron decides what stays, gets an alt, or becomes a loaded version.
-- Saved routines (evening routine, pre-lift warm-up, "strength at length"
-  block) of timed holds and rep-based drills, per side where relevant.
-- Guided player with hold countdowns, side switches, contract-relax cues —
-  reuse `Cue`, isometric timing and `Awake`.
-- Hypermobility-aware: mark joints to leave alone (e.g. wrists) and have
-  routines skip or swap them. Loaded end-range work over passive stretching.
-- ROM tests over time: knee-to-wall (cm), straight-leg raise (degrees,
-  optionally via the phone's inclinometer), Thomas test, wall shoulder flexion —
-  charted per test and side.
-- Loaded-stretch drills log as normal lifting sets so PRs still work.
-- **Balance test** (added 2026-10-26 at Aaron's request): single-leg stand,
-  eyes closed. Press and hold a big pad when the foot lifts, release when it
-  touches down; time shown to 0.1 s. Pick the standing leg, auto-switch after
-  each attempt, ignore anything under 1 s, buzz on start and stop (reuse `Cue`,
-  `Awake`). Best per leg, history charted per side, left/right imbalance shown
-  like D4. Optional eyes-open mode as a separate test. A working prototype of
-  the interaction exists as a standalone artifact ("Stork Stand").
 
 ### [ ] E6. Supplements and blood work
 Supplement schedule, reminders and adherence history, viewable alongside
