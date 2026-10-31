@@ -775,6 +775,27 @@ block of CSS, not edits scattered through `index.html`.
 - Muscle map skins (0.23.0) are separate from themes — check they read well on
   dark backgrounds.
 
+### [ ] E11. Debug mode — show the working
+Added 2026-10-31 at Aaron's request, after seeing a step-by-step scoring trace
+for the strength fitting test's home screen. Goal: any number the app works out
+can show how it got there, so a wrong-looking result can be checked or reported.
+- **A Settings toggle, off by default.** When on, calculated values get a small
+  "show working" tap that opens the trace: the inputs, which value was picked
+  (e.g. the worse side), the formula with the numbers filled in, any cutoffs or
+  thresholds passed and missed, and the result.
+- **Start where results get questioned:** PR detection (`prKey` — which entry
+  beat which; read-only, see D10), estimated 1RM, strength tiers and standards,
+  mobility and balance test scores (E5), RIR ↔ RPE conversion, rep-range
+  verdicts (D5), VBT velocity, velocity loss and estimated RIR (D1), the
+  recovery heatmap (D7), DOTS, caliper body fat (E4), and cardio HR-zone cues
+  (D15).
+- **One shared trace helper**, so every calculation records steps in the same
+  shape (label, value, note) instead of each feature building its own debug UI.
+  No cost when debug is off.
+- **Read-only:** never changes data. A "copy trace" button puts it on the
+  clipboard as plain text, for pasting into a bug report or a Claude chat.
+- Trace sheets follow C4 (labels, contrast, text size).
+
 ---
 
 ## Parked
