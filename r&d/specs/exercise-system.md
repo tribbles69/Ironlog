@@ -228,6 +228,15 @@ the same PR pool as a competition bench; a shirted bench does not. If
 `splitsPR` is not implemented before modifiers ship, PRs become
 unreliable.
 
+**Implemented 0.55.0 (roadmap D10).** `exKey` is built on
+`prKey(leaf, mods)`, so the pool key is `leafKey#sorted+mods|iso|capN`.
+`keyLeaf` strips the `#` part (a pool key never leaks a modifier into a
+stored entry); `keyPR(k)` reads it back. Two optional per-entry fields go
+with these: `chainKg` (total chain weight) and `bandKg` (band tension at
+the top), in kg. They're shown on the chip and don't split the pool
+further. A one-time notice after the update, and the exercise data check,
+list every pool that moved and what it did to the raw lift's best.
+
 ### UI
 
 Quick-tap chips on the logging screen, pre-populated with the seed

@@ -13,6 +13,17 @@ rather than guessed.
 
 ---
 
+## 0.55.0 — 31 Oct 2026
+- **Chains, bands, slingshot and equipped now have their own PRs.** Before,
+  a bench with chains counted toward your raw bench PR. Now each gets a PR
+  line, history and chart of its own. Pick them in the modifier sheet under
+  *Own PR line*.
+- **Chain weight and band tension:** when you tag chains or bands you can
+  add how much (optional). It shows on the exercise.
+- If any of your past sessions were tagged this way, a one-off note after
+  the update lists what moved and how it changed the raw lift's best.
+  Settings → Check exercise data lists it too.
+
 ## 0.54.0 — 31 Oct 2026
 - **New layout:** the bottom bar is now Home · Calendar · Train · Stats ·
   Health.

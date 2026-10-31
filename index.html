@@ -1980,7 +1980,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.54.0';
+const APP_VERSION = '0.55.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -2105,15 +2105,25 @@ function resolveName(name) {
 function leafKey(l) { return `${l.movement}/${l.equipment}/${l.execution}/${l.attachment}`; }
 /* An exKey may carry the isometric suffix (see exKey); the leaf is what comes
    before it. */
-function keyLeaf(k) { const p = String(k).split('|')[0].split('/'); return { movement: p[0], equipment: p[1], execution: p[2], attachment: p[3] }; }
+function keyLeaf(k) { const p = String(k).split('|')[0].split('#')[0].split('/'); return { movement: p[0], equipment: p[1], execution: p[2], attachment: p[3] }; }
+/* The PR-splitting modifiers a key carries (chains, bands…), from prKey's
+   "#a+b" part. keyLeaf stays the plain leaf, so a pool key can never leak a
+   modifier into a stored entry. */
+function keyPR(k) { const m = String(k).split('|')[0].match(/#(.+)$/); return m ? m[1].split('+') : []; }
+/* What sets this pool apart, for labels: "dumbbells, chains". */
+function keyVariantLabel(k) { return [variantLabel(keyLeaf(k)), ...keyPR(k).map(id => modLabel(id).toLowerCase())].filter(Boolean).join(', '); }
+function keyNameHtml(k) { const v = keyVariantLabel(k); return `${esc(displayName(keyLeaf(k)))}${v ? ` <span class="dimmer">${esc(v)}</span>` : ''}`; }
 function keyIsIso(k) { return String(k).includes('|iso'); }
 function leafName(k) {
   const cap = String(k).match(/\|cap(\d+)/);
-  return displayName(keyLeaf(k)) + (keyIsIso(k) ? ' (hold)' : '') + (cap ? ` (in ${capLabel(+cap[1])})` : '');
+  const pr = keyPR(k).map(id => modLabel(id).toLowerCase());
+  return displayName(keyLeaf(k)) + (pr.length ? ` (${pr.join(' + ')})` : '') + (keyIsIso(k) ? ' (hold)' : '') + (cap ? ` (in ${capLabel(+cap[1])})` : '');
 }
 
 /* prKey adds any splitsPR modifiers. Sorted, because it is a persisted grouping
-   key: a different order would silently split a PR history. */
+   key: a different order would silently split a PR history. Wired into exKey
+   since D10 (0.55.0): chains, bands, slingshot and equipped each get their own
+   PR line instead of sharing the raw lift's. */
 function prKey(leaf, mods) {
   const V = catalogue().V;
   const split = (mods || [])
@@ -2903,11 +2913,11 @@ function migrateToV2(st) {
 /* The identity of an entry, for every history/PR join. */
 /* An isometric entry gets its own key, so a 20 s loaded hold and a set of ten
    never contend for the same record or share a history. Computed, never
-   persisted. This is deliberately not prKey/splitsPR (still unwired, roadmap
-   item 14) — only the iso suffix. */
+   persisted. */
 /* A time cap is its own pool too: 20 reps in a minute and a set of 20 aren't
-   the same lift (B1). */
-function exKey(e) { return e && e.leaf ? leafKey(e.leaf) + (e.iso === true ? '|iso' : '') + (e.cap > 0 ? '|cap' + e.cap : '') : ''; }
+   the same lift (B1). And so is a lift with chains, bands, a slingshot or
+   equipped (D10): prKey's "#chains" part comes before the "|" suffixes. */
+function exKey(e) { return e && e.leaf ? prKey(e.leaf, e.mods) + (e.iso === true ? '|iso' : '') + (e.cap > 0 ? '|cap' + e.cap : '') : ''; }
 function exName(e) { return e && e.leaf ? displayName(e.leaf) : (e && e.legacyName) || ''; }
 /* A set counts as working when it is not a warm-up. */
 function isWorking(s) { return s.setType !== 'warmup'; }
@@ -3033,7 +3043,7 @@ function openFeel(obj, title, after) {
 /* An entry-shaped object from a PR key, so exTag can name "in 1 min" or "hold". */
 function keyEntry(k) {
   const parts = String(k).split('|');
-  const e = { leaf: keyLeaf(k), sets: [] };
+  const e = { leaf: keyLeaf(k), mods: keyPR(k), sets: [] };
   parts.slice(1).forEach(p => { if (p === 'iso') e.iso = true; else if (p.startsWith('cap')) e.cap = +p.slice(3); });
   return e;
 }
@@ -4190,6 +4200,7 @@ function render() {
   wire();
   a11yPass(v);
   maybeWhatsNew();
+  maybePoolNotice();
 }
 
 
@@ -6696,7 +6707,7 @@ function viewAnalytics() {
     ${ranks.slice(0, 12).map(r => `
       <div class="rank-row" data-exdetail="${esc(r.key)}">
         <div class="grow">
-          <div class="n">${r.leaf ? nameHtml(r.leaf) : esc(r.name)}${r.estOnly ? ' <span class="chip">EST</span>' : ''}</div>
+          <div class="n">${r.leaf ? keyNameHtml(r.key) : esc(r.name)}${r.estOnly ? ' <span class="chip">EST</span>' : ''}</div>
           <div class="m"><span class="tierlab" style="color:${r.color}">${r.tierName}</span>
             · ${wt(r.e1)} e1RM · ${r.ratio.toFixed(2)}× bw${r.nextName ? ` · ${wt(r.toNext)} to ${r.nextName}` : ''}</div>
           ${bar(r.score, r.color)}
@@ -6750,7 +6761,7 @@ function viewAnalytics() {
           const t = s.pct > 1 ? 'up' : s.pct < -1 ? 'down' : 'flat';
           return `<div class="ex-row" data-exdetail="${esc(s.key)}">
         <div class="grow">
-          <div class="n">${s.leaf ? nameHtml(s.leaf) : esc(s.name)}</div>
+          <div class="n">${s.leaf ? keyNameHtml(s.key) : esc(s.name)}</div>
           <div class="m">${s.sessions} session${s.sessions === 1 ? '' : 's'} · ${s.totalSets} sets · last ${relDay(s.lastDate)}</div>
         </div>
         <div class="pr">
@@ -6829,7 +6840,7 @@ function openMovementPage(movementId, focusKey) {
 
   const strip = () => `<div class="varstrip">${vars.map(v => `
     <button class="vartab ${v.key === focus ? 'on' : ''}" data-var="${esc(v.key)}">
-      <span class="n">${esc(variantLabel(v.leaf) || 'Standard')}</span>
+      <span class="n">${esc(keyVariantLabel(v.key) || 'Standard')}</span>
       <span class="m">${v.stats ? `${v.stats.sessions} session${v.stats.sessions === 1 ? '' : 's'}` : 'not logged'}</span>
     </button>`).join('')}</div>`;
 
@@ -6874,11 +6885,11 @@ function openMovementPage(movementId, focusKey) {
       : `<div class="card tight" style="margin-bottom:10px"><div class="sub">No headline figure — the primary variant
           (${esc(variantLabel(keyLeaf(pk)) || 'the standard version')}) hasn't been logged. Variants are never rolled up into one number.</div></div>`;
     const rows = vars.filter(v => v.stats).map((v, i) => `
-      <tr><td><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${SERIES_COLORS[i % SERIES_COLORS.length]};margin-right:7px"></i>${esc(variantLabel(v.leaf) || 'Standard')}</td>
+      <tr><td><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:${SERIES_COLORS[i % SERIES_COLORS.length]};margin-right:7px"></i>${esc(keyVariantLabel(v.key) || 'Standard')}</td>
         <td class="r mono">${w(v.stats.best.e1)}</td>
         <td class="r mono dimmer">${v.stats.sessions}s</td></tr>`).join('');
     const series = vars.filter(v => v.stats).map((v, i) => ({
-      label: variantLabel(v.leaf) || 'Standard', color: SERIES_COLORS[i % SERIES_COLORS.length],
+      label: keyVariantLabel(v.key) || 'Standard', color: SERIES_COLORS[i % SERIES_COLORS.length],
       points: v.stats.series.map(p => ({ date: p.date, v: dw(p.e1) })),
     }));
     /* The variant picked in the strip gets its own numbers — the headline
@@ -6886,7 +6897,7 @@ function openMovementPage(movementId, focusKey) {
     const fv = vars.find(v => v.key === focus);
     const fs = fv && fv.stats;
     const focusStrip = fv && focus !== pk ? `
-      <div class="eyebrow" style="margin:12px 0 6px">${esc(variantLabel(fv.leaf) || 'Standard')}</div>
+      <div class="eyebrow" style="margin:12px 0 6px">${esc(keyVariantLabel(fv.key) || 'Standard')}</div>
       ${fs ? `<div class="stats grid3">
           <div class="stat"><div class="k">Best e1RM</div><div class="v">${w(fs.best.e1)}</div></div>
           <div class="stat"><div class="k">Top set</div><div class="v">${w(fs.bestW.w)}</div><div class="d">× ${fs.bestW.r}</div></div>
@@ -6899,7 +6910,7 @@ function openMovementPage(movementId, focusKey) {
       .sort((a, b) => a.date < b.date ? 1 : a.date > b.date ? -1 : 0)
       .flatMap(wo => prsFor(wo).filter(p => p.key && p.key.split('|')[0] === base).map(p => ({ p, wo })));
     const tl = fv ? `
-      <div class="eyebrow" style="margin:16px 0 4px">PR timeline · ${esc(variantLabel(fv.leaf) || 'Standard')}</div>
+      <div class="eyebrow" style="margin:16px 0 4px">PR timeline · ${esc(keyVariantLabel(fv.key) || 'Standard')}</div>
       ${timeline.length ? `<div class="prtl">${timeline.slice(0, 30).map(({ p, wo }) => `
         <div class="prtl-row" data-hist-wo="${esc(wo.id)}">
           <span class="prtl-dot"></span>
@@ -11084,19 +11095,59 @@ function tempoLine(e, ei) {
 /* ---------------- modifiers ----------------
    Technique, tempo, stance and range of motion ("comp pause", "slow eccentric")
    as structured tags on the entry, instead of prose in the note. They annotate;
-   they never split the PR leaf. The splitsPR ones (chains, bands, slingshot,
-   equipped) are listed but greyed: giving them their own PR line is prKey's
-   job, and prKey is deliberately still unwired (roadmap item 14) — offering
-   them now would promise a separation that doesn't happen. Your own modifiers
-   are stored as "x:<text>". */
+   they never split the PR leaf — except the splitsPR ones (chains, bands,
+   slingshot, equipped), which give the lift its own PR line through prKey
+   (D10). Chains and bands carry their weight on the entry: chainKg (total
+   chain weight, kg) and bandKg (band tension at the top, kg) — neither splits
+   the pool further. Your own modifiers are stored as "x:<text>". */
 function modVocab() { return catalogue().V.modifier || []; }
+
+/* Which completed entries now sit in their own PR line (D10), and what that
+   did to the raw lift's best: before = the old shared pool, after = without
+   them. Read-only; feeds the exercise data check and the one-time notice. */
+function prPoolMoves(st) {
+  const pools = {};
+  (st.workouts || []).filter(w => w.status === 'completed').forEach(wo => (wo.exercises || []).forEach(e => {
+    if (!e.leaf || !inRepsPool(e)) return;
+    const k = exKey(e);
+    if (!keyPR(k).length) return;
+    (pools[k] = pools[k] || { key: k, entries: 0 }).entries++;
+  }));
+  const out = Object.values(pools).map(p => {
+    const raw = leafKey(keyLeaf(p.key)) + p.key.slice(p.key.split('|')[0].length);
+    const own = statsFor(p.key), rest = statsFor(raw);
+    return { ...p, raw, label: leafName(p.key), rawName: leafName(raw), best: own ? own.best.e1 : 0, rawAfter: rest ? rest.best.e1 : 0 };
+  });
+  // the old shared pool held every split pool of that lift at once
+  out.forEach(p => { p.rawBefore = Math.max(p.rawAfter, ...out.filter(q => q.raw === p.raw).map(q => q.best)); });
+  return out.sort((a, b) => b.entries - a.entries);
+}
+function maybePoolNotice() {
+  if (S.settings.prPoolsNoticed || S.active || modalStack.length || whatsNewArmed || whatsNewBusy) return;
+  S.settings.prPoolsNoticed = APP_VERSION; save();
+  const moved = prPoolMoves(S);
+  if (!moved.length) return;
+  modal({
+    title: 'Chains and bands have their own PRs',
+    body: `<div class="sub" style="margin-top:0">Sessions tagged with chains, bands, a slingshot or equipped now count toward a PR line of their own, not the raw lift's. Nothing was deleted — these numbers just moved.</div>
+      <div class="card flush" style="margin-top:10px">${moved.map(m => `<div class="ex-row" data-exdetail="${esc(m.key)}">
+        <div class="grow"><div class="n">${keyNameHtml(m.key)}</div>
+          <div class="m">${m.entries} session${m.entries === 1 ? '' : 's'} · best e1RM ${wt(m.best)}</div>
+          <div class="m">${esc(m.rawName)}: ${wt(m.rawBefore)} → ${m.rawAfter ? wt(m.rawAfter) : 'no other sessions'}</div></div></div>`).join('')}</div>
+      <div class="sub" style="margin-top:10px">Wrong tag on a session? Edit it and untick the modifier. The full list is in Settings → Check exercise data.</div>`,
+    foot: `<button class="btn primary wide" data-close>Got it</button>`,
+    onOpen: bg => bg.querySelectorAll('[data-exdetail]').forEach(b => b.onclick = () => { closeModal(); openExDetail(b.dataset.exdetail); }),
+  });
+}
+function isSplitMod(id) { const m = modVocab().find(x => x.id === id); return !!(m && m.splitsPR); }
 function modLabel(id) {
   if (String(id).startsWith('x:')) return String(id).slice(2);
   const m = modVocab().find(x => x.id === id);
   return m ? m.label : String(id);
 }
 function modWords(e) {
-  return [...(e && e.tempo ? [`tempo ${e.tempo}`] : []), ...((e && e.mods) || []).map(modLabel)];
+  return [...(e && e.tempo ? [`tempo ${e.tempo}`] : []), ...((e && e.mods) || []).map(id =>
+    id === 'chains' && e.chainKg > 0 ? `${modLabel(id)} ${wt(e.chainKg)}` : id === 'bands' && e.bandKg > 0 ? `${modLabel(id)} ${wt(e.bandKg)}` : modLabel(id))];
 }
 function modsHtml(e) {
   const ws = modWords(e);
@@ -11106,7 +11157,7 @@ function modChips(e, attr) {
   const ms = e.mods || [];
   return `<div class="row wrap modchips" style="gap:6px;margin-top:8px">
     ${e.tempo ? `<span class="chip" style="font-variant-numeric:tabular-nums">Tempo ${esc(e.tempo)}</span>` : ''}
-    ${ms.map(m => `<span class="chip">${esc(modLabel(m))}</span>`).join('')}
+    ${ms.map(m => `<span class="chip">${esc(modLabel(m))}${m === 'chains' && e.chainKg > 0 ? ` ${esc(wt(e.chainKg))}` : m === 'bands' && e.bandKg > 0 ? ` ${esc(wt(e.bandKg))}` : ''}${isSplitMod(m) ? ' <span aria-hidden="true">★</span>' : ''}</span>`).join('')}
     <button class="chip modadd" ${attr} title="Tempo, technique, adaptations — tags that don't split the PR" aria-label="${ms.length || e.tempo ? 'Edit tempo and modifiers' : 'Add tempo or modifier'}">${ms.length || e.tempo ? '✎' : '+ Tempo / modifier'}</button>
   </div>`;
 }
@@ -11114,11 +11165,12 @@ function openModPicker(e, after) {
   adoptTempo(e);
   let sel = new Set(e.mods || []);
   let tp = e.tempo ? tempoParts(e.tempo) : ['', '', '', ''];
+  let chainD = e.chainKg > 0 ? nice(dw(e.chainKg)) : '', bandD = e.bandKg > 0 ? nice(dw(e.bandKg)) : '';
   const draw = () => {
     const vocab = modVocab();
     const custom = [...sel].filter(m => String(m).startsWith('x:'));
     const cur = parseTempo(tp.map(x => x || '0').join('-'));
-    return `<div class="sub" style="margin-bottom:10px">Tags on this exercise for this session. They don't change which PR it counts toward.</div>
+    return `<div class="sub" style="margin-bottom:10px">Tags on this exercise for this session. Only the ones under <b>Own PR line</b> change which PR it counts toward.</div>
       <div class="eyebrow" style="margin:4px 0 4px">Tempo</div>
       <div class="sub" style="margin-bottom:6px">Seconds down · pause at the bottom · up · pause at the top. X = as fast as you can.</div>
       <div class="row" style="gap:8px;margin-bottom:8px" id="mdTempo">
@@ -11140,8 +11192,14 @@ function openModPicker(e, after) {
       <div class="eyebrow" style="margin:12px 0 4px">Yours and others</div>
       ${custom.map(m => `
         <button class="axrow on" data-md="${esc(m)}"><span class="lbl">${esc(modLabel(m))} <span class="dimmer">yours</span></span><span class="rad"></span></button>`).join('')}
+      <div class="eyebrow" style="margin:12px 0 2px">Own PR line</div>
+      <div class="sub" style="margin-bottom:4px">These change the lift, so they get PRs of their own instead of counting toward the raw lift.</div>
       ${vocab.filter(m => m.splitsPR).map(m => `
-        <button class="axrow off" disabled title="Will get its own PR line with roadmap item 14"><span class="lbl">${esc(m.label)} <span class="dimmer">own PR line — not yet</span></span><span class="rad"></span></button>`).join('')}</div>
+        <button class="axrow ${sel.has(m.id) ? 'on' : ''}" data-md="${esc(m.id)}"><span class="lbl">${esc(m.label)}</span><span class="rad"></span></button>
+        ${m.id === 'chains' && sel.has('chains') ? `<div class="field" style="margin:4px 0 8px"><label for="mdChain">Chain weight, both sides (${U()}) — optional</label>
+          <input id="mdChain" type="number" inputmode="decimal" step="0.5" min="0" value="${esc(chainD)}" placeholder="e.g. 20"></div>` : ''}
+        ${m.id === 'bands' && sel.has('bands') ? `<div class="field" style="margin:4px 0 8px"><label for="mdBand">Band tension at the top (${U()}) — optional</label>
+          <input id="mdBand" type="number" inputmode="decimal" step="0.5" min="0" value="${esc(bandD)}" placeholder="if you know it"></div>` : ''}`).join('')}</div>
       <div class="row" style="gap:8px;margin-top:10px">
         <input id="mdNew" class="grow" placeholder="Your own — e.g. close grip, 3-0-1 tempo" maxlength="40">
         <button class="btn sm" id="mdAdd">Add</button>
@@ -11152,6 +11210,12 @@ function openModPicker(e, after) {
     body: draw(),
     foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="mdOk">Done</button>`,
     onOpen: bg => {
+      // the chain / band fields redraw with the list, so their values are kept here
+      const keepNums = () => {
+        const cIn = $('#mdChain', bg), bIn = $('#mdBand', bg);
+        if (cIn) chainD = cIn.value;
+        if (bIn) bandD = bIn.value;
+      };
       const bind = () => {
         const tpIns = [...bg.querySelectorAll('[data-tp]')];
         tpIns.forEach((inp, i) => inp.oninput = () => {
@@ -11169,6 +11233,7 @@ function openModPicker(e, after) {
           const id = b.dataset.md;
           if (sel.has(id)) sel.delete(id); else sel.add(id);
           b.classList.toggle('on', sel.has(id));
+          if (id === 'chains' || id === 'bands') { keepNums(); $('.modal-body', bg).innerHTML = draw(); bind(); }   // show or hide its weight field
         });
         const add = () => {
           const t = $('#mdNew', bg).value.trim().replace(/\s+/g, ' ');
@@ -11177,7 +11242,8 @@ function openModPicker(e, after) {
           const known = modVocab().find(m => m.label.toLowerCase() === t.toLowerCase());
           const typedTempo = !known && tempoFromText(t);
           if (typedTempo) tp = tempoParts(typedTempo);   // "3-0-1 tempo" typed here fills the boxes instead
-          else sel.add(known && !known.splitsPR ? known.id : 'x:' + t);
+          else sel.add(known ? known.id : 'x:' + t);
+          keepNums();
           $('.modal-body', bg).innerHTML = draw(); bind();
         };
         $('#mdAdd', bg).onclick = add;
@@ -11187,10 +11253,17 @@ function openModPicker(e, after) {
       $('#mdOk', bg).onclick = () => {
         // vocabulary order first, then yours in the order added
         const order = modVocab().map(m => m.id);
+        const poolBefore = exKey(e);
         e.mods = [...sel].sort((a, b) => (order.indexOf(a) + 1 || 999) - (order.indexOf(b) + 1 || 999));
         const t = tp.some(Boolean) ? parseTempo(tp.map(x => x || '0').join('-')) : null;
         if (t) e.tempo = t; else delete e.tempo;
+        keepNums();
+        const num = v => { const n = parseFloat(v); return n > 0 ? toKg(n) : 0; };
+        const ck = sel.has('chains') ? num(chainD) : 0, bk = sel.has('bands') ? num(bandD) : 0;
+        if (ck) e.chainKg = ck; else delete e.chainKg;
+        if (bk) e.bandKg = bk; else delete e.bandKg;
         closeModal(); after();
+        if (exKey(e) !== poolBefore) toast(`${leafName(exKey(e))} · its own PR line`, 'green');
       };
     },
   });
@@ -11228,8 +11301,9 @@ function exerciseCheck(st, csvText) {
   if (st.active) scan(st.active, 'active');
   Object.entries(byName).forEach(([name, g]) => {
     const keys = Object.keys(g);
-    if (keys.length > 1) R.splits.push({ name, variants: keys.map(k => ({ key: k, label: leafName(k) + (variantLabel(keyLeaf(k)) ? ` · ${variantLabel(keyLeaf(k))}` : ''), ...g[k] })) });
+    if (keys.length > 1) R.splits.push({ name, variants: keys.map(k => ({ key: k, label: displayName(keyLeaf(k)) + (keyVariantLabel(k) ? ` · ${keyVariantLabel(k)}` : ''), ...g[k] })) });
   });
+  R.moved = prPoolMoves(st);
   if (csvText != null) {
     try {
       const p = parseImport(csvText);   // any app's export (B8)
@@ -11252,6 +11326,8 @@ function exerciseCheckText(R) {
   Object.entries(R.custom).forEach(([n, c]) => L.push(`  ${n} ×${c}`));
   L.push(`old names split across variants: ${R.splits.length}`);
   R.splits.forEach(s => L.push(`  ${s.name}: ` + s.variants.map(v => `${v.label} (${v.entries}, best e1 ${Math.round(v.best)})`).join(' | ')));
+  L.push(`own PR lines for chains / bands / slingshot / equipped (0.55.0): ${R.moved.length}`);
+  R.moved.forEach(m => L.push(`  ${m.label}: ${m.entries} entr${m.entries === 1 ? 'y' : 'ies'}, best e1 ${Math.round(m.best)}; ${m.rawName} best e1 ${Math.round(m.rawBefore)} -> ${m.rawAfter ? Math.round(m.rawAfter) : 'none'}`));
   L.push(`movement differs from what the old name resolves to: ${R.drift.length}`);
   R.drift.slice(0, 50).forEach(d => L.push(`  ${d.date} ${d.name}: stored ${d.now}, resolves ${d.resolves}`));
   if (R.csv) {
