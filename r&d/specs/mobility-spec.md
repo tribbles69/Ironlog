@@ -72,4 +72,31 @@ Drive sync carry it like any session.
   totals, the recovery map).
 
 ## 2. Tests (0.61.0) — on Health
-Spec'd with the build; see section 2 when it lands.
+One store, `S.mobTests`: `{ id, date, test, side: 'L' | 'R' | null, v, mt }`
+(in `DEFAULT_STATE`, JSON export and `SYNC_SETS`). The tests live in one
+table, `MOB_TESTS`:
+
+| id | test | value | sides | better |
+|---|---|---|---|---|
+| `fold` | Forward fold reach — the routine's weekly benchmark | scale: knee, mid-shin, ankle, toes, floor, palms flat (stored as 0–5) | — | higher |
+| `k2w` | Knee to wall | cm | L/R | higher |
+| `slr` | Straight-leg raise | degrees, typed or by the phone | L/R | higher |
+| `thomas` | Thomas test | scale: thigh above / level / below | L/R | higher |
+| `wallflex` | Wall shoulder flexion | cm gap, 0 = touching | — | lower |
+| `bal_ec` / `bal_eo` | Balance, eyes closed / open | seconds | L/R | higher |
+
+- **Health → Mobility tests card** (after the body cards): each test's latest
+  left / right, a chart of the picked test (best per day and side), the
+  left/right gap on the latest day both were tested ("Left 25% behind"), and
+  how to do it.
+- **Log a test:** pick the test, date, a value per side (either may be
+  blank). The straight-leg raise can use the phone as an inclinometer:
+  `deviceorientation` beta, **Zero** with the leg flat, **Capture** per
+  side. iOS asks for motion permission; with no sensor, type the number.
+- **Balance test** (from the "Stork Stand" prototype): eyes closed / open,
+  pick the standing leg, then **hold the pad while the foot is up** and let
+  go when it touches down. Pointer capture, so a sliding thumb doesn't end
+  it; Space / Enter work too. Timed to 0.1 s, under 1 s is ignored, buzz on
+  start and stop, the leg switches after each counted attempt, and every
+  counted attempt is saved straight away. Today's best per leg is shown.
+  Screen kept awake.
