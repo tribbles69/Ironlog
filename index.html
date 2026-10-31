@@ -84,6 +84,7 @@ a{color:var(--accent)}
   cursor:pointer;padding:4px 6px;border-radius:8px;line-height:1;
 }
 .icon-btn:hover{color:var(--txt);background:var(--card)}
+#topbar .icon-btn{min-width:40px;min-height:40px;display:inline-flex;align-items:center;justify-content:center}
 #view{max-width:760px;margin:0 auto;padding:14px 14px 30px}
 
 #nav{
@@ -256,6 +257,8 @@ h3{font-size:13.5px;margin:0 0 8px}
 .dot{width:5px;height:5px;border-radius:50%}
 .dot.done{background:var(--green)}
 .dot.plan{background:var(--blue)}
+.dot.event{background:var(--gold)}
+.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .cal-legend{display:flex;gap:14px;justify-content:center;margin-top:12px;font-size:11px;color:var(--dim2)}
 .cal-legend span{display:flex;align-items:center;gap:5px}
 
@@ -1213,8 +1216,9 @@ html[data-skin="win98"] .summary-hero .t{font-family:var(--w-mono)}
 <header id="topbar">
   <div class="tb-left"><span class="brand">IRON<span class="accent">LOG</span></span></div>
   <div class="tb-right">
-    <button class="icon-btn" id="profileBtn" title="Profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></button>
-    <button class="icon-btn" id="settingsBtn" title="Settings">⚙</button>
+    <button class="icon-btn" id="toolsBtn" title="Tools" aria-label="Tools"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.1L4 16.7 7.3 20l5.3-5.3a4 4 0 0 0 5.1-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg></button>
+    <button class="icon-btn" id="profileBtn" title="Profile" aria-label="Profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></button>
+    <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">⚙</button>
   </div>
 </header>
 
@@ -1223,9 +1227,9 @@ html[data-skin="win98"] .summary-hero .t{font-family:var(--w-mono)}
 <nav id="nav" aria-label="Main">
   <button data-page="home"><span class="ico" aria-hidden="true">◧</span><span>Home</span></button>
   <button data-page="calendar"><span class="ico" aria-hidden="true">▦</span><span>Calendar</span></button>
-  <button data-page="workout"><span class="ico" aria-hidden="true">⬤</span><span>Workout</span></button>
+  <button data-page="workout"><span class="ico" aria-hidden="true">⬤</span><span>Train</span></button>
   <button data-page="analytics"><span class="ico" aria-hidden="true">◫</span><span>Stats</span></button>
-  <button data-page="meets"><span class="ico" aria-hidden="true">★</span><span>Events</span></button>
+  <button data-page="health"><span class="ico" aria-hidden="true">✚</span><span>Health</span></button>
 </nav>
 
 <div id="modalRoot"></div>
@@ -1976,7 +1980,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.53.0';
+const APP_VERSION = '0.54.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4157,23 +4161,31 @@ let analyticsSort = 'sessions';
 let analyticsTab = 'exercises';   // exercises | rankings | muscles — one screen each, not one long scroll
 let analyticsQuery = '';
 
+/* Events live under Calendar since D12 (r&d/specs/layout-spec.md): the page id
+   stays 'meets' so every old route still lands, but Calendar's tab lights. */
+const NAV_TAB = { meets: 'calendar' };
 function go(p) {
   if (p === 'food') p = 'home';   // the Food tab is gone (0.25.0)
   page = p;
-  document.querySelectorAll('#nav button').forEach(b => b.classList.toggle('active', b.dataset.page === p));
   render();
   window.scrollTo(0, 0);
 }
 
 function render() {
   bust();
-  document.querySelectorAll('#nav [data-page]').forEach(b => { if (b.dataset.page === page) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current'); });
+  if (page === 'analytics' && analyticsTab === 'body') { analyticsTab = 'exercises'; page = 'health'; }   // Body moved to Health (D12)
+  const lit = NAV_TAB[page] || page;
+  document.querySelectorAll('#nav [data-page]').forEach(b => {
+    b.classList.toggle('active', b.dataset.page === lit);
+    if (b.dataset.page === lit) b.setAttribute('aria-current', 'page'); else b.removeAttribute('aria-current');
+  });
   const v = $('#view');
   if (page === 'home') v.innerHTML = viewHome();
   else if (page === 'calendar') v.innerHTML = viewCalendar();
   else if (page === 'workout') v.innerHTML = viewWorkout();
   else if (page === 'analytics') v.innerHTML = viewAnalytics();
   else if (page === 'meets') v.innerHTML = viewMeets();
+  else if (page === 'health') v.innerHTML = viewHealth();
   document.documentElement.toggleAttribute('data-w98-work', page === 'workout' && !!S.active && S.active.kind !== 'cardio');
   wire();
   a11yPass(v);
@@ -4493,6 +4505,7 @@ function viewHome() {
   <h1>${greet}</h1>
   <div class="sub" style="margin-bottom:14px">${new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}${streak() > 1 ? ` · 🔥 ${streak()} day check-in streak` : ''}</div>
   ${backupCard()}
+  ${eventCountdown()}
   ${runInLine(today())}
 
   <div class="hero">
@@ -4527,6 +4540,54 @@ function viewHome() {
   <div class="card">${S.goals.length ? S.goals.map(goalRow).join('') :
       `<div class="empty"><span class="big">◎</span>No goals yet.<br>Add one to track progress toward a number.</div>`}</div>
   `;
+}
+
+/* The nearest event inside two weeks, as a card that opens meet day (D12). */
+function eventCountdown() {
+  const m = [...(S.meets || [])].filter(x => x.date && daysBetween(today(), x.date) >= 0 && daysBetween(today(), x.date) <= 14)
+    .sort((a, b) => a.date < b.date ? -1 : 1)[0];
+  if (!m) return '';
+  const d = daysBetween(today(), m.date);
+  return `<div class="card" style="margin-bottom:13px;border-color:var(--gold)">
+    <div class="row between">
+      <div class="grow"><div class="eyebrow" style="color:var(--gold)">★ ${d === 0 ? 'Today' : `In ${d} day${d === 1 ? '' : 's'}`}</div>
+        <div style="font-weight:700;margin-top:3px">${esc(m.name)}</div>
+        <div class="sub">${esc(eventType(m).label)} · ${fmtDate(m.date, { weekday: 'short', month: 'short', day: 'numeric' })}</div></div>
+      <button class="btn primary sm" data-meetday="${m.id}">Meet day</button>
+    </div>
+  </div>`;
+}
+
+/* Calendar | Events — one tab, two views (D12). */
+function calSwitch() {
+  return `<div class="seg" style="margin-bottom:13px">
+    <button data-go="calendar" class="${page === 'calendar' ? 'on' : ''}">Calendar</button>
+    <button data-go="meets" class="${page === 'meets' ? 'on' : ''}">Events</button>
+  </div>`;
+}
+
+/* Health (D12): the body page that was Stats → Body, until D13 builds it out. */
+function viewHealth() {
+  return `
+  <h1>Health</h1>
+  <div class="sub" style="margin-bottom:14px">Bodyweight, body fat, measurements and photos.</div>
+  ${viewBody()}`;
+}
+
+/* Tools (D12): reachable from the top bar in both skins. D11 adds the
+   calculators to this sheet. */
+function openTools() {
+  modal({
+    title: 'Tools',
+    body: `<div class="sub" style="margin:0 0 10px">Calculators that use what you've logged. Nothing here is saved unless you say so.</div>
+      <button class="btn wide" id="tlPlates" style="margin-bottom:8px">Plate loader</button>
+      <button class="btn wide" id="tlRamp">Warm-up ramp</button>`,
+    foot: `<button class="btn primary wide" data-close>Done</button>`,
+    onOpen: bg => {
+      $('#tlPlates', bg).onclick = () => { closeModal(); openPlates(0); };
+      $('#tlRamp', bg).onclick = () => { closeModal(); openRamp('Warm-up', 0); };
+    },
+  });
 }
 
 function last7() {
@@ -4723,9 +4784,10 @@ function viewCalendar() {
     const wos = S.workouts.filter(w => w.date === ds);
     const hasDone = wos.some(w => w.status === 'completed');
     const hasPlan = wos.some(w => w.status === 'planned');
+    const hasEvent = (S.meets || []).some(x => x.date === ds);
     return `<button class="cal-day${c.out ? ' out' : ''}${ds === today() ? ' today' : ''}${ds === calSelected ? ' sel' : ''}" data-day="${ds}">
       ${c.d.getDate()}
-      <span class="dots">${hasDone ? '<i class="dot done"></i>' : ''}${hasPlan ? '<i class="dot plan"></i>' : ''}</span>
+      <span class="dots">${hasDone ? '<i class="dot done"></i>' : ''}${hasPlan ? '<i class="dot plan"></i>' : ''}${hasEvent ? '<i class="dot event"></i>' : ''}</span>
     </button>`;
   }).join('');
 
@@ -4734,6 +4796,8 @@ function viewCalendar() {
   const monthVol = monthWos.reduce((a, w) => a + totalVolume(w), 0);
 
   return `
+  ${calSwitch()}
+  <h1 class="sr-only">Calendar</h1>
   <div class="card">
     <div class="cal-head">
       <button class="btn sm ghost" id="calPrev">‹</button>
@@ -4743,7 +4807,7 @@ function viewCalendar() {
     </div>
     <div class="cal-dow">${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => `<span>${d}</span>`).join('')}</div>
     <div class="cal-grid">${grid}</div>
-    <div class="cal-legend"><span><i class="dot done"></i> Completed</span><span><i class="dot plan"></i> Planned</span></div>
+    <div class="cal-legend"><span><i class="dot done"></i> Completed</span><span><i class="dot plan"></i> Planned</span><span><i class="dot event"></i> Event</span></div>
   </div>
   ${dayPanel(calSelected)}
   `;
@@ -4755,6 +4819,12 @@ function dayPanel(ds) {
   return `
   <div class="sechead"><h2>${fmtDate(ds, { weekday: 'long', month: 'long', day: 'numeric' })}</h2>
     <span class="chip">${relDay(ds)}</span></div>
+
+  ${(S.meets || []).filter(m => m.date === ds).map(m => `<div class="card tight" style="border-color:var(--gold)"><div class="row between">
+      <div class="grow"><div style="font-weight:650">★ ${esc(m.name)}</div><div class="sub">${esc(eventType(m).label)}${m.loc ? ' · ' + esc(m.loc) : ''}</div></div>
+      <div class="row" style="gap:6px">${daysBetween(today(), ds) >= 0 && daysBetween(today(), ds) <= 14 ? `<button class="btn sm primary" data-meetday="${m.id}">Meet day</button>` : ''}
+        <button class="btn sm ghost" data-edit-meet="${m.id}">Open</button></div>
+    </div></div>`).join('')}
 
   ${ci ? `<div class="card tight"><div class="row wrap" style="gap:7px">
       <span class="eyebrow" style="width:100%">Check-in</span>
@@ -5020,11 +5090,11 @@ function workoutLanding() {
   const recent = S.workouts.filter(w => w.status === 'completed')
     .sort((a, b) => a.date < b.date ? 1 : -1).slice(0, 5);
   return `
-  <h1>Workout</h1>
-  <div class="sub" style="margin-bottom:14px">Start fresh, or run a session you planned.</div>
+  <h1>Train</h1>
+  <div class="sub" style="margin-bottom:14px">Lift, or a cardio session — fresh, or one you planned.</div>
 
-  <button class="btn primary big wide" id="startBlank" style="margin-bottom:10px">Start empty workout</button>
-  <button class="btn big wide" id="startCardio" style="margin-bottom:16px">♥ Start cardio session</button>
+  <button class="btn primary big wide" id="startBlank" style="margin-bottom:10px">Lift · start empty workout</button>
+  <button class="btn big wide" id="startCardio" style="margin-bottom:16px">♥ Cardio</button>
 
   <div class="sechead"><h2>Planned</h2></div>
   ${upcoming.length ? upcoming.map(p => `
@@ -6606,11 +6676,11 @@ function viewAnalytics() {
   <div class="sub" style="margin-bottom:14px">Every exercise you've logged, ranked.</div>
 
   <div class="seg" id="anTabs" style="margin-bottom:13px">
-    ${[['exercises', 'Exercises'], ['rankings', 'Rankings'], ['muscles', 'Muscles'], ['body', 'Body']]
+    ${[['exercises', 'Exercises'], ['rankings', 'Rankings'], ['muscles', 'Muscles']]
       .map(([k, l]) => `<button data-antab="${k}" class="${analyticsTab === k ? 'on' : ''}">${l}</button>`).join('')}
   </div>
 
-  ${analyticsTab === 'exercises' ? '' : analyticsTab === 'body' ? viewBody() : (() => {
+  ${analyticsTab === 'exercises' ? '' : (() => {
       const ranks = allRanks(), ms = muscleScores(), bw = bodyweightKg();
       const recOnly = analyticsTab === 'muscles' ? viewMuscleMap() : '';   // recovery needs no ranks (D7)
       if (!bw) return `${recOnly}<div class="card"><div class="eyebrow" style="margin-bottom:6px">Rankings</div>
@@ -7149,6 +7219,7 @@ function viewMeets() {
   const past = meets.filter(m => daysBetween(today(), m.date) < 0);
 
   return `
+  ${calSwitch()}
   <h1>Events</h1>
   <div class="sub" style="margin-bottom:14px">Current standing and what you're building toward.</div>
 
@@ -10294,6 +10365,7 @@ function wire() {
     $('#checkinBtn').onclick = () => openCheckin();
     const qs = $('#quickStart'); if (qs) qs.onclick = newBlank;
     $('#addGoal').onclick = () => openGoal();
+    v.querySelectorAll('[data-meetday]').forEach(b => b.onclick = () => openMeetDay(b.dataset.meetday));
   }
 
   if (page === 'calendar') {
@@ -10307,7 +10379,10 @@ function wire() {
     });
     $('#planDay').onclick = () => openPlanner(calSelected);
     $('#ciDay').onclick = () => openCheckin(calSelected);
+    v.querySelectorAll('[data-meetday]').forEach(b => b.onclick = () => openMeetDay(b.dataset.meetday));
   }
+
+  if (page === 'health') wireBody(v);
 
   if (page === 'workout') {
     if (!S.active) {
@@ -10333,7 +10408,6 @@ function wire() {
     v.querySelectorAll('[data-sort]').forEach(b => b.onclick = () => { analyticsSort = b.dataset.sort; render(); });
     v.querySelectorAll('[data-antab]').forEach(b => b.onclick = () => { analyticsTab = b.dataset.antab; render(); window.scrollTo(0, 0); });
     wireMuscleMap(v);
-    if (analyticsTab === 'body') wireBody(v);
   }
 
   if (page === 'meets') {
@@ -13712,6 +13786,8 @@ function mountChrome() {
 
   const title = document.createElement('div');
   title.id = 'w98-title';
+  title.setAttribute('role', 'region');            // its text sits outside every landmark otherwise (axe "region")
+  title.setAttribute('aria-label', 'Window title');
   title.innerHTML = `
     <span class="ic">▮</span>
     <span class="t">IRONLOG 98 — Strength Training Manager</span>
@@ -13767,12 +13843,14 @@ const W98_MENUS = [
   { label: 'View', items: [
     ['Home', () => go('home')],
     ['Calendar', () => go('calendar')],
-    ['Workout', () => go('workout')],
+    ['Train', () => go('workout')],
     ['Stats', () => go('analytics')],
+    ['Health', () => go('health')],
     ['Events', () => go('meets')],
-    ['Body', () => { analyticsTab = 'body'; go('analytics'); }],
   ] },
   { label: 'Tools', items: [
+    ['Tools…', () => openTools()],
+    '-',
     ['Settings…', () => openSettings()],
     ['Profile…', () => openProfile()],
     '-',
@@ -13865,6 +13943,7 @@ function aboutDlg() {
 document.querySelectorAll('#nav button').forEach(b => b.onclick = () => go(b.dataset.page));
 $('#settingsBtn').onclick = openSettings;
 $('#profileBtn').onclick = () => openProfile();
+$('#toolsBtn').onclick = () => openTools();
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalStack.length) closeModal(); });
 
 /* Fields let go of focus when you're done with them (roadmap A5, Blast #49).

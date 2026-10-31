@@ -13,6 +13,21 @@ rather than guessed.
 
 ---
 
+## 0.54.0 — 31 Oct 2026
+- **New layout:** the bottom bar is now Home · Calendar · Train · Stats ·
+  Health.
+- **Train** (was Workout) is where you start a lift or a cardio session. A
+  session in progress resumes from there as before.
+- **Events moved into Calendar:** use the Calendar | Events switch at the
+  top. Event days show a gold dot on the calendar, and tapping the day opens
+  the event. All the meet-day tools are unchanged.
+- **Home shows a countdown** when an event is two weeks away or less, with a
+  button straight to meet day.
+- **Health** has its own tab. It holds what was Stats → Body (bodyweight,
+  calipers, measurements, photos), and Stats is back to training only.
+- **Tools** button in the top bar (the spanner): plate loader and warm-up
+  ramp for now, with calculators to come.
+
 ## 0.53.0 — 31 Oct 2026
 - **Any equipment for any movement:** equipment a lift doesn't usually use
   is still greyed and listed under "Unusual for …", but you can now pick it.
