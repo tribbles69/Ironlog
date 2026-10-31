@@ -135,9 +135,17 @@ Migration will produce many of these; that is expected, not an error.
 
 ### Equipment validity in the UI
 
-When choosing equipment for a movement, invalid options are shown
-**greyed and unselectable, not hidden**. The user should be able to see
-that the constraint exists.
+When choosing equipment for a movement, equipment the movement doesn't list
+is shown **greyed and sorted below the usual options, but still selectable**
+(changed 2026-10-31, roadmap B9). If someone wants to bench press with a
+kettlebell, that's their call. Picking one blocks nothing; the toast adds
+"unusual combo". The result is a normal leaf (`bench-press/kettlebell/…`) with
+its own PR pool, history and variant-strip entry. Muscle shares fall back to
+the movement's own. Importers map such names to that leaf and mark the match
+as a guess in the dry-run report.
+
+Execution and attachment stay **greyed and unselectable, not hidden** — the
+user should still see that the constraint exists.
 
 ---
 

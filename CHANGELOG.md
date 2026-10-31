@@ -13,6 +13,14 @@ rather than guessed.
 
 ---
 
+## 0.53.0 — 31 Oct 2026
+- **Any equipment for any movement:** equipment a lift doesn't usually use
+  is still greyed and listed under "Unusual for …", but you can now pick it.
+  A kettlebell bench press gets its own PRs, history and stats like any other
+  variant.
+- Importing from other apps now keeps unusual combinations like this instead
+  of failing to match them; the dry run marks them as guesses so you can check.
+
 ## 0.52.4 — 31 Oct 2026
 - **Stats:** the headline tiles and the main-lift e1RM chart now show on
   the Exercises tab only, so Rankings, Muscles and Body open with their own

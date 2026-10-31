@@ -500,6 +500,8 @@ tr.sel td{background:rgba(255,92,53,.045)}
 .axrow.off{color:var(--dim2);cursor:not-allowed}
 .axrow.off svg{color:var(--dim2);opacity:.45}
 .axrow.off .rad{opacity:.35}
+.axrow.odd{color:var(--dim)}
+.axrow.odd svg{opacity:.6}
 /* Variant strip. One chip per leaf of this movement that has been logged,
    plus the primary. Horizontal scroll rather than wrap — it is a rail, not a
    grid, and it must not push the tabs off screen. */
@@ -1974,7 +1976,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.52.4';
+const APP_VERSION = '0.53.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -2594,8 +2596,10 @@ function leafChip(leaf, ei) {
   </div>`;
 }
 
-/* Equipment / execution / attachment picker. Invalid options are greyed and
-   unselectable, never hidden — the constraint should be visible (spec 1a). */
+/* Equipment / execution / attachment picker. Invalid options are greyed, never
+   hidden — the constraint should be visible (spec 1a). Equipment the movement
+   doesn't list stays pickable (B9): a kettlebell bench is the lifter's call,
+   and it becomes a leaf of its own. Execution and attachment stay locked. */
 function openAxisPicker(ei, axis) {
   const a = S.active;
   const e = a && a.exercises[ei];
@@ -2611,7 +2615,7 @@ function openAxisPicker(ei, axis) {
     return t;
   };
   const optionsFor = ax => {
-    if (ax === 'equipment') return (V.equipment || []).map(v => ({ v, label: (EQ_TITLE[v] || v) + ((m.equipment || []).includes(v) && !kitHas(v) ? ` · not at ${placeName()}` : ''), icon: EQ_ICON[v], ok: (m.equipment || []).includes(v) }));
+    if (ax === 'equipment') return (V.equipment || []).map(v => ({ v, label: (EQ_TITLE[v] || v) + (!kitHas(v) ? ` · not at ${placeName()}` : ''), icon: EQ_ICON[v], ok: (m.equipment || []).includes(v), pick: true }));
     if (ax === 'execution') return (V.execution || []).map(v => ({ v, label: EXEC_LABEL[v] || v, icon: EXEC_ICON[v], ok: (m.execution || []).includes(v) }));
     const allowed = attachmentsFor(m, e.leaf.equipment);
     return (V.attachment || []).map(v => ({ v, label: ATT_TITLE[v] || v, icon: ATT_ICON_FALLBACK, ok: allowed.includes(v) || v === 'none' }));
@@ -2620,11 +2624,14 @@ function openAxisPicker(ei, axis) {
     <div class="seg" id="axTabs" style="margin-bottom:12px">
       ${tabsFor().map(([k, lbl]) => `<button data-axtab="${k}" class="${k === tab ? 'on' : ''}">${lbl}</button>`).join('')}
     </div>
-    <div id="axList">${optionsFor(tab).sort((x, y) => (y.ok ? 1 : 0) - (x.ok ? 1 : 0)).map(o => `
-      <button class="axrow ${o.v === e.leaf[tab] ? 'on' : ''} ${o.ok ? '' : 'off'}" ${o.ok ? `data-axpick="${esc(o.v)}"` : 'disabled'}>
+    <div id="axList">${optionsFor(tab).sort((x, y) => (y.ok ? 1 : 0) - (x.ok ? 1 : 0)).map((o, i, all) => `
+      ${!o.ok && o.pick && (i === 0 || all[i - 1].ok) ? `<div class="eyebrow" style="margin:10px 0 4px">Unusual for ${esc(m.name)}</div>` : ''}
+      <button class="axrow ${o.v === e.leaf[tab] ? 'on' : ''} ${o.ok ? '' : o.pick ? 'odd' : 'off'}" ${o.ok || o.pick ? `data-axpick="${esc(o.v)}"` : 'disabled'}>
         ${o.icon || ''}<span class="lbl">${esc(o.label)}</span><span class="rad"></span>
       </button>`).join('')}</div>
-    <div class="sub" style="margin-top:10px">Greyed options aren't valid for ${esc(m.name)}.</div>`;
+    <div class="sub" style="margin-top:10px">${tab === 'equipment'
+      ? `Greyed equipment isn't usual for ${esc(m.name)} — pick it anyway and it gets its own PRs.`
+      : `Greyed options aren't valid for ${esc(m.name)}.`}</div>`;
 
   modal({
     title: exFull(e),
@@ -2639,7 +2646,8 @@ function openAxisPicker(ei, axis) {
           if (leafKey(e.leaf) !== before) {
             /* The leaf is the PR pool, so changing it moves this exercise's
                history. Say so rather than letting a number quietly change. */
-            toast(`${exFull(e)} · ${loadConventionFor(e.leaf) === 'per_side' ? 'per side' : 'total'} load`, 'green');
+            const odd = tab === 'equipment' && !(m.equipment || []).includes(e.leaf.equipment);
+            toast(`${exFull(e)} · ${loadConventionFor(e.leaf) === 'per_side' ? 'per side' : 'total'} load${odd ? ' · unusual combo' : ''}`, 'green');
           }
           save(); bust(); redraw(); render();
         });
@@ -8557,8 +8565,10 @@ function smartMatch(raw) {
     if (!r) return null;
     const m = r.movement;
     let leaf = r.leaf;
+    /* Equipment the movement doesn't list is still a real leaf (B9) — a
+       kettlebell bench press. Flagged as a guess so the dry run shows it. */
     if (axes.equipment) {
-      if (!(m.equipment || []).includes(axes.equipment)) return null;
+      if (!(m.equipment || []).includes(axes.equipment)) how = 'guess';
       leaf = withAxis(leaf, 'equipment', axes.equipment);
     }
     if (axes.execution) {

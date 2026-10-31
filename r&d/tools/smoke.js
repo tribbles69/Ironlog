@@ -481,11 +481,17 @@ window.smoke = async function smoke(opts) {
     if (!chip) throw new Error('no equipment chip rendered');
     chip.click(); await wait(200);
     const rows = [...document.querySelectorAll('.axrow')];
-    const off = rows.filter(r => r.classList.contains('off')).length;
+    /* Unusual equipment is greyed but still pickable (B9): class "odd", with
+       data-axpick. Execution stays locked: class "off", disabled. */
+    const odd = rows.filter(r => r.classList.contains('odd'));
     if (!rows.length) throw new Error('picker had no rows');
-    if (!off) throw new Error('nothing greyed — invalid options should be visible but unselectable');
+    if (!odd.length) throw new Error('nothing greyed — unusual equipment should be visible');
+    if (odd.some(r => r.disabled || !r.dataset.axpick)) throw new Error('greyed equipment should still be selectable');
+    document.querySelector('[data-axtab="execution"]').click(); await wait(100);
+    const off = [...document.querySelectorAll('.axrow.off')];
+    if (off.some(r => !r.disabled)) throw new Error('invalid executions should be unselectable');
     close(); S.active = null; save(); render();
-    return `${rows.length} options, ${off} greyed`;
+    return `${rows.length} options, ${odd.length} unusual, ${off.length} executions locked`;
   });
 
   await step('flow: completed session — view, edit, share', async () => {
