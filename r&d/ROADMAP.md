@@ -699,11 +699,11 @@ Uses D8.
 
 ## E. Later — little demand found
 
-### [ ] E1. Coach share report
+### [x] E1. Coach share report — shipped 0.63.0 (spec `r&d/specs/share-spec.md`; Tools → Share → Coach report: 4 / 8 / 12 weeks or custom, as share text, PDF via print, or JSON)
 A read-only report (JSON / text / PDF) of a training block for a coach. No
 accounts, no server.
 
-### [ ] E2. Share cards
+### [x] E2. Share cards — shipped 0.63.0 (session cards were already in; added the PR card, 1080×1350, from the session-complete sheet and the Stats PR timeline; spec `r&d/specs/share-spec.md`)
 A PR or session summary as an image to post (hunchback_hercules-friendly).
 Optional; no social feed.
 
