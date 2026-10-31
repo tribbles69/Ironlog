@@ -1414,6 +1414,42 @@ function backupDue() {
   const since = last || first;
   return now - since > BACKUP_EVERY ? { last, days: Math.floor((now - since) / 864e5), drive: !!syncMeta().connected } : null;
 }
+/* ---------------- Home as the landing page (D14, r&d/specs/home-landing-spec.md)
+   Someone who hasn't installed Ironlog, or hasn't logged a session yet, sees
+   what it is first. Chrome's install offer is caught and kept for a button
+   instead of the mini-infobar. */
+let installEvt = null;
+window.addEventListener('beforeinstallprompt', ev => { ev.preventDefault(); installEvt = ev; if (page === 'home' && !modalStack.length) render(); });
+window.addEventListener('appinstalled', () => { installEvt = null; if (page === 'home') render(); });
+function isInstalled() {
+  return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) || navigator.standalone === true;
+}
+function aboutCard() {
+  if (S.active || S.settings.aboutHidden) return '';
+  const installed = isInstalled();
+  if (installed && S.workouts.some(w => w.status === 'completed')) return '';
+  return `<div class="card" id="aboutCard" style="margin-bottom:13px;border-color:var(--accent)">
+    <div class="row between" style="align-items:flex-start;gap:10px">
+      <h2 style="margin:0;font-size:17px">Ironlog — a free strength log</h2>
+      <button class="btn xs ghost" id="aboutHide">Hide</button>
+    </div>
+    <div class="sub" style="margin:6px 0 8px">For powerlifting, strongman and strengthlifting — and for adaptive and para lifters.</div>
+    <div class="wl-list">
+      <div><b>Free, for good.</b> No paid tier, nothing locked.</div>
+      <div><b>Your log stays on your phone.</b> No account. Back it up to your own Google Drive if you like.</div>
+      <div><b>AI is optional</b> and runs on your own Anthropic key — everything else works without it.</div>
+    </div>
+    ${installed ? '' : installEvt
+      ? '<button class="btn primary wide" id="aboutInstall" style="margin-top:10px">Install Ironlog</button>'
+      : `<div class="sub" style="margin-top:10px"><b>Install it:</b> on Android in Chrome, tap ⋮ then <b>Install app</b> (or <b>Add to Home screen</b>). On iPhone in Safari, tap Share then <b>Add to Home Screen</b>. It then opens like an app and works offline.</div>`}
+    <div class="row wrap" style="gap:6px;margin-top:10px">
+      <button class="btn xs" id="aboutNews">What's new</button>
+      <button class="btn xs" id="aboutHelp">Help &amp; privacy</button>
+      <a class="btn xs" href="https://github.com/tribbles69/Ironlog" target="_blank" rel="noopener" style="text-decoration:none">Source on GitHub</a>
+    </div>
+  </div>`;
+}
+
 function backupCard() {
   if (S.active) return '';           // never during a workout
   const due = backupDue();
@@ -1984,7 +2020,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.57.0';
+const APP_VERSION = '0.58.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4357,8 +4393,10 @@ const FAQ = [
 function openHelp() {
   modal({
     title: 'Help & FAQ',
-    body: `<div class="faq">${FAQ.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div>`,
+    body: `<div class="faq">${FAQ.map(([q, a]) => `<details><summary>${esc(q)}</summary><p>${esc(a)}</p></details>`).join('')}</div>
+      ${S.settings.aboutHidden ? '<button class="btn wide ghost" id="hpAbout" style="margin-top:10px">Show the About card on Home</button>' : ''}`,
     foot: `<button class="btn primary" data-close>Close</button>`,
+    onOpen: bg => { const b = $('#hpAbout', bg); if (b) b.onclick = () => { delete S.settings.aboutHidden; save(); closeAllModals(); go('home'); }; },
   });
 }
 
@@ -4519,6 +4557,7 @@ function viewHome() {
   return `
   <h1>${greet}</h1>
   <div class="sub" style="margin-bottom:14px">${new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}${streak() > 1 ? ` · 🔥 ${streak()} day check-in streak` : ''}</div>
+  ${aboutCard()}
   ${backupCard()}
   ${eventCountdown()}
   ${runInLine(today())}
@@ -10586,6 +10625,19 @@ function wire() {
     const qs = $('#quickStart'); if (qs) qs.onclick = newBlank;
     $('#addGoal').onclick = () => openGoal();
     v.querySelectorAll('[data-meetday]').forEach(b => b.onclick = () => openMeetDay(b.dataset.meetday));
+    if ($('#aboutCard')) {
+      $('#aboutHide').onclick = () => { S.settings.aboutHidden = true; save(); render(); toast('Hidden — Help & FAQ can bring it back'); };
+      $('#aboutNews').onclick = () => openWhatsNew();
+      $('#aboutHelp').onclick = () => openHelp();
+      const ai = $('#aboutInstall');
+      if (ai) ai.onclick = async () => {
+        const ev = installEvt; installEvt = null;
+        if (!ev) return render();
+        ev.prompt();
+        try { await ev.userChoice; } catch (e) { /* dismissed */ }
+        render();
+      };
+    }
   }
 
   if (page === 'calendar') {

@@ -13,6 +13,16 @@ rather than guessed.
 
 ---
 
+## 0.58.0 — 31 Oct 2026
+- **Home explains Ironlog** to anyone opening it in a browser or before the
+  first logged session: who it's for, that it's free, that your log stays on
+  your phone, and that AI is optional on your own key.
+- **Install button:** when Chrome offers to install, Home has an *Install
+  Ironlog* button. Otherwise it shows the steps for Android and iPhone.
+- Links to What's new, Help & privacy, and the source on GitHub. *Hide* puts
+  it away, and Help & FAQ can bring it back. Installed with a log, you won't
+  see it.
+
 ## 0.57.0 — 31 Oct 2026
 - **Health page:** three tiles at the top show your bodyweight (7-day
   average and weekly change), latest body fat with the skinfold sum, and
