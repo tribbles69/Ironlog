@@ -38,6 +38,9 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
 
 1. Take the **first unchecked item, top to bottom** — section A, then B, C, D,
    E — unless Aaron says otherwise.
+   Within a section, the **order on the page** is the order of work; item
+   numbers are labels and don't always run in sequence (D12 was moved up
+   2026-10-31, D8–D9 moved to the end of D).
 2. **Check the code before trusting a status here.** Some items were marked from
    memory of planning chats, not from the code. If something is already built,
    tick it, note the version, and move on.
@@ -483,24 +486,35 @@ exercises are picked when building a session or program. Only trust it once
 muscle shares for commonly trained lifts have been checked — derived shares are
 placeholders.
 
-### [ ] D8. AI on the user's own key
-No Ironlog AI server and no paid tier.
-- A Settings field for the user's own Anthropic API key, stored only on the
-  device, with a clear note on what it's used for and roughly what it costs.
-- Calls go straight from the device to the API. Per-feature cost hint and a
-  monthly cap the app enforces locally.
-- Every AI feature is optional and hidden or greyed until a key is added.
-- Remove any server-side AI function left after A1.
+### [ ] D12. Layout rework — Home · Calendar · Train · Stats · Health
+Decided 2026-10-31. **Do this before D13 (Health) and E5 (Mobility)** — they
+need somewhere to live. Write `r&d/specs/layout-spec.md` first; it covers both
+skins (the 98 menu bar mirrors the same pages).
 
-### [ ] D9. AI coaching
-Uses D8.
-- Logging stays tightly scoped structured calls, separate from any chat.
-- Hard system-prompt boundaries so the coach can't drift off-topic; no medical
-  or injury advice.
-- Cap or summarise conversation history; use prompt caching — it's the user's
-  money.
-- Optional cardio trend coach: a Haiku call about once a minute looking at HR
-  *trend*, pre-empting drift out of zone.
+Bottom bar goes from Home · Calendar · Workout · Stats · Events to:
+**Home · Calendar · Train · Stats · Health.** Still five tabs.
+- **Workout → Train,** with three starts: **Lift** (today's *Start empty
+  workout* / planned sessions), **Cardio** (opens the machine picker, D15) and
+  **Mobility** (pick a routine, E5). A mobility routine is a session kind like
+  cardio: it shows in the calendar and history and has its own player.
+- **Events → into Calendar.** An event is a dated item on the calendar
+  (blocks already count down to it, C6); opening it gives the full meet-day
+  tools from C2/C3 unchanged. Add an "Add event" entry on the Calendar page and
+  keep a list of upcoming events there. When an event is close (say ≤ 14
+  days), Home shows a countdown card that opens meet-day. Nothing in C2/C3
+  is removed — only where it's reached from.
+- **Health gets the freed slot** (D13). Stats goes back to training only:
+  Exercises / Rankings / Muscles; the Body tab leaves (with A7's fix).
+- **Tools (D11) goes in the top bar** next to profile and settings, so the
+  default skin can reach it too (today only the 98 menu has it).
+- **Home** adds a line for today's mobility routine (e.g. "Morning stretch
+  8 / 25", tap to resume) alongside the check-in and today's training.
+- **Old routes keep working:** `go('meets')` opens Calendar's events,
+  `go('workout')` opens Train, `analyticsTab === 'body'` opens Health — like
+  the existing `food → home` redirect in `go()`. A live session still resumes
+  from Train exactly as it does from Workout now.
+- C4 rules: nav labels, `aria-current`, 40 px targets; re-run the axe check
+  in both skins.
 
 ### [ ] D10. Fix `prKey` / `splitsPR`, with band and chain fields
 `prKey()` is dead code, so chains, bands, slingshot and equipped currently share
@@ -542,36 +556,6 @@ maths that's already in the app — `bmrKcal` / `suggestedTargets`, `e1rm`,
 - e1RM and a rep-max table from any set, and a %1RM ↔ RIR chart.
 - DOTS / IPF GL points calculator.
 - RPE ↔ RIR mapping table for coaches who think in RPE.
-
-### [ ] D12. Layout rework — Home · Calendar · Train · Stats · Health
-Decided 2026-10-31. **Do this before D13 (Health) and E5 (Mobility)** — they
-need somewhere to live. Write `r&d/specs/layout-spec.md` first; it covers both
-skins (the 98 menu bar mirrors the same pages).
-
-Bottom bar goes from Home · Calendar · Workout · Stats · Events to:
-**Home · Calendar · Train · Stats · Health.** Still five tabs.
-- **Workout → Train,** with three starts: **Lift** (today's *Start empty
-  workout* / planned sessions), **Cardio** (opens the machine picker, D15) and
-  **Mobility** (pick a routine, E5). A mobility routine is a session kind like
-  cardio: it shows in the calendar and history and has its own player.
-- **Events → into Calendar.** An event is a dated item on the calendar
-  (blocks already count down to it, C6); opening it gives the full meet-day
-  tools from C2/C3 unchanged. Add an "Add event" entry on the Calendar page and
-  keep a list of upcoming events there. When an event is close (say ≤ 14
-  days), Home shows a countdown card that opens meet-day. Nothing in C2/C3
-  is removed — only where it's reached from.
-- **Health gets the freed slot** (D13). Stats goes back to training only:
-  Exercises / Rankings / Muscles; the Body tab leaves (with A7's fix).
-- **Tools (D11) goes in the top bar** next to profile and settings, so the
-  default skin can reach it too (today only the 98 menu has it).
-- **Home** adds a line for today's mobility routine (e.g. "Morning stretch
-  8 / 25", tap to resume) alongside the check-in and today's training.
-- **Old routes keep working:** `go('meets')` opens Calendar's events,
-  `go('workout')` opens Train, `analyticsTab === 'body'` opens Health — like
-  the existing `food → home` redirect in `go()`. A live session still resumes
-  from Train exactly as it does from Workout now.
-- C4 rules: nav labels, `aria-current`, 40 px targets; re-run the axe check
-  in both skins.
 
 ### [ ] D13. Health page — everything about the body in one place
 Added 2026-10-31. A page of its own (not a tab under Stats) for health and
@@ -632,6 +616,25 @@ Update the spec first — its "Other machines" note is where this was parked.
 - Optional manual readouts at the end (distance, kcal, avg watts) — never
   required.
 - Real-gym check per machine goes on the A4 list.
+
+### [ ] D8. AI on the user's own key
+No Ironlog AI server and no paid tier.
+- A Settings field for the user's own Anthropic API key, stored only on the
+  device, with a clear note on what it's used for and roughly what it costs.
+- Calls go straight from the device to the API. Per-feature cost hint and a
+  monthly cap the app enforces locally.
+- Every AI feature is optional and hidden or greyed until a key is added.
+- Remove any server-side AI function left after A1.
+
+### [ ] D9. AI coaching
+Uses D8.
+- Logging stays tightly scoped structured calls, separate from any chat.
+- Hard system-prompt boundaries so the coach can't drift off-topic; no medical
+  or injury advice.
+- Cap or summarise conversation history; use prompt caching — it's the user's
+  money.
+- Optional cardio trend coach: a Haiku call about once a minute looking at HR
+  *trend*, pre-empting drift out of zone.
 
 ---
 
