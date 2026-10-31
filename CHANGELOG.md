@@ -13,6 +13,18 @@ rather than guessed.
 
 ---
 
+## 0.61.0 — 31 Oct 2026
+- **Mobility tests on Health:** forward fold reach (the weekly benchmark
+  from your stretch routine), knee to wall, straight-leg raise, the Thomas
+  test and wall shoulder flexion. Left and right are logged separately,
+  with a chart and how far behind the weaker side is.
+- **Straight-leg raise by phone:** lay the phone along your shin, zero it
+  with the leg flat, raise the leg and capture the angle.
+- **Balance test:** stand on one leg with your eyes closed (or open), hold
+  the big pad while your foot is up and let go when it touches down. Timed
+  to a tenth of a second. It switches legs for you and keeps your best for
+  each leg.
+
 ## 0.60.0 — 31 Oct 2026
 - **Mobility:** Train has a 🧘 Mobility button, and your Full Body Stretch
   (25 stretches, about 30 minutes) is built in. Tick stretches off as you

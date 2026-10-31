@@ -269,6 +269,11 @@ h3{font-size:13.5px;margin:0 0 8px}
 .mobclock{font-size:64px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;margin:14px 0 4px}
 .chip.on{border-color:var(--accent);color:var(--txt)}
 .dot.mob{background:var(--purple)}
+.balpad{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:100%;min-height:220px;border-radius:18px;
+  border:2px dashed var(--line2);background:var(--bg2);color:var(--txt);cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
+.balpad .mono{font-size:56px;font-weight:800}
+.balpad.on{border-style:solid;border-color:var(--green);background:rgba(79,180,119,.12)}
+tr.on td{color:var(--accent)}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .cal-legend{display:flex;gap:14px;justify-content:center;margin-top:12px;font-size:11px;color:var(--dim2)}
 .cal-legend span{display:flex;align-items:center;gap:5px}
@@ -1317,6 +1322,7 @@ const DEFAULT_STATE = {
   imports: [],    // {id,source,at,sessions,replaced:[backfills it displaced]} — so an import can be taken back out
   measures: [],   // {id,date,cm:{site:cm},custom:{name:cm},mt} — E4 body measurements
   calipers: [],   // {id,date,method:'jp3'|'jp7'|'dw4',sex,age,mm:{site:[readings]},mt} — E4; results derived when shown
+  mobTests: [],   // {id,date,test,side:'L'|'R'|null,v,mt} — E5 mobility and balance tests (MOB_TESTS)
 };
 
 /* Persistence runs through IndexedDB — it's async (so the call sites below don't
@@ -1511,7 +1517,7 @@ const SYNC_FILE = 'Ironlog backup.json', SYNC_FORMAT = 'ironlog-sync', SYNC_V = 
 // collection -> how a record is keyed
 const SYNC_SETS = {
   workouts: x => x.id, goals: x => x.id, meets: x => x.id, imports: x => x.id,
-  checkins: x => x.date, measures: x => x.id, calipers: x => x.id,
+  checkins: x => x.date, measures: x => x.id, calipers: x => x.id, mobTests: x => x.id,
   customEx: x => (typeof x === 'string' ? x : JSON.stringify(x)), programs: x => String(x),
 };
 const SYNC_MAPS = ['exAliases', 'programStarts'];
@@ -2030,7 +2036,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.60.0';
+const APP_VERSION = '0.61.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4664,6 +4670,7 @@ function viewHealth() {
   <div class="sub" style="margin-bottom:14px">Bodyweight, body fat, measurements and photos — kept on this phone.</div>
   ${healthSummary()}
   ${viewBody()}
+  ${mobTestsCard()}
   <div class="card" style="margin-bottom:13px">
     <div class="eyebrow" style="margin-bottom:6px">Physique</div>
     <div class="sub" style="margin-bottom:8px">Calculators that start from the numbers above. Estimates — see the notes in each.</div>
@@ -10678,6 +10685,7 @@ function wire() {
 
   if (page === 'health') {
     wireBody(v);
+    wireMobTests(v);
     v.querySelectorAll('[data-hl]').forEach(b => b.onclick = () => { const c = $('#' + b.dataset.hl); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
     v.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => openTool(b.dataset.tool));
     $('#hlRecovery').onclick = () => { analyticsTab = 'muscles'; go('analytics'); };
@@ -12221,6 +12229,205 @@ function openMobility(rid, date = today()) {
     foot: '<button class="btn primary wide" data-close>Close</button>',
     onOpen: bg => { bgRef = bg; bind(); },
     onClose: () => { stop(); render(); },
+  });
+}
+
+/* ---------------- mobility tests (E5 part 2, mobility-spec §2) ----------------
+   Range-of-motion and balance tests over time, on Health. One store,
+   S.mobTests: { id, date, test, side: 'L' | 'R' | null, v, mt }. Scales are
+   stored as their step number (0 = the first label), so they chart. */
+const MOB_TESTS = [
+  { id: 'fold', label: 'Forward fold reach', unit: '', scale: ['Knee', 'Mid-shin', 'Ankle', 'Toes', 'Floor', 'Palms flat'], better: 1,
+    how: 'Feet together, knees straight, fold and hang. Where do the fingertips reach? Weekly, same time of day.' },
+  { id: 'k2w', label: 'Knee to wall', unit: 'cm', sides: true, better: 1, step: 0.5,
+    how: 'Ankle mobility. Facing a wall, toes a distance from it, push the knee to touch the wall without the heel lifting. The furthest toe-to-wall distance that still works.' },
+  { id: 'slr', label: 'Straight-leg raise', unit: '°', sides: true, better: 1, step: 1, incline: true,
+    how: 'Lying on your back, raise one straight leg as far as it goes without the knee bending or the other leg lifting. Phone on the shin measures the angle.' },
+  { id: 'thomas', label: 'Thomas test', sides: true, better: 1, scale: ['Thigh above level', 'Thigh level', 'Thigh below level'],
+    how: 'Hip flexor length. Sit on the end of a bench, hug one knee and roll back. Where does the other thigh rest? Below the bench line is a pass.' },
+  { id: 'wallflex', label: 'Wall shoulder flexion', unit: 'cm', better: -1, step: 0.5,
+    how: 'Back, head and hips on a wall, lower back flat. Raise straight arms overhead. The gap between thumbs and wall — 0 is touching.' },
+  { id: 'bal_ec', label: 'Balance · eyes closed', unit: 's', sides: true, better: 1, balance: true,
+    how: 'Single-leg stand, eyes closed. Run it from the Balance test.' },
+  { id: 'bal_eo', label: 'Balance · eyes open', unit: 's', sides: true, better: 1, balance: true,
+    how: 'Single-leg stand, eyes open. Run it from the Balance test.' },
+];
+function mobTestDef(id) { return MOB_TESTS.find(t => t.id === id); }
+function mobTestText(T, v) { return v == null ? '—' : T.scale ? T.scale[Math.round(v)] || '—' : `${nice(v)}${T.unit === '°' ? '°' : T.unit ? ' ' + T.unit : ''}`; }
+/* The best result per day and side — a balance test has many attempts a day. */
+function mobTestSeries(id, side) {
+  const T = mobTestDef(id), by = {};
+  (S.mobTests || []).filter(x => x.test === id && (x.side || null) === (side || null)).forEach(x => {
+    const cur = by[x.date];
+    if (cur == null || (T.better > 0 ? x.v > cur : x.v < cur)) by[x.date] = x.v;
+  });
+  return Object.keys(by).sort().map(d => ({ date: d, v: by[d] }));
+}
+function mobTestLatest(id, side) { const s = mobTestSeries(id, side); return s.length ? s[s.length - 1] : null; }
+/* Left against right on the latest day both were tested, as the weaker
+   side's shortfall — the D4 way of putting it. */
+function mobTestGap(id) {
+  const T = mobTestDef(id);
+  if (!T.sides || T.scale) return null;
+  const L = mobTestSeries(id, 'L'), R = mobTestSeries(id, 'R');
+  const both = L.map(p => p.date).filter(d => R.some(q => q.date === d)).sort().pop();
+  if (!both) return null;
+  const l = L.find(p => p.date === both).v, r = R.find(p => p.date === both).v;
+  const hi = Math.max(l, r);
+  if (!(hi > 0) || l === r) return { even: true, date: both };
+  const weak = (T.better > 0 ? l < r : l > r) ? 'L' : 'R';
+  return { weak, gap: Math.abs(l - r) / hi * 100, date: both };
+}
+
+let mobTestPick = 'fold';
+function mobTestsCard() {
+  const T = mobTestDef(mobTestPick) || MOB_TESTS[0];
+  const any = (S.mobTests || []).length;
+  const latest = t => t.sides ? ['L', 'R'].map(sd => { const x = mobTestLatest(t.id, sd); return `${sd} ${x ? mobTestText(t, x.v) : '—'}`; }).join(' · ')
+    : (x => x ? mobTestText(t, x.v) : '—')(mobTestLatest(t.id, null));
+  const series = T.sides
+    ? [{ label: 'Left', color: 'var(--blue)', points: mobTestSeries(T.id, 'L') }, { label: 'Right', color: 'var(--accent)', points: mobTestSeries(T.id, 'R') }]
+    : [{ label: T.label, color: 'var(--accent)', points: mobTestSeries(T.id, null) }];
+  const gap = mobTestGap(T.id);
+  return `<div class="card" id="hlMob" style="margin-bottom:13px">
+    <div class="row between" style="margin-bottom:8px"><div class="eyebrow">Mobility tests</div>
+      <span class="row" style="gap:6px"><button class="btn xs" id="mtBal">Balance test</button><button class="btn xs" id="mtAdd">+ Log a test</button></span></div>
+    ${any ? `<table class="vartable"><tbody>${MOB_TESTS.map(t => `<tr data-mtpick="${t.id}" style="cursor:pointer" class="${t.id === T.id ? 'on' : ''}">
+        <td>${esc(t.label)}</td><td class="r mono">${esc(latest(t))}</td></tr>`).join('')}</tbody></table>
+      <div class="row" style="gap:8px;margin:10px 0 4px;align-items:center"><label class="sub" for="mtSel">Chart</label>
+        <select id="mtSel" style="flex:1">${MOB_TESTS.map(t => `<option value="${t.id}" ${t.id === T.id ? 'selected' : ''}>${esc(t.label)}</option>`).join('')}</select></div>
+      ${chartMulti(series, { h: 130, fmt: v => T.scale ? (T.scale[Math.round(v)] || '') : nice(v) })}
+      ${gap ? `<div class="sub" style="margin-top:6px">${gap.even ? 'Left and right even' : `${gap.weak === 'L' ? 'Left' : 'Right'} ${gap.gap.toFixed(0)}% behind`} · ${esc(fmtDate(gap.date))}</div>` : ''}
+      <div class="sub" style="margin-top:6px">${esc(T.how)}</div>`
+      : '<div class="sub">No tests yet. Forward fold reach weekly is a good start — it\'s the benchmark in the Full Body Stretch.</div>'}
+  </div>`;
+}
+function wireMobTests(v) {
+  const add = $('#mtAdd', v); if (add) add.onclick = () => openMobTest(mobTestPick && !mobTestDef(mobTestPick).balance ? mobTestPick : 'fold');
+  const bal = $('#mtBal', v); if (bal) bal.onclick = () => openBalanceTest();
+  const sel = $('#mtSel', v); if (sel) sel.onchange = () => { mobTestPick = sel.value; render(); };
+  v.querySelectorAll('[data-mtpick]').forEach(r => r.onclick = () => { mobTestPick = r.dataset.mtpick; render(); });
+}
+
+/* Logging a range-of-motion test: pick the test, one value per side. The
+   straight-leg raise can use the phone as an inclinometer. */
+function openMobTest(id) {
+  let test = id;
+  const draw = () => {
+    const T = mobTestDef(test);
+    const field = sd => T.scale
+      ? `<select id="mtv${sd || ''}">${T.scale.map((l, i) => `<option value="${i}">${esc(l)}</option>`).join('')}</select>`
+      : `<input type="number" inputmode="decimal" step="${T.step || 'any'}" min="0" id="mtv${sd || ''}">`;
+    return `<div class="field"><label for="mtTest">Test</label><select id="mtTest">${MOB_TESTS.filter(t => !t.balance).map(t => `<option value="${t.id}" ${t.id === test ? 'selected' : ''}>${esc(t.label)}</option>`).join('')}</select></div>
+      <div class="sub" style="margin:-4px 0 10px">${esc(T.how)}</div>
+      <div class="field"><label for="mtDate">Date</label><input type="date" id="mtDate" value="${today()}" max="${today()}"></div>
+      ${T.sides ? `<div class="grid2">
+          <div class="field"><label for="mtvL">Left${T.unit ? ` (${T.unit})` : ''}</label>${field('L')}</div>
+          <div class="field"><label for="mtvR">Right${T.unit ? ` (${T.unit})` : ''}</label>${field('R')}</div></div>`
+        : `<div class="field"><label for="mtv">${T.unit ? `Result (${T.unit})` : 'Result'}</label>${field(null)}</div>`}
+      ${T.incline ? `<div class="card tight" style="margin-top:4px"><div class="sub" style="margin-bottom:6px">With the phone: lie flat, phone along the shin. <b>Zero</b> with the leg on the floor, raise it, <b>Capture</b>.</div>
+        <div class="row" style="gap:8px;align-items:center"><b class="mono" id="mtAng" style="font-size:22px;min-width:64px">—</b>
+          <button class="btn xs" id="mtZero">Zero</button><button class="btn xs" id="mtCapL">Capture left</button><button class="btn xs" id="mtCapR">Capture right</button></div></div>` : ''}
+      ${T.scale ? '' : '<div class="sub" style="margin-top:6px">Leave a side empty if you only tested one.</div>'}`;
+  };
+  let zero = null, lastBeta = null;
+  const onTilt = ev => { if (ev.beta == null) return; lastBeta = ev.beta; const el = $('#mtAng'); if (el) el.textContent = zero == null ? '—' : `${Math.round(Math.abs(ev.beta - zero))}°`; };
+  const stopTilt = () => window.removeEventListener('deviceorientation', onTilt);
+  modal({
+    title: 'Log a mobility test',
+    body: draw(),
+    foot: '<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="mtSave">Save</button>',
+    onClose: stopTilt,
+    onOpen: bg => {
+      const bind = () => {
+        $('#mtTest', bg).onchange = ev => { test = ev.target.value; zero = null; $('.modal-body', bg).innerHTML = draw(); bind(); };
+        const z = $('#mtZero', bg);
+        if (z) {
+          const start = async () => {
+            try { if (window.DeviceOrientationEvent && typeof DeviceOrientationEvent.requestPermission === 'function') await DeviceOrientationEvent.requestPermission(); } catch (e) { /* denied: typing still works */ }
+            window.addEventListener('deviceorientation', onTilt);
+          };
+          z.onclick = async () => { await start(); setTimeout(() => { if (lastBeta == null) toast('No tilt sensor here — type the angle'); else { zero = lastBeta; toast('Zeroed', 'green'); } }, 300); };
+          [['#mtCapL', 'L'], ['#mtCapR', 'R']].forEach(([s, sd]) => { $(s, bg).onclick = () => {
+            if (zero == null || lastBeta == null) return toast('Zero it first, with the leg flat');
+            $('#mtv' + sd, bg).value = Math.round(Math.abs(lastBeta - zero)); Cue.buzz(80);
+          }; });
+        }
+        bg.querySelectorAll('input').forEach(selectOnFocus);
+      };
+      bind();
+      $('#mtSave', bg).onclick = () => {
+        const T = mobTestDef(test), date = $('#mtDate', bg).value || today();
+        const read = sd => { const el = $('#mtv' + (sd || ''), bg); if (!el || el.value === '') return null; const v = parseFloat(el.value); return Number.isFinite(v) && v >= 0 ? v : null; };
+        const rows = (T.sides ? ['L', 'R'] : [null]).map(sd => ({ sd, v: read(sd) })).filter(x => x.v != null);
+        if (!rows.length) return toast('Enter a result');
+        S.mobTests = S.mobTests || [];
+        rows.forEach(x => S.mobTests.push({ id: uid(), date, test, side: x.sd, v: x.v, mt: Date.now() }));
+        mobTestPick = test;
+        stopTilt(); save(); closeModal(); render();
+        toast(`${T.label} saved`, 'green');
+      };
+    },
+  });
+}
+
+/* The balance test (roadmap E5, the "Stork Stand" prototype): stand on one
+   leg, eyes closed; hold the pad while the foot is up, let go when it touches
+   down. Times to 0.1 s, anything under a second is ignored, the standing leg
+   switches after each attempt. Every counted attempt is saved at once. */
+function openBalanceTest() {
+  let leg = 'L', eyes = 'ec', t0 = null, iv = null, last = null;
+  const testId = () => eyes === 'ec' ? 'bal_ec' : 'bal_eo';
+  const todays = () => (S.mobTests || []).filter(x => x.test === testId() && x.date === today());
+  const best = sd => { const a = todays().filter(x => x.side === sd).map(x => x.v); return a.length ? Math.max(...a) : null; };
+  const draw = () => `
+    <div class="seg" id="blEyes" style="margin-bottom:8px"><button data-v="ec" class="${eyes === 'ec' ? 'on' : ''}">Eyes closed</button><button data-v="eo" class="${eyes === 'eo' ? 'on' : ''}">Eyes open</button></div>
+    <div class="seg" id="blLeg" style="margin-bottom:10px"><button data-v="L" class="${leg === 'L' ? 'on' : ''}">Standing on left</button><button data-v="R" class="${leg === 'R' ? 'on' : ''}">Standing on right</button></div>
+    <button class="balpad" id="blPad" aria-label="Hold while your foot is up, standing on ${leg === 'L' ? 'left' : 'right'} leg">
+      <span class="mono" id="blTime">0.0</span><span class="sub" id="blHint">Hold here while your foot is up</span></button>
+    <div class="sub center" id="blLast" aria-live="polite" style="margin:8px 0">${last || ''}</div>
+    <div class="stats grid2"><div class="stat"><div class="k">Best left today</div><div class="v">${best('L') != null ? nice(best('L')) + '<small>s</small>' : '—'}</div></div>
+      <div class="stat"><div class="k">Best right today</div><div class="v">${best('R') != null ? nice(best('R')) + '<small>s</small>' : '—'}</div></div></div>`;
+  modal({
+    title: 'Balance test',
+    body: draw(),
+    foot: '<button class="btn primary wide" data-close>Done</button>',
+    onClose: () => { clearInterval(iv); Awake.release('balance'); render(); },
+    onOpen: bg => {
+      Awake.hold('balance');
+      const redraw = () => { $('.modal-body', bg).innerHTML = draw(); bind(); a11yPass($('.modal-body', bg)); };
+      const down = ev => {
+        if (t0) return;
+        if (ev) ev.preventDefault();
+        Cue.unlock(); t0 = performance.now(); Cue.buzz(60);
+        const pad = $('#blPad', bg); if (ev && ev.pointerId != null && pad.setPointerCapture) pad.setPointerCapture(ev.pointerId);
+        pad.classList.add('on'); $('#blHint', bg).textContent = 'Let go when the foot touches down';
+        iv = setInterval(() => { const el = $('#blTime', bg); if (el) el.textContent = ((performance.now() - t0) / 1000).toFixed(1); }, 50);
+      };
+      const up = () => {
+        if (!t0) return;
+        clearInterval(iv);
+        const sec = Math.round((performance.now() - t0) / 100) / 10;
+        t0 = null; Cue.buzz([60, 40, 60]);
+        if (sec < 1) { last = `${sec.toFixed(1)} s — too short, not counted`; return redraw(); }
+        S.mobTests = S.mobTests || [];
+        S.mobTests.push({ id: uid(), date: today(), test: testId(), side: leg, v: sec, mt: Date.now() });
+        save();
+        last = `${leg === 'L' ? 'Left' : 'Right'} ${sec.toFixed(1)} s — saved. Now the ${leg === 'L' ? 'right' : 'left'} leg.`;
+        leg = leg === 'L' ? 'R' : 'L';
+        redraw();
+      };
+      const bind = () => {
+        const pad = $('#blPad', bg);
+        pad.onpointerdown = down; pad.onpointerup = up; pad.onpointercancel = up;
+        pad.onkeydown = ev => { if ((ev.key === ' ' || ev.key === 'Enter') && !ev.repeat) down(ev); };
+        pad.onkeyup = ev => { if (ev.key === ' ' || ev.key === 'Enter') up(); };
+        pad.oncontextmenu = ev => ev.preventDefault();   // a long press mustn't open a menu
+        bg.querySelectorAll('#blEyes button').forEach(b => b.onclick = () => { eyes = b.dataset.v; last = null; redraw(); });
+        bg.querySelectorAll('#blLeg button').forEach(b => b.onclick = () => { leg = b.dataset.v; redraw(); });
+      };
+      bind();
+    },
   });
 }
 
