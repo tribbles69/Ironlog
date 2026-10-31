@@ -13,6 +13,11 @@ rather than guessed.
 
 ---
 
+## 0.52.4 — 31 Oct 2026
+- **Stats:** the headline tiles and the main-lift e1RM chart now show on
+  the Exercises tab only, so Rankings, Muscles and Body open with their own
+  content.
+
 ## 0.52.3 — 26 Oct 2026
 - **WDC Records, Legs:** Smith calf raises are now single leg on both A and
   B weeks, left leg first with the right matching its reps. They open per side
