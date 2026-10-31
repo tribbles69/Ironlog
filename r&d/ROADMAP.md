@@ -220,6 +220,19 @@ Blast shipped these; make sure Ironlog doesn't have them. Tick each.
 Search the UK trademark register (UKIPO) and the app stores for "Ironlog" before
 promoting it. A rename is cheap now and expensive later.
 
+### [ ] A7. Stats: main-lift chart shows on every tab (bug)
+Added 2026-10-31. On the Stats/Analytics page the headline tiles (sessions,
+volume, PRs) and the **e1RM trend · main lifts** card (`mainLiftChart()`, which
+picks the top 3 lifts via `mainLiftKeys()`) render *above* the
+Exercises / Rankings / Muscles / Body switch in `viewAnalytics()`, so the same
+top-3 lifts appear on every tab.
+- Show the tiles and main-lift chart on the **Exercises** tab only (move the
+  `${mainLiftChart()}` call, and the tiles, inside the `analyticsTab ===
+  'exercises'` branch).
+- Each other tab opens with its own content; nothing above the switch except
+  the page title.
+- If D12 moves Body out of Stats, drop the Body tab here at the same time.
+
 ---
 
 ## B. Core logging — what keeps people using it
@@ -508,6 +521,37 @@ maths that's already in the app — `bmrKcal` / `suggestedTargets`, `e1rm`,
 - e1RM and a rep-max table from any set, and a %1RM ↔ RIR chart.
 - DOTS / IPF GL points calculator.
 - RPE ↔ RIR mapping table for coaches who think in RPE.
+
+### [ ] D12. Health page — everything about the body in one place
+Added 2026-10-31. A page of its own (not a tab under Stats) for health and
+body data. Write `r&d/specs/health-page-spec.md` before building.
+- **Moves in from Stats → Body (E4):** bodyweight with the 7-day average,
+  caliper tests (JP3 / JP7 / DW4, raw skinfold sum beside the %), measurements
+  (L/R and custom sites), progress photos. Reuse `viewBody()` and the existing
+  stores — no second copy of the data, no schema change just for the move.
+- **Grows into the home for:** E6 supplements and blood work, E5 ROM and
+  balance tests, the recovery heatmap (D7) if it reads better here, and D11's
+  physique calculators (prefilled from this data).
+- Top of the page: latest bodyweight, latest BF% / skinfold sum, and the
+  trend since the last check, each tapping through to its full history.
+- Way in: Home and the menu (decide the nav slot in the spec — don't add a
+  sixth bottom tab without asking Aaron). Old links to Stats → Body go here.
+- Same rules as everywhere: C4 accessibility, both skins, data stays on the
+  device and is in JSON export / Drive sync.
+
+### [ ] D13. A proper landing page
+Added 2026-10-31. A public page that explains what Ironlog is before someone
+installs it: who it's for (powerlifting, strongman, strengthlifting, adaptive
+lifters), the free / local-only / bring-your-own-AI-key model, a few
+screenshots, and a clear **Install** button with Android steps.
+- **Check with Aaron first** that this means the public site, not the in-app
+  Home page.
+- The app currently *is* the site root (`index.html`), so moving it would break
+  installed PWAs (`start_url` / service worker scope). Spec the URL layout
+  before building — e.g. landing page at a separate path or a sibling page,
+  app untouched — and keep existing installs working.
+- Plain static HTML/CSS, fast, no tracking. Links to the changelog, privacy /
+  data note and the GitHub repo.
 
 ---
 
