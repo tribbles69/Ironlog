@@ -307,6 +307,27 @@ phone.
 generalising the Liftoff importer. Map to leaves via the exercise data check and
 show a dry-run report before anything is written.
 
+### [ ] B9. Let any equipment be picked for any movement
+Added 2026-10-31. Today the equipment picker (`openAxisPicker`) greys **and
+disables** equipment a movement doesn't list — spec 1a in
+`r&d/specs/exercise-system.md`. Aaron's call: grey is fine as a hint, but it
+must still be selectable. If someone wants to bench press with a kettlebell,
+that's up to them. Update spec 1a to say so.
+- Unlisted equipment stays **greyed and sorted below** the usual options, but
+  tappable. Picking one asks nothing and blocks nothing; a small "unusual
+  combo" note at most.
+- The result is a normal leaf (e.g. Bench Press / Kettlebell): its **own PR
+  pool**, history, stats and variant-strip entry like any other. Nothing
+  merges it into the standard variant.
+- Muscle shares fall back to the movement's own shares; equipment doesn't
+  change them.
+- Settings → **Check exercise data**, CSV/JSON import, Drive sync and the
+  importers (B8) must accept these leaves instead of flagging them as invalid.
+- The places filter (D6) still applies on top: equipment that isn't at the
+  current place shows "not at …" as now, and stays selectable too.
+- Execution and attachment axes stay as they are unless Aaron asks for the
+  same there.
+
 ---
 
 ## C. Competition — the edge nobody else has
