@@ -223,7 +223,7 @@ Blast shipped these; make sure Ironlog doesn't have them. Tick each.
 Search the UK trademark register (UKIPO) and the app stores for "Ironlog" before
 promoting it. A rename is cheap now and expensive later.
 
-### [ ] A7. Stats: main-lift chart shows on every tab (bug)
+### [x] A7. Stats: main-lift chart shows on every tab (bug) — fixed 0.52.4
 Added 2026-10-31. On the Stats/Analytics page the headline tiles (sessions,
 volume, PRs) and the **e1RM trend · main lifts** card (`mainLiftChart()`, which
 picks the top 3 lifts via `mainLiftKeys()`) render *above* the

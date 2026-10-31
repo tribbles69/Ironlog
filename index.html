@@ -1974,7 +1974,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.52.3';
+const APP_VERSION = '0.52.4';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -6597,14 +6597,6 @@ function viewAnalytics() {
   <h1>Analytics</h1>
   <div class="sub" style="margin-bottom:14px">Every exercise you've logged, ranked.</div>
 
-  <div class="stats grid3" style="margin-bottom:13px">
-    <div class="stat"><div class="k">Sessions</div><div class="v">${totalSessions}</div></div>
-    <div class="stat"><div class="k">Volume</div><div class="v">${w(totalVol, 0)}</div><div class="d">all time</div></div>
-    <div class="stat"><div class="k">PRs</div><div class="v">${totalPRs}</div><div class="d">all time</div></div>
-  </div>
-
-  ${mainLiftChart()}
-
   <div class="seg" id="anTabs" style="margin-bottom:13px">
     ${[['exercises', 'Exercises'], ['rankings', 'Rankings'], ['muscles', 'Muscles'], ['body', 'Body']]
       .map(([k, l]) => `<button data-antab="${k}" class="${analyticsTab === k ? 'on' : ''}">${l}</button>`).join('')}
@@ -6659,6 +6651,15 @@ function viewAnalytics() {
     </div>
   </div>` : ''}`;
     })()}
+
+  ${analyticsTab !== 'exercises' ? '' : `
+  <div class="stats grid3" style="margin-bottom:13px">
+    <div class="stat"><div class="k">Sessions</div><div class="v">${totalSessions}</div></div>
+    <div class="stat"><div class="k">Volume</div><div class="v">${w(totalVol, 0)}</div><div class="d">all time</div></div>
+    <div class="stat"><div class="k">PRs</div><div class="v">${totalPRs}</div><div class="d">all time</div></div>
+  </div>
+
+  ${mainLiftChart()}`}
 
   ${analyticsTab !== 'exercises' ? '' : stats.length ? `
   <input id="anQ" placeholder="Search exercises…" value="${esc(analyticsQuery)}" autocomplete="off" style="margin-bottom:10px">
