@@ -46,7 +46,7 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    **Where things stand (2026-11-01, 0.66.0):** everything in A–D is built
    except D9. A4 and A6 are waiting on Aaron. Aaron asked for E11 and
    E12 next (E11 shipped 0.64.0, E12's first build 0.65.0); D8 shipped 0.66.0.
-   The next build item is the rest of **D9** (part 2, the training digest, onward), then E3 onwards.
+   D9 finished in 0.73.0; the next build item is **E3** onwards.
 2. **Check the code before trusting a status here.** Some items were marked from
    memory of planning chats, not from the code. If something is already built,
    tick it, note the version, and move on.
@@ -719,7 +719,7 @@ No Ironlog AI server and no paid tier.
 - Every AI feature is optional and hidden or greyed until a key is added.
 - Remove any server-side AI function left after A1.
 
-### [ ] D9. Coach — template plans, then AI coaching — **parts 0–1 shipped 0.67.0** (Coach button, chat setup, memory, plan builder with preview/swap/accept; kit in two taps and the fitting-test invite added 2026-11-02). 0.67.1 asks for sex, date of birth and bodyweight when missing; 0.68.0 asks whether to build a plan at all and adds **Bring in a plan** (the Ironlog plan format, `r&d/specs/plan-format.md`, written by the lifter's own AI or by Claude on their key). 0.69.0 makes the chat local-first (Aaron: "build up as much automated chat as you can"): digest, debrief, weekly review, data-built Ask chips, a typed-question matcher, "remember …" notes, AI only as the fallback; 0.70.0 adds conversation (context, small talk, quick sums, situations). 0.71.0 adds suggested changes (swap a stalled lift, add a set, lighter week — apply and undo). 0.72.0 adds Tailor it (Claude on the lifter's key, swaps and ±1 sets only, re-checked locally). Still to come: cardio trend coach
+### [x] D9. Coach — template plans, then AI coaching — **all parts shipped by 0.73.0**; **parts 0–1 shipped 0.67.0** (Coach button, chat setup, memory, plan builder with preview/swap/accept; kit in two taps and the fitting-test invite added 2026-11-02). 0.67.1 asks for sex, date of birth and bodyweight when missing; 0.68.0 asks whether to build a plan at all and adds **Bring in a plan** (the Ironlog plan format, `r&d/specs/plan-format.md`, written by the lifter's own AI or by Claude on their key). 0.69.0 makes the chat local-first (Aaron: "build up as much automated chat as you can"): digest, debrief, weekly review, data-built Ask chips, a typed-question matcher, "remember …" notes, AI only as the fallback; 0.70.0 adds conversation (context, small talk, quick sums, situations). 0.71.0 adds suggested changes (swap a stalled lift, add a set, lighter week — apply and undo). 0.72.0 adds Tailor it (Claude on the lifter's key, swaps and ±1 sets only, re-checked locally). 0.73.0 adds the cardio trend coach, built locally (HR slope over 90 s, a minute's projection, the smallest step early; a switch on cardio setup) instead of a Haiku call a minute — no AI needed
 **Spec: `r&d/specs/coach-spec.md`** (planned 2026-11-01 — the spec wins over
 this summary). Uses D8 for the AI parts.
 - **Build first: a raised Coach button mid-nav opening a chat with its own small memory (`S.coach`: setup done?, answers, notes), and the template plan builder run inside that chat, no AI.** Setup questions (goal,

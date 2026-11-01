@@ -2124,7 +2124,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.72.0';
+const APP_VERSION = '0.73.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -5443,8 +5443,18 @@ const WHY = {
     if (!rule) {
       const miss = st.hr20 - (cfg.lo + cfg.hi) / 2, K = M.knobs[cfg.cue];
       t.step('Miss', `${Math.round(st.hr20)} − ${(cfg.lo + cfg.hi) / 2} = ${nice(miss)} bpm`, `within ±${CARDIO.tol} counts as on target`);
-      if (Math.abs(miss) <= CARDIO.tol) rule = 'On target';
-      else {
+      if (Math.abs(miss) <= CARDIO.tol) {
+        rule = 'On target';
+        if (cfg.trend) {
+          if (st.slope == null) t.step('Trend coach', 'no slope yet', `needs ${45} s of samples`);
+          else {
+            const proj = st.hr20 + st.slope * CARDIO.trendAhead / 60;
+            t.step('Trend coach', `${st.slope >= 0 ? '+' : ''}${nice(st.slope)} bpm/min → ${Math.round(proj)} in ${CARDIO.trendAhead} s`,
+              `least squares over the last ${CARDIO.trendWin} s; acts when the slope is ${CARDIO.trendMin}+ bpm/min and the projection leaves ${cfg.lo}–${cfg.hi}`);
+            if (Math.abs(st.slope) >= CARDIO.trendMin && (proj > cfg.hi || proj < cfg.lo)) rule = proj > cfg.hi ? 'Trend easier' : 'Trend harder';
+          }
+        }
+      } else {
         const r1 = x => Math.round(x * 1000) / 1000, dir = miss < 0 ? 1 : -1;
         const step = clamp(r1(Math.round(Math.abs(miss) * K.perBpm / K.round) * K.round), K.step[0], K.step[1]);
         t.step('Step', `${nice(Math.abs(miss))} × ${K.perBpm} per bpm, rounded to ${K.round}, kept in ${K.step[0]}–${K.step[1]} = ${step}`, K.label);
@@ -5457,7 +5467,7 @@ const WHY = {
     const d = L.d;
     t.step('Cue the app gave', d && d.cue ? d.cue.text || d.cue.kind : 'no cue');
     /* cardioDecide is pure, so replaying the same inputs is the check. */
-    const kind = { '1. Over the ceiling': 'ceiling', Harder: 'up', Easier: 'down' }[rule] || 'none';
+    const kind = { '1. Over the ceiling': 'ceiling', Harder: 'up', Easier: 'down', 'Trend harder': 'up', 'Trend easier': 'down' }[rule] || 'none';
     if (rule !== '2. Warm-up') {
       const r = cardioDecide(L.cfg, st);
       t.check('Outcome', kind, r && r.cue ? r.cue.kind : 'none');
@@ -15885,7 +15895,21 @@ const CARDIO = {
   ceilGap: 15,      // s between repeated ceiling cues
   sample: 5,        // s between stored HR points
   fresh: 10,        // s before a silent strap counts as no HR
+  trendAhead: 60,   // trend coach: how far ahead it projects (s)
+  trendMin: 4,      // bpm per minute before a trend counts
+  trendWin: 90,     // s of samples the slope is fitted to
 };
+/* Heart rate's slope in bpm per minute over the last trendWin seconds, by
+   least squares; null until there are 45 s of samples. */
+function hrSlope(sec = CARDIO.trendWin) {
+  const now = Date.now(), s = HR.samples.filter(x => x[0] >= now - sec * 1000);
+  if (s.length < 10 || s[s.length - 1][0] - s[0][0] < 45000) return null;
+  const xs = s.map(x => (x[0] - s[0][0]) / 60000), ys = s.map(x => x[1]);
+  const mx = xs.reduce((a, b) => a + b, 0) / xs.length, my = ys.reduce((a, b) => a + b, 0) / ys.length;
+  let num = 0, den = 0;
+  xs.forEach((x, i) => { num += (x - mx) * (ys[i] - my); den += (x - mx) ** 2; });
+  return den ? num / den : null;
+}
 
 function cardioCfg() {
   const raw = S.settings.cardio || {};
@@ -15984,7 +16008,18 @@ function cardioDecide(cfg0, st) {
   if (st.hr20 == null) return { cue: null };                       // 6. no fresh HR: silent
   // 7. aim for the middle of the zone, with a little slack either side of it
   const miss = st.hr20 - (cfg.lo + cfg.hi) / 2;
-  if (Math.abs(miss) <= CARDIO.tol) return { cue: null };
+  if (Math.abs(miss) <= CARDIO.tol) {
+    /* 7b. trend coach (optional): on target now, but the last ~90 s say the
+       zone is a minute from being left — the smallest step, early. */
+    if (cfg.trend && st.slope != null && Math.abs(st.slope) >= CARDIO.trendMin) {
+      const proj = st.hr20 + st.slope * CARDIO.trendAhead / 60, out = proj > cfg.hi ? -1 : proj < cfg.lo ? 1 : 0;
+      const param = cfg.cue, K = M.knobs[param];
+      const target = out ? r1(clamp(st.v[param] + K.harder * out * K.step[0], ...K.bounds)) : st.v[param];
+      if (out && target !== st.v[param]) return { cue: { kind: out > 0 ? 'up' : 'down', trend: true, param, target,
+        text: `Heart rate ${out > 0 ? 'dropping' : 'climbing'}. ${K.vague ? (out > 0 ? 'Pick it up a touch' : 'Ease off a touch') : set(K, target)}` } };
+    }
+    return { cue: null };
+  }
   const dir = miss < 0 ? 1 : -1, m = Math.abs(miss);             // +1: needs to be harder
   // 8. the step scales with the miss
   const param = cfg.cue, K = M.knobs[param];
@@ -16206,7 +16241,7 @@ function cardioTick() {
     }
     const st = { el, hr5, hr20, v: cardioKnobs(c),
       lastCheck: c.lastCheck, lastChange: c.lastChange, lastCeil: c.lastCeil,
-      warmStep: c.warmStep, warmDone: c.warmDone };
+      warmStep: c.warmStep, warmDone: c.warmDone, slope: c.cfg.trend ? hrSlope() : null };
     const d = cardioDecide(c.cfg, st);
     if (debugOn()) cardioWhyLast = { cfg: c.cfg, st: { ...st, v: { ...st.v } }, d };
     if (d) {
@@ -16277,7 +16312,7 @@ function openCardioSetup() {
   if (S.active) { toast('Finish the active workout first'); return go('workout'); }
   const cfg = cardioCfg();
   const est = estMaxHr();
-  let machine = cfg.machine, preset = cfg.preset, voice = cfg.voice !== false;
+  let machine = cfg.machine, preset = cfg.preset, voice = cfg.voice !== false, trend = !!cfg.trend;
   const drafts = {};                                   // per-machine edits while the sheet is open
   const setupOf = id => drafts[id] || machineSetup(cfg, id);
   let ceilEdited = false;
@@ -16346,7 +16381,13 @@ function openCardioSetup() {
             <button data-v="1" class="${voice ? 'on' : ''}">On</button>
             <button data-v="0" class="${!voice ? 'on' : ''}">Off</button>
           </div></div>
-      </div>`,
+      </div>
+      <div class="field"><label>Trend coach</label>
+        <div class="seg" id="cdTrendSeg">
+          <button data-v="1" class="${trend ? 'on' : ''}">On</button>
+          <button data-v="0" class="${!trend ? 'on' : ''}">Off</button>
+        </div>
+        <div class="sub" style="margin-top:4px">Watches which way your heart rate is heading, and nudges you a minute before it would leave the zone — not after. Needs a zone.</div></div>`,
     foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="cdGo">Start</button>`,
     onOpen: bg => {
       const num = id => { const v = +$(id, bg).value; return v > 0 ? v : null; };
@@ -16416,6 +16457,7 @@ function openCardioSetup() {
       if (all) all.onclick = () => HR.pick(true).then(hrPaint);
       if (HR.state === 'none' && S.settings.hrDevice) HR.resume().then(hrPaint);
       seg('#cdVoiceSeg', v => { voice = v === '1'; });
+      seg('#cdTrendSeg', v => { trend = v === '1'; });
       seg('#cdZoneSeg', v => { preset = v; refill(); });
       ['#cdMax', '#cdRest'].forEach(s => { $(s, bg).oninput = refill; });
       ['#cdLo', '#cdHi'].forEach(s => { $(s, bg).oninput = () => {
@@ -16432,7 +16474,7 @@ function openCardioSetup() {
         const lo = num('#cdLo'), hi = num('#cdHi');
         if ((lo || hi) && !(lo >= 40 && hi > lo && hi <= 230)) return toast('Zone needs a low below the high, 40–230 bpm');
         const mine = readMachine();
-        const shared = { machine, preset, voice, maxHr: num('#cdMax'), restHr: num('#cdRest'),
+        const shared = { machine, preset, voice, trend, maxHr: num('#cdMax'), restHr: num('#cdRest'),
           lo: lo || null, hi: hi || null, ceiling: num('#cdCeil'), interval: clamp(num('#cdInt') || 30, 15, 120) };
         S.settings.cardio = { ...shared, byMachine: { ...cfg.byMachine, ...drafts } };
         closeModal();
@@ -16453,7 +16495,7 @@ function startCardio(cfg) {
   const leaf = completeLeaf(movementById(M.movement), null);
   const now = Date.now();
   const run = { lo: cfg.lo, hi: cfg.hi, ceiling: cfg.ceiling, cue: cfg.cue, interval: cfg.interval,
-    maxHr: cfg.maxHr, restHr: cfg.restHr, preset: cfg.preset, voice: cfg.voice,
+    maxHr: cfg.maxHr, restHr: cfg.restHr, preset: cfg.preset, voice: cfg.voice, trend: !!cfg.trend,
     machine: id, warm: cfg.warm, work: cfg.work, warmMin: cfg.warmMin };
   const plan = warmPlan(run);
   const start = { ...(cfg.start || {}), [p]: plan ? cfg.warm : cfg.work };

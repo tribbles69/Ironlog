@@ -863,6 +863,24 @@ window.smoke = async function smoke(opts) {
     } finally { S.settings.places = JSON.parse(places0); }
   });
 
+  await step('cardio trend coach: slope and early cue', async () => {
+    const keep = HR.samples;
+    try {
+      const now = Date.now();
+      HR.samples = Array.from({ length: 90 }, (_, i) => [now - (89 - i) * 1000, 130 + i * (8 / 60)]);   // +8 bpm a minute
+      const sl = hrSlope();
+      if (!(Math.abs(sl - 8) < 0.2)) throw new Error(`slope ${sl}, expected 8`);
+      const cfg = { machine: 'treadmill', lo: 130, hi: 145, ceiling: 170, interval: 30, cue: 'speed', work: 8, warm: 8, warmMin: 0 };
+      const st = { el: 600, hr5: 141, hr20: 139, v: { speed: 8, incline: 1 }, lastCheck: 500, lastChange: 300, lastCeil: null, warmDone: true, slope: 8 };
+      const off = cardioDecide(cfg, st), on = cardioDecide({ ...cfg, trend: true }, st);
+      if (off && off.cue) throw new Error('cued without the trend coach while on target');
+      if (!on || !on.cue || on.cue.kind !== 'down' || !on.cue.trend || on.cue.target !== 7.9) throw new Error(`trend cue ${JSON.stringify(on && on.cue)}`);
+      const flat = cardioDecide({ ...cfg, trend: true }, { ...st, slope: 2 });
+      if (flat && flat.cue) throw new Error('acted on a slope under the threshold');
+      return `slope ${sl.toFixed(2)} bpm/min; on target at 139 rising 8/min → "${on.cue.text}"`;
+    } finally { HR.samples = keep; }
+  });
+
   await step('food removed: tab gone, old route lands home', async () => {
     close();
     if (document.querySelector('#nav [data-page="food"]')) throw new Error('Food tab still in the nav');
