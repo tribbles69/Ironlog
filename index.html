@@ -2124,7 +2124,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.70.2';
+const APP_VERSION = '0.71.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -14283,6 +14283,9 @@ function coMenuPick(v, label) {
   if (v === 'checkin') { closeAllModals(); return openCheckin(today()); }
   if (v.startsWith('ramp:')) { const [, k, kg] = v.split(':'); return openRamp(k, +kg || 0); }
   if (v.startsWith('plates:')) { const kg = +v.split(':')[1] || 0; if (/Open the plate loader/.test(label)) return openPlates(kg); return coAnswerTopic('plates', String(nice(dw(kg)))); }
+  if (v.startsWith('sugg:')) { const [, kind, arg] = v.split(':'); return coOfferChange(kind, arg); }
+  if (v.startsWith('apply:')) { const [, kind, arg] = v.split(':'); return coApplyChange(kind, arg); }
+  if (v === 'undo') return coUndoChange();
   if (v.startsWith('easy:')) {
     const j = v.split(':')[1], A = coachMem().answers;
     A.easy = [...new Set([...(A.easy || []), j])]; save();
@@ -14624,7 +14627,8 @@ function coAnsStall(D, key) {
   if (D.week.missed) why.push(`${D.week.missed} planned session${D.week.missed === 1 ? '' : 's'} missed this week`);
   if (D.streak >= 8) { why.push(`you've trained ${D.streak} weeks straight`); fix.push('a lighter week could let it come back up'); }
   fix.push(`or swap to a close variation for 3–4 weeks (a pause, tempo or different bar) and come back to ${name}`);
-  return { html: `<b>${name}</b> has stalled since ${esc(fmtDate(s.since))}.<br>${why.length ? `Likely reasons: ${why.map(esc).join('; ')}.` : 'Nothing obvious in your log — plateaus happen.'}<br>What to try: ${fix.map(esc).join('; ')}.` };
+  return { html: `<b>${name}</b> has stalled since ${esc(fmtDate(s.since))}.<br>${why.length ? `Likely reasons: ${why.map(esc).join('; ')}.` : 'Nothing obvious in your log — plateaus happen.'}<br>What to try: ${fix.map(esc).join('; ')}.`,
+    act: coSuggestion('swap', key) ? [[`sugg:swap:${key}`, 'Swap it in my plan']] : [] };
 }
 function coDeloadScore(D) {
   const pts = [];
@@ -14644,7 +14648,8 @@ function coAnsDeload(D) {
   return { html: score >= 3
     ? `<b>Yes — take a lighter week.</b> ${list}<br>Half the sets, RIR 3–4, same exercises. Then pick up where you left off.`
     : score >= 2 ? `<b>Not yet, but watch it.</b> ${list}<br>If it's the same next week, take a lighter one.`
-    : `<b>No.</b> ${list}` };
+    : `<b>No.</b> ${list}`,
+    act: score >= 2 && coSuggestion('deload') ? [['sugg:deload', 'Make next week lighter']] : [] };
 }
 function coAnsVolume(D) {
   const e = Object.entries(D.muscles);
@@ -14655,7 +14660,8 @@ function coAnsVolume(D) {
   return { html: `Working sets this week, by muscle (a set counts by how much the muscle does in it). Most: ${esc(top.join(', '))}.`
     + (low.length ? `<br>Low (under ${CO_LOW_SETS}): ${esc(low.join(', '))}.` : '')
     + (high.length ? `<br>High (over ${CO_HIGH_SETS}): ${esc(high.join(', '))} — fine for a focus, a lot to recover from otherwise.` : '')
-    + '<br>Roughly 10–20 hard sets a week is where most muscles grow.' };
+    + '<br>Roughly 10–20 hard sets a week is where most muscles grow.',
+    act: e.filter(([k, v]) => v < CO_LOW_SETS && coSuggestion('vol', k)).slice(0, 2).map(([k]) => [`sugg:vol:${k}`, `More ${(MUSCLES[k] || k).toLowerCase()}`]) };
 }
 function coAnsRecovery(D) {
   const c = D.ci, p = D.ciPrev;
@@ -14760,7 +14766,11 @@ function coReview(D) {
   if (D.testR && D.testR.flags.length) focus.push([0, `Keep at your fitting-test flag: ${D.testR.flags[0].text.toLowerCase()}.`]);
   if (!focus.length) focus.push([0, moving.length ? `Keep going — ${moving.map(l => l.name).join(', ')} ${moving.length === 1 ? 'is' : 'are'} moving.` : 'Keep the plan as it is and chase one more rep.']);
   focus.sort((a, b) => b[0] - a[0]);
-  return { html: `${L.join('<br>')}<br><b>Focus for next week:</b> ${esc(focus[0][1])}` };
+  /* The focus, as a change the lifter can apply. */
+  const offer = dl.score >= 3 && coSuggestion('deload') ? ['sugg:deload', 'Make next week lighter']
+    : stalled[0] && coSuggestion('swap', stalled[0].key) ? [`sugg:swap:${stalled[0].key}`, `Swap ${shortLift(stalled[0].name).toLowerCase()} for a while`]
+    : low.length && D.week.done ? (() => { const k = Object.entries(D.muscles).filter(([, v]) => v < CO_LOW_SETS).map(([m]) => m).find(m => coSuggestion('vol', m)); return k ? [`sugg:vol:${k}`, `More ${(MUSCLES[k] || k).toLowerCase()}`] : null; })() : null;
+  return { html: `${L.join('<br>')}<br><b>Focus for next week:</b> ${esc(focus[0][1])}`, act: offer ? [offer] : [] };
 }
 
 /* ---- the chips and the typed-question matcher ---- */
@@ -15015,6 +15025,97 @@ function coAnsGear(D, text) {
 function coAnsPain() {
   return { html: 'Stop anything that hurts, and if it\'s still there in a day or two, get it checked by a physio or doctor. I can\'t advise on injuries.<br>What I can do is go easy on a joint: the plan then avoids exercises that load it.',
     act: MOB_JOINTS.slice(0, 7).map(([k, l]) => [`easy:${k}`, `Go easy on ${l.toLowerCase()}`]) };
+}
+/* ---- suggested plan changes (coach-spec §6): offered in the chat, applied
+   only on Apply, undoable. They edit upcoming planned sessions directly, so
+   they work on any plan — coach-built, imported or shipped. ---- */
+function coFuture(days) {
+  return S.workouts.filter(w => w.status === 'planned' && w.date >= today() && (!days || daysBetween(today(), w.date) < days));
+}
+const coMe = key => String(key).split('/').slice(0, 2).join('/');
+/* The next sensible variation for a lift: its slot's swap list in the
+   coach's plan, else the next candidate in the template pattern it belongs to. */
+/* Close variations to rotate to when a lift stalls: same pattern, a different
+   stimulus, still trains what the lift needs. First one that's available wins. */
+const CO_STALL_SWAP = {
+  'bench-press': ['larsen-press/barbell', 'close-grip-bench/barbell', 'incline-bench-press/barbell', 'bench-press/dumbbells'],
+  'back-squat': ['box-squat/barbell', 'front-squat/barbell', 'back-squat/safety_squat_bar', 'hack-squat/plate_loaded_machine'],
+  'deadlift': ['sumo-deadlift/barbell', 'deadlift/trap_bar', 'deadlift/barbell', 'rack-pull/barbell', 'romanian-deadlift/barbell'],
+  'sumo-deadlift': ['deadlift/barbell', 'deadlift/trap_bar'],
+  'overhead-press': ['push-press/barbell', 'overhead-press/dumbbells', 'log-press/log'],
+  'log-press': ['overhead-press/axle', 'push-press/barbell', 'overhead-press/barbell'],
+  'incline-bench-press': ['bench-press/barbell', 'incline-bench-press/dumbbells'],
+  'front-squat': ['back-squat/barbell', 'box-squat/barbell'],
+  'seated-row': ['chest-supported-row/machine', 'bent-over-row/barbell', 'single-arm-row/dumbbells'],
+  'lat-pulldown': ['pull-up/bodyweight', 'chin-up/bodyweight'],
+  'hip-thrust': ['romanian-deadlift/barbell', 'glute-bridge/dumbbells'],
+};
+function coSwapFor(key) {
+  const ck = coMe(key), C = S.coach || {}, A = C.answers || {};
+  const place = coachPlace(A.gymPlace) || coachPlace(A.homePlace);
+  const ok = c => c !== ck && candLeaf(c) && (!place || kitHas(c.split('/')[1], place));
+  const cur = CO_STALL_SWAP[ck.split('/')[0]];
+  if (cur) { const c = cur.find(ok); if (c) return c; }
+  if (C.plan) for (const d of C.plan.days) for (const w of ['A', 'B']) for (const x of (d[w] || [])) if (x.key === ck) { const c = x.alts.find(ok); if (c) return c; }
+  for (const p of Object.values(COACH_TPL.patterns)) {
+    if (!p.candidates.includes(ck)) continue;
+    const alt = p.candidates.find(c => c !== ck && candLeaf(c) && c.split('/')[0] !== ck.split('/')[0]) || p.candidates.find(c => c !== ck && candLeaf(c));
+    if (alt) return alt;
+  }
+  return null;
+}
+function coPrimeMuscle(leaf) { const lm = leaf ? leafMuscles(leaf) : null; return lm && lm.m ? Object.entries(lm.m).sort((a, b) => b[1] - a[1])[0][0] : null; }
+/* What a suggestion would do: a sentence, and the edit as a function over one session. */
+function coSuggestion(kind, arg) {
+  if (kind === 'swap') {
+    const alt = coSwapFor(arg), ws = coFuture(42).filter(w => w.exercises.some(e => exKey(e) === arg));
+    if (!alt || !ws.length) return null;
+    const leaf = candLeaf(alt);
+    return { text: `Swap ${leafName(arg)} for ${candName(alt)} for the next 6 weeks, then come back to it.`, ws,
+      edit: w => w.exercises.forEach(e => { if (exKey(e) !== arg) return; e.leaf = leaf; e.legacyName = displayName(leaf); delete e.auto; e.sets.forEach(s => { s.w = 0; delete s.planW; delete s.auto; }); }) };
+  }
+  if (kind === 'vol') {
+    const ws = coFuture(14).filter(w => w.exercises.some(e => e.leaf && coPrimeMuscle(e.leaf) === arg && e.sets.length));
+    if (!ws.length) return null;
+    return { text: `Add a set to the ${(MUSCLES[arg] || arg).toLowerCase()} exercise in each session for the next 2 weeks.`, ws,
+      /* the last one of the session: the accessory, not the main lift */
+      edit: w => { const e = [...w.exercises].reverse().find(x => x.leaf && coPrimeMuscle(x.leaf) === arg && x.sets.length); if (e) e.sets.push({ ...e.sets[e.sets.length - 1], done: false, rpe: null }); } };
+  }
+  if (kind === 'deload') {
+    const ws = coFuture(7);
+    if (!ws.length) return null;
+    return { text: 'Make the next 7 days a lighter week: half the sets (at least one), and every set at RIR 3 or more. Same exercises.', ws,
+      edit: w => { w.exercises.forEach(e => { const work = e.sets.filter(s => isWorking(s)); const keep = Math.max(1, Math.ceil(work.length / 2)); let n = 0;
+        e.sets = e.sets.filter(s => !isWorking(s) || ++n <= keep); e.sets.forEach(s => { if (s.t != null) s.t = Math.max(3, s.t); }); }); w.light = true; } };
+  }
+  return null;
+}
+function coOfferChange(kind, arg) {
+  const sg = coSuggestion(kind, arg);
+  if (!sg) { coBubble('coach', 'There\'s nothing on your calendar for me to change — build or bring in a plan first.'); return coFollow([['new', 'Build me a plan'], ['import', 'Bring in my own']]); }
+  coBubble('coach', `<b>Suggested change:</b> ${esc(sg.text)}<br>It changes ${sg.ws.length} upcoming session${sg.ws.length === 1 ? '' : 's'}. Nothing changes until you tap Apply.`);
+  coAnswer(`${coChips([[`apply:${kind}${arg ? ':' + arg : ''}`, 'Apply'], ['menu', 'Not now']], null, true)}${coFormHtml()}`);
+  $('#coAns', CO.bg).querySelectorAll('[data-cov]').forEach(b => b.onclick = () => coMenuPick(b.dataset.cov, b.textContent));
+  coFormWire();
+}
+function coApplyChange(kind, arg) {
+  const sg = coSuggestion(kind, arg);
+  if (!sg) return coBubble('coach', 'Nothing to change any more.');
+  const C = coachMem();
+  C.lastChange = { at: Date.now(), text: sg.text, before: sg.ws.map(w => ({ id: w.id, exercises: structuredClone(w.exercises), light: !!w.light })) };
+  sg.ws.forEach(sg.edit);
+  bust(); save();
+  coBubble('coach', `Done — ${sg.ws.length} session${sg.ws.length === 1 ? '' : 's'} changed. Weights fill in from your RIR as usual.`);
+  coFollow([['undo', 'Undo that']]);
+}
+function coUndoChange() {
+  const C = coachMem(), L = C.lastChange;
+  if (!L) return coBubble('coach', 'Nothing to undo.');
+  let n = 0;
+  L.before.forEach(b => { const w = S.workouts.find(x => x.id === b.id && x.status === 'planned'); if (w) { w.exercises = b.exercises; if (b.light) w.light = true; else delete w.light; n++; } });
+  C.lastChange = null; bust(); save();
+  coBubble('coach', `Undone — ${n} session${n === 1 ? '' : 's'} back as they were.`);
+  coMenu();
 }
 function coAnsWhy() {
   const c = (CO && CO.ctx) || {};

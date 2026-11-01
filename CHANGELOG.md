@@ -13,6 +13,14 @@ rather than guessed.
 
 ---
 
+## 0.71.0 — 1 Nov 2026
+- **The coach can now change your plan, but only when you tap Apply.** It offers three changes where your log points to them:
+  - **Stalled lift:** swap it for a close variation for 6 weeks, then come back to it. Larsen or close-grip for bench; box, front or safety-bar squat for squat; sumo or trap bar for deadlift; push press for overhead press. It only picks kit your gym has.
+  - **Low-volume muscle:** add a set to that muscle's accessory in each session for 2 weeks.
+  - **Time for a deload:** make the next 7 days a lighter week, with half the sets and every set at RIR 3 or more.
+- You'll see these on *Why has my … stalled?*, *Should I deload?*, *Am I doing enough volume?* and the weekly review. It works on any plan on your calendar: coach-built, imported, or the shipped program.
+- Every change says how many sessions it touches first, and **Undo that** puts them straight back.
+
 ## 0.70.2 — 1 Nov 2026
 - **Fixed:** the coach's answer panel took up most of the screen, and chat text showed through under it. The question chips are now single rows you swipe sideways, the panel covers the chat properly, and Coach settings moved into the Plan row, so the chat has room.
 - The coach now answers kit questions: belt, sleeves, wrist and knee wraps, straps, chalk, shoes and singlet ("Do I need my belt?").

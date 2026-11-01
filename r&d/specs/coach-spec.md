@@ -307,6 +307,15 @@ Previous AI wording kept for reference:
   volume is lopsided. May end with a suggested change, which goes through
   the same accept-only diff as §4.
 
+**Suggested changes (0.71.0):** offered as chips on the stall, deload, volume
+and weekly-review answers; nothing changes until *Apply*, and *Undo that*
+restores the touched sessions (snapshot in `S.coach.lastChange`). They edit
+upcoming planned sessions directly, so they work on any plan: swap a stalled
+lift for 6 weeks (`CO_STALL_SWAP` close variations, filtered by the gym's
+kit, then the plan slot's swap list), +1 set on the last exercise whose main
+muscle is the low one (next 2 weeks), or a lighter next 7 days (half the
+working sets, RIR 3+).
+
 ## 7. Ask the coach (local answers + AI fallback; built 0.69.0)
 
 - **Chips built from the lifter's data**: today's session, review my week,
