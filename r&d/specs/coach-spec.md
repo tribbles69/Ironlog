@@ -315,6 +315,14 @@ Previous AI wording kept for reference:
   then, with a key, the AI fallback below. Without a key the coach says it
   can't answer that yet and offers the chips.
 - **"Remember …"** typed in the chat proposes a note; it's saved only on Yes.
+- **Conversation (0.70.0):** small talk (hello, thanks, help, who), context for
+  follow-ups ("and squat?", "why?", "yes" to the last suggestion), varied
+  wording, a short typing pause on typed questions, and next-question chips
+  after each answer (`CO_NEXT`). Quick sums answered locally: working weight
+  for reps at an RIR, warm-up, plates, best single, recent PRs, session
+  counts, kg↔lb, RPE↔RIR. Situations: short on time (keep the first
+  exercises), at home today (swap to home kit), low motivation, a missed
+  session, pain (stop / see a professional, and offer a go-easy joint).
 - **Deload check**, local: stalled main lifts, typed RIR below target, sleep
   or energy down on the week before, soreness up, and weeks since the last
   light week each add to a score; 3+ says "take a lighter week".

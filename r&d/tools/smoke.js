@@ -795,6 +795,12 @@ window.smoke = async function smoke(opts) {
       const wrong = Object.entries(want).filter(([q, t]) => (coMatch(q) || {}).topic !== t).map(([q, t]) => `"${q}" → ${(coMatch(q) || {}).topic} not ${t}`);
       if (wrong.length) throw new Error(wrong.join('; '));
       if (coMatch('what is the meaning of life')) throw new Error('matched nonsense');
+      const talk = { 'hey': 'greet', 'thanks!': 'thanks', 'how heavy should I go on bench for 5': 'weightfor', 'warm up for squat': 'warmup',
+        'plates for 140': 'plates', "I've only got 30 minutes": 'short', "I'm at home today": 'home', "can't be bothered today": 'motivate',
+        'I missed yesterday': 'missed', 'my knee hurts': 'pain', 'any PRs lately': 'prs', '100 lb in kg': 'convert', 'rpe 8 in rir': 'rirrpe', 'help': 'help' };
+      const wrong2 = Object.entries(talk).filter(([q, t]) => (coMatch(q) || {}).topic !== t).map(([q, t]) => `"${q}" → ${(coMatch(q) || {}).topic} not ${t}`);
+      if (wrong2.length) throw new Error(wrong2.join('; '));
+      if (Math.abs(coAnsConvert('100 lb in kg').html.match(/= ([\d.]+)/)[1] - 45.4) > 0.05) throw new Error('lb → kg wrong');
       const D = coachDigest();
       S.coach = { ...JSON.parse(keep), setupDone: true };
       openCoach(); await wait(80);
