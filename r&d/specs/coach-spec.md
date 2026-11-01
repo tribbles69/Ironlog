@@ -90,7 +90,10 @@ one in asks only the goal, experience and profile basics, then opens the
 import sheet (`r&d/specs/plan-format.md`): the lifter's own AI app, Claude on
 their key, or a file. No plan saves the answers and stops. The plan
 questions (place, days, length, priority lifts, go-easy) are asked only when
-the coach builds the plan.
+the coach builds the plan. A program already on the calendar with sessions to come is
+asked about first ("Keep following it?" — *Keep it* makes it the coach's
+plan); *No plan* and *Keep it* end the setup straight away (0.70.1), and a
+later *Build my plan* asks whatever plan questions were skipped.
 
 Asked in the coach chat (§0) the first time it opens, and again from
 *Change my answers* or *New plan*. The welcome screen (C1) ends with a "Set
