@@ -2090,7 +2090,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.65.0';
+const APP_VERSION = '0.66.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -11074,12 +11074,19 @@ function openSettings() {
         <div class="sub" style="margin-top:4px">Used for placing predictions. Openers are conservative, thirds get missed, nerves cost kilos — 96% is a reasonable default.</div>
       </div>
       <div class="hr"></div>
-      <div class="eyebrow" style="margin-bottom:6px">AI parsing</div>
-      <div class="field"><label>Anthropic API key</label>
-        <input id="stKey" type="password" autocomplete="off" spellcheck="false"
-          value="${esc(aiKey())}" placeholder="sk-ant-… — leave blank to use the offline table">
-        <div class="sub" style="margin-top:4px">Held on this device only and sent nowhere but Anthropic. Clearing site data removes it. Only used by voice logging, when the built-in grammar can't read a set. Everything works without it.</div>
+      <div class="eyebrow" style="margin-bottom:6px">AI — on your own key</div>
+      <div class="sub" style="margin-bottom:8px">Optional. Ironlog has no AI server: with your own Anthropic key, the phone calls Anthropic directly and you pay them for what you use — fractions of a penny a time. Everything works without it.</div>
+      <div class="field"><label for="stKey">Anthropic API key</label>
+        <div class="row" style="gap:6px"><input id="stKey" type="password" autocomplete="off" spellcheck="false" style="flex:1"
+          value="${esc(aiKey())}" placeholder="sk-ant-…"><button class="btn sm ghost" id="stKeyShow" aria-pressed="false">Show</button></div>
+        <div class="sub" style="margin-top:4px">Kept on this phone only and sent nowhere but Anthropic. Clearing site data removes it. Get one at console.anthropic.com.</div>
+        <div class="row" style="gap:8px;margin-top:6px;align-items:center"><button class="btn sm" id="stKeyTest">Check key</button><span class="sub" id="stKeyMsg" role="status"></span></div>
       </div>
+      <div class="field"><label for="stAiCap">Monthly cap ($)</label>
+        <input id="stAiCap" type="number" inputmode="decimal" step="0.5" min="0" value="${aiCap()}">
+        <div class="sub" style="margin-top:4px">AI stops for the rest of the month once this phone's estimated spend reaches it. 0 turns AI off. An estimate from token counts — Anthropic's console is the real bill.</div>
+      </div>
+      <div id="stAiUse">${aiUsageHtml()}</div>
       <div class="field"><label>Debug mode — show the working</label>
         <div class="seg" id="dbgSeg">
           <button data-v="1" class="${debugOn() ? 'on' : ''}">On</button>
@@ -11192,6 +11199,22 @@ function openSettings() {
         units = b.dataset.u;
         bg.querySelectorAll('#unitSeg button').forEach(x => x.classList.toggle('on', x === b));
       });
+      $('#stKeyShow', bg).onclick = ev => {
+        const k = $('#stKey', bg), on = k.type === 'password';
+        k.type = on ? 'text' : 'password'; ev.target.textContent = on ? 'Hide' : 'Show'; ev.target.setAttribute('aria-pressed', on);
+      };
+      $('#stKeyTest', bg).onclick = async () => {
+        const k = $('#stKey', bg).value.trim(), msg = $('#stKeyMsg', bg);
+        if (!k) { msg.textContent = 'Enter a key first.'; return; }
+        setAiKey(k);
+        msg.textContent = 'Checking…';
+        try {
+          await aiCall({ feature: 'check', user: 'Reply with OK.', maxTokens: 1 });
+          msg.textContent = '✓ Key works.';
+        } catch (e) { msg.textContent = aiWhy(e); }
+        $('#stAiUse', bg).innerHTML = aiUsageHtml(); wireAiUsage(bg);
+      };
+      wireAiUsage(bg);
       bg.querySelectorAll('#dbgSeg button').forEach(b => b.onclick = () => {
         bg.querySelectorAll('#dbgSeg button').forEach(x => x.classList.toggle('on', x === b));
         S.settings.debug = b.dataset.v === '1';
@@ -11287,6 +11310,8 @@ function openSettings() {
         const op = +$('#stOpener', bg).value;
         if (op >= 50 && op <= 100) S.settings.openerPct = op;
         setAiKey($('#stKey', bg).value.trim());
+        const cap = parseFloat(String($('#stAiCap', bg).value).replace(',', '.'));
+        if (cap >= 0 && cap <= 1000) S.settings.aiCap = Math.round(cap * 100) / 100;
         const pp = +$('#stPlatform', bg).value;
         if (pp >= 80 && pp <= 100) S.settings.platformPct = pp;
         const rm = parseTime($('#stRestMain', bg).value), ra = parseTime($('#stRestAcc', bg).value);
@@ -11318,50 +11343,125 @@ function openSettings() {
 
 
 /* ============================================================
-   AI KEY
+   AI KEY (D8, r&d/specs/ai-key-spec.md)
    Bring-your-own-key, held on this device and sent nowhere but Anthropic.
-   Only voice set logging uses it now, and only when the local grammar can't
-   read what was said.
+   Every call goes through aiCall(): key, monthly cap, the call, and the
+   tokens priced and counted against the feature. No Ironlog AI server.
    ============================================================ */
+/* $ per million tokens, input / output. One place to update. */
+const AI_MODELS = { 'claude-haiku-5-5': { name: 'Claude Haiku 5.5', in: 0.10, out: 0.50 } };
+const AI_MODEL = 'claude-haiku-5-5';
+/* Every AI feature, with a typical call's tokens for the cost hint. */
+const AI_FEATURES = [
+  { id: 'voice', name: 'Voice logging, hard sentences', what: 'Reads a spoken set when the on-device grammar can\'t', tokIn: 450, tokOut: 40, per: 'set' },
+];
+const AI_CAP_DEFAULT = 1;
+function aiCap() { const c = S.settings.aiCap; return c == null || isNaN(+c) ? AI_CAP_DEFAULT : Math.max(0, +c); }
+const aiMonth = () => today().slice(0, 7);
+function aiUsage() {
+  let u = null;
+  try { u = JSON.parse(localStorage.getItem('ironlog.aiUsage') || 'null'); } catch (e) { /* blocked or bad JSON */ }
+  return u && u.month === aiMonth() ? u : { month: aiMonth(), calls: 0, inTok: 0, outTok: 0, usd: 0, by: {} };
+}
+function aiSaveUsage(u) { try { localStorage.setItem('ironlog.aiUsage', JSON.stringify(u)); } catch (e) { /* the cap can't hold without storage; calls still work */ } }
+function aiPrice(model, inTok, outTok) { const m = AI_MODELS[model] || AI_MODELS[AI_MODEL]; return (inTok * m.in + outTok * m.out) / 1e6; }
+function aiRecord(feature, model, inTok, outTok) {
+  const u = aiUsage(), usd = aiPrice(model, inTok, outTok);
+  const f = u.by[feature] = u.by[feature] || { calls: 0, inTok: 0, outTok: 0, usd: 0 };
+  [u, f].forEach(o => { o.calls++; o.inTok += inTok; o.outTok += outTok; o.usd += usd; });
+  aiSaveUsage(u);
+}
+function aiCapped() { return aiUsage().usd >= aiCap(); }
+/* What a feature can do right now: 'on', 'nokey' or 'capped'. */
+function aiStatus() { return !aiKey() ? 'nokey' : aiCapped() ? 'capped' : 'on'; }
+function aiCostHint(F) {
+  const one = aiPrice(AI_MODEL, F.tokIn, F.tokOut);
+  return `about $${one < 0.001 ? one.toFixed(5) : one.toFixed(4)} a ${F.per} — ${Math.floor(1 / one).toLocaleString()} for $1`;
+}
+function usd(v) { return `$${v < 0.01 && v > 0 ? v.toFixed(4) : v.toFixed(2)}`; }
+
+/* The one door to the API. Throws with .nokey, .capped, .status or .net set,
+   so each feature can fall back to its local path and say why. */
+async function aiCall({ feature, system, user, maxTokens = 1024 }) {
+  const key = aiKey();
+  if (!key) { const e = new Error('nokey'); e.nokey = true; throw e; }
+  if (aiCapped()) { const e = new Error('capped'); e.capped = true; throw e; }
+  let r;
+  try {
+    r = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': key,
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true',
+      },
+      body: JSON.stringify({
+        model: AI_MODEL,
+        max_tokens: maxTokens,
+        thinking: { type: 'disabled' },   // short structured jobs: no reasoning to pay for
+        ...(system ? { system } : {}),
+        messages: [{ role: 'user', content: user }],
+      }),
+    });
+  } catch (e) { const err = new Error('network'); err.net = true; throw err; }
+  if (!r.ok) {
+    const body = await r.text().catch(() => '');
+    let msg = '';
+    try { msg = JSON.parse(body).error.message; } catch (e) { msg = body.slice(0, 160); }
+    const err = new Error(msg || ('HTTP ' + r.status));
+    err.status = r.status; err.body = 'upstream ' + r.status + ' ' + body;
+    throw err;
+  }
+  const data = await r.json();
+  const u = data.usage || {};
+  aiRecord(feature, data.model || AI_MODEL, u.input_tokens || 0, u.output_tokens || 0);
+  return { text: (data.content || []).filter(b => b.type === 'text').map(b => b.text).join(''), stop: data.stop_reason, usage: u };
+}
+/* Why a call didn't happen, in words for a toast. */
+function aiWhy(e) {
+  if (e.nokey) return 'No AI key — add one in Settings → AI';
+  if (e.capped) return `This month's AI cap (${usd(aiCap())}) is reached — raise it in Settings → AI`;
+  if (e.net) return 'Couldn\'t reach Anthropic — offline?';
+  if (e.status === 401) return 'The AI key was refused — check it in Settings → AI';
+  if (e.status === 429) return 'Anthropic is rate-limiting this key — try again shortly';
+  if (e.status === 400 && /credit/i.test(e.message)) return 'The Anthropic account is out of credit';
+  return `AI call failed — ${e.message || e.status}`;
+}
+/* Settings: this month's spend and each feature's state. */
+function aiUsageHtml() {
+  const u = aiUsage(), cap = aiCap(), st = aiStatus();
+  const word = { on: 'On', nokey: 'Needs a key', capped: 'Paused — cap reached' };
+  return `<div class="card tight" style="margin-bottom:10px">
+    <div class="row between"><span class="eyebrow">This month</span>${u.calls ? '<button class="btn xs ghost" id="stAiReset">Reset count</button>' : ''}</div>
+    <div class="sub" style="margin:4px 0 6px">${u.calls ? `${u.calls} call${u.calls === 1 ? '' : 's'} · ${u.inTok.toLocaleString()} tokens in, ${u.outTok.toLocaleString()} out · about <b>${usd(u.usd)}</b> of ${usd(cap)}` : `No AI calls yet · cap ${usd(cap)}`}</div>
+    <div class="fitbar${st === 'capped' ? ' lag' : ''}" role="img" aria-label="${Math.min(100, cap ? u.usd / cap * 100 : 100).toFixed(0)}% of the cap used"><i style="width:${Math.min(100, cap ? u.usd / cap * 100 : 100).toFixed(1)}%"></i></div>
+    ${AI_FEATURES.map(F => `<div class="row between" style="margin-top:8px;gap:8px"><div class="grow"><b style="font-size:13px">${esc(F.name)}</b>
+      <div class="sub">${esc(F.what)} · ${esc(aiCostHint(F))}</div></div><span class="chip${st === 'on' ? ' green' : ''}">${word[st]}</span></div>`).join('')}
+    <div class="sub" style="margin-top:8px">Model: ${esc(AI_MODELS[AI_MODEL].name)}, $${AI_MODELS[AI_MODEL].in.toFixed(2)} / $${AI_MODELS[AI_MODEL].out.toFixed(2)} per million tokens in / out.</div>
+  </div>`;
+}
+function wireAiUsage(bg) {
+  const r = $('#stAiReset', bg);
+  if (r) r.onclick = () => confirmDlg('Reset this month\'s AI count? Only the count — nothing is refunded.', () => {
+    aiSaveUsage({ month: aiMonth(), calls: 0, inTok: 0, outTok: 0, usd: 0, by: {} });
+    $('#stAiUse', bg).innerHTML = aiUsageHtml(); wireAiUsage(bg);
+  }, 'Reset');
+}
 function aiKey() { try { return localStorage.getItem('ironlog.anthropicKey') || ''; } catch (e) { return ''; } }
 function setAiKey(k) {
   try { k ? localStorage.setItem('ironlog.anthropicKey', k) : localStorage.removeItem('ironlog.anthropicKey'); }
   catch (e) { /* private mode: no key, so the local parser is all there is */ }
 }
 
-/* Direct browser call. The key sits in this origin's localStorage and goes
-   nowhere but Anthropic — no repo, no bundle, no host. */
-async function claudeParse(text, system) {
-  const key = aiKey();
-  if (!key) { const e = new Error('nokey'); e.nokey = true; throw e; }
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': key,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    },
-    body: JSON.stringify({
-      model: 'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
-      system,
-      messages: [{ role: 'user', content: text }],
-    }),
-  });
-  if (!r.ok) {
-    const body = await r.text().catch(() => '');
-    const err = new Error(body || ('HTTP ' + r.status));
-    err.status = r.status; err.body = 'upstream ' + r.status + ' ' + body;
-    throw err;
-  }
-  const data = await r.json();
-  const out = (data.content || []).filter(b => b.type === 'text').map(b => b.text).join('');
+/* A JSON reply through aiCall. Haiku usually returns bare JSON, but
+   occasionally tops it with a sentence: salvage the object or array rather
+   than throwing the whole reply away. */
+async function claudeParse(text, system, feature) {
+  const { text: out } = await aiCall({ feature, system, user: text });
   let clean = out.replace(/```json|```/g, '').trim();
-  /* Haiku usually returns a bare array, but occasionally tops it with a
-     sentence. Salvage the array rather than throwing the whole reply away. */
-  if (clean[0] !== '[') {
-    const a = clean.indexOf('['), z = clean.lastIndexOf(']');
+  if (clean[0] !== '[' && clean[0] !== '{') {
+    const a = clean.search(/[[{]/), z = Math.max(clean.lastIndexOf(']'), clean.lastIndexOf('}'));
     if (a !== -1 && z > a) clean = clean.slice(a, z + 1);
   }
   try {
@@ -15570,7 +15670,8 @@ async function resolveVoiceSet(text) {
   const local = parseSetSpeech(text, S.active);
   if (local) return confirmVoiceSet(local, 'local');
 
-  if (!aiKey()) {
+  if (aiStatus() !== 'on') {
+    if (aiStatus() === 'capped') toast(aiWhy({ capped: true }));
     return confirmVoiceSet(
       { exercise: null, exerciseHow: 'unknown', sure: false, kg: null, reps: null, rpe: null, rir: null, said: text },
       'failed');
@@ -15591,6 +15692,7 @@ async function resolveVoiceSet(text) {
     }
     confirmVoiceSet(p, 'ai');
   } catch (e) {
+    if (!e.badjson) toast(aiWhy(e));
     confirmVoiceSet({ exercise: null, exerciseHow: 'unknown', sure: false, kg: null, reps: null, rpe: null, said: text }, 'failed');
   }
 }
@@ -15603,7 +15705,7 @@ Reply with JSON only: {"exercise":string|null,"kg":number|null,"reps":number|nul
 - exercise is the movement name only, no weight or reps. null if not stated.
 - Use null for anything not stated. No prose, no code fences.`;
 
-function claudeParseSet(text) { return claudeParse(text, SET_SYSTEM); }
+function claudeParseSet(text) { return claudeParse(text, SET_SYSTEM, 'voice'); }
 
 /* Nothing is written until this card is accepted. It shows the transcript as
    well as the reading of it, because the two failure modes look very different:
