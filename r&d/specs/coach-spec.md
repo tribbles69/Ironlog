@@ -101,6 +101,11 @@ instead.
 | 7 | Lifts you care most about? *(skipped for under 6 months)* | Pre-selected from Q1; add / remove | These go first in their session and get the most sets. Beginners get Q1's default main lifts |
 | 8 | Anything to go easy on? | Joints-to-leave-alone list (E5) and adaptation chips (C5) | Swaps exercises before the preview |
 
+**Profile basics** (Aaron, 2026-11-02), asked right after Q1 and only when the
+profile lacks them: which strength standards (men's / women's), date of birth
+(skippable) and bodyweight (saved as today's check-in). Someone who set up
+before this is asked once, before their next plan.
+
 Then the **fitting test invite** (§1b), then **Preview → Accept** (or
 **Tailor it**, §4, when a key is set).
 

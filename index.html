@@ -2114,7 +2114,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.67.0';
+const APP_VERSION = '0.67.1';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -14134,6 +14134,19 @@ function coachPriorityOptions(A) {
 /* ---- the setup, as chat steps: ask, answer chips, what it stores ---- */
 const COACH_STEPS = [
   { id: 'goal', ask: () => 'What are you training for?', kind: 'single', opts: () => COACH_GOALS },
+  /* Profile basics, asked only when the profile hasn't got them: every
+     strength standard is a multiple of bodyweight, read for sex, and age
+     sets balance norms, heart-rate zones and masters classes. */
+  { id: 'sex', ask: () => 'Strength standards differ for men and women — which should I use?', kind: 'single',
+    opts: () => [['male', 'Men\'s'], ['female', 'Women\'s']], show: () => !S.settings.sex, apply: v => { S.settings.sex = v; } },
+  { id: 'dob', ask: () => 'What\'s your date of birth? Age sets balance norms, heart-rate zones and masters classes.', kind: 'dob',
+    show: () => !S.settings.dob, apply: v => { if (v !== 'skip') S.settings.dob = v; } },
+  { id: 'bw', ask: () => 'What do you weigh? Every strength standard is a multiple of bodyweight.', kind: 'number', unit: () => U(),
+    show: () => !bodyweightKg(), apply: v => {
+      if (!(v > 0)) return;
+      const c = S.checkins.find(x => x.date === today());
+      if (c) c.weight = v; else S.checkins.push({ date: today(), weight: v, notes: '' });
+    } },
   { id: 'eventDate', ask: () => 'Got a date for it?', kind: 'date', show: A => A.goal === 'powerlifting' || A.goal === 'strongman' },
   { id: 'where', ask: () => 'Where do you train?', kind: 'single', opts: () => [['gym', 'Gym'], ['home', 'Home'], ['both', 'Both']] },
   { id: 'gymPlace', ask: () => places().length ? 'Which gym?' : 'Is it a standard gym — racks, barbells, dumbbells, cables and machines?', kind: 'place', which: 'gym',
@@ -14153,6 +14166,8 @@ function coachAnswerText(step, A) {
   if (v == null || (Array.isArray(v) && !v.length && step.id !== 'easy')) return '—';
   if (step.kind === 'single') { const o = step.opts(A).find(x => String(x[0]) === String(v)); return o ? o[1] : String(v); }
   if (step.kind === 'date') return v === 'none' ? 'No event yet' : fmtDate(v, { day: 'numeric', month: 'short', year: 'numeric' });
+  if (step.kind === 'dob') return v === 'skip' ? 'Rather not say' : `${fmtDate(v, { day: 'numeric', month: 'short', year: 'numeric' })} (${ageFrom(v)})`;
+  if (step.kind === 'number') return v > 0 ? wt(v) : 'Skipped';
   if (step.kind === 'place') { const p = coachPlace(v); return p ? p.name : '—'; }
   if (step.kind === 'days') return `${coachDays(A).map(d => COACH_WD.find(w => w[0] === d)[1]).join(', ')} — ${coachSplitName(coachDays(A).length)}`;
   if (step.kind === 'dayPlace') return coachDays(A).map(d => `${COACH_WD.find(w => w[0] === d)[1]} ${(A.dayPlace || {})[d] === 'home' ? 'home' : 'gym'}`).join(', ');
@@ -14231,7 +14246,7 @@ function coNext() {
 function coAsk(st, done) {
   const A = S.coach.answers;
   coBubble('coach', esc(st.ask(A)));
-  const finish = text => { coBubble('me', esc(text)); save(); done(); };
+  const finish = text => { if (st.apply) st.apply(A[st.id]); coBubble('me', esc(text)); save(); done(); };
   const wire = fn => $('#coAns', CO.bg).querySelectorAll('[data-cov]').forEach(b => b.onclick = () => fn(b.dataset.cov, b));
   if (st.kind === 'single') {
     coAnswer(coChips(st.opts(A), A[st.id] != null ? [String(A[st.id])] : null));
@@ -14251,6 +14266,24 @@ function coAsk(st, done) {
       <button class="btn primary sm" id="coDateOk">Use date</button></div>${coChips([['none', 'No event yet']])}`);
     $('#coDateOk', CO.bg).onclick = () => { const v = $('#coDate', CO.bg).value; if (!v) return toast('Pick a date, or tap No event yet'); A.eventDate = v; finish(coachAnswerText(st, A)); };
     wire(() => { A.eventDate = 'none'; finish('No event yet'); });
+  } else if (st.kind === 'dob') {
+    coAnswer(`<div class="row" style="gap:8px;align-items:flex-end"><div class="field grow" style="margin:0"><label for="coDob">Date of birth</label><input type="date" id="coDob" max="${today()}" value="${esc(A.dob && A.dob !== 'skip' ? A.dob : '')}"></div>
+      <button class="btn primary sm" id="coDobOk">OK</button></div>${coChips([['skip', 'Rather not say']])}`);
+    $('#coDobOk', CO.bg).onclick = () => {
+      const v = $('#coDob', CO.bg).value, a = v ? ageFrom(v) : null;
+      if (!v || !(a >= 10 && a <= 100)) return toast('Pick your date of birth, or tap Rather not say');
+      A.dob = v; finish(coachAnswerText(st, A));
+    };
+    wire(() => { A.dob = 'skip'; finish('Rather not say'); });
+  } else if (st.kind === 'number') {
+    coAnswer(`<div class="row" style="gap:8px;align-items:flex-end"><div class="field grow" style="margin:0"><label for="coNum">Bodyweight (${esc(st.unit())})</label><input type="number" inputmode="decimal" step="0.1" min="0" id="coNum" value="${A[st.id] > 0 ? nice(dw(A[st.id])) : ''}"></div>
+      <button class="btn primary sm" id="coNumOk">OK</button></div>${coChips([['skip', 'Skip for now']])}`);
+    $('#coNumOk', CO.bg).onclick = () => {
+      const kg = toKg(parseFloat(String($('#coNum', CO.bg).value).replace(',', '.')) || 0);
+      if (!(kg >= 25 && kg <= 350)) return toast('Enter your bodyweight, or tap Skip for now');
+      A[st.id] = kg; finish(coachAnswerText(st, A));
+    };
+    wire(() => { A[st.id] = 0; finish('Skip for now'); });
   } else if (st.kind === 'days') {
     const sel = new Set(A.days || []);
     const line = () => sel.size ? `${sel.size} day${sel.size === 1 ? '' : 's'} → <b>${esc(coachSplitName(sel.size))}</b>` : 'Tap your training days.';
@@ -14319,6 +14352,9 @@ function coAskPlace(st, A, finish) {
 }
 /* Spec §1b: offer the fitting test before building, or use a recent one. */
 function coInvite() {
+  /* Someone set up before these were asked still gets them, once. */
+  const miss = COACH_STEPS.find(s => ['sex', 'dob', 'bw'].includes(s.id) && s.show(S.coach.answers) && !(S.coach.asked || []).includes(s.id));
+  if (miss) return coAsk(miss, () => { (S.coach.asked = S.coach.asked || []).push(miss.id); save(); coInvite(); });
   const t = coachRecentTest();
   if (t) { coBubble('coach', `Using your fitting test from ${esc(fmtDate(t.date))} — it shapes the plan.`); return coBuildAndShow(t); }
   coBubble('coach', 'Want to do the fitting test first? 15 minutes at home now, the gym hour on your first gym day. It finds your weak spots and starting weights, and the plan uses both.');

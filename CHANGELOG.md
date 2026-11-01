@@ -13,6 +13,10 @@ rather than guessed.
 
 ---
 
+## 0.67.1 — 1 Nov 2026
+- The coach now asks for the basics the strength standards need, but only if your profile hasn't got them: which standards to use (men's or women's), your date of birth and your bodyweight. They're saved to your profile, and the bodyweight as today's check-in. Date of birth can be skipped.
+- If you'd already set up the coach, it asks for whatever's missing before your next plan.
+
 ## 0.67.0 — 1 Nov 2026
 - **New: the Coach** — a raised button in the middle of the bottom bar (a Coach menu in the 98 skin). The first time, it sets you up in a chat: your goal, any event date, where you train, which days (the number of days picks the split), session length, experience, the lifts you care about and anything to go easy on. Tap answers, no typing and no AI. It fills in what your log already knows, so you confirm rather than answer from scratch.
 - **Kit in two taps:** for a gym, "is it a standard gym?"; for home, tap what you've got (dumbbells, barbell, rack, bench, kettlebells, bands, pull-up bar).
