@@ -1401,6 +1401,7 @@ const DEFAULT_STATE = {
   fitTests: [],   // {id,date,mode:'home'|'full',bw,sex,age,home,power,ladder:{pattern:{variation,sets:[{kg,r,rpe}]}},tol,grip,engine,mt} — E12
   fitDraft: null, // the fitting test in progress, this device only (not synced)
   coach: { setupDone: false, answers: {}, notes: [] },   // D9 coach memory: answers, notes, plan — synced
+  programNames: {},   // program id -> name, for coach-built and imported programs (PROGRAM_NAMES covers shipped ones)
 };
 
 /* Persistence runs through IndexedDB — it's async (so the call sites below don't
@@ -1598,7 +1599,7 @@ const SYNC_SETS = {
   checkins: x => x.date, measures: x => x.id, calipers: x => x.id, mobTests: x => x.id, bp: x => x.id, glucose: x => x.id, fitTests: x => x.id,
   customEx: x => (typeof x === 'string' ? x : JSON.stringify(x)), programs: x => String(x),
 };
-const SYNC_MAPS = ['exAliases', 'programStarts', 'coach'];
+const SYNC_MAPS = ['exAliases', 'programStarts', 'coach', 'programNames'];
 const SYNC_LOCAL_SETTINGS = ['lastSeenVersion', 'backupSnoozeUntil', 'lastExportAt'];
 
 /* Device-only bookkeeping, outside S so it never syncs itself:
@@ -2114,7 +2115,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.67.1';
+const APP_VERSION = '0.68.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -9445,7 +9446,7 @@ function installProgram(P, startDate) {
         const out = { leaf, legacyName: e.name, notes: e.notes || '', mods: modsFromNote(e.notes),
           sets: e.sets.map(s => {
             const o = { w: s.w || 0, r: e.iso ? null : s.r, rpe: null, done: false,
-                        setType: ['top', 'backoff', 'amrap'].includes(s.type) ? s.type : 'working' };
+                        setType: ['warmup', 'top', 'backoff', 'amrap', 'drop'].includes(s.type) ? s.type : 'working' };
             if (s.t != null) o.t = s.t;          // this set's target RIR
             if (s.like === 'prev') o.like = 'prev';   // an AMRAP at the weight of the set before it
             if (e.iso) {                         // a hold: planned target, or max time
@@ -11144,10 +11145,11 @@ function openSettings() {
       </div>` : ''}
       ${oldPrograms().map(id => `
       <div class="row between" style="margin-bottom:10px">
-        <div class="grow"><div style="font-weight:650;font-size:13.5px">${esc(PROGRAM_NAMES[id] || id)}</div>
+        <div class="grow"><div style="font-weight:650;font-size:13.5px">${esc(programName(id))}</div>
           <div class="sub">Earlier program · ${S.workouts.filter(w => w.prog === id && w.status === 'planned').length} planned sessions left</div></div>
-        <button class="btn sm danger" data-oldprog="${esc(id)}" aria-label="Remove planned sessions from ${esc(PROGRAM_NAMES[id] || id)}">Remove</button>
+        <button class="btn sm danger" data-oldprog="${esc(id)}" aria-label="Remove planned sessions from ${esc(programName(id))}">Remove</button>
       </div>`).join('')}
+      <button class="btn sm wide" id="stPlanImport" style="margin-top:4px">Bring in a plan…</button>
       <div class="hr"></div>
       <div class="eyebrow" style="margin-bottom:8px">Backfill</div>
       <div class="sub" style="margin-bottom:8px">Mark past planned sessions as done at their prescribed loads. Today is never included. Flagged as estimates — they count toward volume and streaks but can't set a PR.</div>
@@ -11225,6 +11227,7 @@ function openSettings() {
         units = b.dataset.u;
         bg.querySelectorAll('#unitSeg button').forEach(x => x.classList.toggle('on', x === b));
       });
+      $('#stPlanImport', bg).onclick = () => openPlanImport();
       $('#stKeyShow', bg).onclick = ev => {
         const k = $('#stKey', bg), on = k.type === 'password';
         k.type = on ? 'text' : 'password'; ev.target.textContent = on ? 'Hide' : 'Show'; ev.target.setAttribute('aria-pressed', on);
@@ -11257,7 +11260,7 @@ function openSettings() {
       if (pg) pg.onclick = () => { closeModal(); openProgram(); };
       bg.querySelectorAll('[data-oldprog]').forEach(b => b.onclick = () => {
         const id = b.dataset.oldprog;
-        confirmDlg(`Remove the planned sessions left from ${PROGRAM_NAMES[id] || id}? Sessions you've trained are kept.`,
+        confirmDlg(`Remove the planned sessions left from ${programName(id)}? Sessions you've trained are kept.`,
           () => { const n = removeProgram(id); closeAllModals(); render(); toast(`${n} planned sessions removed`); },
           'Remove');
       });
@@ -11380,6 +11383,7 @@ const AI_MODEL = 'claude-haiku-5-5';
 /* Every AI feature, with a typical call's tokens for the cost hint. */
 const AI_FEATURES = [
   { id: 'voice', name: 'Voice logging, hard sentences', what: 'Reads a spoken set when the on-device grammar can\'t', tokIn: 450, tokOut: 40, per: 'set' },
+  { id: 'plan', name: 'Plan writer', what: 'Turns your own plan, in any format, into an Ironlog plan', tokIn: 4500, tokOut: 2500, per: 'plan' },
 ];
 const AI_CAP_DEFAULT = 1;
 function aiCap() { const c = S.settings.aiCap; return c == null || isNaN(+c) ? AI_CAP_DEFAULT : Math.max(0, +c); }
@@ -14086,23 +14090,11 @@ function coachProgram(plan) {
   return P;
 }
 function coachAccept(plan, after) {
-  const C = coachMem(), P = coachProgram(plan), prev = C.planProg;
-  const others = (S.programs || []).filter(id => id !== prev && S.workouts.some(w => w.prog === id && w.status === 'planned' && w.date >= today()));
-  const go2 = dropOthers => {
-    if (prev) removeProgram(prev);
-    if (dropOthers) others.forEach(removeProgram);
-    const n = installProgram(P);
-    Object.assign(C, { plan, planId: plan.id, planProg: P.id, planAt: today(), draft: null });
-    save(); bust();
+  const C = coachMem(), P = coachProgram(plan);
+  installAsking(P, today(), [C.planProg], n => {
+    Object.assign(C, { plan, planId: plan.id, planProg: P.id, planName: P.name, planAt: today(), draft: null });
+    save();
     if (after) after(n);
-  };
-  if (!others.length) return go2(false);
-  const names = others.map(id => PROGRAM_MANIFEST && id === PROGRAM_MANIFEST.id ? PROGRAM_MANIFEST.name : id).join(', ');
-  modal({
-    title: 'Other planned sessions',
-    body: `<p class="sub" style="margin-top:0">You also have <b>${esc(names)}</b> planned. Keep those sessions as well, or replace them with this plan? Anything already trained stays either way.</p>`,
-    foot: `<button class="btn" id="coKeep">Keep both</button><button class="btn primary" id="coRepl">Replace them</button>`,
-    onOpen: bg => { $('#coKeep', bg).onclick = () => { closeModal(); go2(false); }; $('#coRepl', bg).onclick = () => { closeModal(); go2(true); }; },
   });
 }
 
@@ -14132,7 +14124,11 @@ function coachPriorityOptions(A) {
 }
 
 /* ---- the setup, as chat steps: ask, answer chips, what it stores ---- */
+/* Plan questions only matter when the coach is building the plan. */
+const coachBuilding = A => !A.planMode || A.planMode === 'build';
 const COACH_STEPS = [
+  { id: 'planMode', ask: () => 'Do you want me to build you a plan? If you already follow one, you can bring it in instead.', kind: 'single',
+    opts: () => [['build', 'Build me a plan'], ['import', 'I\'ve got a plan — bring it in'], ['none', 'No plan — I\'ll just log']] },
   { id: 'goal', ask: () => 'What are you training for?', kind: 'single', opts: () => COACH_GOALS },
   /* Profile basics, asked only when the profile hasn't got them: every
      strength standard is a multiple of bodyweight, read for sex, and age
@@ -14147,19 +14143,19 @@ const COACH_STEPS = [
       const c = S.checkins.find(x => x.date === today());
       if (c) c.weight = v; else S.checkins.push({ date: today(), weight: v, notes: '' });
     } },
-  { id: 'eventDate', ask: () => 'Got a date for it?', kind: 'date', show: A => A.goal === 'powerlifting' || A.goal === 'strongman' },
-  { id: 'where', ask: () => 'Where do you train?', kind: 'single', opts: () => [['gym', 'Gym'], ['home', 'Home'], ['both', 'Both']] },
+  { id: 'eventDate', ask: () => 'Got a date for it?', kind: 'date', show: A => coachBuilding(A) && (A.goal === 'powerlifting' || A.goal === 'strongman') },
+  { id: 'where', ask: () => 'Where do you train?', kind: 'single', opts: () => [['gym', 'Gym'], ['home', 'Home'], ['both', 'Both']], show: coachBuilding },
   { id: 'gymPlace', ask: () => places().length ? 'Which gym?' : 'Is it a standard gym — racks, barbells, dumbbells, cables and machines?', kind: 'place', which: 'gym',
-    show: A => (A.where === 'gym' || A.where === 'both') },
+    show: A => coachBuilding(A) && (A.where === 'gym' || A.where === 'both') },
   { id: 'homePlace', ask: () => places().length ? 'And at home?' : 'What have you got at home?', kind: 'place', which: 'home',
-    show: A => (A.where === 'home' || A.where === 'both') },
-  { id: 'days', ask: () => 'Which days can you train? Tap them — the number of days picks the split.', kind: 'days' },
-  { id: 'dayPlace', ask: () => 'Which of those are gym days?', kind: 'dayPlace', show: A => A.where === 'both' },
-  { id: 'minutes', ask: () => 'How long per session?', kind: 'single', opts: () => [[30, '30 min'], [45, '45 min'], [60, '60 min'], [90, '90 min']] },
+    show: A => coachBuilding(A) && (A.where === 'home' || A.where === 'both') },
+  { id: 'days', ask: () => 'Which days can you train? Tap them — the number of days picks the split.', kind: 'days', show: coachBuilding },
+  { id: 'dayPlace', ask: () => 'Which of those are gym days?', kind: 'dayPlace', show: A => coachBuilding(A) && A.where === 'both' },
+  { id: 'minutes', ask: () => 'How long per session?', kind: 'single', opts: () => [[30, '30 min'], [45, '45 min'], [60, '60 min'], [90, '90 min']], show: coachBuilding },
   { id: 'experience', ask: () => 'How long have you trained properly?', kind: 'single', opts: () => COACH_EXP },
-  { id: 'priority', ask: () => 'Which lifts do you care most about? They go first and get the most sets.', kind: 'multi', show: A => A.experience !== 'under6m',
+  { id: 'priority', ask: () => 'Which lifts do you care most about? They go first and get the most sets.', kind: 'multi', show: A => coachBuilding(A) && A.experience !== 'under6m',
     opts: A => coachPriorityOptions(A).map(k => [k, leafName(k) + (variantLabel(keyLeaf(k)) ? ` (${variantLabel(keyLeaf(k))})` : '')]) },
-  { id: 'easy', ask: () => 'Anything to go easy on?', kind: 'multi', opts: () => MOB_JOINTS, none: 'Nothing' },
+  { id: 'easy', ask: () => 'Anything to go easy on?', kind: 'multi', opts: () => MOB_JOINTS, none: 'Nothing', show: coachBuilding },
 ];
 function coachAnswerText(step, A) {
   const v = A[step.id];
@@ -14217,20 +14213,23 @@ function openCoach(at) {
 function coGreet() {
   const C = S.coach, A = C.answers;
   const wk = C.planAt ? Math.floor(daysBetween(C.planAt, today()) / 7) + 1 : null;
-  coBubble('coach', C.plan
-    ? `Hi again. You're on <b>${esc(C.plan.name)}</b>${wk ? `, week ${wk} of ${C.plan.weeks}` : ''} — ${esc(coachAnswerText(COACH_STEPS[0], A))}, ${C.plan.days.length} days, ${C.plan.minutes} min.`
-    : 'Hi again. Your answers are saved — want a plan from them?');
+  const goal = COACH_STEPS.find(s => s.id === 'goal');
+  coBubble('coach', C.plan && C.planProg && S.programs.includes(C.planProg)
+    ? `Hi again. You're on <b>${esc(C.plan.name)}</b>${wk ? `, week ${wk} of ${C.plan.weeks}` : ''} — ${esc(coachAnswerText(goal, A))}, ${C.plan.days.length} days, ${C.plan.minutes} min.`
+    : C.planProg && S.programs.includes(C.planProg) ? `Hi again. You're on <b>${esc(programName(C.planProg))}</b>${wk ? `, week ${wk}` : ''}.`
+    : 'Hi again. Your answers are saved — want a plan?');
   coMenu();
 }
 function coMenu() {
   const C = S.coach;
-  coAnswer(`${coChips([...(C.plan ? [['see', 'See my plan']] : []), ['new', C.plan ? 'New plan' : 'Build my plan'], ['answers', 'Change my answers'], ['test', 'Fitting test']])}
+  coAnswer(`${coChips([...(C.plan ? [['see', 'See my plan']] : []), ['new', C.plan ? 'New plan' : 'Build my plan'], ['import', 'Bring in my own plan'], ['answers', 'Change my answers'], ['test', 'Fitting test']])}
     <div class="sub" style="margin-top:8px">Session debriefs, weekly reviews and chat come next — they'll use your AI key.</div>`);
   $('#coAns', CO.bg).querySelectorAll('[data-cov]').forEach(b => b.onclick = () => {
     const v = b.dataset.cov;
     coBubble('me', esc(b.textContent));
     if (v === 'see') return coPreview(C.plan, true);
-    if (v === 'new') return coInvite();
+    if (v === 'new') { C.answers.planMode = 'build'; return coInvite(); }
+    if (v === 'import') return coImport();
     if (v === 'answers') return coAnswers();
     if (v === 'test') { closeAllModals(); return openFitTest('home'); }
   });
@@ -14239,7 +14238,12 @@ function coMenu() {
 function coNext() {
   const A = S.coach.answers;
   const st = COACH_STEPS.find(s => (!s.show || s.show(A)) && !(S.coach.asked || []).includes(s.id));
-  if (!st) { S.coach.setupDone = true; S.coach.setupAt = S.coach.setupAt || today(); save(); return coInvite(); }
+  if (!st) {
+    S.coach.setupDone = true; S.coach.setupAt = S.coach.setupAt || today(); save();
+    if (A.planMode === 'import') { coBubble('coach', 'Good — let\'s bring your plan in. Any format works; an AI turns it into Ironlog\'s.'); return coImport(); }
+    if (A.planMode === 'none') { coBubble('coach', 'No plan — just log. Your answers are saved; open me whenever you want a plan.'); return coMenu(); }
+    return coInvite();
+  }
   coAsk(st, () => { (S.coach.asked = S.coach.asked || []).push(st.id); save(); coNext(); });
 }
 /* Ask one step; done() runs once it's answered. */
@@ -14350,6 +14354,16 @@ function coAskPlace(st, A, finish) {
     fresh();
   });
 }
+/* An imported plan becomes the coach's current plan. */
+function coImport() {
+  openPlanImport((P, n) => {
+    const C = coachMem();
+    Object.assign(C, { plan: null, planProg: P.id, planName: P.name, planAt: today(), draft: null });
+    save();
+    openCoach();
+    coBubble('coach', `${esc(P.name)} is on your calendar — ${n} session${n === 1 ? '' : 's'}. I'll review it with you as you train.`);
+  }, [coachMem().planProg]);
+}
 /* Spec §1b: offer the fitting test before building, or use a recent one. */
 function coInvite() {
   /* Someone set up before these were asked still gets them, once. */
@@ -14426,7 +14440,7 @@ function coAnswers() {
     const st = COACH_STEPS.find(s => s.id === b.dataset.costep);
     coAsk(st, () => coAnswers());
   });
-  $('#coBuild', CO.bg).onclick = () => { coBubble('me', 'Build my plan'); S.coach.setupDone = true; save(); coInvite(); };
+  $('#coBuild', CO.bg).onclick = () => { coBubble('me', 'Build my plan'); S.coach.setupDone = true; A.planMode = 'build'; save(); coInvite(); };
 }
 function openCoachSettings() {
   const C = coachMem();
@@ -14446,6 +14460,231 @@ function openCoachSettings() {
       $('#csForget', bg).onclick = () => confirmDlg('Forget your answers, notes and plan draft? Your training log and any plan already on the calendar stay.', () => {
         S.coach = { setupDone: false, answers: {}, notes: [], asked: [], forgotAt: Date.now() }; save(); closeAllModals(); render(); toast('The coach has forgotten everything');
       }, 'Forget');
+    },
+  });
+}
+
+/* ---------------- plans from anywhere: the Ironlog plan format (r&d/specs/plan-format.md) ----------------
+   A short JSON format any AI can write: the lifter copies the rules into their
+   own AI app with their plan, or Claude writes it here on their key, or they
+   paste or load a file. planToProgram() turns it into a normal program and
+   reports anything it had to guess before it's installed. */
+const PLAN_EQ_WORDS = { dumbbell: 'dumbbells', db: 'dumbbells', dbs: 'dumbbells', kettlebells: 'kettlebell', kb: 'kettlebell', band: 'resistance_band', bands: 'resistance_band',
+  resistance_bands: 'resistance_band', trapbar: 'trap_bar', hex_bar: 'trap_bar', smith_machine: 'smith', cables: 'cable', machines: 'machine', bw: 'bodyweight',
+  plate_loaded: 'plate_loaded_machine', ssb: 'safety_squat_bar', safety_bar: 'safety_squat_bar', barbells: 'barbell' };
+const PLAN_DEFAULT_DAYS = { 1: ['mon'], 2: ['mon', 'thu'], 3: ['mon', 'wed', 'fri'], 4: ['mon', 'tue', 'thu', 'fri'], 5: ['mon', 'tue', 'wed', 'thu', 'fri'], 6: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat'], 7: ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] };
+/* The rules, as given to an AI. r&d/specs/plan-format.md mirrors this text. */
+function planFormatText() {
+  const V = catalogue().V, eq = (V.equipment || []).map(e => e.id || e);
+  const moves = (catalogue().C.movements || []).filter(m => m.type !== 'cardio')
+    .map(m => `${m.name} — ${(m.equipment || []).join(', ')}`).sort();
+  return `You are writing a training plan for the Ironlog app. Reply with one JSON object and nothing else — no prose, no code fences.
+
+FORMAT
+{
+  "format": "ironlog-plan", "version": 1,
+  "name": "Short plan name",
+  "weeks": 8,                              // how many weeks to put on the calendar (1-52)
+  "weekdays": ["mon", "wed", "fri"],       // optional: one per day below, in order (mon tue wed thu fri sat sun)
+  "days": [
+    { "name": "Push", "exercises": [
+      { "name": "Bench Press", "equipment": "barbell", "sets": 3, "reps": "6-10", "rir": 2 },
+      { "name": "Triceps Pushdown", "equipment": "cable", "sets": 3, "reps": 12, "rir": 1, "notes": "superset with Lateral Raise" },
+      { "name": "Back Squat", "sets": [ { "reps": 5, "rir": 4, "type": "warmup" }, { "reps": 3, "rir": 1, "type": "top" }, { "reps": 5, "rir": 2, "type": "backoff" } ] },
+      { "name": "Plank", "sets": 3, "seconds": 45 },
+      { "name": "Farmers Carry", "equipment": "farmers_handles", "sets": 3, "metres": 20, "kg": 60 }
+    ] }
+  ],
+  "alternate": { "days": [ ... ] }         // optional: a B week, same number of days; odd weeks use "days", even weeks these
+}
+
+RULES
+- Exercise names: use a name from the list below wherever one fits, with an equipment value that list allows for it. Anything else is added as the lifter's own exercise.
+- equipment is one of: ${eq.join(', ')}. Leave it out for the usual version.
+- "unilateral": true for single-arm or single-leg work.
+- sets is a number (every set the same) or a list of sets. Each set can have reps, rir, kg, type, seconds, metres.
+- reps is a number or a range like "6-10". A range starts at the bottom and the lifter adds weight at the top.
+- rir is reps in reserve: 0 = failure, 2 = two left. Prefer rir to fixed weights — Ironlog works out the weight from the lifter's history. Only give kg when the plan really fixes a load.
+- type: warmup, working (default), top, backoff, amrap, drop.
+- Holds: "seconds" instead of reps. Carries and sleds: "metres" (and kg).
+- notes: free text shown with the exercise. Ironlog reads "superset with <exercise>", "tempo 3-1-1-0" and "paused" from it.
+- Training days per week: 1-7. Keep each day to what fits the lifter's time.
+- No medical advice; programme around injuries only as the lifter asks.
+
+EXERCISES (name — equipment it allows)
+${moves.join('\n')}`;
+}
+function planEq(v) {
+  if (!v) return null;
+  const k = String(v).trim().toLowerCase().replace(/[\s-]+/g, '_');
+  return PLAN_EQ_WORDS[k] || k;
+}
+/* Pull the JSON object out of whatever came back (an AI may wrap it in prose or fences). */
+function planParse(text) {
+  const t = String(text || '').replace(/```(?:json)?/g, '').trim();
+  const a = t.indexOf('{'), z = t.lastIndexOf('}');
+  if (a < 0 || z <= a) throw new Error('No plan found — paste the JSON your AI wrote (it starts with {).');
+  try { return JSON.parse(t.slice(a, z + 1)); }
+  catch (e) { throw new Error(`That isn't valid JSON (${e.message}). Ask your AI to send the plan again as JSON only.`); }
+}
+/* Either the plan format or a full Ironlog program → a program, plus what was guessed. */
+function planToProgram(obj) {
+  const warn = [], unknown = new Set(), V = catalogue().V, eqOk = new Set((V.equipment || []).map(e => e.id || e));
+  const id = 'import-' + uid();
+  if (Array.isArray(obj.workouts)) {                       // already a program (program.json shape)
+    if (!obj.workouts.length || !obj.workouts.every(w => Array.isArray(w.exercises))) throw new Error('The program has no sessions with exercises.');
+    obj.workouts.forEach(w => w.exercises.forEach(e => { if (!resolveName(e.name)) unknown.add(e.name); }));
+    return { P: { ...obj, id, name: obj.name || 'Imported program' }, warn, unknown: [...unknown] };
+  }
+  const days = obj.days;
+  if (!Array.isArray(days) || !days.length) throw new Error('The plan has no days. Each day needs a name and a list of exercises.');
+  if (days.length > 7) throw new Error(`${days.length} days a week — the most is 7.`);
+  const alt = obj.alternate && Array.isArray(obj.alternate.days) ? obj.alternate.days : null;
+  if (alt && alt.length !== days.length) { warn.push(`The B week has ${alt.length} day${alt.length === 1 ? '' : 's'} but the plan has ${days.length} — B weeks left out.`); }
+  const B = alt && alt.length === days.length ? alt : null;
+  let weeks = Math.round(+obj.weeks || 8);
+  if (!(weeks >= 1 && weeks <= 52)) { warn.push(`"weeks" was ${obj.weeks} — using 8.`); weeks = 8; }
+  const wdKeys = COACH_WD.map(w => w[0]);
+  let wd = Array.isArray(obj.weekdays) ? obj.weekdays.map(d => String(d).slice(0, 3).toLowerCase()) : null;
+  if (wd && (wd.length !== days.length || wd.some(d => !wdKeys.includes(d)))) { warn.push('The weekdays didn\'t match the days — placed them for you.'); wd = null; }
+  if (!wd) { wd = PLAN_DEFAULT_DAYS[days.length]; if (!Array.isArray(obj.weekdays)) warn.push(`No weekdays given — put on ${wd.map(d => COACH_WD.find(w => w[0] === d)[1]).join(', ')}.`); }
+  let anyKg = false;
+  const ex = e => {
+    const name = String(e.name || '').trim();
+    if (!name) throw new Error('An exercise has no name.');
+    if (!resolveName(name)) unknown.add(name);
+    let eq = planEq(e.equipment);
+    if (eq && !eqOk.has(eq)) { warn.push(`${name}: "${e.equipment}" isn't equipment Ironlog knows — used the usual version.`); eq = null; }
+    const base = { reps: e.reps, rir: e.rir, kg: e.kg, type: e.type, seconds: e.seconds, metres: e.metres };
+    const list = Array.isArray(e.sets) ? e.sets.map(s => ({ ...base, ...s })) : Array.from({ length: clamp(Math.round(+e.sets || 3), 1, 20) }, () => ({ ...base }));
+    const notes = [];
+    let range = null;
+    const sets = list.map(s => {
+      let r = null;
+      const rr = String(s.reps ?? '').match(/^\s*(\d{1,3})\s*(?:-|–|to)\s*(\d{1,3})\s*$/);
+      if (rr) { r = +rr[1]; range = range || [+rr[1], +rr[2]]; } else if (+s.reps > 0) r = Math.round(+s.reps);
+      const type = String(s.type || 'working').toLowerCase().replace(/[^a-z]/g, '');
+      const o = { w: +s.kg > 0 ? +s.kg : null, r, type: { warmup: 'warmup', top: 'top', topset: 'top', backoff: 'backoff', amrap: 'amrap', drop: 'drop', dropset: 'drop' }[type] || 'working' };
+      if (o.w) anyKg = true;
+      if (s.rir != null && s.rir !== '' && !isNaN(+s.rir)) o.t = clamp(Math.round(+s.rir), 0, 10);
+      if (+s.seconds > 0) o.sec = Math.round(+s.seconds);
+      if (+s.metres > 0) o.m = +s.metres;
+      return o;
+    });
+    if (range) notes.push(`${range[0]}–${range[1]} reps`);
+    if (e.notes) notes.push(String(e.notes));
+    const out = { name, notes: notes.join(' · '), sets };
+    if (eq) out.equipment = eq;
+    if (e.unilateral) out.execution = 'unilateral';
+    if (sets.some(s => s.sec)) out.iso = true;
+    return out;
+  };
+  const conv = d => ({ name: String(d.name || 'Day'), exercises: (d.exercises || []).map(ex) });
+  const A = days.map(conv), Bd = B ? B.map(conv) : null;
+  if (A.some(d => !d.exercises.length)) throw new Error('A day has no exercises.');
+  const wdNum = Object.fromEntries(COACH_WD.map(w => [w[0], w[2]]));
+  const P = { id, name: String(obj.name || 'Imported plan').slice(0, 60), ...(anyKg ? {} : { loads: 'rir' }), weekdays: wd.map(d => wdNum[d]), workouts: [] };
+  for (let w = 1; w <= weeks; w++) (Bd && w % 2 === 0 ? Bd : A).forEach((d, di) => P.workouts.push({ week: w, day: di + 1, name: `${d.name}${Bd ? (w % 2 ? ' A' : ' B') : ''}`, block: `Week ${w}`, exercises: d.exercises }));
+  return { P, warn, unknown: [...unknown], days: A, daysB: Bd, weeks, wd };
+}
+function programName(id) { return PROGRAM_NAMES[id] || (S.programNames || {})[id] || (PROGRAM_MANIFEST && id === PROGRAM_MANIFEST.id ? PROGRAM_MANIFEST.name : id); }
+/* Install, asking first about other programs that still have planned sessions. */
+function installAsking(P, startDate, replace, after) {
+  const others = (S.programs || []).filter(id => !replace.includes(id) && S.workouts.some(w => w.prog === id && w.status === 'planned' && w.date >= today()));
+  const go2 = dropOthers => {
+    replace.filter(Boolean).forEach(removeProgram);
+    if (dropOthers) others.forEach(removeProgram);
+    S.programNames = { ...(S.programNames || {}), [P.id]: P.name };
+    const n = installProgram(P, startDate);
+    save(); bust();
+    if (after) after(n);
+  };
+  if (!others.length) return go2(false);
+  modal({
+    title: 'Other planned sessions',
+    body: `<p class="sub" style="margin-top:0">You also have <b>${esc(others.map(programName).join(', '))}</b> planned. Keep those sessions as well, or replace them with this plan? Anything already trained stays either way.</p>`,
+    foot: `<button class="btn" id="coKeep">Keep both</button><button class="btn primary" id="coRepl">Replace them</button>`,
+    onOpen: bg => { $('#coKeep', bg).onclick = () => { closeModal(); go2(false); }; $('#coRepl', bg).onclick = () => { closeModal(); go2(true); }; },
+  });
+}
+function openPlanImport(after, replace) {
+  const st = aiStatus();
+  modal({
+    title: 'Bring in a plan',
+    body: `<p class="sub" style="margin-top:0">Any plan works — from a coach, a spreadsheet, a PDF or your own notes. It needs turning into Ironlog's plan format first, and an AI does that well.</p>
+      <div class="eyebrow">1 · With your own AI app</div>
+      <div class="sub" style="margin:4px 0 6px">Copy the instructions, paste them into ChatGPT, Claude, Gemini or similar with your plan, then paste its reply below.</div>
+      <button class="btn sm wide" id="piCopy">Copy instructions for your AI</button>
+      <div class="eyebrow" style="margin-top:14px">2 · Or have Claude write it here</div>
+      <div class="sub" style="margin:4px 0 6px">${st === 'on' ? 'Describe the plan or paste it in any format. Uses your AI key — about a penny or less.' : st === 'capped' ? 'Paused — this month\'s AI cap is reached (Settings → AI).' : 'Needs your own AI key (Settings → AI).'}</div>
+      <textarea id="piDesc" rows="4" placeholder="e.g. 4 days upper/lower, 60 min, bench and deadlift focus — or paste the plan" ${st === 'on' ? '' : 'disabled'} style="width:100%"></textarea>
+      <button class="btn sm wide" id="piAi" ${st === 'on' ? '' : 'disabled'} style="margin-top:6px">Write my plan</button>
+      <div class="eyebrow" style="margin-top:14px">3 · Paste the plan, or load a file</div>
+      <label class="sub" for="piText" style="display:block;margin:4px 0 6px">The JSON your AI wrote, or an Ironlog plan or program file.</label>
+      <textarea id="piText" rows="5" placeholder='{ "format": "ironlog-plan", ... }' style="width:100%;font-family:ui-monospace,monospace;font-size:12px"></textarea>
+      <div class="row" style="gap:8px;margin-top:6px"><button class="btn sm" id="piFile">Load a file</button><button class="btn sm primary grow" id="piGo">Check the plan</button></div>
+      <div class="sub" id="piMsg" role="status" style="margin-top:8px"></div>`,
+    foot: '<button class="btn ghost" data-close>Cancel</button>',
+    onOpen: bg => {
+      const msg = t => { $('#piMsg', bg).textContent = t; };
+      $('#piCopy', bg).onclick = () => copyText(`${planFormatText()}\n\nMY PLAN\n(paste or describe your plan here)`, 'Instructions copied — paste them into your AI app');
+      const check = text => {
+        let res;
+        try { res = planToProgram(planParse(text)); } catch (e) { return msg(e.message); }
+        openPlanPreview(res, after, replace);
+      };
+      $('#piGo', bg).onclick = () => { const t = $('#piText', bg).value.trim(); if (!t) return msg('Paste the plan first, or load a file.'); check(t); };
+      $('#piFile', bg).onclick = () => {
+        const inp = document.createElement('input');
+        inp.type = 'file'; inp.accept = '.json,.txt,application/json,text/plain';
+        inp.onchange = async e => { const f = e.target.files[0]; if (!f) return; const t = await f.text(); $('#piText', bg).value = t; check(t); };
+        inp.click();
+      };
+      $('#piAi', bg).onclick = async () => {
+        const d = $('#piDesc', bg).value.trim();
+        if (!d) return msg('Describe the plan or paste it in first.');
+        const b = $('#piAi', bg); b.disabled = true; msg('Claude is writing your plan…');
+        try {
+          const r = await aiCall({ feature: 'plan', system: planFormatText(), user: d, maxTokens: 8000 });
+          if (r.stop === 'max_tokens') throw new Error('The plan came back cut short — ask for fewer weeks or exercises.');
+          $('#piText', bg).value = r.text; msg('');
+          check(r.text);
+        } catch (e) { msg(e.nokey || e.capped || e.net || e.status ? aiWhy(e) : e.message); }
+        b.disabled = false;
+      };
+    },
+  });
+}
+/* What will be installed, and anything that was guessed, before it is. */
+function openPlanPreview(res, after, replace) {
+  const P = res.P, sessions = P.workouts.length;
+  const one = (x, s) => `${s.sec ? `${s.sec} s` : s.m ? `${s.m} m` : `${(x.notes.match(/^(\d+–\d+) reps/) || [])[1] || s.r || '?'} reps`}${s.t != null ? ` @ RIR ${s.t}` : ''}${s.w ? ` · ${wt(s.w)}` : ''}`;
+  const fmtSet = x => {
+    const same = x.sets.every(s => JSON.stringify(s) === JSON.stringify(x.sets[0]));
+    return same ? `${x.sets.length} × ${one(x, x.sets[0] || {})}`
+      : x.sets.map(s => `${one(x, s)}${s.type !== 'working' ? ` ${s.type === 'backoff' ? 'back-off' : s.type === 'warmup' ? 'warm-up' : s.type}` : ''}`).join(', ');
+  };
+  const rest = x => x.notes.replace(/^\d+–\d+ reps( · )?/, '');
+  const dayCards = (list, label) => list.map(d => `<div class="co-day"><b>${esc(d.name)}${label ? ` · ${label}` : ''}</b>${d.exercises.map(x => `<div class="co-x"><div class="grow">${esc(x.name)}${x.equipment ? ` <span class="dimmer">(${esc(EQ_TITLE[x.equipment] || x.equipment)})</span>` : ''}
+    <div class="sub">${esc(fmtSet(x))}${rest(x) ? ` · ${esc(rest(x))}` : ''}</div></div></div>`).join('')}</div>`).join('');
+  modal({
+    title: 'Check the plan',
+    body: `<div style="font-weight:750;font-size:16px">${esc(P.name)}</div>
+      <div class="sub" style="margin-bottom:8px">${res.days ? `${res.days.length} day${res.days.length === 1 ? '' : 's'} a week · ${res.weeks} weeks · ` : ''}${sessions} sessions${P.loads === 'rir' ? ' · weights from your history and RIR' : ''}</div>
+      ${res.unknown.length ? `<div class="sub" style="color:var(--gold);margin-bottom:6px">Not in Ironlog's exercise list, so added as your own: ${esc(res.unknown.join(', '))}. They log fine, but have no muscle map or strength standard.</div>` : ''}
+      ${res.warn.map(w => `<div class="sub" style="margin-bottom:4px">• ${esc(w)}</div>`).join('')}
+      ${res.days ? dayCards(res.days, res.daysB ? 'A week' : '') + (res.daysB ? dayCards(res.daysB, 'B week') : '') : `<div class="sub">A full program file — ${sessions} sessions as written.</div>`}
+      <div class="field" style="margin-top:12px"><label for="ppStart">Start</label><input type="date" id="ppStart" value="${today()}" min="${today()}"></div>`,
+    foot: `<button class="btn ghost" data-close>Back</button><button class="btn primary" id="ppGo">Put it on my calendar</button>`,
+    onOpen: bg => {
+      $('#ppGo', bg).onclick = () => {
+        const start = $('#ppStart', bg).value || today();
+        installAsking(P, start, (replace || []).filter(Boolean), n => {
+          closeAllModals(); render();
+          toast(`${n} session${n === 1 ? '' : 's'} added from ${P.name}`, 'green');
+          if (after) after(P, n);
+        });
+      };
     },
   });
 }

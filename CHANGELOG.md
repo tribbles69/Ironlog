@@ -13,6 +13,16 @@ rather than guessed.
 
 ---
 
+## 0.68.0 — 1 Nov 2026
+- **The coach asks first whether you want a plan:** *Build me a plan*, *I've got a plan — bring it in*, or *No plan — I'll just log*. If you bring your own, it skips the plan questions.
+- **New: Bring in a plan** (from the coach, or Settings → Training program). Any plan works, from a coach, a spreadsheet or your notes:
+  - **With your own AI app:** *Copy instructions for your AI* copies Ironlog's plan rules and exercise list. Paste them into ChatGPT, Claude or Gemini with your plan, then paste the reply back.
+  - **With Claude here:** describe or paste the plan and Claude writes it, on your own AI key.
+  - **From a file:** paste or load an Ironlog plan or program file.
+- **Check the plan** shows every day before anything is saved. It also lists any exercise that isn't in Ironlog's list (added as your own) and anything it had to guess. Then pick a start date and put it on your calendar.
+- Plans can use RIR targets (Ironlog works out the weights), fixed weights, rep ranges, warm-up, top and back-off sets, holds, carries and an alternating B week.
+- Coach-built and imported plans now show their names in Settings instead of an ID.
+
 ## 0.67.1 — 1 Nov 2026
 - The coach now asks for the basics the strength standards need, but only if your profile hasn't got them: which standards to use (men's or women's), your date of birth and your bodyweight. They're saved to your profile, and the bodyweight as today's check-in. Date of birth can be skipped.
 - If you'd already set up the coach, it asks for whatever's missing before your next plan.
