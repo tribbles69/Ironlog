@@ -718,7 +718,7 @@ No Ironlog AI server and no paid tier.
 ### [ ] D9. Coach — template plans, then AI coaching
 **Spec: `r&d/specs/coach-spec.md`** (planned 2026-11-01 — the spec wins over
 this summary). Uses D8 for the AI parts.
-- **Build first: plan builder from templates, no AI.** Setup questions (goal,
+- **Build first: a raised Coach button mid-nav opening a chat with its own small memory (`S.coach`: setup done?, answers, notes), and the template plan builder run inside that chat, no AI.** Setup questions (goal,
   date, place, tap the training days — the count picks the split: 1 full
   body · 2 upper/lower · 3 PPL · 4 ULUL · 5 PPLUL · 6 PPLPPL — session length,
   experience, priority lifts (skipped under 6 months), go-easy list), then a

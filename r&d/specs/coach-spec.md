@@ -12,7 +12,10 @@ it fast, free for most people, and stops the AI inventing numbers.
 
 ## Parts, in build order
 
-1. **Plan builder from templates** — local, no AI (§1–§4). *Build first.*
+0. **Coach button, chat sheet and coach memory** — local, no AI (§0).
+   *Build first, with part 1.*
+1. **Plan builder from templates**, run inside the coach chat — local, no AI
+   (§1–§4). *Build first.*
 2. **Training digest** — local summary every AI feature reads (§5).
 3. **Session debrief** — AI, on the session summary (§6).
 4. **Weekly / block review** — AI, a card on Home / Stats (§6).
@@ -25,11 +28,63 @@ training), so both paths must be right in the first build.
 
 ---
 
+## 0. The Coach button and its memory (added 2026-11-01)
+
+**One way in:** a raised round **Coach** button in the middle of the bottom
+bar, between Train and Stats, so the bar reads
+Home · Calendar · Train · **◉** · Stats · Health (three either side). In the
+98 skin it's a **Coach** menu. It opens the coach chat sheet. Everything in
+this spec starts from there; other entry points (session summary, Home
+card) open the same chat at the right spot.
+
+**The chat is the setup.** The §1 questions are asked *in the chat* as coach
+bubbles with tap-answer chips (day picker, time chips etc.) — no typing and
+**no AI**, so it works without a key and costs nothing. Free-text chat
+(§7) needs a key; without one the input says so and the chips still work.
+
+**Coach memory** — a small record the coach checks every time it opens, so
+it never asks the same thing twice. Stored as `S.coach` in the app's own
+data (not a cookie): on the device, in JSON export and in Drive sync, so a
+new phone remembers too.
+
+```
+S.coach = {
+  setupDone: true,            // false → chat opens straight into §1
+  setupAt: '2026-11-01',
+  answers: { goal, eventDate, where, days: ['mon',…], dayPlace: {mon:'gym'},
+             minutes, experience, priority: [leafKey…], easy: [joint…] },
+  planId: '…',                // the plan the setup produced, if accepted
+  notes: ['Hates lunges'],    // things the user asked the coach to remember
+  summary: '…',               // rolling short summary of past chats (AI)
+  lastDebrief: '…', lastReview: '…'
+}
+```
+
+- **On open:** no `setupDone` → start the setup. Done → greet with a short
+  status line from memory and the digest ("5-day PPLUL, week 3. Bench
+  stalled 2 weeks.") plus suggested prompts and chips: *New plan*,
+  *Change my answers*, *Review my week*, *Debrief last session*.
+- **"Change my answers"** reopens the setup with every answer pre-filled;
+  change one and go straight to the preview.
+- **Notes:** the coach may *suggest* a note ("Remember that you can't do
+  lunges?") — it's only saved when the user taps Yes. A user can also say
+  "remember …".
+- **Coach settings** (in the chat's ⋯): view and edit answers and notes,
+  *Forget everything* (clears `S.coach` after a confirm; training data is
+  untouched).
+- **Size:** notes capped (about 20 short lines) and `summary` kept under
+  ~300 words, since memory is sent with every AI call (cached).
+- **Existing users** (like Aaron, who already has data): `setupDone` starts
+  false, but the setup pre-fills everything it can from history, places and
+  the installed program, so it's a quick confirm, not a quiz.
+
 ## 1. Setup questions
 
-Asked from **Train → New plan** (and offered at the end of the welcome
-screen, C1). Skip any question the app can already answer from C1 or from
-history, and show the answer as a pre-filled step instead.
+Asked in the coach chat (§0) the first time it opens, and again from
+*Change my answers* or *New plan*. The welcome screen (C1) ends with a "Set
+up your coach" button that opens it. Skip any question the app can already
+answer from C1 or from history, and show the answer as a pre-filled step
+instead.
 
 | # | Question | Answers | What it drives |
 |---|---|---|---|
