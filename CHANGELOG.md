@@ -13,6 +13,18 @@ rather than guessed.
 
 ---
 
+## 0.70.0 — 1 Nov 2026
+- **The coach is more conversational.** It keeps track of what you were talking about: "and squat?" or "what about deadlift?" asks the same question for another lift, "why?" explains its last answer, and "yes" takes the suggestion it just made. Replies vary, there's a short typing pause, and each answer offers sensible next questions.
+- **New things to ask:**
+  - "How heavy should I go on bench for 3?": the weight from your working e1RM and the RIR target, with a warm-up ramp and plates one tap away.
+  - "Warm-up for squat", "plates for 140", "what's my max?", "any PRs lately?", "how many sessions this month?"
+  - "I've only got 25 minutes": what to keep from today's session.
+  - "I'm at home today": today's session with your home kit swapped in.
+  - "Can't be bothered today", "I missed yesterday"
+  - "100 lb in kg", "RPE 8 in RIR"
+  - Hello, thanks, help, and "who are you?"
+- **"My knee hurts"** gets: stop, and get it checked if it persists. The coach doesn't advise on injuries, but offers to go easy on that joint in your plan.
+
 ## 0.69.0 — 1 Nov 2026
 - **The coach now talks, with no AI needed.** Ask it from chips built from your own training, or just type a question. It answers from your log:
   - what's today's session, with a readiness note from your check-in

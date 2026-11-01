@@ -124,6 +124,9 @@ html[data-skin="win98"] #nav .navcoach{display:none}
 .co-day{margin-top:10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px}
 .co-x{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
 .co-x:last-child{border-bottom:0}
+.co-typing{letter-spacing:3px;animation:coType 1s infinite}
+@keyframes coType{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.co-typing{animation:none}}
 html[data-skin="win98"] .co-b{border-radius:0}
 html[data-skin="win98"] .co-b.coach{background:#fff;color:#000;border:1px solid #808080}
 html[data-skin="win98"] .co-b.me{background:var(--w-navy);color:#fff}
@@ -2115,7 +2118,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.69.0';
+const APP_VERSION = '0.70.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -14256,6 +14259,7 @@ function coMenu() {
 }
 function coMenuPick(v, label) {
   const C = S.coach;
+  if (CO) CO.lastText = null;
   coBubble('me', esc(label));
   if (v === 'menu') return coMenu();
   if (v === 'see') return coPreview(C.plan, true);
@@ -14265,6 +14269,14 @@ function coMenuPick(v, label) {
   if (v === 'test') { closeAllModals(); return openFitTest('home'); }
   if (v === 'go') { closeAllModals(); return go('workout'); }
   if (v === 'checkin') { closeAllModals(); return openCheckin(today()); }
+  if (v.startsWith('ramp:')) { const [, k, kg] = v.split(':'); return openRamp(k, +kg || 0); }
+  if (v.startsWith('plates:')) { const kg = +v.split(':')[1] || 0; if (/Open the plate loader/.test(label)) return openPlates(kg); return coAnswerTopic('plates', String(nice(dw(kg)))); }
+  if (v.startsWith('easy:')) {
+    const j = v.split(':')[1], A = coachMem().answers;
+    A.easy = [...new Set([...(A.easy || []), j])]; save();
+    coBubble('coach', `Noted — going easy on ${esc((MOB_JOINTS.find(x => x[0] === j) || [j, j])[1].toLowerCase())}.${C.plan ? ' Want a new plan that works around it?' : ''}`);
+    return coFollow(C.plan ? [['new', 'Rebuild my plan']] : []);
+  }
   const [topic, arg] = v.split(':');
   coAnswerTopic(topic, arg);
 }
@@ -14777,6 +14789,8 @@ function coMatch(text) {
   const q = ' ' + String(text).toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ') + ' ';
   const rem = String(text).match(/^\s*(?:please\s+)?(?:remember|note|don'?t forget)(?:\s+that)?[:,]?\s+(.{3,140})$/i);
   if (rem) return { topic: 'remember', arg: rem[1].trim().replace(/[.!]+$/, '') };
+  const more = coMatchMore(String(text), q);
+  if (more) return more;
   /* Help answers: words in the FAQ question count double, words in its answer once. */
   const words = q.split(' ').filter(w => w.length >= 3 && !CO_STOP.has(w));
   let faq = null, score = 0;
@@ -14795,11 +14809,214 @@ function coMatch(text) {
   if (faq && score >= 2) return { topic: 'faq', arg: faq };
   return null;
 }
+/* ---- conversation: small talk, follow-ups and quick sums (coach-spec §7) ---- */
+const coPick = a => a[Math.floor(Math.random() * a.length)];
+function coHello() { const h = new Date().getHours(); return h < 5 ? 'Up late' : h < 12 ? 'Morning' : h < 18 ? 'Afternoon' : 'Evening'; }
+function coNum(q) { const m = String(q).match(/(\d+(?:[.,]\d+)?)/); return m ? +m[1].replace(',', '.') : null; }
+/* The working weight for reps at an RIR, from the same e1RM the plans use. */
+function coWeightFor(key, reps, rir) {
+  const st = statsFor(key), e1 = autoE1(key) || (st ? st.best.e1 : 0);
+  if (!e1) return null;
+  return { e1, kg: roundLoadFor(loadFor(e1, reps, rir), keyLeaf(key)), reps, rir };
+}
+/* The reps and RIR the next planned session asks of a lift; else 5 at RIR 2. */
+function coPlannedFor(key) {
+  const w = S.workouts.filter(x => x.status === 'planned' && x.date >= today()).sort((a, b) => a.date < b.date ? -1 : 1).find(x => x.exercises.some(e => exKey(e) === key));
+  const e = w && w.exercises.find(x => exKey(x) === key), s = e && e.sets.find(x => isWorking(x) && x.r > 0);
+  return s ? { reps: s.r, rir: s.t != null ? s.t : targetRirFor(e, null), date: w.date } : { reps: 5, rir: 2 };
+}
+const CO_INTENTS = [
+  ['pain', /\b(hurt|hurts|hurting|injur\w*|pain\w*|tweak\w*|strain\w*|pulled|sprain\w*|twinge\w*)\b/],
+  ['convert', /\d+(\.\d+)?\s*(lb|lbs|pounds?|kg|kgs|kilos?)\b.*\b(in|to|into)\s*(kg|kgs|kilos?|lb|lbs|pounds?)\b/],
+  ['rirrpe', /\b(rpe|rir)\s*\d/],
+  ['plates', /\b(plates? (for|on)|how (do i|to) load|load (the )?bar)\b/],
+  ['warmup', /\b(warm ?ups?|ramp up)\b/],
+  ['weightfor', /\b(how heavy|what weight|how much (weight )?(should|do|can) i|what should i (lift|use|put on)|working weight|weight for \d+)\b/],
+  ['max', /\b(1rm|one rep max|my max|max (on|for)|what('s| is) my (best|max))\b/],
+  ['short', /\b(short on time|no time|in a rush|quick session|only (have|got) \d+|\d+ ?min(ute)?s? (only|today|left)|hurry|pushed for time)\b/],
+  ['home', /\b(at home|home today|no gym|gym('s| is)? (closed|shut)|travel\w*|hotel|away from (the )?gym)\b/],
+  ['motivate', /\b(don'?t feel like|unmotivated|no motivation|can'?t be bothered|lazy|not feeling it|motivat\w*|want to skip|thinking of skipping)\b/],
+  ['missed', /\b(missed|skipped|didn'?t (go|train|make it)|fell off|been away|haven'?t trained)\b/],
+  ['prs', /\b(prs?|personal (best|record)s?|records?)\b/],
+  ['count', /\b(how many (sessions|workouts|times)|streak|sessions this (week|month|year)|consisten\w*|how often)\b/],
+  ['help', /\b(what can you do|what do you do|help me|how do (i use|you work)|what can i ask)\b|^\s*help\b/],
+  ['who', /\b(who are you|are you (a bot|an? ai|real|human|chatgpt|claude)|what are you)\b/],
+  ['greet', /^\s*(hi|hey|hello|hiya|yo|sup|alright|morning|afternoon|evening|good (morning|afternoon|evening))\b/],
+  ['thanks', /\b(thanks|thank you|cheers|nice one|legend|ta)\b/],
+];
+const CO_LIFT_TOPICS = ['lift', 'stall', 'weightfor', 'max', 'warmup'];
+/* Conversation-level matches, before the training topics: follow-ups on the
+   last answer, small talk, and quick sums. */
+function coMatchMore(text, q) {
+  const ctx = (CO && CO.ctx) || {}, lift = coFindLift(q), short = q.trim().split(' ').length <= 4;
+  const follow = lift && ctx.topic && CO_LIFT_TOPICS.includes(ctx.topic);
+  if (/^\s*(why|how come|how so|explain|really|says who)\s*$/.test(q) && ctx.topic) return { topic: 'why' };
+  if (follow && /^\s*(and|what about|how about|same for|now|ok and)\b/.test(q)) return { topic: ctx.topic, arg: lift };
+  if (/^\s*(yes|yeah|yep|sure|ok|okay|go on|please|cool|right)\s*$/.test(q)) return ctx.next ? { topic: ctx.next[0], arg: ctx.next[1] } : { topic: 'okay' };
+  if (/^\s*(no|nope|nah|no thanks|not now)\s*$/.test(q)) return { topic: 'nothanks' };
+  const hit = CO_INTENTS.find(([, re]) => re.test(q));
+  if (hit && !((hit[0] === 'greet' || hit[0] === 'thanks') && !short)) {   // "thanks, should I deload?" is a question
+    return { topic: hit[0], arg: CO_LIFT_TOPICS.includes(hit[0]) ? lift : text };
+  }
+  /* "squat?" on its own, after a lift answer: the same question for that lift. */
+  if (follow && short && !CO_TOPICS.some(([, re]) => re.test(q))) return { topic: ctx.topic, arg: lift };
+  return null;
+}
+function coAnsGreet(D) {
+  const n = D.next;
+  const line = n ? (n.date === D.t ? `Today's ${n.name}.` : `Next up: ${n.name}, ${relDay(n.date).toLowerCase()}.`) : 'Nothing planned right now.';
+  return { html: `${coHello()}! ${esc(line)} ${coPick(['What do you want to know?', 'What can I help with?', 'Ask me anything about your training.'])}` };
+}
+function coAnsHelp() {
+  return { html: 'I answer from your own log, on this phone. Try:<br>• "What\'s today\'s session?" · "I\'ve only got 30 min" · "I\'m at home today"<br>• "How heavy should I go on bench for 5?" · "Warm-up for squat" · "Plates for 140"<br>• "How\'s my deadlift going?" · "Why has my bench stalled?" · "What\'s my max?"<br>• "Should I deload?" · "Review my week" · "Debrief my last session"<br>• "Remember I can\'t do lunges" · "What does RIR mean?"<br>Follow-ups work too — "and my squat?", "why?".' };
+}
+function coAnsWho() {
+  return { html: `I'm the coach built into Ironlog. I read your log here on the phone — no server — and answer from your own numbers with rules, not guesses.${aiKey() ? ' The odd question I can\'t place goes to Claude on your key.' : ' Add an AI key in Settings and I can hand odd questions to Claude too.'}` };
+}
+function coAnsMotivate(D) {
+  const n = D.next, main = n && n.exercises[0] ? exName(n.exercises[0]) : null;
+  return { html: coPick([
+    `Do just the main lift${main ? ` — ${esc(main)}` : ''}, three sets. If you still want to stop after that, stop. Most days you won't.`,
+    `Fair enough — some days are like that. Shrink it: warm up, ${main ? esc(main) : 'your main lift'}, done. Twenty minutes still counts.`,
+    `Turn up and do the first exercise. Momentum does the rest. If it's a genuinely rough day — no sleep, ill, stressed — mark it an off day and it won't count against your progress.`]) };
+}
+function coAnsMissed(D) {
+  return { html: coPick([
+    'No harm done. Don\'t double up — just pick up with the next planned session at your usual weights.',
+    'One missed session changes nothing. Carry on from the next one; don\'t try to cram it in.',
+    'Happens. If it was a day or two, carry on as planned. If it\'s been a week or more, start back a little lighter — your weights fill in from your RIR anyway.'])
+    + (D.week.missed >= 2 ? `<br>That's ${D.week.missed} this week, though — if the plan doesn't fit your week, I can build one with fewer days.` : ''),
+    act: D.week.missed >= 2 ? [['answers', 'Change my days']] : [] };
+}
+function coAnsShort(D, text) {
+  const mins = coNum(text) || 30, n = D.next;
+  if (!n) return { html: `With ${mins} minutes: warm up, then your main lift for 3 hard sets, and one accessory if there's time.` };
+  const keep = n.exercises.slice(0, mins <= 20 ? 1 : mins <= 35 ? 2 : 3);
+  return { html: `With ${mins} minutes, from <b>${esc(n.name)}</b> do:<br>${keep.map(e => `• ${esc(exName(e))} — ${e.sets.length} sets`).join('<br>')}<br>Skip the rest. The main lift is the session; the accessories are a bonus.` };
+}
+function coAnsHome(D) {
+  const n = D.next, A = (S.coach || {}).answers || {};
+  const home = coachPlace(A.homePlace) || places().find(p => /home/i.test(p.name)) || null;
+  if (!n) return { html: 'Nothing planned. At home, a solid session is: a squat or lunge, a push-up or dumbbell press, a row, and a carry or plank.' };
+  if (!home) return { html: 'I don\'t know your home kit yet. Tell me in the setup (Change my answers → Where do you train → Both), and I\'ll swap exercises for you.', act: [['answers', 'Change my answers']] };
+  const lines = n.exercises.map(e => {
+    if (!e.leaf || kitHas(e.leaf.equipment, home)) return `• ${esc(exName(e))} — as planned`;
+    const m = movementById(e.leaf.movement), eq = m && (m.equipment || []).find(v => kitHas(v, home));
+    return eq ? `• ${esc(exName(e))} → use ${esc(EQ_TITLE[eq] || eq)}` : `• ${esc(exName(e))} → skip (no kit for it at ${esc(home.name)})`;
+  });
+  return { html: `<b>${esc(n.name)}</b> at ${esc(home.name)}:<br>${lines.join('<br>')}<br>Weights will be different on new equipment — go by the RIR targets.` };
+}
+function coLiftPick(topic, D) {
+  const keys = D.lifts.map(l => l.key);
+  return { html: 'Which lift?', act: keys.slice(0, 4).map(k => [`${topic}:${k}`, shortLift(leafName(k))]) };
+}
+function coAnsWeightFor(D, key, text) {
+  if (!key) return coLiftPick('weightfor', D);
+  const want = String(text || '').match(/\b(?:for|x|×)\s*(\d{1,2})\b|\b(\d{1,2})\s*reps?\b/);
+  const plan = coPlannedFor(key), reps = want ? +(want[1] || want[2]) : plan.reps, rir = plan.rir;
+  const r = coWeightFor(key, reps, rir);
+  if (!r) return { html: `No ${esc(leafName(key))} logged yet — start light, do a set of ${reps}, log the RIR and I'll work it out from there.` };
+  return { html: `<b>${esc(leafName(key))}</b>: about <b>${wt(r.kg)}</b> for ${reps} at RIR ${rir}${plan.date && !want ? ` (what ${relDay(plan.date).toLowerCase()}'s session asks)` : ''}.<br>If the first set moves faster than expected, add 2.5 kg; if it grinds, drop 5%.`,
+    because: `Your working e1RM for ${leafName(key)} is ${wt(r.e1)} (last three sessions, newest weighted most). ${reps} reps plus ${rir} in reserve is worth ${reps + rir}, so the load is ${wt(r.e1)} ÷ (1 + ${reps + rir}/30), rounded to what loads.`,
+    act: [[`warmup:${key}`, 'Warm-up for it'], [`plates:${r.kg}`, `Plates for ${nice(dw(r.kg))}`]] };
+}
+function coAnsWarmup(D, key) {
+  if (!key) return coLiftPick('warmup', D);
+  const p = coPlannedFor(key), r = coWeightFor(key, p.reps, p.rir);
+  return { html: `Warm-up for <b>${esc(leafName(key))}</b>${r ? ` up to ${wt(r.kg)}` : ''}: the bar for 8–10, then about 50% × 5, 65% × 3, 80% × 2 and 90% × 1 if it's heavy — rest a minute between. The ramp builds it to your plates.`,
+    act: [[`ramp:${key}:${r ? r.kg : 0}`, 'Show my warm-up ramp']] };
+}
+function coAnsPlates(text) {
+  const n = coNum(text);
+  if (!n) return { html: 'Plates for what weight? Try "plates for 140".' };
+  const kg = toKg(n), res = loadPlates(kg, 20, inventory());
+  if (res.impossible) return { html: `${wt(kg)} is under the 20 kg bar.` };
+  return { html: `${wt(kg)} on a 20 kg bar: each side ${res.perSide.length ? res.perSide.map(p => `${p.count > 1 ? p.count + ' × ' : ''}${nice(p.kg)}`).join(' + ') : 'nothing — just the bar'}${!res.exact && res.achieved ? ` (closest with your plates: ${wt(res.achieved)})` : ''}.`,
+    act: [[`plates:${kg}`, 'Open the plate loader']] };
+}
+function coAnsMax(D, key) {
+  if (!key) return coLiftPick('max', D);
+  const b = bestSingleInfo(key), st = statsFor(key);
+  if (!st) return { html: `No ${esc(leafName(key))} logged yet.` };
+  return { html: b.est
+    ? `<b>${esc(leafName(key))}</b>: no true single logged, so your best estimate is ${wt(b.kg)} (from ${setLine(st.best)}).`
+    : `<b>${esc(leafName(key))}</b>: best single ${wt(b.kg)}; best estimate from any set ${wt(b.e1)}.`,
+    act: [[`lift:${key}`, `How's it going?`], [`weightfor:${key}`, 'How heavy next time?']] };
+}
+function coAnsPrs() {
+  const since = addDaysISO(today(), -30);
+  const list = S.workouts.filter(w => w.status === 'completed' && w.date >= since).sort((a, b) => a.date < b.date ? 1 : -1).flatMap(w => prsFor(w).map(p => ({ p, w })));
+  if (!list.length) return { html: 'No PRs in the last 30 days. Keep logging RIR honestly — the e1RM PRs come when the sets get easier at the same weight.' };
+  return { html: `PRs in the last 30 days:<br>${list.slice(0, 8).map(({ p, w }) => `• ${esc(p.name)} ${esc(prText(p))} — ${esc(fmtDate(w.date))}`).join('<br>')}${list.length > 8 ? `<br>…and ${list.length - 8} more.` : ''}` };
+}
+function coAnsCount(D) {
+  const n = d => coLifted(d).length;
+  return { html: `Sessions: ${n(7)} this week, ${n(30)} in 30 days, ${n(365)} in a year. You've trained ${D.streak} week${D.streak === 1 ? '' : 's'} in a row.${D.streak >= 4 ? ' Consistency is the whole game — nice.' : ''}` };
+}
+function coAnsConvert(text) {
+  const m = String(text).toLowerCase().match(/(\d+(?:[.,]\d+)?)\s*(lb|lbs|pounds?|kg|kgs|kilos?)/);
+  if (!m) return { html: 'Try "100 lb in kg".' };
+  const v = +m[1].replace(',', '.'), toLb = /^k/.test(m[2]);
+  return { html: toLb ? `${nice(v)} kg = ${nice(v * 2.2046226218)} lb.` : `${nice(v)} lb = ${nice(v / 2.2046226218)} kg.` };
+}
+function coAnsRirRpe(text) {
+  const m = String(text).toLowerCase().match(/\b(rpe|rir)\s*(\d+(?:\.\d)?)/);
+  if (!m) return { html: 'RIR = 10 − RPE.' };
+  const v = +m[2];
+  return { html: m[1] === 'rpe' ? `RPE ${nice(v)} = RIR ${nice(10 - v)} — ${10 - v <= 0 ? 'nothing left' : `${nice(10 - v)} rep${10 - v === 1 ? '' : 's'} left in the tank`}.` : `RIR ${nice(v)} = RPE ${nice(10 - v)}.` };
+}
+function coAnsPain() {
+  return { html: 'Stop anything that hurts, and if it\'s still there in a day or two, get it checked by a physio or doctor. I can\'t advise on injuries.<br>What I can do is go easy on a joint: the plan then avoids exercises that load it.',
+    act: MOB_JOINTS.slice(0, 7).map(([k, l]) => [`easy:${k}`, `Go easy on ${l.toLowerCase()}`]) };
+}
+function coAnsWhy() {
+  const c = (CO && CO.ctx) || {};
+  return { html: c.because ? esc(c.because) : 'Everything I say comes from your log — your sets, RIR, check-ins and plan. Turn on debug mode (Settings) and each answer gets a "how?" with the full working.' };
+}
+/* Follow-ups worth offering after each kind of answer. */
+const CO_NEXT = {
+  today: [['short', 'Short on time'], ['home', 'At home today'], ['motivate', 'Not feeling it']],
+  review: [['debrief', 'Debrief my last session'], ['volume', 'My volume'], ['deload', 'Should I deload?']],
+  debrief: [['review', 'Review my week'], ['today', 'Next session']],
+  stall: [['deload', 'Should I deload?'], ['volume', 'My volume']],
+  deload: [['recovery', 'My recovery'], ['review', 'Review my week']],
+  volume: [['weak', 'Weakest area'], ['review', 'Review my week']],
+  weak: [['volume', 'My volume'], ['stall', 'Anything stalled?']],
+  recovery: [['deload', 'Should I deload?']],
+  body: [['review', 'Review my week']],
+  event: [['today', 'Next session'], ['deload', 'Should I deload?']],
+  missed: [['today', 'Next session']],
+  motivate: [['short', 'Short session'], ['today', 'Today\'s session']],
+  short: [['today', 'Full session']],
+  prs: [['review', 'Review my week']],
+  count: [['review', 'Review my week']],
+};
+
 /* One answer, as a coach bubble plus any follow-up chips. */
 function coAnswerTopic(topic, arg) {
   const D = coachDigest();
   let r;
-  if (topic === 'today') r = coAnsToday(D);
+  if (topic === 'greet') r = coAnsGreet(D);
+  else if (topic === 'thanks') r = { html: coPick(['Any time.', 'Go get it.', 'No problem — shout if you need me.', 'Good luck with it.']) };
+  else if (topic === 'nothanks') r = { html: coPick(['No problem.', 'Fair enough.', 'OK — I\'m here if you need me.']) };
+  else if (topic === 'okay') r = { html: coPick(['Sure — what next?', 'OK. Anything else?', 'Right — what do you want to know?']) };
+  else if (topic === 'help') r = coAnsHelp();
+  else if (topic === 'who') r = coAnsWho();
+  else if (topic === 'motivate') r = coAnsMotivate(D);
+  else if (topic === 'missed') r = coAnsMissed(D);
+  else if (topic === 'short') r = coAnsShort(D, arg);
+  else if (topic === 'home') r = coAnsHome(D);
+  else if (topic === 'weightfor') r = coAnsWeightFor(D, arg && arg.includes('/') ? arg : (CO && CO.ctx && CO.ctx.lift), CO && CO.lastText);
+  else if (topic === 'warmup') r = coAnsWarmup(D, arg && arg.includes('/') ? arg : (CO && CO.ctx && CO.ctx.lift));
+  else if (topic === 'max') r = coAnsMax(D, arg && arg.includes('/') ? arg : (CO && CO.ctx && CO.ctx.lift));
+  else if (topic === 'plates') r = coAnsPlates(arg);
+  else if (topic === 'prs') r = coAnsPrs();
+  else if (topic === 'count') r = coAnsCount(D);
+  else if (topic === 'convert') r = coAnsConvert(arg);
+  else if (topic === 'rirrpe') r = coAnsRirRpe(arg);
+  else if (topic === 'pain') r = coAnsPain();
+  else if (topic === 'why') r = coAnsWhy();
+  else if (topic === 'today') r = coAnsToday(D);
   else if (topic === 'review') { r = coReview(D); S.coach.lastReview = D.t; save(); }
   else if (topic === 'debrief') r = coDebrief(arg ? S.workouts.find(w => w.id === arg) : D.lastDone);
   else if (topic === 'stall') r = arg ? coAnsStall(D, arg) : (D.lifts.find(l => l.stall) ? coAnsStall(D, D.lifts.find(l => l.stall).key) : { html: 'None of your main lifts is stalled — each has beaten its mark within its last five sessions.' });
@@ -14814,7 +15031,16 @@ function coAnswerTopic(topic, arg) {
   else if (topic === 'faq') r = { html: `<b>${esc(arg[0])}</b><br>${esc(arg[1])}` };
   else return;
   coBubble('coach', r.html + (debugOn() ? ' ' + why('digest') : ''));
-  coFollow(r.act || []);
+  /* Remember what this was about, so "and my squat?" and "why?" work next. */
+  const lift = arg && String(arg).includes('/') && !String(arg).includes(' ') ? arg : null;
+  if (['why', 'thanks', 'nothanks', 'okay', 'greet', 'help', 'who'].includes(topic)) return coFollow(r.act || []);   // small talk keeps the thread
+  CO.ctx = { topic, lift: lift || (CO.ctx || {}).lift || null, because: r.because || null, next: (r.act || [])[0] ? String(r.act[0][0]).split(':') : null };
+  if (topic === 'stall' && !r.because) CO.ctx.because = 'A lift counts as stalled when, over its last five sessions, none of the last four beat the first by more than 1% (e1RM, off days left out). The reasons come from your RIR against targets, sleep, bodyweight, the muscle\'s weekly sets and missed sessions.';
+  if (topic === 'deload' && !r.because) { const s = coDeloadScore(D); CO.ctx.because = s.pts.length ? `Score ${s.score}: ${s.pts.map(p => `${p[1]} (+${p[0]})`).join(', ')}. 3 or more says take a lighter week.` : 'Nothing in your log adds to the deload score — no stalls, effort on target, sleep and energy steady.'; }
+  if (topic === 'lift' && lift) CO.ctx.because = 'e1RM is Epley with your reps in reserve added to the reps, capped at 12. The working figure is your last three sessions, newest weighted most.';
+  const seen = new Set();
+  const act = [...(r.act || []), ...(CO_NEXT[topic] || [])].filter(([v]) => !seen.has(v) && seen.add(v)).slice(0, 4);
+  coFollow(act);
 }
 /* Follow-up chips under an answer, then the usual menu. */
 function coFollow(act) {
@@ -14835,6 +15061,7 @@ function coFormWire() {
 /* Typed into the chat: the local matcher first, then (with a key) the AI. */
 async function coTyped(text) {
   coBubble('me', esc(text));
+  CO.lastText = text;
   const m = coMatch(text);
   if (m && m.topic === 'remember') {
     coBubble('coach', `Remember this? "${esc(m.arg)}"`);
@@ -14846,7 +15073,14 @@ async function coTyped(text) {
     });
     return;
   }
-  if (m) return coAnswerTopic(m.topic, m.arg);
+  if (m) {
+    /* A short pause reads as the coach thinking, not a lookup. */
+    coBubble('coach', '<span class="co-typing" aria-label="Coach is typing">•••</span>');
+    const dots = $('#coLog', CO.bg).lastElementChild;
+    await new Promise(r => setTimeout(r, 300 + Math.random() * 300));
+    dots.remove();
+    return coAnswerTopic(m.topic, m.arg);
+  }
   if (aiStatus() !== 'on') {
     coBubble('coach', `I can't answer that one on my own yet${aiStatus() === 'capped' ? ' (and this month\'s AI cap is reached)' : ' — with your AI key added I could try'}. These I can do:`);
     return coMenu();
