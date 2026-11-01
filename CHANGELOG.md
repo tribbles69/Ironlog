@@ -13,6 +13,11 @@ rather than guessed.
 
 ---
 
+## 0.64.0 — 1 Nov 2026
+- **New: Debug mode** (Settings → Debug mode — show the working). Off by default. When it's on, worked-out numbers get a small **how?** button: tap it to see the inputs, the sum with the numbers in, and the result, plus a line saying whether it matches what the app shows.
+- Covers estimated 1RM, PRs, strength tiers, RIR ↔ RPE, rep-range verdicts, bar speed and today's e1RM from VBT, the recovery map (tap a muscle), DOTS and IPF GL, caliper body fat, mobility tests and the cardio heart-rate cues.
+- **Copy trace** puts the whole walk-through on the clipboard, ready to paste into a bug report. Debug mode never changes your data.
+
 ## 0.63.0 — 31 Oct 2026
 - New: Coach report, under Tools → Share. Pick the last 4, 8 or 12 weeks (or your own dates) and get a read-only summary for a coach: sessions per week, volume, bodyweight and check-in averages, your main lifts' best estimated 1RM against before, PRs, and every session's sets. Send it as text in a message, save it as a PDF, or save the raw JSON. Warm-ups, notes and check-ins can each be left out.
 - New: share a PR as an image. Each PR on the session-complete screen has a Share button, and so does each row of a lift's PR timeline in Stats. The card shows the lift, the number big, how much it beat your previous best, and your estimated 1RM line with the new PR in gold.
