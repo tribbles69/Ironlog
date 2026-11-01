@@ -715,8 +715,18 @@ No Ironlog AI server and no paid tier.
 - Every AI feature is optional and hidden or greyed until a key is added.
 - Remove any server-side AI function left after A1.
 
-### [ ] D9. AI coaching
-Uses D8.
+### [ ] D9. Coach — template plans, then AI coaching
+**Spec: `r&d/specs/coach-spec.md`** (planned 2026-11-01 — the spec wins over
+this summary). Uses D8 for the AI parts.
+- **Build first: plan builder from templates, no AI.** Setup questions (goal,
+  date, place, tap the training days — the count picks the split: 1 full
+  body · 2 upper/lower · 3 PPL · 4 ULUL · 5 PPLUL · 6 PPLPPL — session length,
+  experience, priority lifts (skipped under 6 months), go-easy list), then a
+  preview with swaps and Accept. Output is a normal `loads: "rir"` program.
+  Aaron tests it on himself and on Chelsea (new lifter).
+- Then: a local **training digest**, AI **session debrief** and **weekly
+  review**, optional **Tailor it** (slot swaps only, re-checked locally), and
+  **Ask the coach**. Nothing changes a plan without the user accepting it.
 - Logging stays tightly scoped structured calls, separate from any chat.
 - Hard system-prompt boundaries so the coach can't drift off-topic; no medical
   or injury advice.
