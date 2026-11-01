@@ -13,6 +13,12 @@ rather than guessed.
 
 ---
 
+## 0.66.0 — 1 Nov 2026
+- **New: Settings → AI — on your own key.** Ironlog has no AI server: add your own Anthropic key and the phone calls Anthropic directly. **Check key** tells you straight away whether it works.
+- **Monthly cap** (default $1): AI pauses for the rest of the month once this phone's estimated spend reaches it. Set it to 0 to turn AI off.
+- **This month** shows calls, tokens and the estimated cost, and lists each AI feature with what one use costs and whether it's on.
+- Voice logging's fallback now uses Claude Haiku 5.5: about a tenth of the old price, around $0.00006 a set. If AI can't help (no key, cap reached, offline, key refused), it says why instead of failing quietly.
+
 ## 0.65.0 — 1 Nov 2026
 - **New: Strength fitting test** (Health → Fitting test). Find your type before training it. The **home screen** takes 15 minutes: knee to wall, shoulder scratch, overhead squat flat and with heels raised, and eyes-closed balance. The **full test** adds an hour at the gym: power, a rep ladder for hinge, squat, press and pull (never a true max), leg-press rep tolerance, a grip hold and a 500 m row.
 - The rep ladder works out every next load from bodyweight and the reps you had left, and tells you when to stop.

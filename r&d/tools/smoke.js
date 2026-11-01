@@ -678,6 +678,34 @@ window.smoke = async function smoke(opts) {
     }
   });
 
+  await step('flow: AI on your own key — meter and cap (D8)', async () => {
+    const realFetch = window.fetch, oldKey = aiKey(), oldUse = localStorage.getItem('ironlog.aiUsage'), oldCap = S.settings.aiCap;
+    let sent = null, hits = 0;
+    window.fetch = async (url, o) => {
+      if (!String(url).includes('api.anthropic.com')) return realFetch(url, o);
+      hits++; sent = JSON.parse(o.body);
+      return new Response(JSON.stringify({ model: AI_MODEL, content: [{ type: 'text', text: '{"exercise":"bench","kg":100,"reps":5,"rpe":8}' }],
+        stop_reason: 'end_turn', usage: { input_tokens: 450, output_tokens: 40 } }), { status: 200 });
+    };
+    try {
+      setAiKey(''); localStorage.removeItem('ironlog.aiUsage');
+      if (aiStatus() !== 'nokey') throw new Error('no key should read as nokey');
+      try { await aiCall({ feature: 'voice', user: 'x' }); throw new Error('called without a key'); } catch (e) { if (!e.nokey) throw e; }
+      setAiKey('sk-ant-smoke'); S.settings.aiCap = 1;
+      const r = await claudeParseSet('bench a hundred for five');
+      if (r.kg !== 100 || sent.model !== AI_MODEL || sent.thinking.type !== 'disabled') throw new Error('bad request or parse');
+      const u = aiUsage();
+      if (u.calls !== 1 || u.inTok !== 450 || Math.abs(u.usd - aiPrice(AI_MODEL, 450, 40)) > 1e-12) throw new Error('usage not recorded');
+      S.settings.aiCap = u.usd;   // spent == cap → paused
+      try { await aiCall({ feature: 'voice', user: 'x' }); throw new Error('cap not enforced'); } catch (e) { if (!e.capped) throw e; }
+      if (hits !== 1) throw new Error(`${hits} network calls, expected 1`);
+      return `1 call, ${usd(u.usd)} recorded; no key and cap both block before the network`;
+    } finally {
+      window.fetch = realFetch; setAiKey(oldKey); S.settings.aiCap = oldCap;
+      oldUse ? localStorage.setItem('ironlog.aiUsage', oldUse) : localStorage.removeItem('ironlog.aiUsage');
+    }
+  });
+
   await step('food removed: tab gone, old route lands home', async () => {
     close();
     if (document.querySelector('#nav [data-page="food"]')) throw new Error('Food tab still in the nav');

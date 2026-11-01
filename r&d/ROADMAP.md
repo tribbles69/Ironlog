@@ -43,10 +43,10 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    2026-10-31, D8–D9 moved to the end of D; E5 and the new D16 moved ahead of
    D8 the same day; E1–E2 were done early at Aaron's request, 0.63.0).
 
-   **Where things stand (2026-11-01, 0.64.0):** everything in A–D is built
-   except D8 and D9. A4 and A6 are waiting on Aaron. Aaron asked for E11 and
-   E12 next (E11 shipped 0.64.0, E12's first build 0.65.0); the next build item
-   is **D8**, then D9, then E3 onwards.
+   **Where things stand (2026-11-01, 0.66.0):** everything in A–D is built
+   except D9. A4 and A6 are waiting on Aaron. Aaron asked for E11 and
+   E12 next (E11 shipped 0.64.0, E12's first build 0.65.0); D8 shipped 0.66.0.
+   The next build item is **D9**, then E3 onwards.
 2. **Check the code before trusting a status here.** Some items were marked from
    memory of planning chats, not from the code. If something is already built,
    tick it, note the version, and move on.
@@ -232,6 +232,9 @@ these come back; report anything that fails):
     test). Are the inputs quick enough mid-test, does the balance timer fill
     the boxes, and does the profile line read right? The full hour is planned
     for the Christmas test day.
+15. **AI key (0.66.0):** Settings → AI → paste your key → *Check key* should
+    say it works. Then say a set the grammar can't read and see whether
+    Claude fills it in; *This month* should count the call.
 
 ### [x] A5. Checks against Blast's bugs — checked 0.27.1 (superset item waits for B3)
 Blast shipped these; make sure Ironlog doesn't have them. Tick each.
@@ -703,7 +706,7 @@ the spec into `r&d/specs/health-page-spec.md` first.
   other targets.
 - Same rules as Health: on the device, in JSON export and Drive sync, C4.
 
-### [ ] D8. AI on the user's own key
+### [x] D8. AI on the user's own key — shipped 0.66.0 (spec `r&d/specs/ai-key-spec.md`; every call through `aiCall`, Claude Haiku 5.5, monthly cap default $1 per device, usage meter and per-feature cost hints in Settings → AI; no server-side AI function was left to remove)
 No Ironlog AI server and no paid tier.
 - A Settings field for the user's own Anthropic API key, stored only on the
   device, with a clear note on what it's used for and roughly what it costs.
