@@ -43,9 +43,10 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    2026-10-31, D8–D9 moved to the end of D; E5 and the new D16 moved ahead of
    D8 the same day; E1–E2 were done early at Aaron's request, 0.63.0).
 
-   **Where things stand (2026-11-01, 0.63.0):** everything in A–D is built
-   except D8 and D9. A4 and A6 are waiting on Aaron, so the next build item is
-   **D8**, then D9, then E3 onwards.
+   **Where things stand (2026-11-01, 0.64.0):** everything in A–D is built
+   except D8 and D9. A4 and A6 are waiting on Aaron. Aaron asked for E11 and
+   E12 next (E11 shipped 0.64.0); after E12 the next build item is **D8**, then
+   D9, then E3 onwards.
 2. **Check the code before trusting a status here.** Some items were marked from
    memory of planning chats, not from the code. If something is already built,
    tick it, note the version, and move on.
@@ -794,7 +795,7 @@ block of CSS, not edits scattered through `index.html`.
 - Muscle map skins (0.23.0) are separate from themes — check they read well on
   dark backgrounds.
 
-### [ ] E11. Debug mode — show the working
+### [x] E11. Debug mode — show the working — shipped 0.64.0 (spec `r&d/specs/debug-mode-spec.md`; Aaron's call: every calculation listed below in the first build; fitting-test scores join with E12)
 Added 2026-10-31 at Aaron's request, after seeing a step-by-step scoring trace
 for the strength fitting test's home screen. Goal: any number the app works out
 can show how it got there, so a wrong-looking result can be checked or reported.

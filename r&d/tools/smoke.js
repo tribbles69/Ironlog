@@ -596,6 +596,44 @@ window.smoke = async function smoke(opts) {
     return `report ${R.count} sessions, ${txt.split('\n').length} lines, preview ${prev.length} chars; PR card ${c.width}x${c.height}`;
   });
 
+  await step('flow: debug mode traces (E11)', async () => {
+    const was = S.settings.debug;
+    S.settings.debug = false;
+    if (why('e1', 100, 5, 8) !== '') throw new Error('why() drew a button with debug off');
+    S.settings.debug = true;
+    try {
+      if (!why('e1', 100, 5, 8).includes('data-why="e1"')) throw new Error('no how? button with debug on');
+      const bad = [], ran = [];
+      const run = (k, ...a) => {
+        const t = WHY[k].fn(...a);
+        if (!t) return;
+        ran.push(k);
+        t.checks.filter(c => !c.same).forEach(c => bad.push(`${k}: ${c.what} ${c.mine} vs ${c.app}`));
+        if (!traceText(t).startsWith('How:')) bad.push(`${k}: text`);
+      };
+      run('e1', 100, 5, 8); run('e1', 140, 1, null); run('e1', 60, 15, 7); run('rir', 7.5);
+      run('dots', 600, 93, 'male', false); run('dots', 120, 60, 'female', true);
+      const rk = allRanks()[0]; if (rk) run('rank', rk.key);
+      const wo = S.workouts.find(w => w.status === 'completed' && prsFor(w).length); if (wo) run('pr', wo.id, 0);
+      Object.keys(fatigueMap()).slice(0, 3).forEach(k => run('rec', k));
+      (S.calipers || []).slice(0, 2).forEach(c => run('cal', c.id));
+      MOB_TESTS.forEach(T => run('mob', T.id));
+      run('vbt', { place: 'bar', reps: [{ v: .62, peak: .9 }, { v: .55, peak: .8 }, { v: .48, peak: .7 }], loss: 22.6, conf: .8, est: null });
+      const leaf = (S.workouts.flatMap(w => w.exercises).find(e => e.leaf && slewLiftFor(e.leaf)) || {}).leaf;
+      if (leaf) run('lv', { leaf, lvp: { points: [{ kg: 60, v: 1 }, { kg: 80, v: .85 }, { kg: 100, v: .7 }, { kg: 120, v: .56 }] } });
+      run('range', { range: [5, 8], notes: 'rir 2', leaf }, [{ w: 100, r: 8, rpe: 8, done: true }, { w: 100, r: 7, rpe: 8, done: true }], today());
+      cardioWhyLast = { cfg: { machine: 'treadmill', lo: 130, hi: 145, ceiling: 170, interval: 60, cue: 'speed', work: 8, warm: 8, warmMin: 0 },
+        st: { el: 400, hr5: 152, hr20: 150, v: { speed: 8, incline: 1 }, lastCheck: 330, lastChange: 200, lastCeil: null, warmDone: true }, d: null };
+      run('cardio');
+      cardioWhyLast = null;
+      openWhy('e1', [100, 5, 8]); await wait(80);
+      if (!/^How:/.test(modalTitle())) throw new Error(`trace sheet opened "${modalTitle()}"`);
+      close();
+      if (bad.length) throw new Error(bad.join('; '));
+      return `${ran.length} traces, all agree (${[...new Set(ran)].join(', ')})`;
+    } finally { S.settings.debug = was; }
+  });
+
   await step('food removed: tab gone, old route lands home', async () => {
     close();
     if (document.querySelector('#nav [data-page="food"]')) throw new Error('Food tab still in the nav');

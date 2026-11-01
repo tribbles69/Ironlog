@@ -226,6 +226,16 @@ h3{font-size:13.5px;margin:0 0 8px}
 
 .rp-prev{max-height:40vh;overflow:auto;white-space:pre-wrap;font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace;
   background:var(--bg2);border:1px solid var(--line);border-radius:10px;padding:10px;margin:0;color:var(--txt)}
+.why{display:inline-flex;align-items:center;min-height:24px;padding:0 8px;margin:2px 0 0 4px;border-radius:999px;font:600 11px/1 inherit;
+  background:transparent;color:var(--txt);border:1px dashed var(--dim);cursor:pointer;vertical-align:middle}
+.why:hover{border-style:solid}
+.whytab{width:100%;border-collapse:collapse;font-size:13px}
+.whytab th,.whytab td{padding:6px 4px;border-bottom:1px solid var(--line);vertical-align:top;text-align:left}
+.whytab th.r,.whytab td.r{text-align:right;white-space:normal;word-break:break-word;max-width:58%}
+.whytab tr.wh th{padding-top:12px;font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--txt)}
+.whytab tr.res td{font-weight:750}
+.whyok{margin-top:10px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);border-left:4px solid var(--green);font-size:13px;color:var(--txt)}
+.whyok.bad{border-left-color:var(--red)}
 #printRoot{display:none}
 @media print{
   body > *:not(#printRoot){display:none !important}
@@ -2072,7 +2082,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.63.0';
+const APP_VERSION = '0.64.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -3737,6 +3747,7 @@ function wireMuscleMap(v) {
         const r = cv.getBoundingClientRect();
         const key = muscleAt(im, plan, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height);
         if (!key) return;
+        if (fm && debugOn()) return openWhy('rec', [key]);
         if (fm) return toast(`${MUSCLES[key]} · ${recoveryTap(fm[key])}`);
         const m = muscleScores().find(x => x.key === key);
         if (!m) return toast(`${MUSCLES[key]} — no ranked lift trains it yet`);
@@ -4939,6 +4950,448 @@ function openReport() {
   });
 }
 
+/* ---------------- debug mode: show the working (E11) ----------------
+   r&d/specs/debug-mode-spec.md. Off by default. why() puts a small "how?"
+   beside a worked-out number; tapping it runs that kind's explainer, which
+   redoes the sum step by step and then checks itself against the app's own
+   function. Nothing is built until the tap, and nothing is ever written. */
+const debugOn = () => !!S.settings.debug;
+function why(kind, ...args) {
+  if (!debugOn()) return '';
+  const X = WHY[kind];
+  return `<button type="button" class="why" data-why="${kind}" data-wa="${esc(JSON.stringify(args))}" aria-label="Show the working for ${esc(X ? X.label : kind)}">how?</button>`;
+}
+function trace(title) {
+  const t = { title, rows: [], checks: [] };
+  const val = v => v == null || v === '' ? '—' : String(v);
+  t.head = text => { t.rows.push({ h: text }); return t; };
+  t.step = (label, value, note) => { t.rows.push({ label, value: val(value), note: note || '' }); return t; };
+  t.result = (label, value, note) => { t.rows.push({ label, value: val(value), note: note || '', res: true }); return t; };
+  t.note = text => { t.rows.push({ p: text }); return t; };
+  /* The walk-through's answer against the app's: a mismatch is a bug in one of them. */
+  t.check = function (what, mine, app, fmt) {
+    fmt = fmt || String;
+    const same = typeof mine === 'number' && typeof app === 'number'
+      ? Math.abs(mine - app) <= 1e-6 * Math.max(1, Math.abs(app)) : String(mine) === String(app);
+    t.checks.push({ what, same, mine: fmt(mine), app: fmt(app) });
+    return t;
+  };
+  return t;
+}
+function traceText(t) {
+  const out = [`How: ${t.title}`, `Ironlog ${APP_VERSION} · ${new Date().toLocaleString()}`, ''];
+  t.rows.forEach(r => {
+    if (r.h) out.push('', `== ${r.h} ==`);
+    else if (r.p) out.push(r.p);
+    else out.push(`${r.res ? '→ ' : ''}${r.label}: ${r.value}${r.note ? `  (${r.note})` : ''}`);
+  });
+  if (t.checks.length) out.push('');
+  t.checks.forEach(c => out.push(c.same ? `✓ ${c.what} matches what the app shows (${c.app})` : `✗ ${c.what}: walk-through ${c.mine}, app shows ${c.app}`));
+  return out.join('\n');
+}
+function traceHtml(t) {
+  const rows = t.rows.map(r => r.h ? `<tr class="wh"><th colspan="2" scope="colgroup">${esc(r.h)}</th></tr>`
+    : r.p ? `<tr><td colspan="2" class="sub">${esc(r.p)}</td></tr>`
+    : `<tr${r.res ? ' class="res"' : ''}><td>${esc(r.label)}${r.note ? `<div class="sub">${esc(r.note)}</div>` : ''}</td><td class="r mono">${esc(r.value)}</td></tr>`).join('');
+  return `<table class="whytab"><thead><tr><th scope="col">Step</th><th scope="col" class="r">Value</th></tr></thead><tbody>${rows}</tbody></table>
+    ${t.checks.map(c => `<div class="whyok ${c.same ? 'ok' : 'bad'}" role="status">${c.same
+      ? `✓ ${esc(c.what)} matches what the app shows (${esc(c.app)})`
+      : `✗ ${esc(c.what)}: this walk-through gives ${esc(c.mine)} but the app shows ${esc(c.app)}. Copy the trace and report it.`}</div>`).join('')}`;
+}
+async function copyText(text, msg) {
+  try { await navigator.clipboard.writeText(text); toast(msg, 'green'); }
+  catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly', ''); ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch (e2) { /* no copy at all */ }
+    ta.remove();
+    toast(ok ? msg : 'Could not copy');
+  }
+}
+function openWhy(kind, args) {
+  const X = WHY[kind];
+  if (!X) return;
+  let t;
+  try { t = X.fn(...(args || [])); }
+  catch (e) { console.warn('why', kind, e); t = trace(X.label).note(`Couldn't build this trace: ${e.message}`); }
+  if (!t) return toast('Nothing to show the working for any more');
+  modal({
+    title: `How: ${t.title}`,
+    body: traceHtml(t),
+    foot: `<button class="btn ghost" id="whyCopy">Copy trace</button><button class="btn primary" data-close>Done</button>`,
+    onOpen: bg => { $('#whyCopy', bg).onclick = () => copyText(traceText(t), 'Trace copied'); },
+  });
+}
+/* Captured before any row handler, so "how?" inside a tappable row opens the
+   trace and not the row. */
+document.addEventListener('click', ev => {
+  const b = ev.target.closest && ev.target.closest('[data-why]');
+  if (!b) return;
+  ev.stopPropagation(); ev.preventDefault();
+  let a = [];
+  try { a = JSON.parse(b.dataset.wa || '[]'); } catch (e) { /* bad args: open with none */ }
+  openWhy(b.dataset.why, a);
+}, true);
+
+const rirText = rpe => rpe == null ? 'no RIR logged' : `RIR ${nice(rpeToRir(rpe))} (RPE ${nice(rpe)})`;
+const setLine = s => `${wt(s.w)} × ${s.r}${s.rpe != null ? ` @ RIR ${nice(rpeToRir(s.rpe))}` : ''}`;
+/* Where targetRirFor's answer came from: the note, the block, or the default. */
+function targetRirSource(e, blockRir) {
+  const n = String((e && e.notes) || '').toLowerCase();
+  const m = n.match(/stop (\d) shy/) || n.match(/rir\s*(\d)/) || n.match(/@\s*(\d)\b/);
+  return m ? `the exercise note ("${m[0]}")` : blockRir != null ? 'the training block' : 'the default';
+}
+/* The cardio loop's latest call, kept only while debug mode is on. */
+let cardioWhyLast = null;
+
+const WHY = {
+  e1: { label: 'estimated 1RM', fn: (kg, r, rpe) => {
+    const t = trace('estimated 1RM');
+    t.step('Weight', wt(kg)).step('Reps', r);
+    const ok = rpe >= 5 && rpe <= 10, rir = ok ? 10 - rpe : 0, eff = (r || 0) + rir;
+    t.step('Effort', rpe == null ? 'not logged' : rirText(rpe), rpe == null ? 'counted as 0 reps left' : ok ? 'RIR = 10 − RPE' : 'outside RPE 5–10, so counted as 0 reps left');
+    t.step('Reps the set was worth', `${r} + ${nice(rir)} = ${nice(eff)}`, 'reps done + reps left');
+    let mine;
+    if (!kg || !r) { mine = 0; t.note('No weight or no reps: no estimate.'); }
+    else if (eff <= 1) { mine = kg; t.step('Rule', 'a true single', 'worth 1 rep or less, so the weight is the 1RM'); }
+    else {
+      const c = Math.min(eff, 12);
+      if (eff > 12) t.step('Cap', `${nice(eff)} → 12`, 'Epley drifts past 12 reps, so it stops there');
+      mine = kg * (1 + c / 30);
+      t.step('Epley', `${nice(dw(kg, 2))} × (1 + ${nice(c)} ÷ 30)`, 'weight × (1 + reps ÷ 30)');
+    }
+    t.result('Estimated 1RM', wt(mine));
+    return t.check('Estimated 1RM', mine, e1rm(kg, r, rpe), v => wt(v));
+  } },
+
+  rir: { label: 'RIR and RPE', fn: rpe => {
+    const t = trace(`RPE ${nice(rpe)} ↔ RIR`);
+    t.step('Stored', `RPE ${nice(rpe)}`, 'Ironlog stores RPE; every effort sum uses it');
+    t.step('Shown', `10 − ${nice(rpe)} = ${nice(10 - rpe)}`, 'RIR = 10 − RPE, reps left in the tank');
+    t.step('Typing it back', `10 − ${nice(10 - rpe)} = RPE ${nice(rpe)}`, 'RPE = 10 − RIR, so nothing is lost either way');
+    t.note('In the e1RM the reps left are added to the reps done: 100 × 5 at RIR 2 is worth 7 reps.');
+    t.result('RIR', nice(10 - rpe));
+    return t.check('RIR', 10 - rpe, rpeToRir(rpe)).check('RPE back', rirToRpe(10 - rpe), rpe);
+  } },
+
+  pr: { label: 'PR', fn: (woId, i) => {
+    const wo = S.workouts.find(x => x.id === woId), p = wo && prsFor(wo)[i];
+    if (!p) return null;
+    const t = trace(`PR — ${p.name || 'lift'}`);
+    t.step('Session', fmtDate(wo.date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }), wo.name || '');
+    if (p.key) {
+      const split = keyPR(p.key).map(id => modLabel(id).toLowerCase());
+      t.step('Record line', leafName(p.key), [keyVariantLabel(p.key), `key ${p.key}`].filter(Boolean).join(' · '));
+      t.step('Kept apart by', split.length ? split.join(', ') : 'nothing extra', split.length ? 'modifiers that split the PR line (D10)' : 'no chains, bands, slingshot or equipped');
+    }
+    if (p.label) {
+      t.step('Record', p.label, p.what || '');
+      t.note('Holds, carries, races, time caps and stone series each keep their own record: the best hold or time at a weight, furthest at a weight, most reps in the cap. This beat the best one dated before this session.');
+      return t.result('PR', 'yes');
+    }
+    const e = wo.exercises.find(x => exKey(x) === p.key);
+    const sets = e ? e.sets.filter(s => s.done && isPRSet(s) && s.r > 0) : [];
+    t.head('This session');
+    t.note('Warm-ups and drop sets never count; only done sets with reps.');
+    sets.forEach((s, k) => t.step(`Set ${k + 1}`, setLine(s), s.w > 0 ? `e1RM ${wt(e1rm(s.w, s.r, s.rpe))}` : 'bodyweight'));
+    const best = sets.length ? bestSetOf(sets) : null;
+    if (best) t.step('Best set', setLine(best), best.w > 0 ? 'highest e1RM' : 'most reps (nothing loaded)');
+    const st = statsFor(p.key, wo.date);
+    t.head('History before this date');
+    if (!st) return t.note('Nothing logged before: a first session sets the marks, it isn\'t a PR.');
+    t.step('Sets counted', st.totalSets, S.settings.prCountEst !== false ? 'backfilled sets count (Settings)' : 'backfilled sets left out (Settings)');
+    let mine;
+    if (best && best.w > 0) {
+      t.step('Best before', `${setLine(st.best)} · ${fmtDate(st.best.date)}`, `e1RM ${wt(st.best.e1)}`);
+      const now = e1rm(best.w, best.r, best.rpe);
+      mine = now > st.best.e1;
+      t.step('Compare', `${wt(now)} ${mine ? '>' : '≤'} ${wt(st.best.e1)}`, 'beats it only if strictly higher');
+    } else if (best) {
+      t.step('Best before', st.bestBw ? `${st.bestBw.r} reps · ${fmtDate(st.bestBw.date)}` : 'no bodyweight sets', 'bodyweight sets only race bodyweight sets');
+      mine = !!st.bestBw && best.r > st.bestBw.r;
+      t.step('Compare', st.bestBw ? `${best.r} ${mine ? '>' : '≤'} ${st.bestBw.r}` : '—');
+    }
+    t.result('PR', mine ? 'yes' : 'no');
+    return t.check('PR', mine ? 'yes' : 'no', best && beatsBest(st, best.w, best.r, best.rpe) ? 'yes' : 'no');
+  } },
+
+  rank: { label: 'strength tier', fn: key => {
+    const name = leafName(key), t = trace(`${name} — tier`);
+    const src = bodyweightSource(), bw = bodyweightKg(), st = statsFor(key), raw = STD[name];
+    t.step('Bodyweight', wt(bw), src.from === 'checkin' ? `check-in ${fmtDate(src.date)}` : src.from === 'fallback' ? 'profile figure — no check-in weight' : 'none');
+    if (!st) return t.note('No logged sets.');
+    t.step('Best e1RM', wt(st.best.e1), `${setLine(st.best)} · ${fmtDate(st.best.date)}${st.best.est ? ' · backfilled' : ''}`);
+    if (!raw) return t.note(`No strength standard for "${name}".`);
+    const fem = S.settings.sex === 'female';
+    t.step('Standard row', name, `× bw: ${raw.slice(0, 5).join(' / ')}`);
+    t.step('Sex', fem ? `female, × ${raw[5]}` : 'male, × 1', fem ? 'the row\'s female factor' : '');
+    const th = raw.slice(0, 5).map(v => v * (fem ? raw[5] : 1)), ratio = st.best.e1 / bw;
+    t.step('Ratio', `${nice(dw(st.best.e1))} ÷ ${nice(dw(bw))} = ${ratio.toFixed(3)}× bw`);
+    t.head('Tier marks');
+    th.forEach((m, i) => t.step(TIERS[i], `${m.toFixed(2)}× = ${wt(m * bw)}`, ratio >= m ? 'reached' : 'not yet'));
+    let score, tier = -1;
+    if (ratio < th[0]) { score = ratio / th[0] * 20; t.step('Score', `${ratio.toFixed(3)} ÷ ${th[0].toFixed(2)} × 20`, 'below the first mark'); }
+    else {
+      let i = 4; while (i > 0 && ratio < th[i]) i--; tier = i;
+      if (i === 4) { score = 100; t.step('Score', '100', 'at or past Elite'); }
+      else {
+        score = 20 * (i + 1) + (ratio - th[i]) / (th[i + 1] - th[i]) * 20;
+        t.step('Score', `20 × ${i + 1} + (${ratio.toFixed(3)} − ${th[i].toFixed(2)}) ÷ (${th[i + 1].toFixed(2)} − ${th[i].toFixed(2)}) × 20`, '20 points a tier, the part-way bit in between');
+      }
+    }
+    score = clamp(score, 0, 100);
+    t.result('Tier', tier < 0 ? 'Untrained' : TIERS[tier]).result('Score', score.toFixed(1));
+    const app = rankFor(key);
+    return t.check('Score', score, app ? app.score : NaN, v => (+v).toFixed(1));
+  } },
+
+  range: { label: 'rep-range verdict', fn: (e, sets, date) => {
+    const t = trace('rep-range verdict');
+    const [lo, hi] = e.range || [];
+    const ab = activeBlock(date || today()), tr = targetRirFor(e, ab ? ab.kind.rir : null);
+    t.step('Range', `${lo}–${hi} reps`).step('Target RIR', tr, `from ${targetRirSource(e, ab ? ab.kind.rir : null)}`);
+    t.step('Sets judged', date === today() ? 'today\'s' : `last time, ${fmtDate(date)}`);
+    const work = (sets || []).filter(s => s.done !== false && isPRSet(s) && s.setType !== 'amrap' && s.w > 0 && s.r > 0);
+    t.note('Working sets only: no warm-ups, drops or AMRAPs, and only loaded sets with reps.');
+    if (!work.length) return t.note('No working sets to judge.');
+    const W = Math.max(...work.map(s => s.w)), at = work.filter(s => s.w === W);
+    t.step('Top weight', wt(W), `${at.length} set${at.length === 1 ? '' : 's'} at it`);
+    at.forEach((s, k) => t.step(`At ${wt(W)} #${k + 1}`, `${s.r} reps${s.rpe != null ? ` @ RIR ${nice(rpeToRir(s.rpe))}` : ''}`));
+    const rirs = at.filter(s => s.rpe != null).map(s => rpeToRir(s.rpe));
+    const allTop = at.every(s => s.r >= hi), allRir = rirs.every(r => r >= tr);
+    t.head('Rules, in order');
+    t.step(`Every set reached ${hi}`, allTop ? 'yes' : 'no');
+    t.step(`Every logged RIR ≥ ${tr}`, rirs.length ? (allRir ? 'yes' : 'no') : 'none logged — counts as yes');
+    let kind;
+    if (allTop && allRir) {
+      kind = 'up';
+      const step = e.leaf && (e.leaf.equipment === 'dumbbells' || e.leaf.equipment === 'kettlebell') ? 2 : 2.5;
+      t.step('→ up', `max(${nice(dw(W))} × 1.025, ${nice(dw(W))} + ${step}) rounded`, 'the bigger of +2.5% or one step, rounded to what loads');
+      t.result('Next', `${wt(rangeNextLoad(W, e.leaf))} × ${lo}`);
+    } else if (at[0].r < lo) { kind = 'below'; t.step(`First set under ${lo}`, `${at[0].r} reps`, '→ below the range'); }
+    else { kind = 'build'; if (allTop) t.note(`Reached ${hi}, but harder than RIR ${tr}: same weight again.`); }
+    t.result('Verdict', kind);
+    const app = rangeVerdict(e, sets, date);
+    return t.check('Verdict', kind, app ? app.kind : 'none');
+  } },
+
+  vbt: { label: 'bar speed', fn: v => {
+    const t = trace('bar speed (VBT)');
+    t.step('Phone', v.place === 'pocket' ? 'in a pocket' : 'on the bar', v.place === 'pocket' ? 'reads the body, not the bar: confidence × 0.6' : '');
+    (v.reps || []).forEach((r, i) => t.step(`Rep ${i + 1}`, `${r.v.toFixed(3)} m/s`, `peak ${r.peak.toFixed(2)}${r.con ? ` · up ${r.con} s` : ''}${r.flags && r.flags.length ? ` · ${r.flags.join(', ')}` : ''}`));
+    const vs = (v.reps || []).map(r => r.v);
+    if (!vs.length) return t.note('No reps in the recording.');
+    const best = Math.max(...vs), last = vs[vs.length - 1], loss = best > 0 ? (best - last) / best * 100 : 0;
+    t.step('Best rep', `${best.toFixed(3)} m/s`, 'fastest mean concentric velocity');
+    t.step('Velocity loss', `(${best.toFixed(3)} − ${last.toFixed(3)}) ÷ ${best.toFixed(3)} = ${loss.toFixed(1)}%`, '(best − last) ÷ best');
+    if (v.est) {
+      t.head('Reps left (Slew)');
+      t.step('Method', v.est.method).step('Estimate', `RIR ${nice(v.est.rir)} ± ${nice(v.est.spread)}`, `stored as RPE ${nice(v.est.rpe)}`);
+      if (v.est.because) t.note(v.est.because);
+      if (v.est.romCut) t.note('Range of motion shrank on the last reps, so the estimate was trimmed.');
+    }
+    t.step('Confidence', `${Math.round((v.conf || 0) * 100)}%`);
+    t.result('Velocity loss', `${loss.toFixed(1)}%`);
+    return t.check('Velocity loss', +loss.toFixed(1), v.loss, x => `${(+x).toFixed(1)}%`);
+  } },
+
+  lv: { label: "today's e1RM from bar speed", fn: e => {
+    const t = trace("today's e1RM from bar speed");
+    const pts = ((e.lvp && e.lvp.points) || []);
+    const liftId = e.leaf ? slewLiftFor(e.leaf) : null;
+    t.head('Warm-up points');
+    pts.forEach((p, i) => t.step(`Point ${i + 1}`, `${wt(p.kg)} · ${p.v.toFixed(3)} m/s`, p.place === 'pocket' ? 'pocket — shown, never fitted' : ''));
+    const f = lvFit(pts);
+    if (!f) return t.note('Needs 3+ bar points spread over at least 15% of the heaviest, with speed dropping as the weight rises.');
+    f.out.forEach(p => t.step('Left out', `${wt(p.kg)} · ${p.v.toFixed(3)}`, `faster than a lighter point by over ${LV_SLACK} m/s`));
+    t.head('The line');
+    t.step('Fit', `v = ${f.a.toFixed(4)} ${f.b < 0 ? '−' : '+'} ${Math.abs(f.b).toFixed(6)} × kg`, `least squares on ${f.n} points`);
+    t.step('Scatter', `${f.rse.toFixed(4)} m/s`, 'residual standard error');
+    const s = (S.settings.slewProfiles || {})[liftId] || {}, prior = Slew.defaultProfile(liftId).v0;
+    const obs = (s.v0Obs || []).map(o => o.v).filter(x => x > 0), mvt = mvtFor(liftId);
+    t.head('Speed at a max (MVT)');
+    t.step('Population prior', `${prior.toFixed(3)} m/s`, `for ${liftId}`);
+    t.step('Your failed reps', obs.length ? obs.map(x => x.toFixed(2)).join(', ') : 'none yet');
+    if (obs.length) t.step('Shrunk', `(${MVT_PRIOR_WEIGHT} × ${prior.toFixed(3)} + ${obs.reduce((a, b) => a + b, 0).toFixed(3)}) ÷ (${MVT_PRIOR_WEIGHT} + ${obs.length})`, 'the prior counts as 3 observations');
+    t.step('MVT used', `${mvt.toFixed(3)} m/s`);
+    const mid = (mvt - f.a) / f.b, pct = f.heavy / mid * 100;
+    t.head('Where they meet');
+    t.step('e1RM', `(${mvt.toFixed(3)} − ${f.a.toFixed(4)}) ÷ ${f.b.toFixed(6)} = ${wt(mid)}`);
+    t.step('Heaviest warm-up', `${wt(f.heavy)} = ${pct.toFixed(0)}%`, mid > f.heavy ? '' : 'already at or past the e1RM: not believable');
+    if (!(mid > f.heavy) || pct < 35) return t.note(pct < 35 ? 'Under 35%: too far to extrapolate.' : 'No range shown.');
+    const half = 4 + (f.rse / Math.abs(f.b)) / mid * 100 + Math.max(0, 80 - pct) * 0.5;
+    t.step('± width', `4 + scatter ${((f.rse / Math.abs(f.b)) / mid * 100).toFixed(1)} + far-out ${(Math.max(0, 80 - pct) * 0.5).toFixed(1)} = ${half.toFixed(1)}%`, 'base 4%, the line\'s scatter in kg as a %, and half a point per % the heaviest warm-up sits under 80%');
+    t.result('Range', `${nice(dw(mid * (1 - half / 100), 0))}–${nice(dw(mid * (1 + half / 100), 0))} ${U()}`);
+    const app = lvDay(e);
+    return t.check('Middle', mid, app ? app.mid : NaN, x => wt(x));
+  } },
+
+  rec: { label: 'recovery', fn: key => {
+    const t = trace(`${MUSCLES[key] || key} — recovery`);
+    const now = Date.now(), since = now - RECOVERY.days * 864e5, tau = muscleTau(key);
+    t.step('Window', `last ${RECOVERY.days} days`).step('Half-life style decay', `e^(−hours ÷ ${tau})`, BIG_MUSCLES.includes(key) ? 'big muscle: 36 h' : 'smaller muscle: 24 h');
+    t.note('Each set counts by effort: RIR ≤ 1 = 1, 2 = 0.85, 3 = 0.7, more = 0.55, unlogged = 0.8; drop sets × 0.6; warm-ups 0.');
+    const list = S.workouts.filter(w => w.status === 'completed' && w.kind !== 'cardio' && woTime(w) >= since && woTime(w) <= now);
+    if (S.active && S.active.kind !== 'cardio' && S.active.exercises) list.push({ ...S.active, end: now, live: true });
+    let sum = 0;
+    t.head('What trained it');
+    list.forEach(wo => {
+      const hrs = Math.max(0, (now - woTime(wo)) / 36e5);
+      (wo.exercises || []).forEach(e => {
+        const lm = e.leaf ? leafMuscles(e.leaf) : (exInfo(exName(e)) ? { m: exMuscles(exName(e)) } : null);
+        const share = lm && lm.m && lm.m[key];
+        if (!share) return;
+        const ss = e.sets.filter(s => (wo.live ? s.done : s.done !== false) && (s.r > 0 || s.sec > 0 || s.m > 0));
+        const eff = ss.reduce((a, s) => a + setEffort(s), 0);
+        if (!eff) return;
+        const f = eff * share * Math.exp(-hrs / tau);
+        sum += f;
+        t.step(`${exFull(e)} · ${wo.live ? 'today' : fmtDate(wo.date)}`, f.toFixed(2), `${ss.length} sets → effort ${eff.toFixed(2)} × share ${share} × e^(−${hrs.toFixed(0)} ÷ ${tau})`);
+      });
+    });
+    const level = RECOVERY.levels.filter(x => sum >= x).length;
+    t.step('Total', sum.toFixed(2), 'about this many hard sets are still in the muscle');
+    t.step('Bands', RECOVERY.levels.join(' / '), RECOVERY_WORDS.join(' · '));
+    t.result('Reads as', RECOVERY_WORDS[level]);
+    if (sum > RECOVERY.fresh) t.result('Fresh in', `~${Math.ceil(tau * Math.log(sum / RECOVERY.fresh))} h`, `${tau} × ln(${sum.toFixed(2)} ÷ ${RECOVERY.fresh})`);
+    const app = fatigueMap(now)[key];
+    return t.check('Total', sum, app ? app.f : 0, x => (+x).toFixed(2));
+  } },
+
+  dots: { label: 'DOTS and IPF GL points', fn: (total, bw, sex, bench) => {
+    const t = trace('DOTS and IPF GL');
+    const fem = sex === 'female';
+    t.step('Total', wt(total)).step('Bodyweight', wt(bw)).step('Sex', fem ? 'female' : 'male', 'picks the coefficients');
+    const c = fem ? [-57.96288, 13.6175032, -0.1126655495, 0.0005158568, -0.0000010706]
+      : [-307.75076, 24.0900756, -0.1918759221, 0.0007391293, -0.000001093];
+    const x = clamp(bw, 40, 210);
+    t.head('DOTS');
+    if (x !== bw) t.step('Bodyweight used', `${nice(x)} kg`, 'DOTS clamps to 40–210 kg');
+    const den = c[0] + c[1] * x + c[2] * x ** 2 + c[3] * x ** 3 + c[4] * x ** 4;
+    t.step('Denominator', den.toFixed(4), `a + b·bw + c·bw² + d·bw³ + e·bw⁴ with ${c.join(', ')}`);
+    const D = den > 0 ? total * 500 / den : 0;
+    t.result('DOTS', `${nice(dw(total, 2))} × 500 ÷ ${den.toFixed(4)} = ${nice(D)}`);
+    t.head(`IPF GL (${bench ? 'bench only' : 'classic'})`);
+    const k = bench ? (fem ? [142.40398, 442.52671, 0.04724] : [320.98041, 281.40258, 0.01008])
+      : (fem ? [610.32796, 1045.59282, 0.03048] : [1199.72839, 1025.18162, 0.00921]);
+    const gd = k[0] - k[1] * Math.exp(-k[2] * bw), G = gd > 0 ? total * 100 / gd : 0;
+    t.step('Denominator', `${k[0]} − ${k[1]} × e^(−${k[2]} × ${nice(bw)}) = ${gd.toFixed(4)}`);
+    t.result('IPF GL', `${nice(total)} × 100 ÷ ${gd.toFixed(4)} = ${nice(G)}`);
+    return t.check('DOTS', D, dots(total, bw, sex), nice).check('IPF GL', G, glPoints(total, bw, sex, bench), nice);
+  } },
+
+  cal: { label: 'body fat from calipers', fn: id => {
+    const c = (S.calipers || []).find(x => x.id === id), M = c && CAL_METHODS[c.method];
+    if (!M) return null;
+    const t = trace(`body fat — ${M.short}`);
+    t.step('Method', M.name).step('Sex', c.sex || 'male').step('Age', c.age || 0, 'on the day');
+    t.head('Skinfolds (mm)');
+    const sites = M.sites(c.sex);
+    const means = sites.map(s => {
+      const r = ((c.mm || {})[s] || []).filter(x => x > 0), m = r.length ? mean(r) : null;
+      t.step(s, m == null ? 'missing' : nice(m), r.length > 1 ? `mean of ${r.join(', ')}` : '');
+      return m;
+    });
+    if (means.some(x => x == null)) return t.note('A site is missing, so there is no result.');
+    const sum = means.reduce((a, b) => a + b, 0), bd = M.bd(sum, c.age || 0, c.sex);
+    t.step('Sum', `${nice(sum)} mm`);
+    const eq = {
+      jp3: c.sex === 'female' ? '1.0994921 − 0.0009929·S + 0.0000023·S² − 0.0001392·age' : '1.10938 − 0.0008267·S + 0.0000016·S² − 0.0002574·age',
+      jp7: c.sex === 'female' ? '1.097 − 0.00046971·S + 0.00000056·S² − 0.00012828·age' : '1.112 − 0.00043499·S + 0.00000055·S² − 0.00028826·age',
+      dw4: (() => { const b = DW_BANDS[c.sex === 'female' ? 'female' : 'male'].filter(x => (c.age || 0) >= x[0]).pop() || DW_BANDS.male[0]; return `${b[1]} − ${b[2]}·log10(S) (age ${b[0]}+ band)`; })(),
+    }[c.method];
+    t.step('Body density', bd.toFixed(5), eq);
+    const bf = 495 / bd - 450;
+    t.step('Siri', `495 ÷ ${bd.toFixed(5)} − 450`);
+    t.result('Body fat', `${bf.toFixed(1)}%`, bf >= 3 && bf <= 50 ? '' : 'outside 3–50% — check the readings');
+    const wk = weightNear(c.date);
+    if (wk) t.step('Weigh-in within 3 days', wt(wk)).step('Fat / lean', `${wt(wk * bf / 100)} / ${wt(wk * (1 - bf / 100))}`);
+    else t.note('No weigh-in within 3 days, so no fat and lean mass.');
+    const app = caliperCalc(c);
+    return t.check('Body fat', bf, app ? app.bf : NaN, x => `${(+x).toFixed(1)}%`);
+  } },
+
+  mob: { label: 'mobility test', fn: id => {
+    const T = mobTestDef(id);
+    if (!T) return null;
+    const t = trace(T.label);
+    t.step('Better', T.better > 0 ? 'higher' : 'lower').step('Unit', T.scale ? `steps: ${T.scale.join(' → ')}` : T.unit || '—');
+    t.note(`Several tries on a day count as that day's best${T.balance ? '; balance tries under 1 s are never saved' : ''}.`);
+    const sides = T.sides ? ['L', 'R'] : [null];
+    sides.forEach(sd => {
+      const sr = mobTestSeries(id, sd), raw = (S.mobTests || []).filter(x => x.test === id && (x.side || null) === sd);
+      const last = sr[sr.length - 1];
+      t.head(sd ? (sd === 'L' ? 'Left' : 'Right') : 'Result');
+      t.step('Tries saved', raw.length).step('Days', sr.length);
+      if (last) {
+        const day = raw.filter(x => x.date === last.date).map(x => x.v);
+        t.step('Latest day', fmtDate(last.date), day.length > 1 ? `tries ${day.map(x => mobTestText(T, x)).join(', ')}` : '');
+        t.result('Best that day', mobTestText(T, last.v));
+      }
+    });
+    const g = mobTestGap(id);
+    if (T.sides && !T.scale) {
+      t.head('Left against right');
+      if (!g) t.note('Needs a day with both sides tested.');
+      else if (g.even) t.result('Gap', 'even', fmtDate(g.date));
+      else {
+        const L = mobTestSeries(id, 'L').find(p => p.date === g.date).v, R = mobTestSeries(id, 'R').find(p => p.date === g.date).v;
+        const gap = Math.abs(L - R) / Math.max(L, R) * 100;
+        t.step('Same day', `${fmtDate(g.date)}: L ${nice(L)} · R ${nice(R)}`);
+        t.result('Gap', `|${nice(L)} − ${nice(R)}| ÷ ${nice(Math.max(L, R))} = ${gap.toFixed(0)}%`, `${g.weak === 'L' ? 'left' : 'right'} behind`);
+        t.check('Gap', gap, g.gap, x => `${(+x).toFixed(0)}%`);
+      }
+    }
+    return t;
+  } },
+
+  cardio: { label: 'heart-rate cue', fn: () => {
+    const L = cardioWhyLast;
+    const t = trace('heart-rate cue');
+    if (!L) return t.note('No check has run yet — start the session with debug mode on.');
+    const cfg = cardioNorm(L.cfg), M = cardioMachine(cfg.machine), P = cardioPrimary(M), st = L.st;
+    const since = x => x == null ? Infinity : st.el - x, sec = x => x === Infinity ? 'never' : `${Math.round(x)} s`;
+    t.step('At', `${Math.round(st.el)} s in`, M.label || cfg.machine);
+    t.step('HR, last 5 s', st.hr5 == null ? 'none' : Math.round(st.hr5)).step('HR, last 20 s', st.hr20 == null ? 'none' : Math.round(st.hr20), 'the smoothed figure the zone uses');
+    t.step('Zone', cardioHasZone(cfg) ? `${cfg.lo}–${cfg.hi}, aiming at ${(cfg.lo + cfg.hi) / 2}` : 'none').step('Ceiling', cfg.ceiling > 0 ? cfg.ceiling : 'off');
+    t.head('Rules, first match wins');
+    let rule = null;
+    const go = (name, hit, note) => { if (rule) return; t.step(name, hit ? 'yes — stops here' : 'no', note); if (hit) rule = name; };
+    go('1. Over the ceiling', st.hr5 != null && cfg.ceiling > 0 && st.hr5 > cfg.ceiling && since(st.lastCeil) >= CARDIO.ceilGap, `5-s HR over the ceiling, and ${CARDIO.ceilGap} s since the last ceiling cue (${sec(since(st.lastCeil))})`);
+    const plan = warmPlan(cfg);
+    go('2. Warm-up', !!(plan && !st.warmDone), plan ? `${plan.n} steps, one every ${Math.round(plan.every)} s; hands over early once 20-s HR reaches ${cfg.lo}` : 'no warm-up set');
+    go('3. No zone', !cardioHasZone(cfg), 'just a log');
+    go('4. Settling', !plan && st.el < CARDIO.settle, `first ${CARDIO.settle} s with no warm-up`);
+    go('5. Interval', since(st.lastCheck) < cfg.interval, `${sec(since(st.lastCheck))} since the last check, every ${cfg.interval} s`);
+    go('6. Waiting for HR to answer', since(st.lastChange) < CARDIO.respond, `${sec(since(st.lastChange))} since the last change, waits ${CARDIO.respond} s`);
+    go('7. No fresh HR', st.hr20 == null, 'silent');
+    if (!rule) {
+      const miss = st.hr20 - (cfg.lo + cfg.hi) / 2, K = M.knobs[cfg.cue];
+      t.step('Miss', `${Math.round(st.hr20)} − ${(cfg.lo + cfg.hi) / 2} = ${nice(miss)} bpm`, `within ±${CARDIO.tol} counts as on target`);
+      if (Math.abs(miss) <= CARDIO.tol) rule = 'On target';
+      else {
+        const r1 = x => Math.round(x * 1000) / 1000, dir = miss < 0 ? 1 : -1;
+        const step = clamp(r1(Math.round(Math.abs(miss) * K.perBpm / K.round) * K.round), K.step[0], K.step[1]);
+        t.step('Step', `${nice(Math.abs(miss))} × ${K.perBpm} per bpm, rounded to ${K.round}, kept in ${K.step[0]}–${K.step[1]} = ${step}`, K.label);
+        const target = r1(clamp(st.v[cfg.cue] + K.harder * dir * step, ...K.bounds));
+        t.step('New value', `${knobVal(K, st.v[cfg.cue])} → ${knobVal(K, target)}`, `kept inside ${K.bounds.join('–')}`);
+        rule = dir > 0 ? 'Harder' : 'Easier';
+      }
+    }
+    t.result('Outcome', rule);
+    const d = L.d;
+    t.step('Cue the app gave', d && d.cue ? d.cue.text || d.cue.kind : 'no cue');
+    /* cardioDecide is pure, so replaying the same inputs is the check. */
+    const kind = { '1. Over the ceiling': 'ceiling', Harder: 'up', Easier: 'down' }[rule] || 'none';
+    if (rule !== '2. Warm-up') {
+      const r = cardioDecide(L.cfg, st);
+      t.check('Outcome', kind, r && r.cue ? r.cue.kind : 'none');
+    }
+    return t;
+  } },
+};
+
 /* What's stored, for prefilling. Each is null when there's nothing. */
 function latestBF() {
   const t = [...(S.calipers || [])].sort((a, b) => a.date < b.date ? 1 : -1).map(caliperCalc).find(r => r && r.complete && !r.odd);
@@ -5012,7 +5465,7 @@ function openTool(id) {
     ], v => {
       if (!(v.w > 0) || !(v.r > 0)) return calcNeed('a weight and reps');
       const rir = Math.max(0, v.rir || 0), e1 = e1rm(fromW(v.w), v.r, rirToRpe(rir));
-      return `<div class="stat" style="margin-bottom:10px"><div class="k">Estimated 1RM</div><div class="v">${w(e1)}</div></div>
+      return `<div class="stat" style="margin-bottom:10px"><div class="k">Estimated 1RM</div><div class="v">${w(e1)}</div>${why('e1', fromW(v.w), v.r, rirToRpe(rir))}</div>
         ${calcTable(['Reps', `at RIR ${rir}`, 'at RIR 0'], [1, 2, 3, 4, 5, 6, 8, 10, 12].map(r => [r, wt(loadFor(e1, r, rir)), wt(loadFor(e1, r, 0))]))}`;
     }, 'Epley with your RIR added to the reps, capped at 12 — the same estimate the app plans with.');
   }
@@ -5038,13 +5491,14 @@ function openTool(id) {
       if (!(v.t > 0) || !(v.bw > 0)) return calcNeed('a total and a bodyweight');
       const t = fromW(v.t), b = fromW(v.bw);
       return `<div class="stats grid2"><div class="stat"><div class="k">DOTS</div><div class="v">${nice(dots(t, b, v.sex))}</div></div>
-        <div class="stat"><div class="k">IPF GL</div><div class="v">${nice(glPoints(t, b, v.sex, v.bo === 'bench'))}</div><div class="d">${v.bo === 'bench' ? 'bench only' : 'classic'}</div></div></div>`;
+        <div class="stat"><div class="k">IPF GL</div><div class="v">${nice(glPoints(t, b, v.sex, v.bo === 'bench'))}</div><div class="d">${v.bo === 'bench' ? 'bench only' : 'classic'}</div></div></div>
+        ${why('dots', t, b, v.sex, v.bo === 'bench')}`;
     }, ps.total ? 'Total from your tested priority lifts.' : 'Log tests of your priority lifts on Calendar → Events and the total fills in.');
   }
 
   if (id === 'rpe') {
     return calcSheet('RPE ↔ RIR table', 'Ironlog stores RPE and shows RIR. RPE 10 is a true max; each step down is one more rep left.', [], () =>
-      calcTable(['RPE', 'RIR', 'Means'], [10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6, 5].map(r => [r, rpeToRir(r), {
+      calcTable(['RPE', 'RIR', 'Means'], [10, 9.5, 9, 8.5, 8, 7.5, 7, 6.5, 6, 5].map(r => [`${r} ${why('rir', r)}`, rpeToRir(r), {
         10: 'Nothing left', 9.5: 'Maybe more weight, no more reps', 9: '1 rep left', 8.5: '1, maybe 2 left', 8: '2 left',
         7.5: '2, maybe 3 left', 7: '3 left', 6.5: '3–4 left', 6: '4 left', 5: '5+ left — warm-up territory' }[r]])));
   }
@@ -5829,7 +6283,7 @@ function vbtStrip(e) {
     return `<div class="row between">
       <span class="sub">Set ${i + 1}</span>
       <span class="mono grow">${v.best.toFixed(2)} m/s${v.loss >= 5 ? ` <span class="dimmer">▾${v.loss.toFixed(0)}%</span>` : ''}${e.tempo ? vbtTimes(v) : ''}</span>
-      ${v.est ? `<span class="mono sub" style="color:var(--purple)">RIR ${rpeToRir(v.est.rpe)}</span>` : ''}
+      ${v.est ? `<span class="mono sub" style="color:var(--purple)">RIR ${rpeToRir(v.est.rpe)}</span>` : ''}${why('vbt', v)}
     </div>`;
   }).join('')}</div>`;
 }
@@ -6974,6 +7428,7 @@ function showSummary(wo) {
             <div class="sub">${p.label ? esc(p.what) : p.first ? 'First time logged' : p.w > 0 ? `previous e1RM ${wt(p.prev)}` : `previous best ${p.prevReps} reps`}</div>
           </div><div class="right"><div style="font-weight:780;font-size:17px;color:var(--gold)">${esc(prText(p))}</div>
             ${p.label ? '' : `<div class="sub">${p.w > 0 ? `e1RM ${wt(p.e1)}` : 'bodyweight'}</div>`}
+            ${why('pr', wo.id, prs.indexOf(p))}
             <button class="btn xs ghost" data-prshare="${prs.indexOf(p)}" style="margin-top:4px" aria-label="Share ${esc(p.name)} PR as an image">↗ Share</button></div></div>
         </div>`).join('')}` : `<div class="empty">No PRs this session — still money in the bank.</div>`}
       ${(() => { const ch = e1Changes(wo); return ch.length ? `
@@ -7314,7 +7769,7 @@ function viewAnalytics() {
         <div class="grow">
           <div class="n">${r.leaf ? keyNameHtml(r.key) : esc(r.name)}${r.estOnly ? ' <span class="chip">EST</span>' : ''}</div>
           <div class="m"><span class="tierlab" style="color:${r.color}">${r.tierName}</span>
-            · ${wt(r.e1)} e1RM · ${r.ratio.toFixed(2)}× bw${r.nextName ? ` · ${wt(r.toNext)} to ${r.nextName}` : ''}</div>
+            · ${wt(r.e1)} e1RM · ${r.ratio.toFixed(2)}× bw${r.nextName ? ` · ${wt(r.toNext)} to ${r.nextName}` : ''} ${why('rank', r.key)}</div>
           ${bar(r.score, r.color)}
         </div>
         <div class="rank-sc" style="color:${r.color}">${Math.round(r.score)}</div>
@@ -7483,7 +7938,7 @@ function openMovementPage(movementId, focusKey) {
        machine chest press outranking a competition bench is nonsense. */
     const headline = ps
       ? `<div class="stats grid3" style="margin-bottom:6px">
-          <div class="stat"><div class="k">Best e1RM</div><div class="v">${w(ps.best.e1)}</div><div class="d">${esc(variantLabel(keyLeaf(pk)) || 'standard')}</div></div>
+          <div class="stat"><div class="k">Best e1RM</div><div class="v">${w(ps.best.e1)}</div><div class="d">${esc(variantLabel(keyLeaf(pk)) || 'standard')}</div>${why('e1', ps.best.w, ps.best.r, ps.best.rpe)}</div>
           <div class="stat"><div class="k">Top set</div><div class="v">${w(ps.bestW.w)}</div><div class="d">× ${ps.bestW.r}</div></div>
           <div class="stat"><div class="k">Sessions</div><div class="v">${ps.sessions}</div><div class="d">${ps.totalSets} sets</div></div>
         </div>`
@@ -7504,7 +7959,7 @@ function openMovementPage(movementId, focusKey) {
     const focusStrip = fv && focus !== pk ? `
       <div class="eyebrow" style="margin:12px 0 6px">${esc(keyVariantLabel(fv.key) || 'Standard')}</div>
       ${fs ? `<div class="stats grid3">
-          <div class="stat"><div class="k">Best e1RM</div><div class="v">${w(fs.best.e1)}</div></div>
+          <div class="stat"><div class="k">Best e1RM</div><div class="v">${w(fs.best.e1)}</div>${why('e1', fs.best.w, fs.best.r, fs.best.rpe)}</div>
           <div class="stat"><div class="k">Top set</div><div class="v">${w(fs.bestW.w)}</div><div class="d">× ${fs.bestW.r}</div></div>
           <div class="stat"><div class="k">Last</div><div class="v" style="font-size:15px">${esc(relDay(fs.lastDate))}</div><div class="d">${fs.sessions} sessions</div></div>
         </div>` : `<div class="sub">This variant hasn't been logged yet.</div>`}` : '';
@@ -7521,6 +7976,7 @@ function openMovementPage(movementId, focusKey) {
           <span class="prtl-dot"></span>
           <div class="grow"><div class="mono"><b>${esc(prText(p))}</b>${p.label ? ` <span class="dimmer">${esc(p.what)}${p.key.includes('|') ? ` · ${esc(exTag(keyEntry(p.key)))}` : ''}</span>` : p.e1 ? ` <span class="dimmer">e1RM ${wt(p.e1)}${p.prev ? ` · ▲ ${wt(p.e1 - p.prev)}` : ''}</span>` : ''}</div>
             <div class="sub">${fmtDate(wo.date)} · ${relDay(wo.date)}</div></div>
+          ${why('pr', wo.id, prsFor(wo).indexOf(p))}
           <button class="btn xs ghost" data-prtl="${esc(wo.id)}|${prsFor(wo).indexOf(p)}" aria-label="Share this PR as an image">↗</button>
         </div>`).join('')}${timeline.length > 30 ? `<div class="sub" style="padding:6px 0">…and ${timeline.length - 30} earlier</div>` : ''}</div>`
         : `<div class="sub">No PRs yet${fs ? ' — the first session sets the marks to beat' : ''}.</div>`}` : '';
@@ -7858,7 +8314,7 @@ function viewMeets() {
     </div>
     <div class="totrow">
       <div><div class="k eyebrow">Total</div><div class="v">${ps.total ? nice(dw(ps.total, 0)) : '—'}<small class="sub"> ${U()}</small></div></div>
-      <div><div class="k eyebrow">DOTS</div><div class="v" style="color:var(--purple)">${ps.dots ? Math.round(ps.dots) : '—'}</div></div>
+      <div><div class="k eyebrow">DOTS</div><div class="v" style="color:var(--purple)">${ps.dots ? Math.round(ps.dots) : '—'}</div>${ps.dots ? why('dots', ps.total, ps.bw, S.settings.sex, false) : ''}</div>
       <div><div class="k eyebrow">Bodyweight</div><div class="v">${ps.bw ? nice(dw(ps.bw)) : '—'}<small class="sub"> ${U()}</small></div></div>
     </div>
     ${ps.untested ? `<div class="sub" style="margin-top:9px">${ps.untested} lift${ps.untested === 1 ? '' : 's'} not tested yet — a total needs all three. Log one with <b>Log test</b>.</div>`
@@ -10293,6 +10749,7 @@ function lvPanel(e, ei) {
     ${sg ? `<div class="row between" style="margin-top:6px;gap:8px"><span>Set ${sg.si + 1}: <b>${wt(sg.kg)} × ${sg.r}</b> <span class="sub">@ RIR ${sg.t}</span></span>
       <button class="btn xs primary" data-lvuse="${ei}">Use it</button></div>` : ''}
     ${lvChart(e)}
+    ${d ? why('lv', { leaf: e.leaf, lvp: e.lvp }) : ''}
     <div class="row between" style="margin-top:4px"><span class="sub" style="font-size:11px">A guide from the phone's sensor, not a measurement.</span>
       ${pts.length ? `<button class="btn xs ghost" data-lvclear="${ei}">Clear points</button>` : ''}</div>
   </div>`;
@@ -10602,6 +11059,13 @@ function openSettings() {
           value="${esc(aiKey())}" placeholder="sk-ant-… — leave blank to use the offline table">
         <div class="sub" style="margin-top:4px">Held on this device only and sent nowhere but Anthropic. Clearing site data removes it. Only used by voice logging, when the built-in grammar can't read a set. Everything works without it.</div>
       </div>
+      <div class="field"><label>Debug mode — show the working</label>
+        <div class="seg" id="dbgSeg">
+          <button data-v="1" class="${debugOn() ? 'on' : ''}">On</button>
+          <button data-v="0" class="${debugOn() ? '' : 'on'}">Off</button>
+        </div>
+        <div class="sub" style="margin-top:4px">Puts a small <b>how?</b> beside worked-out numbers — e1RM, PRs, tiers, points, recovery, body fat, VBT, cardio cues, test scores. It shows the inputs, the sum and the result, and you can copy it into a bug report. Changes nothing.</div>
+      </div>
       <div class="field"><label>Count backfilled sessions toward PRs</label>
         <div class="seg" id="prEstSeg">
           <button data-pe="1" class="${S.settings.prCountEst !== false ? 'on' : ''}">Yes</button>
@@ -10706,6 +11170,12 @@ function openSettings() {
       bg.querySelectorAll('#unitSeg button').forEach(b => b.onclick = () => {
         units = b.dataset.u;
         bg.querySelectorAll('#unitSeg button').forEach(x => x.classList.toggle('on', x === b));
+      });
+      bg.querySelectorAll('#dbgSeg button').forEach(b => b.onclick = () => {
+        bg.querySelectorAll('#dbgSeg button').forEach(x => x.classList.toggle('on', x === b));
+        S.settings.debug = b.dataset.v === '1';
+        if (!S.settings.debug) cardioWhyLast = null;
+        save(); render();
       });
       bg.querySelectorAll('#prEstSeg button').forEach(b => b.onclick = () => {
         bg.querySelectorAll('#prEstSeg button').forEach(x => x.classList.remove('on'));
@@ -11550,6 +12020,15 @@ function verdictWords(v, today2) {
   if (v.grind) return today2 ? `Reached ${v.hi}, but harder than RIR ${v.t} — same weight next time` : `reached ${v.hi} but past RIR ${v.t} — same weight again`;
   return today2 ? `In range — same weight next time, aim for more reps` : `${v.reps.join(', ')} — same weight, beat those reps`;
 }
+/* Debug trace for the line below: the same sets rangeLine judges. */
+function whyRange(e) {
+  if (!debugOn() || !e.range) return '';
+  const strip = x => ({ range: x.range, notes: x.notes || '', leaf: x.leaf });
+  const sets = s => s.map(x => ({ w: x.w, r: x.r, rpe: x.rpe, done: x.done, setType: x.setType }));
+  if (!e.sets.some(s => !s.done && isPRSet(s))) return why('range', strip(e), sets(e.sets.filter(s => s.done)), today());
+  const last = lastSession(exKey(e));
+  return last ? why('range', strip(e), sets(last.sets), last.date) : '';
+}
 function rangeLine(e, ei) {
   if (!rangeOk(e)) return '';
   if (!e.range) return '';
@@ -11571,7 +12050,7 @@ function rangeLine(e, ei) {
   }
   return `<div class="rangeline"><div class="row" style="gap:8px;align-items:center">
       <span class="chip">${rangeText(e.range)} reps · RIR ${t}</span>
-      <span class="sub grow">${msg || 'Work up through the range at the target RIR, then add weight.'}</span>${use}</div></div>`;
+      <span class="sub grow">${msg || 'Work up through the range at the target RIR, then add weight.'}</span>${use}${whyRange(e)}</div></div>`;
 }
 
 /* ---------------- PER-SIDE (D4) ----------------
@@ -12634,6 +13113,7 @@ function mobTestsCard() {
         <select id="mtSel" style="flex:1">${MOB_TESTS.map(t => `<option value="${t.id}" ${t.id === T.id ? 'selected' : ''}>${esc(t.label)}</option>`).join('')}</select></div>
       ${chartMulti(series, { h: 130, fmt: v => T.scale ? (T.scale[Math.round(v)] || '') : nice(v) })}
       ${gap ? `<div class="sub" style="margin-top:6px">${gap.even ? 'Left and right even' : `${gap.weak === 'L' ? 'Left' : 'Right'} ${gap.gap.toFixed(0)}% behind`} · ${esc(fmtDate(gap.date))}</div>` : ''}
+      ${why('mob', T.id)}
       <div class="sub" style="margin-top:6px">${esc(T.how)}</div>`
       : '<div class="sub">No tests yet. Forward fold reach weekly is a good start — it\'s the benchmark in the Full Body Stretch.</div>'}
   </div>`;
@@ -13373,9 +13853,11 @@ function cardioTick() {
       c.hrMax = Math.max(c.hrMax || 0, Math.round(hr5));
       if (el - c.lastSample >= CARDIO.sample) { c.hr.push([Math.round(el), Math.round(hr5)]); c.lastSample = el; }
     }
-    const d = cardioDecide(c.cfg, { el, hr5, hr20, v: cardioKnobs(c),
+    const st = { el, hr5, hr20, v: cardioKnobs(c),
       lastCheck: c.lastCheck, lastChange: c.lastChange, lastCeil: c.lastCeil,
-      warmStep: c.warmStep, warmDone: c.warmDone });
+      warmStep: c.warmStep, warmDone: c.warmDone };
+    const d = cardioDecide(c.cfg, st);
+    if (debugOn()) cardioWhyLast = { cfg: c.cfg, st: { ...st, v: { ...st.v } }, d };
     if (d) {
       if (d.cue && d.cue.kind === 'ceiling') c.lastCeil = el; else c.lastCheck = el;
       if (d.warmStep != null) c.warmStep = d.warmStep;
@@ -13796,6 +14278,7 @@ function cardioView() {
         <button class="btn sm" id="cdConn" style="margin-top:6px"></button></div>
     </div>
     <div class="sub" id="cdNote" style="margin:8px 0"></div>
+    ${why('cardio')}
     <div id="cdChart">${hrChart(c, 190)}</div>
   </div>
 
@@ -14839,7 +15322,7 @@ function viewBody() {
   const bfCard = `<div class="card" id="hlBf" style="margin-bottom:13px">
     <div class="row between" style="margin-bottom:8px"><div class="eyebrow">Body fat · calipers</div><button class="btn xs" id="bdCal">+ New test</button></div>
     ${lastT ? `<div class="stats grid3" style="margin-bottom:8px">
-        <div class="stat"><div class="k">Body fat</div><div class="v">${lastT.r.bf.toFixed(1)}<small>%</small></div><div class="d">${esc(CAL_METHODS[method].short)} · ${esc(relDay(lastT.t.date))}</div></div>
+        <div class="stat"><div class="k">Body fat</div><div class="v">${lastT.r.bf.toFixed(1)}<small>%</small></div><div class="d">${esc(CAL_METHODS[method].short)} · ${esc(relDay(lastT.t.date))}</div>${why('cal', lastT.t.id)}</div>
         <div class="stat"><div class="k">Skinfolds</div><div class="v">${Math.round(lastT.r.sum)}<small>mm</small></div><div class="d">sum of ${lastT.r.sites.length}</div></div>
         <div class="stat"><div class="k">Lean / fat</div><div class="v" style="font-size:16px">${lastT.r.leanKg ? `${nice(dw(lastT.r.leanKg))} / ${nice(dw(lastT.r.fatKg))}` : '—'}</div><div class="d">${lastT.r.leanKg ? U() : 'no weigh-in within 3 days'}</div></div>
       </div>
