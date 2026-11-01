@@ -251,6 +251,15 @@ built into the app, like the morning-stretch routine.
   profile's flags feed Tailor it, and with no key they at least re-rank slot
   picks locally.
 
+## 4b. Local first (Aaron, 2026-11-02)
+
+Aaron: "build up as much automated chat as you can." The coach's chat works
+**without AI**: Ironlog's own numbers answer, written as short sentences by
+rules and templates — free, offline, can't invent a number, and each answer
+says what it's based on. AI is only the fallback for a typed question the
+local matcher can't place (§7). §6 and §7 below are now local; the AI notes
+in them apply only to that fallback.
+
 ## 5. Training digest (local)
 
 One function, `coachDigest(weeks)`, builds a compact summary the AI features
@@ -268,7 +277,24 @@ share. No raw logs are ever sent.
 - **Debug mode (E11) shows the exact digest sent.** That's also the plain
   "what goes to the AI" disclosure (Lift app lesson).
 
-## 6. Debrief and review (AI)
+## 6. Debrief and review (local; built 0.69.0)
+
+Both are rules over the digest, no key needed:
+
+- **Session debrief** (session summary → *Coach debrief*, or the chat): sets
+  done against the plan and any lift skipped; typed RIR against each set's
+  target (2+ sets: easier than planned → add weight, harder → ease off); the
+  real PRs; each ranged lift's up / build / below verdict; stalled lifts;
+  typed RIR against bar-speed RIR where both exist; pain flags (stop and see a
+  professional if it persists — never more). Ends with **one thing for next
+  time**: the highest-ranked rule that fired.
+- **Weekly review** (chat, and a Home card once a week): sessions done
+  against planned; PRs; main lifts' e1RM against two weeks ago; stalls; the
+  week's working sets per muscle (under 6 low, over 22 high); sleep, energy
+  and soreness against the week before; bodyweight; the next event and
+  block. Ends with **one focus for next week**.
+
+Previous AI wording kept for reference:
 
 - **Session debrief:** a button on the session summary. Compares the
   session to the plan, says which PRs are real, gives **one** thing for
@@ -278,7 +304,22 @@ share. No raw logs are ever sent.
   volume is lopsided. May end with a suggested change, which goes through
   the same accept-only diff as §4.
 
-## 7. Ask the coach
+## 7. Ask the coach (local answers + AI fallback; built 0.69.0)
+
+- **Chips built from the lifter's data**: today's session, review my week,
+  debrief my last session, why a stalled lift has stalled, how a main lift is
+  going, should I deload, my weakest area, weeks to my event, my volume, my
+  recovery, my bodyweight, my plan.
+- **Typed questions** go through a local matcher first (keywords per topic,
+  plus the lift named in the question), then the Help & FAQ answers. Only
+  then, with a key, the AI fallback below. Without a key the coach says it
+  can't answer that yet and offers the chips.
+- **"Remember …"** typed in the chat proposes a note; it's saved only on Yes.
+- **Deload check**, local: stalled main lifts, typed RIR below target, sleep
+  or energy down on the week before, soreness up, and weeks since the last
+  light week each add to a score; 3+ says "take a lighter week".
+
+Original AI notes:
 
 - A chat sheet with **suggested prompts built from the user's own data**
   (Lift app lesson), e.g. "Why has my bench stalled?".

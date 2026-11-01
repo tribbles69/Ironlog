@@ -2115,7 +2115,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.68.0';
+const APP_VERSION = '0.69.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4692,6 +4692,7 @@ function viewHome() {
   ${eventCountdown()}
   ${runInLine(today())}
   ${mobilityHomeLine()}
+  ${coachHomeCard()}
 
   <div class="hero">
     <div class="row between">
@@ -5391,6 +5392,23 @@ const WHY = {
     if (!isP && r.flag) T.result('Flag', FIT.others[item].action, `score ${FIT.flagAt} or lower`);
     const app = fitResults(t)[isP ? 'strength' : 'others'].find(x => x.id === item);
     return T.check('Score', r.score, app ? app.score : NaN);
+  } },
+
+  digest: { label: 'what the coach read', fn: () => {
+    const D = coachDigest(), t = trace('what the coach read');
+    t.step('Last 7 days', `${D.week.done} sessions`, `${D.week.missed} planned missed · ${D.week.prev} the week before`);
+    D.lifts.forEach(l => t.step(l.name, l.now ? `e1RM ${wt(l.now)}` : '—', `${l.then ? `2 weeks ago ${wt(l.then)}` : 'no 2-week figure'}${l.stall ? ' · stalled' : ''} — historyE1, last 3 sessions weighted 3:2:1`));
+    t.step('Typed RIR − target', D.rirGap != null ? nice(D.rirGap) : '—', `${D.rirN} sets with a target in 14 days (needs 4)`);
+    t.step('Typed RIR − bar speed', D.vbtGap != null ? nice(D.vbtGap) : '—');
+    t.head('Sets per muscle this week');
+    Object.entries(D.muscles).sort((a, b) => b[1] - a[1]).forEach(([k, v]) => t.step(MUSCLES[k] || k, nice(v), v < CO_LOW_SETS ? 'low' : v > CO_HIGH_SETS ? 'high' : ''));
+    t.head('Check-ins');
+    t.step('This week', `sleep ${D.ci.sleep ? nice(D.ci.sleep) : '—'} · energy ${D.ci.energy ? nice(D.ci.energy) : '—'} · soreness ${D.ci.soreness ? nice(D.ci.soreness) : '—'}`, `${D.ci.n} check-ins`);
+    t.step('Last week', `sleep ${D.ciPrev.sleep ? nice(D.ciPrev.sleep) : '—'} · energy ${D.ciPrev.energy ? nice(D.ciPrev.energy) : '—'}`);
+    t.step('Weeks in a row trained', D.streak);
+    const dl = coDeloadScore(D);
+    t.step('Deload score', dl.score, dl.pts.map(p => `${p[1]} (+${p[0]})`).join('; ') || 'nothing');
+    return t;
   } },
 
   cardio: { label: 'heart-rate cue', fn: () => {
@@ -7512,9 +7530,10 @@ function showSummary(wo) {
         </div>`;
     }).join('')}
     `,
-    foot: `<button class="btn sm ghost" id="sumShare">↗ Share image</button><button class="btn primary" id="sumDone">Done</button>`,
+    foot: `<button class="btn sm ghost" id="sumShare">↗ Share image</button><button class="btn sm" id="sumCoach">Coach debrief</button><button class="btn primary" id="sumDone">Done</button>`,
     onOpen: bg => {
       $('#sumShare', bg).onclick = () => openShare(wo);
+      $('#sumCoach', bg).onclick = () => { closeAllModals(); render(); openCoach(`ask:debrief:${wo.id}`); };
       bg.querySelectorAll('[data-prshare]').forEach(b => b.onclick = () => openPRShare(prs[+b.dataset.prshare], wo));
       $('#sumDone', bg).onclick = () => { closeAllModals(); go('home'); };
       if (prs.length) setTimeout(() => toast(`★ ${prs.length} new PR${prs.length === 1 ? '' : 's'}`, 'gold'), 300);
@@ -11384,6 +11403,7 @@ const AI_MODEL = 'claude-haiku-5-5';
 const AI_FEATURES = [
   { id: 'voice', name: 'Voice logging, hard sentences', what: 'Reads a spoken set when the on-device grammar can\'t', tokIn: 450, tokOut: 40, per: 'set' },
   { id: 'plan', name: 'Plan writer', what: 'Turns your own plan, in any format, into an Ironlog plan', tokIn: 4500, tokOut: 2500, per: 'plan' },
+  { id: 'ask', name: 'Coach, odd questions', what: 'Only for typed questions the coach can\'t answer on its own', tokIn: 700, tokOut: 180, per: 'question' },
 ];
 const AI_CAP_DEFAULT = 1;
 function aiCap() { const c = S.settings.aiCap; return c == null || isNaN(+c) ? AI_CAP_DEFAULT : Math.max(0, +c); }
@@ -11599,6 +11619,7 @@ function wire() {
   v.querySelectorAll('[data-mobopen]').forEach(b => b.onclick = () => openMobility(b.dataset.mobopen, b.dataset.mobdate || today()));
 
   if (page === 'home') {
+    { const r = $('#hmReview', v); if (r) r.onclick = () => openCoach('ask:review'); }
     const bn = $('#backupNow');
     if (bn) bn.onclick = !syncMeta().connected ? exportJSON : async () => {
       bn.disabled = true; bn.textContent = 'Syncing…';
@@ -14200,6 +14221,11 @@ function openCoach(at) {
   const C = S.coach;
   if (at === 'preview' && C.draft) { coBubble('coach', 'Here\'s your plan again.'); return coPreview(C.draft); }
   if (at === 'answers') return coAnswers();
+  if (at && at.startsWith('ask:') && C.setupDone !== undefined) {
+    const [, topic, arg] = at.split(':');
+    coBubble('coach', 'Here you go.');
+    return coAnswerTopic(topic, arg);
+  }
   if (!C.setupDone) {
     const g = coachGuess(), A = C.answers;
     let pre = 0;
@@ -14221,18 +14247,26 @@ function coGreet() {
   coMenu();
 }
 function coMenu() {
+  const C = S.coach, D = coachDigest();
+  coAnswer(`<div class="eyebrow" style="margin-bottom:4px">Ask</div>${coChips(coAskChips(D))}
+    <div class="eyebrow" style="margin:10px 0 4px">Plan</div>${coChips([...(C.plan ? [['see', 'See my plan']] : []), ['new', C.plan ? 'New plan' : 'Build my plan'], ['import', 'Bring in my own plan'], ['answers', 'Change my answers'], ['test', 'Fitting test']])}
+    ${coFormHtml()}`);
+  $('#coAns', CO.bg).querySelectorAll('[data-cov]').forEach(b => b.onclick = () => coMenuPick(b.dataset.cov, b.textContent));
+  coFormWire();
+}
+function coMenuPick(v, label) {
   const C = S.coach;
-  coAnswer(`${coChips([...(C.plan ? [['see', 'See my plan']] : []), ['new', C.plan ? 'New plan' : 'Build my plan'], ['import', 'Bring in my own plan'], ['answers', 'Change my answers'], ['test', 'Fitting test']])}
-    <div class="sub" style="margin-top:8px">Session debriefs, weekly reviews and chat come next — they'll use your AI key.</div>`);
-  $('#coAns', CO.bg).querySelectorAll('[data-cov]').forEach(b => b.onclick = () => {
-    const v = b.dataset.cov;
-    coBubble('me', esc(b.textContent));
-    if (v === 'see') return coPreview(C.plan, true);
-    if (v === 'new') { C.answers.planMode = 'build'; return coInvite(); }
-    if (v === 'import') return coImport();
-    if (v === 'answers') return coAnswers();
-    if (v === 'test') { closeAllModals(); return openFitTest('home'); }
-  });
+  coBubble('me', esc(label));
+  if (v === 'menu') return coMenu();
+  if (v === 'see') return coPreview(C.plan, true);
+  if (v === 'new') { C.answers.planMode = 'build'; return coInvite(); }
+  if (v === 'import') return coImport();
+  if (v === 'answers') return coAnswers();
+  if (v === 'test') { closeAllModals(); return openFitTest('home'); }
+  if (v === 'go') { closeAllModals(); return go('workout'); }
+  if (v === 'checkin') { closeAllModals(); return openCheckin(today()); }
+  const [topic, arg] = v.split(':');
+  coAnswerTopic(topic, arg);
 }
 /* The next unanswered step, or the fitting-test invite once they're all in. */
 function coNext() {
@@ -14464,6 +14498,391 @@ function openCoachSettings() {
   });
 }
 
+/* ---------------- coach chat, answered locally (coach-spec §4b, §5–§7) ----------------
+   Ironlog's own numbers answer, in short sentences built by rules. No key, no
+   network, nothing invented: every figure comes from the log. Typed questions
+   go through a local matcher; only what it can't place reaches the AI. */
+const CO_LOW_SETS = 6, CO_HIGH_SETS = 22;   // working sets a muscle gets in a week
+function coLifted(days, end = today()) {
+  return S.workouts.filter(w => w.status === 'completed' && w.kind !== 'cardio' && w.kind !== 'mobility'
+    && daysBetween(w.date, end) >= 0 && daysBetween(w.date, end) < days);
+}
+const coAvg = a => a.length ? a.reduce((x, y) => x + y, 0) / a.length : null;
+function coCheckins(from, to) {   // days ago, from > to
+  const cis = S.checkins.filter(c => { const d = daysBetween(c.date, today()); return d < from && d >= to; });
+  const f = k => coAvg(cis.map(c => c[k]).filter(v => v > 0));
+  return { n: cis.length, sleep: f('sleepH'), energy: f('energy'), soreness: f('soreness'), weight: f('weight') };
+}
+/* The digest every answer reads (spec §5). Built fresh each time. */
+function coachDigest() {
+  const t = today(), wk = coLifted(7), prevWk = coLifted(14).filter(w => daysBetween(w.date, t) >= 7);
+  const missed = S.workouts.filter(w => w.status === 'planned' && w.date < t && daysBetween(w.date, t) < 7);
+  const lifts = mainLiftKeys().map(k => ({ key: k, name: leafName(k), now: historyE1(k), then: historyE1(k, addDaysISO(t, -14)), stall: stallFor(k), last: lastSession(k) }));
+  const mus = {};
+  wk.forEach(wo => sessionMuscles(wo).list.forEach(m => { mus[m.key] = (mus[m.key] || 0) + m.sets; }));
+  const gaps = [], vgaps = [];
+  coLifted(14).forEach(wo => wo.exercises.forEach(e => e.sets.forEach(s => {
+    if (!s.done || !isWorking(s) || s.rpe == null) return;
+    if (s.t != null) gaps.push(rpeToRir(s.rpe) - s.t);
+    if (s.vbt && s.vbt.est) vgaps.push(rpeToRir(s.rpe) - rpeToRir(s.vbt.est.rpe));
+  })));
+  let streak = 0;
+  for (let i = 0; i < 26; i++) { if (coLifted(7, addDaysISO(t, -7 * i)).length) streak++; else break; }
+  const ev = (S.meets || []).filter(m => m.date >= t).sort((a, b) => a.date < b.date ? -1 : 1)[0] || null;
+  const test = fitTestsSorted().pop() || null;
+  const next = S.workouts.filter(w => w.status === 'planned' && w.date >= t).sort((a, b) => a.date < b.date ? -1 : 1)[0] || null;
+  const prs = wk.flatMap(wo => prsFor(wo).map(p => ({ ...p, date: wo.date })));
+  return { t, week: { done: wk.length, missed: missed.length, prev: prevWk.length }, prs, lifts, muscles: mus,
+    rirGap: gaps.length >= 4 ? coAvg(gaps) : null, rirN: gaps.length, vbtGap: vgaps.length >= 3 ? coAvg(vgaps) : null,
+    ci: coCheckins(7, 0), ciPrev: coCheckins(14, 7), bwThen: coCheckins(35, 28).weight, streak,
+    event: ev, block: activeBlock(t), test, testR: test ? fitResults(test) : null, next, lastDone: coLifted(400).sort((a, b) => a.date < b.date ? 1 : -1)[0] || null };
+}
+const coKg = kg => wt(kg, 1);
+const coPct = (a, b) => b ? (a - b) / b * 100 : 0;
+function coLiftLine(l) {
+  if (!l.now) return `${esc(l.name)}: not enough sessions yet.`;
+  const d = l.then ? coPct(l.now, l.then) : null;
+  return `${esc(l.name)}: e1RM ${coKg(l.now)}${d != null ? ` (${d >= 0 ? '▲' : '▼'} ${Math.abs(d).toFixed(1)}% in 2 weeks)` : ''}${l.stall ? ' — <b>stalled</b>' : ''}`;
+}
+
+/* ---- the answers ---- */
+function coAnsToday(D) {
+  const n = D.next;
+  if (!n) return { html: 'Nothing planned. Build a plan with me, or start an empty workout on Train.' };
+  const when = n.date === D.t ? 'Today' : relDay(n.date);
+  const ci = checkinFor(D.t);
+  let ready = '';
+  if (ci && ((ci.sleepH > 0 && ci.sleepH < 6) || (ci.energy > 0 && ci.energy <= 2)))
+    ready = '<br>Your check-in says a rough night or low energy — stay at the easy end of every RIR target today, or mark it an off day (it won\'t count against your progress).';
+  else if (ci && ci.energy >= 4) ready = '<br>Energy\'s good — if the first sets move well, take the top of each target.';
+  const ex = n.exercises.slice(0, 8).map(e => `• ${esc(exName(e))} — ${e.sets.length} × ${e.sets[0] && e.sets[0].r ? e.sets[0].r : '—'}${e.sets[0] && e.sets[0].t != null ? ` @ RIR ${e.sets[0].t}` : ''}`).join('<br>');
+  return { html: `<b>${esc(when)}: ${esc(n.name)}</b><br>${ex}${ready}`, act: [['go', 'Open Train']] };
+}
+function coAnsLift(D, key) {
+  const st = statsFor(key);
+  if (!st) return { html: `No ${esc(leafName(key))} logged yet.` };
+  const l = D.lifts.find(x => x.key === key) || { key, name: leafName(key), now: historyE1(key), then: historyE1(key, addDaysISO(D.t, -14)), stall: stallFor(key), last: lastSession(key) };
+  const old = historyE1(key, addDaysISO(D.t, -84));
+  const bits = [coLiftLine(l)];
+  if (old && l.now) bits.push(`Over 12 weeks: ${coPct(l.now, old) >= 0 ? '+' : ''}${coPct(l.now, old).toFixed(1)}%.`);
+  bits.push(`Best: ${setLine(st.best)} on ${fmtDate(st.best.date)} (e1RM ${coKg(st.best.e1)}).`);
+  if (l.last) {
+    const top = l.last.sets.filter(s => s.w > 0).sort((a, b) => e1rm(b.w, b.r, b.rpe) - e1rm(a.w, a.r, a.rpe))[0];
+    if (top) bits.push(`Last time (${relDay(l.last.date).toLowerCase()}): ${setLine(top)}.`);
+  }
+  if (l.stall) bits.push(`Five sessions without beating ${coKg(l.stall.e1)} by more than 1% — ask me why it's stalled.`);
+  return { html: bits.join('<br>'), act: l.stall ? [[`stall:${key}`, 'Why has it stalled?']] : [] };
+}
+function coAnsStall(D, key) {
+  const s = stallFor(key), name = esc(leafName(key));
+  if (!s) return { html: `${name} isn't stalled — it's beaten its mark within the last five sessions.` };
+  const why = [], fix = [];
+  if (D.rirGap != null && D.rirGap < -0.5) { why.push(`you've been finishing sets about ${Math.abs(D.rirGap).toFixed(1)} reps closer to failure than planned`); fix.push('drop the load about 5% and rebuild for two weeks'); }
+  if (D.rirGap != null && D.rirGap > 1) { why.push(`your sets have been ${D.rirGap.toFixed(1)} reps easier than planned — the weight may be too light to drive progress`); fix.push('push the top set closer to its RIR target'); }
+  if (D.ci.sleep && D.ci.sleep < 7) { why.push(`sleep has averaged ${nice(D.ci.sleep)} h this week`); fix.push('sleep is the cheapest win — aim for 7–9 h'); }
+  if (D.bwThen && D.ci.weight && D.ci.weight < D.bwThen - 1) { why.push(`bodyweight is down ${coKg(D.bwThen - D.ci.weight)} in a month`); fix.push('strength rarely climbs while weight drops — eat to maintain for now'); }
+  const leaf = keyLeaf(key), lm = leaf ? leafMuscles(leaf) : null, prime = lm && lm.m ? Object.entries(lm.m).sort((a, b) => b[1] - a[1])[0][0] : null;
+  if (prime && (D.muscles[prime] || 0) < CO_LOW_SETS) { why.push(`${MUSCLES[prime] || prime} got only ${nice(D.muscles[prime] || 0)} working sets this week`); fix.push(`add 2–4 sets for ${(MUSCLES[prime] || prime).toLowerCase()}`); }
+  if (D.week.missed) why.push(`${D.week.missed} planned session${D.week.missed === 1 ? '' : 's'} missed this week`);
+  if (D.streak >= 8) { why.push(`you've trained ${D.streak} weeks straight`); fix.push('a lighter week could let it come back up'); }
+  fix.push(`or swap to a close variation for 3–4 weeks (a pause, tempo or different bar) and come back to ${name}`);
+  return { html: `<b>${name}</b> has stalled since ${esc(fmtDate(s.since))}.<br>${why.length ? `Likely reasons: ${why.map(esc).join('; ')}.` : 'Nothing obvious in your log — plateaus happen.'}<br>What to try: ${fix.map(esc).join('; ')}.` };
+}
+function coDeloadScore(D) {
+  const pts = [];
+  const stalls = D.lifts.filter(l => l.stall).length;
+  if (stalls) pts.push([stalls >= 2 ? 2 : 1, `${stalls} main lift${stalls === 1 ? '' : 's'} stalled`]);
+  if (D.rirGap != null && D.rirGap < -0.5) pts.push([1, 'sets finishing closer to failure than planned']);
+  if (D.ci.sleep && D.ciPrev.sleep && D.ci.sleep < D.ciPrev.sleep - 0.5) pts.push([1, `sleep down to ${nice(D.ci.sleep)} h`]);
+  if (D.ci.energy && D.ciPrev.energy && D.ci.energy < D.ciPrev.energy - 0.5) pts.push([1, `energy down to ${nice(D.ci.energy)}/5`]);
+  if (D.ci.soreness && D.ci.soreness >= 3.5) pts.push([1, `soreness ${nice(D.ci.soreness)}/5`]);
+  if (D.streak >= 6) pts.push([D.streak >= 10 ? 2 : 1, `${D.streak} weeks straight`]);
+  return { score: pts.reduce((a, p) => a + p[0], 0), pts };
+}
+function coAnsDeload(D) {
+  const { score, pts } = coDeloadScore(D);
+  if (D.block && D.block.kind === BLOCK_KINDS.deload) return { html: 'You\'re in a deload block already — keep it light and easy.' };
+  const list = pts.length ? `Signs: ${pts.map(p => esc(p[1])).join('; ')}.` : 'No warning signs in your log.';
+  return { html: score >= 3
+    ? `<b>Yes — take a lighter week.</b> ${list}<br>Half the sets, RIR 3–4, same exercises. Then pick up where you left off.`
+    : score >= 2 ? `<b>Not yet, but watch it.</b> ${list}<br>If it's the same next week, take a lighter one.`
+    : `<b>No.</b> ${list}` };
+}
+function coAnsVolume(D) {
+  const e = Object.entries(D.muscles);
+  if (!e.length) return { html: 'No working sets logged this week yet.' };
+  const low = e.filter(([, v]) => v < CO_LOW_SETS).map(([k, v]) => `${MUSCLES[k] || k} ${nice(v)}`);
+  const high = e.filter(([, v]) => v > CO_HIGH_SETS).map(([k, v]) => `${MUSCLES[k] || k} ${nice(v)}`);
+  const top = e.sort((a, b) => b[1] - a[1]).slice(0, 4).map(([k, v]) => `${MUSCLES[k] || k} ${nice(v)}`);
+  return { html: `Working sets this week, by muscle (a set counts by how much the muscle does in it). Most: ${esc(top.join(', '))}.`
+    + (low.length ? `<br>Low (under ${CO_LOW_SETS}): ${esc(low.join(', '))}.` : '')
+    + (high.length ? `<br>High (over ${CO_HIGH_SETS}): ${esc(high.join(', '))} — fine for a focus, a lot to recover from otherwise.` : '')
+    + '<br>Roughly 10–20 hard sets a week is where most muscles grow.' };
+}
+function coAnsRecovery(D) {
+  const c = D.ci, p = D.ciPrev;
+  const cmp = (now, then, unit, hi) => now ? `${nice(now)}${unit}${then ? ` (${now > then + 0.2 ? (hi ? 'up' : 'up') : now < then - 0.2 ? 'down' : 'same'} on last week)` : ''}` : '—';
+  const fm = fatigueSummary(fatigueMap());
+  return { html: c.n && (c.sleep || c.energy || c.soreness) ? `This week from ${c.n} check-in${c.n === 1 ? '' : 's'}: sleep ${cmp(c.sleep, p.sleep, ' h')}, energy ${cmp(c.energy, p.energy, '/5')}, soreness ${cmp(c.soreness, p.soreness, '/5')}.${fm ? `<br>${esc(fm)}.` : ''}`
+    : `${c.n ? 'No sleep, energy or soreness in this week\'s check-ins' : 'No check-ins this week'} — a quick daily one (sleep, energy, soreness) lets me spot when to back off.${fm ? `<br>${esc(fm)}.` : ''}`, act: [['checkin', 'Check in now']] };
+}
+function coAnsBody(D) {
+  const now = D.ci.weight, then = D.bwThen, goal = (S.coach.answers || {}).goal;
+  if (!now) return { html: 'No weigh-ins this week. Add your weight to a check-in and I\'ll track the trend.', act: [['checkin', 'Check in now']] };
+  if (!then) return { html: `This week's average: ${coKg(now)}. A month of weigh-ins and I can show the trend.` };
+  const d = now - then, rate = d / 4;
+  let note = '';
+  if (goal === 'size') note = d <= 0 ? ' For size you\'d want it creeping up — about 0.25–0.5% of bodyweight a week.' : rate > now * 0.0075 ? ' That\'s quick for lean gains — a bit slower keeps it mostly muscle.' : ' A steady gain — good for size.';
+  else if (goal === 'strength' || goal === 'powerlifting' || goal === 'strongman') note = d < -1 ? ' Losing weight makes strength harder to build — fine if you\'re making a weight class.' : '';
+  return { html: `Bodyweight: ${coKg(now)} this week, ${d >= 0 ? '+' : '−'}${coKg(Math.abs(d))} on a month ago (${d >= 0 ? '+' : '−'}${coKg(Math.abs(rate))} a week).${esc(note)}` };
+}
+function coAnsWeak(D) {
+  const bits = [];
+  if (D.testR && D.testR.weakest) bits.push(`Your fitting test (${fmtDate(D.test.date)}) says <b>${esc(D.testR.weakest.label.toLowerCase())}</b>${D.testR.lagging ? `, and ${esc(D.testR.lagging.label.toLowerCase())} is your lagging lift pattern` : ''}.`);
+  const ranks = allRanks();
+  if (ranks.length > 1) { const lo = ranks[ranks.length - 1]; bits.push(`Of your ranked lifts, ${esc(lo.name)} scores lowest (${esc(lo.tierName)}, ${Math.round(lo.score)}).`); }
+  const low = Object.entries(D.muscles).filter(([, v]) => v < CO_LOW_SETS).map(([k]) => MUSCLES[k] || k);
+  if (low.length) bits.push(`Undertrained this week: ${esc(low.slice(0, 4).join(', '))}.`);
+  if (!bits.length) return { html: 'I need a fitting test or a few weeks of logging to say. The fitting test is the quickest way.', act: [['test', 'Fitting test']] };
+  return { html: bits.join('<br>'), act: D.test ? [] : [['test', 'Fitting test']] };
+}
+function coAnsEvent(D) {
+  const m = D.event;
+  if (!m) return { html: 'No event on the calendar. Add one on Calendar → Events and I\'ll count down to it.' };
+  const days = daysBetween(D.t, m.date), b = D.block;
+  return { html: `<b>${esc(m.name || 'Your event')}</b> is ${days === 0 ? 'today' : `in ${days} day${days === 1 ? '' : 's'} (${Math.floor(days / 7)} weeks ${days % 7} days)`} — ${esc(fmtDate(m.date))}.`
+    + (b ? `<br>You're in week ${b.week} of the ${esc(b.kind.label.toLowerCase())} block: ${esc(b.kind.tip)}.` : '<br>No training blocks set up for it — Calendar → the event → Blocks lays them out backwards from the date.') };
+}
+function coAnsPlan() {
+  const C = S.coach;
+  if (C.plan && S.programs.includes(C.planProg)) return { html: `You're on <b>${esc(C.plan.name)}</b>.`, act: [['see', 'See my plan']] };
+  if (C.planProg && S.programs.includes(C.planProg)) return { html: `You're on <b>${esc(programName(C.planProg))}</b>.` };
+  const other = (S.programs || []).filter(id => S.workouts.some(w => w.prog === id && w.status === 'planned'));
+  return { html: other.length ? `Your calendar has ${esc(other.map(programName).join(', '))}.` : 'No plan on the calendar.', act: [['new', 'Build me a plan'], ['import', 'Bring in my own']] };
+}
+/* The debrief (spec §6): what happened, then one thing for next time. */
+function coDebrief(wo) {
+  if (!wo) return { html: 'No finished session to look at yet.' };
+  const lines = [], next = [];
+  const work = wo.exercises.map(e => ({ e, sets: e.sets.filter(s => isWorking(s)) })).filter(x => x.sets.length);
+  const done = work.reduce((a, x) => a + x.sets.filter(s => s.done).length, 0), all = work.reduce((a, x) => a + x.sets.length, 0);
+  const skipped = work.filter(x => !x.sets.some(s => s.done)).map(x => exName(x.e));
+  if (wo.prog) lines.push(`${done} of ${all} planned sets done${skipped.length ? `; skipped ${skipped.join(', ')}` : ''}.`);
+  else { const T = sessionTotals(wo); lines.push(`${T.sets} working set${T.sets === 1 ? '' : 's'} over ${work.length} exercise${work.length === 1 ? '' : 's'}, ${wt(T.volume, 0)} moved.`); }
+  const main = work[0];
+  if (main && !main.sets.some(s => s.done)) next.push([5, `Get ${exName(main.e)} done first next time — it's the session's main lift.`]);
+  const gaps = [];
+  work.forEach(x => x.sets.forEach(s => { if (s.done && s.t != null && s.rpe != null) gaps.push({ g: rpeToRir(s.rpe) - s.t, name: exName(x.e) }); }));
+  if (gaps.length >= 2) {
+    const g = coAvg(gaps.map(x => x.g));
+    if (g >= 1.5) { lines.push(`Sets were about ${nice(g)} reps easier than planned.`); next.push([4, 'Add weight — your sets are easier than their RIR targets.']); }
+    else if (g <= -1) { lines.push(`Sets were about ${nice(-g)} reps harder than planned.`); next.push([4, 'Ease the weight 2.5–5% so sets land on their RIR targets.']); }
+    else lines.push('Effort was on target.');
+  }
+  const prs = prsFor(wo);
+  if (prs.length) lines.push(`PR${prs.length > 1 ? 's' : ''}: ${prs.map(p => `${p.name} ${prText(p)}`).join(', ')}.`);
+  work.forEach(x => {
+    if (!x.e.range) return;
+    const v = rangeVerdict(x.e, x.sets.filter(s => s.done), wo.date);
+    if (!v) return;
+    lines.push(`${exName(x.e)}: ${verdictWords(v, false)}.`);
+    if (v.kind === 'up') next.push([3, `${exName(x.e)}: ${wt(v.next)} × ${v.lo} next time.`]);
+  });
+  const stalled = work.filter(x => x.e.leaf && stallFor(exKey(x.e))).map(x => exName(x.e));
+  if (stalled.length) { lines.push(`Stalled: ${stalled.join(', ')}.`); next.push([2, `${stalled[0]} has stalled — ask me why before the next session.`]); }
+  const vg = [];
+  work.forEach(x => x.sets.forEach(s => { if (s.done && s.vbt && s.vbt.est && s.rpe != null) vg.push(rpeToRir(s.rpe) - rpeToRir(s.vbt.est.rpe)); }));
+  if (vg.length >= 2) { const g = coAvg(vg); if (Math.abs(g) >= 1) lines.push(`Bar speed says you had ${g > 0 ? 'fewer' : 'more'} reps left than you logged (about ${nice(Math.abs(g))}).`); }
+  const pain = [...wo.exercises.filter(e => e.sets.some(s => s.feel && s.feel.pain)).map(exName), ...(wo.feel && wo.feel.pain ? ['the session'] : [])];
+  if (pain.length) { lines.push(`You flagged pain on ${pain.join(', ')}.`); next.push([6, 'You flagged pain — if it\'s still there, stop and get it checked by a professional. I can\'t advise on injuries.']); }
+  if (!next.length) next.push([0, prs.length ? 'Same again and try to beat one more rep somewhere.' : 'Same weights, and beat at least one rep somewhere.']);
+  next.sort((a, b) => b[0] - a[0]);
+  return { html: `<b>${esc(wo.name)}</b> · ${esc(fmtDate(wo.date))}${wo.summary && wo.summary.mins ? ` · ${wo.summary.mins} min` : ''}<br>${lines.map(esc).join('<br>')}<br><b>Next time:</b> ${esc(next[0][1])}` };
+}
+/* The weekly review (spec §6): the week, then one focus. */
+function coReview(D) {
+  const L = [], focus = [];
+  L.push(`<b>Last 7 days:</b> ${D.week.done} session${D.week.done === 1 ? '' : 's'}${D.week.missed ? `, ${D.week.missed} planned one${D.week.missed === 1 ? '' : 's'} missed` : ''} (${D.week.prev} the week before).`);
+  if (D.week.missed >= 2) focus.push([4, 'Consistency first: get every planned session in, even short ones.']);
+  if (D.prs.length) L.push(`PRs: ${esc(D.prs.map(p => `${p.name} ${prText(p)}`).join(', '))}.`);
+  const moving = D.lifts.filter(l => l.now && l.then && l.now > l.then * 1.01), stalled = D.lifts.filter(l => l.stall);
+  if (D.lifts.length) L.push(D.lifts.map(coLiftLine).join('<br>'));
+  if (stalled.length) focus.push([3, `${stalled[0].name} has stalled — ask me why.`]);
+  const low = Object.entries(D.muscles).filter(([, v]) => v < CO_LOW_SETS).map(([k]) => MUSCLES[k] || k);
+  if (low.length && D.week.done) { L.push(`Low volume: ${esc(low.slice(0, 5).join(', '))}.`); focus.push([1, `Give ${low[0].toLowerCase()} a few more sets.`]); }
+  const c = D.ci, p = D.ciPrev;
+  if (c.n) L.push(`Check-ins: sleep ${c.sleep ? nice(c.sleep) + ' h' : '—'}, energy ${c.energy ? nice(c.energy) + '/5' : '—'}, soreness ${c.soreness ? nice(c.soreness) + '/5' : '—'}${p.n ? ' (last week ' + [p.sleep ? nice(p.sleep) + ' h' : '', p.energy ? nice(p.energy) + '/5' : ''].filter(Boolean).join(', ') + ')' : ''}.`);
+  if (c.sleep && c.sleep < 6.5) focus.push([3, 'Sleep is the cheapest win this week — aim for 7–9 h.']);
+  if (c.weight && D.bwThen) L.push(`Bodyweight ${coKg(c.weight)} (${c.weight >= D.bwThen ? '+' : '−'}${coKg(Math.abs(c.weight - D.bwThen))} in a month).`);
+  if (D.event) L.push(`${esc(D.event.name || 'Event')} in ${daysBetween(D.t, D.event.date)} days${D.block ? ` — ${esc(D.block.kind.label.toLowerCase())} block, week ${D.block.week}` : ''}.`);
+  const dl = coDeloadScore(D);
+  if (dl.score >= 3) focus.push([5, 'Take a lighter week: half the sets, RIR 3–4.']);
+  if (D.testR && D.testR.flags.length) focus.push([0, `Keep at your fitting-test flag: ${D.testR.flags[0].text.toLowerCase()}.`]);
+  if (!focus.length) focus.push([0, moving.length ? `Keep going — ${moving.map(l => l.name).join(', ')} ${moving.length === 1 ? 'is' : 'are'} moving.` : 'Keep the plan as it is and chase one more rep.']);
+  focus.sort((a, b) => b[0] - a[0]);
+  return { html: `${L.join('<br>')}<br><b>Focus for next week:</b> ${esc(focus[0][1])}` };
+}
+
+/* ---- the chips and the typed-question matcher ---- */
+function coAskChips(D) {
+  const out = [];
+  if (D.next) out.push(['today', D.next.date === D.t ? 'What\'s today\'s session?' : 'What\'s my next session?']);
+  out.push(['review', 'Review my week']);
+  if (D.lastDone) out.push(['debrief', 'Debrief my last session']);
+  const st = D.lifts.find(l => l.stall);
+  if (st) out.push([`stall:${st.key}`, `Why has my ${shortLift(st.name).toLowerCase()} stalled?`]);
+  const mv = D.lifts.find(l => !l.stall && l.now);
+  if (mv) out.push([`lift:${mv.key}`, `How's my ${shortLift(mv.name).toLowerCase()} going?`]);
+  out.push(['deload', 'Should I deload?'], ['weak', 'What\'s my weakest area?']);
+  if (D.event) out.push(['event', `How long to ${D.event.name || 'my event'}?`]);
+  out.push(['volume', 'Am I doing enough volume?'], ['recovery', 'How\'s my recovery?'], ['body', 'How\'s my bodyweight?']);
+  return out;
+}
+/* Most specific first: the first topic that matches (other than lift/stall) answers. */
+const CO_TOPICS = [
+  ['stall', /\b(stall\w*|plateau\w*|stuck|not (going up|moving)|no progress|why .*(not|isn't|isnt))\b/],
+  ['deload', /\b(deload|tired|burn(t|ed)? out|rest week|back off|overtrain\w*|fatigued)\b/],
+  ['weak', /\b(weak\w*|lagging|worst|improve)\b/],
+  ['event', /\b(meet|comp|competition|event|show|countdown|weeks (to|until)|how long (to|until))\b/],
+  ['volume', /\b(volume|enough sets|sets per|too much|too little|how many sets)\b/],
+  ['recovery', /\b(recover\w*|sleep\w*|energy|sore\w*|fresh)\b/],
+  ['body', /\b(body ?weight|weigh\w*|cut\w*|bulk\w*|weight class|fat|lean)\b/],
+  ['debrief', /\b(debrief|last session|yesterday|last workout|how did .*(go|do))\b/],
+  ['review', /\b(week|weekly|review|summary|how am i doing|progress overall|recap)\b/],
+  ['today', /\b(today|tonight|next session|session today|workout today|what (do|should) i (do|train|lift))\b/],
+  ['plan', /\b(plan|program\w*|routine|split|schedule)\b/],
+  ['lift', /\b(e1rm|1rm|max|going|strength|stronger|pr|prs)\b/],
+];
+const CO_STOP = new Set('what when where which with have does that this your about should there from much many they then them into will would could been were their make need want know tell really the and you how can why are for its mean means doing'.split(' '));
+/* Which logged lift the text names: the longest matching exercise name, then
+   the common short forms of the main lifts. */
+function coFindLift(q) {
+  const keys = allStats().map(s => s.key);
+  let best = null;
+  keys.forEach(k => {
+    const n = displayName(keyLeaf(k)).toLowerCase();
+    if (q.includes(n) && (!best || n.length > best.n.length)) best = { k, n };
+  });
+  if (best) return best.k;
+  const short = [['bench', 'bench-press'], ['squat', 'back-squat'], ['deadlift', 'deadlift'], ['dead', 'deadlift'], ['ohp', 'overhead-press'], ['overhead', 'overhead-press'], ['press', 'overhead-press'], ['row', 'seated-row'], ['log', 'log-press'], ['trap bar', 'deadlift']];
+  for (const [w, m] of short) {
+    if (!new RegExp(`\\b${w}\\b`).test(q)) continue;
+    const pk = priorityKeys().find(k => typeof k === 'string' && k.startsWith(m + '/') && statsFor(k));
+    const k = pk || keys.filter(k2 => k2.startsWith(m + '/')).sort((a, b) => (statsFor(b).sessions) - (statsFor(a).sessions))[0];
+    if (k) return k;
+  }
+  return null;
+}
+function coMatch(text) {
+  const q = ' ' + String(text).toLowerCase().replace(/[^a-z0-9' ]+/g, ' ').replace(/\s+/g, ' ') + ' ';
+  const rem = String(text).match(/^\s*(?:please\s+)?(?:remember|note|don'?t forget)(?:\s+that)?[:,]?\s+(.{3,140})$/i);
+  if (rem) return { topic: 'remember', arg: rem[1].trim().replace(/[.!]+$/, '') };
+  /* Help answers: words in the FAQ question count double, words in its answer once. */
+  const words = q.split(' ').filter(w => w.length >= 3 && !CO_STOP.has(w));
+  let faq = null, score = 0;
+  FAQ.forEach(([qq, a]) => {
+    const s = words.reduce((n, w) => n + (qq.toLowerCase().includes(w) ? 2 : 0) + (a.toLowerCase().includes(w) ? 1 : 0), 0);
+    if (s > score) { score = s; faq = [qq, a]; }
+  });
+  if (faq && score >= 2 && /^\s*(what('s| is| are| does)|whats|explain|define|how do i)\b/.test(q)) return { topic: 'faq', arg: faq };
+  const lift = coFindLift(q);
+  const hits = CO_TOPICS.filter(([, re]) => re.test(q)).map(t => t[0]);
+  if (hits.includes('stall') && lift) return { topic: 'stall', arg: lift };
+  const pick = hits.find(t => t !== 'lift' && t !== 'stall') || (hits.includes('stall') ? 'stall' : null);
+  if (pick) return { topic: pick };
+  if (lift) return { topic: 'lift', arg: lift };
+  if (hits.includes('lift')) return { topic: 'lift' };
+  if (faq && score >= 2) return { topic: 'faq', arg: faq };
+  return null;
+}
+/* One answer, as a coach bubble plus any follow-up chips. */
+function coAnswerTopic(topic, arg) {
+  const D = coachDigest();
+  let r;
+  if (topic === 'today') r = coAnsToday(D);
+  else if (topic === 'review') { r = coReview(D); S.coach.lastReview = D.t; save(); }
+  else if (topic === 'debrief') r = coDebrief(arg ? S.workouts.find(w => w.id === arg) : D.lastDone);
+  else if (topic === 'stall') r = arg ? coAnsStall(D, arg) : (D.lifts.find(l => l.stall) ? coAnsStall(D, D.lifts.find(l => l.stall).key) : { html: 'None of your main lifts is stalled — each has beaten its mark within its last five sessions.' });
+  else if (topic === 'lift') r = arg ? coAnsLift(D, arg) : { html: D.lifts.map(coLiftLine).join('<br>') || 'No main lifts logged yet.' };
+  else if (topic === 'deload') r = coAnsDeload(D);
+  else if (topic === 'weak') r = coAnsWeak(D);
+  else if (topic === 'event') r = coAnsEvent(D);
+  else if (topic === 'volume') r = coAnsVolume(D);
+  else if (topic === 'recovery') r = coAnsRecovery(D);
+  else if (topic === 'body') r = coAnsBody(D);
+  else if (topic === 'plan') r = coAnsPlan();
+  else if (topic === 'faq') r = { html: `<b>${esc(arg[0])}</b><br>${esc(arg[1])}` };
+  else return;
+  coBubble('coach', r.html + (debugOn() ? ' ' + why('digest') : ''));
+  coFollow(r.act || []);
+}
+/* Follow-up chips under an answer, then the usual menu. */
+function coFollow(act) {
+  if (!act.length) return coMenu();
+  coAnswer(`${coChips([...act, ['menu', 'Something else']])}${coFormHtml()}`);
+  $('#coAns', CO.bg).querySelectorAll('[data-cov]').forEach(b => b.onclick = () => coMenuPick(b.dataset.cov, b.textContent));
+  coFormWire();
+}
+/* The typed-question box sits under every set of chips. */
+function coFormHtml() {
+  return `<form class="row" id="coForm" style="gap:6px;margin-top:10px"><label for="coText" class="sr-only">Ask the coach</label>
+    <input id="coText" autocomplete="off" placeholder="Ask about your training…" style="flex:1"><button class="btn sm primary" type="submit">Ask</button></form>`;
+}
+function coFormWire() {
+  const f = $('#coForm', CO.bg);
+  if (f) f.onsubmit = ev => { ev.preventDefault(); const t = $('#coText', CO.bg).value.trim(); if (t) coTyped(t); };
+}
+/* Typed into the chat: the local matcher first, then (with a key) the AI. */
+async function coTyped(text) {
+  coBubble('me', esc(text));
+  const m = coMatch(text);
+  if (m && m.topic === 'remember') {
+    coBubble('coach', `Remember this? "${esc(m.arg)}"`);
+    coAnswer(coChips([['yes', 'Yes, remember it'], ['no', 'No']]));
+    $('#coAns', CO.bg).querySelectorAll('[data-cov]').forEach(b => b.onclick = () => {
+      coBubble('me', esc(b.textContent));
+      if (b.dataset.cov === 'yes') { const C = coachMem(); C.notes = [...C.notes, m.arg].slice(-20); save(); coBubble('coach', 'Saved. You can see and delete notes in Coach settings.'); }
+      coMenu();
+    });
+    return;
+  }
+  if (m) return coAnswerTopic(m.topic, m.arg);
+  if (aiStatus() !== 'on') {
+    coBubble('coach', `I can't answer that one on my own yet${aiStatus() === 'capped' ? ' (and this month\'s AI cap is reached)' : ' — with your AI key added I could try'}. These I can do:`);
+    return coMenu();
+  }
+  coBubble('coach', '…');
+  const thinking = $('#coLog', CO.bg).lastElementChild;
+  try {
+    const D = coachDigest(), C = S.coach;
+    const facts = {
+      goal: (C.answers || {}).goal, experience: (C.answers || {}).experience, notes: C.notes, week: D.week,
+      lifts: D.lifts.map(l => ({ name: l.name, e1rm_kg: l.now && +l.now.toFixed(1), two_weeks_ago_kg: l.then && +l.then.toFixed(1), stalled: !!l.stall })),
+      sets_per_muscle_this_week: Object.fromEntries(Object.entries(D.muscles).map(([k, v]) => [MUSCLES[k] || k, +v.toFixed(1)])),
+      rir_vs_target: D.rirGap != null ? +D.rirGap.toFixed(1) : null, checkins_this_week: D.ci, checkins_last_week: D.ciPrev,
+      event: D.event ? { name: D.event.name, date: D.event.date } : null, block: D.block ? { kind: D.block.kind.label, week: D.block.week } : null,
+      fitting_test: D.testR ? { profile: D.testR.type, flags: D.testR.flags.map(f => f.text) } : null,
+    };
+    const r = await aiCall({ feature: 'ask', maxTokens: 400,
+      system: 'You are the coach inside Ironlog, a strength training log. Answer the lifter\'s question in under 120 words of plain text (no markdown). Use only the numbers in the training data given; if they don\'t answer it, say what to log. Training topics only. No medical or injury advice: for pain or injury, say to stop and see a professional. RIR means reps in reserve. Weights are kg.',
+      user: `Training data: ${JSON.stringify(facts)}\n\nQuestion: ${text}` });
+    thinking.textContent = r.text.trim() || 'No answer came back.';
+    thinking.insertAdjacentHTML('beforeend', ' <span class="chip blue" style="margin-left:4px">CLAUDE</span>');
+  } catch (e) { thinking.textContent = aiWhy(e); }
+  coMenu();
+}
+/* The coach's Home card: the weekly review, once a week. */
+function coachHomeCard() {
+  const C = S.coach;
+  if (!C || !C.setupDone) return '';
+  const last = C.lastReview;
+  if (last && daysBetween(last, today()) < 7) return '';
+  if (!coLifted(7).length) return '';
+  return `<div class="card" style="margin-bottom:13px"><div class="row between" style="gap:8px"><div class="grow"><div class="eyebrow">Coach</div>
+    <div style="font-weight:650">Your weekly review is ready</div><div class="sub">What moved, what's stuck, and one focus for next week.</div></div>
+    <button class="btn sm primary" id="hmReview">Open</button></div></div>`;
+}
+
 /* ---------------- plans from anywhere: the Ironlog plan format (r&d/specs/plan-format.md) ----------------
    A short JSON format any AI can write: the lifter copies the rules into their
    own AI app with their plan, or Claude writes it here on their key, or they
@@ -14587,7 +15006,11 @@ function planToProgram(obj) {
   for (let w = 1; w <= weeks; w++) (Bd && w % 2 === 0 ? Bd : A).forEach((d, di) => P.workouts.push({ week: w, day: di + 1, name: `${d.name}${Bd ? (w % 2 ? ' A' : ' B') : ''}`, block: `Week ${w}`, exercises: d.exercises }));
   return { P, warn, unknown: [...unknown], days: A, daysB: Bd, weeks, wd };
 }
-function programName(id) { return PROGRAM_NAMES[id] || (S.programNames || {})[id] || (PROGRAM_MANIFEST && id === PROGRAM_MANIFEST.id ? PROGRAM_MANIFEST.name : id); }
+function programName(id) {
+  return PROGRAM_NAMES[id] || (S.programNames || {})[id] || (PROGRAM_MANIFEST && id === PROGRAM_MANIFEST.id ? PROGRAM_MANIFEST.name : null)
+    || (S.coach && S.coach.plan && S.coach.planProg === id ? `Coach · ${S.coach.plan.name}` : null)
+    || (String(id).startsWith('coach-') ? 'Coach plan' : String(id).startsWith('import-') ? 'Imported plan' : id);
+}
 /* Install, asking first about other programs that still have planned sessions. */
 function installAsking(P, startDate, replace, after) {
   const others = (S.programs || []).filter(id => !replace.includes(id) && S.workouts.some(w => w.prog === id && w.status === 'planned' && w.date >= today()));
