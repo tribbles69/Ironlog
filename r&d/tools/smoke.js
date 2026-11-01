@@ -733,6 +733,9 @@ window.smoke = async function smoke(opts) {
       S.coach = { setupDone: false, answers: {}, notes: [] };
       openCoach(); await wait(80);
       if (modalTitle() !== 'Coach') throw new Error(`coach opened "${modalTitle()}"`);
+      const first = document.querySelector('#coAns [data-cov="build"]');
+      if (!first) throw new Error('first question should ask whether to build a plan');
+      first.click(); await wait(40);
       const chip = document.querySelector('#coAns [data-cov="strength"]');
       if (!chip) throw new Error('first question has no Strength chip');
       chip.click(); await wait(40);
@@ -749,6 +752,36 @@ window.smoke = async function smoke(opts) {
     } finally {
       if (pid) removeProgram(pid);
       S.coach = JSON.parse(keep.coach); S.settings.places = JSON.parse(keep.places); S.programs = keep.programs; bust(); save(); close();
+      if (S.workouts.length !== keep.n) throw new Error('cleanup left sessions behind');
+    }
+  });
+
+  await step('flow: bring in a plan — format, parse, install (plan-format)', async () => {
+    const keep = { programs: [...S.programs], names: { ...(S.programNames || {}) }, n: S.workouts.length };
+    let pid = null;
+    try {
+      const txt = planFormatText();
+      if (!txt.includes('ironlog-plan') || !txt.includes('Bench Press')) throw new Error('instructions missing the format or the exercise list');
+      const fence = '`'.repeat(3);
+      const reply = `Sure!\n${fence}json\n` + JSON.stringify({ format: 'ironlog-plan', version: 1, name: 'Smoke UL', weeks: 2, weekdays: ['mon', 'thu'],
+        days: [{ name: 'Upper', exercises: [{ name: 'Bench Press', equipment: 'Barbell', sets: 3, reps: '6-10', rir: 2 }, { name: 'Plank', sets: 2, seconds: 30 }] },
+               { name: 'Lower', exercises: [{ name: 'Back Squat', sets: [{ reps: 5, rir: 4, type: 'warm-up' }, { reps: 3, rir: 1, type: 'top' }] }] }] }) + `\n${fence}`;
+      const r = planToProgram(planParse(reply));
+      if (r.P.loads !== 'rir' || r.P.workouts.length !== 4 || r.unknown.length) throw new Error('plan expanded wrongly');
+      try { planParse('no plan here'); throw new Error('accepted text with no JSON'); } catch (e) { if (!/No plan found/.test(e.message)) throw e; }
+      let n = 0;
+      installAsking(r.P, today(), [], k => { n = k; });
+      await wait(40);
+      if (modalTitle() === 'Other planned sessions') { document.querySelector('#coKeep').click(); await wait(40); }
+      pid = r.P.id;
+      const ws = S.workouts.filter(w => w.prog === pid);
+      const sq = ws.find(w => /Lower/.test(w.name)), up = ws.find(w => /Upper/.test(w.name));
+      if (!n || !sq || sq.exercises[0].sets[0].setType !== 'warmup' || !up.exercises[1].iso) throw new Error('installed sessions wrong');
+      if (programName(pid) !== 'Smoke UL') throw new Error('program name not kept');
+      return `${txt.length} chars of instructions; ${n} sessions installed`;
+    } finally {
+      if (pid) removeProgram(pid);
+      S.programs = keep.programs; S.programNames = keep.names; bust(); save(); close();
       if (S.workouts.length !== keep.n) throw new Error('cleanup left sessions behind');
     }
   });

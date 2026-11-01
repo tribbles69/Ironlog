@@ -84,6 +84,14 @@ S.coach = {
 
 ## 1. Setup questions
 
+**Q0 — does the lifter want a plan?** (Aaron, 2026-11-02) Asked first: *Build me a
+plan* · *I've got a plan — bring it in* · *No plan — I'll just log*. Bringing
+one in asks only the goal, experience and profile basics, then opens the
+import sheet (`r&d/specs/plan-format.md`): the lifter's own AI app, Claude on
+their key, or a file. No plan saves the answers and stops. The plan
+questions (place, days, length, priority lifts, go-easy) are asked only when
+the coach builds the plan.
+
 Asked in the coach chat (§0) the first time it opens, and again from
 *Change my answers* or *New plan*. The welcome screen (C1) ends with a "Set
 up your coach" button that opens it. Skip any question the app can already
