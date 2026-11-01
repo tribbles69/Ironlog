@@ -3,51 +3,414 @@
   "rules": {
     "oneMainPerDay": true,
     "neverTogether": [
-      ["back-squat/*", "leg-press/*"],
-      ["deadlift/trap_bar", "leg-press/*"]
+      [
+        "back-squat/*",
+        "leg-press/*"
+      ],
+      [
+        "deadlift/trap_bar",
+        "leg-press/*"
+      ]
     ],
     "neverTogetherNote": "From the PPLUL doc (squat and leg press never share a session) and the coach spec (trap bar and leg press never share a day)."
   },
   "patterns": {
-    "squat":            { "label": "Squat",                   "candidates": ["back-squat/barbell", "back-squat/safety_squat_bar", "back-squat/smith", "front-squat/barbell", "goblet-squat/dumbbells"] },
-    "squat-machine":    { "label": "Machine squat",           "candidates": ["leg-press/plate_loaded_machine", "hack-squat/plate_loaded_machine", "pendulum-squat/plate_loaded_machine", "back-squat/belt_squat", "goblet-squat/dumbbells"] },
-    "hinge":            { "label": "Deadlift",                "candidates": ["deadlift/barbell", "deadlift/trap_bar", "sumo-deadlift/barbell", "romanian-deadlift/dumbbells"] },
-    "hinge-2":          { "label": "Second hinge",            "candidates": ["romanian-deadlift/barbell", "deadlift/trap_bar", "romanian-deadlift/dumbbells", "stiff-leg-deadlift/barbell", "good-morning/barbell", "back-extension/bodyweight"] },
-    "glute-main":       { "label": "Hip thrust",              "candidates": ["hip-thrust/barbell", "hip-thrust/machine", "hip-thrust/smith", "glute-bridge/dumbbells"] },
-    "single-leg":       { "label": "Single-leg",              "candidates": ["bulgarian-split-squat/dumbbells", "reverse-lunge/dumbbells", "split-squat/dumbbells", "step-up/dumbbells", "split-squat/bodyweight"] },
-    "quad-iso":         { "label": "Quads",                   "candidates": ["leg-extension/machine", "sissy-squat/bodyweight", "split-squat/bodyweight"] },
-    "ham-curl":         { "label": "Hamstring curl",          "candidates": ["leg-curl/machine", "glute-ham-raise/bodyweight", "nordic-curl/bodyweight", "leg-curl/resistance_band"] },
-    "glute-iso":        { "label": "Glutes",                  "candidates": ["hip-abduction/machine", "glute-kickback/cable", "hip-abduction/resistance_band", "glute-bridge/bodyweight"] },
-    "adductors":        { "label": "Adductors",               "candidates": ["hip-adduction/machine", "hip-adduction/cable", "side-lunge/dumbbells"] },
-    "calves":           { "label": "Calves",                  "candidates": ["calf-raise-standing/smith", "calf-raise-standing/machine", "calf-raise-seated/machine", "calf-raise-standing/dumbbells", "calf-raise-standing/bodyweight"] },
-
-    "bench":            { "label": "Bench press",             "candidates": ["bench-press/barbell", "bench-press/dumbbells", "bench-press/machine", "push-up/bodyweight"] },
-    "bench-b":          { "label": "Chest press",             "candidates": ["bench-press/machine", "bench-press/dumbbells", "bench-press/smith", "larsen-press/barbell", "push-up/bodyweight"] },
-    "incline-press":    { "label": "Incline press",           "candidates": ["incline-bench-press/dumbbells", "incline-bench-press/barbell", "incline-bench-press/machine", "incline-push-up/bodyweight"] },
-    "close-grip":       { "label": "Close-grip press",        "candidates": ["close-grip-bench/barbell", "pin-press/barbell", "larsen-press/barbell", "triceps-dip/bodyweight"] },
-    "ohp":              { "label": "Overhead press",          "candidates": ["overhead-press/barbell", "overhead-press/dumbbells", "overhead-press/machine", "arnold-press/dumbbells"] },
-    "ohp-b":            { "label": "Machine shoulder press",  "candidates": ["overhead-press/smith", "overhead-press/machine", "overhead-press/dumbbells", "arnold-press/dumbbells"] },
-    "chest-iso":        { "label": "Chest fly",               "candidates": ["chest-fly/cable", "pec-deck/machine", "chest-fly/dumbbells", "push-up/bodyweight"] },
-    "lateral-raise":    { "label": "Lateral raise",           "candidates": ["lateral-raise/cable", "lateral-raise/dumbbells", "lateral-raise/machine", "lateral-raise/resistance_band"] },
-    "rear-delt":        { "label": "Rear delts",              "candidates": ["face-pull/cable", "rear-delt-fly/machine", "rear-delt-fly/dumbbells", "face-pull/resistance_band"] },
-    "triceps":          { "label": "Triceps",                 "candidates": ["triceps-pushdown/cable", "skull-crusher/barbell", "triceps-dip/bodyweight", "triceps-pushdown/resistance_band"] },
-    "triceps-oh":       { "label": "Overhead triceps",        "candidates": ["overhead-triceps-extension/cable", "overhead-triceps-extension/dumbbells", "skull-crusher/dumbbells", "overhead-triceps-extension/resistance_band"] },
-
-    "row":              { "label": "Row",                     "candidates": ["seated-row/cable", "chest-supported-row/machine", "bent-over-row/barbell", "single-arm-row/dumbbells", "inverted-row/bodyweight"] },
-    "pulldown":         { "label": "Pulldown / pull-up",      "candidates": ["lat-pulldown/cable", "pull-up/bodyweight", "chin-up/bodyweight", "pull-up/resistance_band"] },
-    "shrug":            { "label": "Shrug",                   "candidates": ["shrug/barbell", "shrug/smith", "shrug/trap_bar", "shrug/dumbbells"] },
-    "biceps":           { "label": "Biceps",                  "candidates": ["biceps-curl/dumbbells", "biceps-curl/cable", "preacher-curl/machine", "biceps-curl/barbell", "biceps-curl/resistance_band"] },
-    "biceps-2":         { "label": "Hammer curl",             "candidates": ["hammer-curl/dumbbells", "hammer-curl/cable", "reverse-curl/barbell", "hammer-curl/resistance_band"] },
-
-    "abs":              { "label": "Abs",                     "candidates": ["cable-crunch/cable", "hanging-knee-raise/bodyweight", "ab-wheel/bodyweight", "plank/bodyweight"] },
-    "obliques":         { "label": "Obliques",                "candidates": ["side-bend/dumbbells", "woodchopper/cable", "pallof-press/cable", "side-plank/bodyweight"] },
-
-    "event-carry":      { "label": "Carry event",             "candidates": ["farmers-carry/farmers_handles", "yoke-carry/yoke", "sandbag-carry/sandbag", "farmers-carry/dumbbells"] },
-    "event-load":       { "label": "Loading event",           "candidates": ["atlas-stone/stone", "sandbag-load/sandbag", "keg-load/keg"] },
-    "event-press":      { "label": "Press event",             "candidates": ["log-press/log", "overhead-press/axle", "push-press/barbell", "push-press/dumbbells"] }
+    "squat": {
+      "label": "Squat",
+      "candidates": [
+        "back-squat/barbell",
+        "back-squat/safety_squat_bar",
+        "back-squat/smith",
+        "front-squat/barbell",
+        "goblet-squat/dumbbells"
+      ]
+    },
+    "squat-machine": {
+      "label": "Machine squat",
+      "candidates": [
+        "leg-press/plate_loaded_machine",
+        "hack-squat/plate_loaded_machine",
+        "pendulum-squat/plate_loaded_machine",
+        "back-squat/belt_squat",
+        "goblet-squat/dumbbells"
+      ]
+    },
+    "hinge": {
+      "label": "Deadlift",
+      "candidates": [
+        "deadlift/barbell",
+        "deadlift/trap_bar",
+        "sumo-deadlift/barbell",
+        "romanian-deadlift/dumbbells"
+      ]
+    },
+    "hinge-2": {
+      "label": "Second hinge",
+      "candidates": [
+        "romanian-deadlift/barbell",
+        "deadlift/trap_bar",
+        "romanian-deadlift/dumbbells",
+        "stiff-leg-deadlift/barbell",
+        "good-morning/barbell",
+        "back-extension/bodyweight"
+      ]
+    },
+    "glute-main": {
+      "label": "Hip thrust",
+      "candidates": [
+        "hip-thrust/barbell",
+        "hip-thrust/machine",
+        "hip-thrust/smith",
+        "glute-bridge/dumbbells"
+      ]
+    },
+    "single-leg": {
+      "label": "Single-leg",
+      "candidates": [
+        "bulgarian-split-squat/dumbbells",
+        "reverse-lunge/dumbbells",
+        "split-squat/dumbbells",
+        "step-up/dumbbells",
+        "split-squat/bodyweight"
+      ]
+    },
+    "quad-iso": {
+      "label": "Quads",
+      "candidates": [
+        "leg-extension/machine",
+        "sissy-squat/bodyweight",
+        "split-squat/bodyweight"
+      ]
+    },
+    "ham-curl": {
+      "label": "Hamstring curl",
+      "candidates": [
+        "leg-curl/machine",
+        "glute-ham-raise/bodyweight",
+        "nordic-curl/bodyweight",
+        "leg-curl/resistance_band"
+      ]
+    },
+    "glute-iso": {
+      "label": "Glutes",
+      "candidates": [
+        "hip-abduction/machine",
+        "glute-kickback/cable",
+        "hip-abduction/resistance_band",
+        "glute-bridge/bodyweight"
+      ]
+    },
+    "adductors": {
+      "label": "Adductors",
+      "candidates": [
+        "hip-adduction/machine",
+        "hip-adduction/cable",
+        "side-lunge/dumbbells"
+      ]
+    },
+    "calves": {
+      "label": "Calves",
+      "candidates": [
+        "calf-raise-standing/smith",
+        "calf-raise-standing/machine",
+        "calf-raise-seated/machine",
+        "calf-raise-standing/dumbbells",
+        "calf-raise-standing/bodyweight"
+      ]
+    },
+    "bench": {
+      "label": "Bench press",
+      "candidates": [
+        "bench-press/barbell",
+        "bench-press/dumbbells",
+        "bench-press/machine",
+        "push-up/bodyweight"
+      ]
+    },
+    "bench-b": {
+      "label": "Chest press",
+      "candidates": [
+        "bench-press/machine",
+        "bench-press/dumbbells",
+        "bench-press/smith",
+        "larsen-press/barbell",
+        "push-up/bodyweight"
+      ]
+    },
+    "incline-press": {
+      "label": "Incline press",
+      "candidates": [
+        "incline-bench-press/dumbbells",
+        "incline-bench-press/barbell",
+        "incline-bench-press/machine",
+        "incline-push-up/bodyweight"
+      ]
+    },
+    "close-grip": {
+      "label": "Close-grip press",
+      "candidates": [
+        "close-grip-bench/barbell",
+        "pin-press/barbell",
+        "larsen-press/barbell",
+        "triceps-dip/bodyweight"
+      ]
+    },
+    "ohp": {
+      "label": "Overhead press",
+      "candidates": [
+        "overhead-press/barbell",
+        "overhead-press/dumbbells",
+        "overhead-press/machine",
+        "arnold-press/dumbbells"
+      ]
+    },
+    "ohp-b": {
+      "label": "Machine shoulder press",
+      "candidates": [
+        "overhead-press/smith",
+        "overhead-press/machine",
+        "overhead-press/dumbbells",
+        "arnold-press/dumbbells"
+      ]
+    },
+    "chest-iso": {
+      "label": "Chest fly",
+      "candidates": [
+        "chest-fly/cable",
+        "pec-deck/machine",
+        "chest-fly/dumbbells",
+        "push-up/bodyweight"
+      ]
+    },
+    "lateral-raise": {
+      "label": "Lateral raise",
+      "candidates": [
+        "lateral-raise/cable",
+        "lateral-raise/dumbbells",
+        "lateral-raise/machine",
+        "lateral-raise/resistance_band"
+      ]
+    },
+    "rear-delt": {
+      "label": "Rear delts",
+      "candidates": [
+        "face-pull/cable",
+        "rear-delt-fly/machine",
+        "rear-delt-fly/dumbbells",
+        "face-pull/resistance_band"
+      ]
+    },
+    "triceps": {
+      "label": "Triceps",
+      "candidates": [
+        "triceps-pushdown/cable",
+        "skull-crusher/barbell",
+        "triceps-dip/bodyweight",
+        "triceps-pushdown/resistance_band"
+      ]
+    },
+    "triceps-oh": {
+      "label": "Overhead triceps",
+      "candidates": [
+        "overhead-triceps-extension/cable",
+        "overhead-triceps-extension/dumbbells",
+        "skull-crusher/dumbbells",
+        "overhead-triceps-extension/resistance_band"
+      ]
+    },
+    "row": {
+      "label": "Row",
+      "candidates": [
+        "seated-row/cable",
+        "chest-supported-row/machine",
+        "bent-over-row/barbell",
+        "single-arm-row/dumbbells",
+        "inverted-row/bodyweight"
+      ]
+    },
+    "pulldown": {
+      "label": "Pulldown / pull-up",
+      "candidates": [
+        "lat-pulldown/cable",
+        "pull-up/bodyweight",
+        "chin-up/bodyweight",
+        "pull-up/resistance_band"
+      ]
+    },
+    "shrug": {
+      "label": "Shrug",
+      "candidates": [
+        "shrug/barbell",
+        "shrug/smith",
+        "shrug/trap_bar",
+        "shrug/dumbbells"
+      ]
+    },
+    "biceps": {
+      "label": "Biceps",
+      "candidates": [
+        "biceps-curl/dumbbells",
+        "biceps-curl/cable",
+        "preacher-curl/machine",
+        "biceps-curl/barbell",
+        "biceps-curl/resistance_band"
+      ]
+    },
+    "biceps-2": {
+      "label": "Hammer curl",
+      "candidates": [
+        "hammer-curl/dumbbells",
+        "hammer-curl/cable",
+        "reverse-curl/barbell",
+        "hammer-curl/resistance_band"
+      ]
+    },
+    "abs": {
+      "label": "Abs",
+      "candidates": [
+        "cable-crunch/cable",
+        "hanging-knee-raise/bodyweight",
+        "ab-wheel/bodyweight",
+        "plank/bodyweight"
+      ]
+    },
+    "obliques": {
+      "label": "Obliques",
+      "candidates": [
+        "side-bend/dumbbells",
+        "woodchopper/cable",
+        "pallof-press/cable",
+        "side-plank/bodyweight"
+      ]
+    },
+    "event-carry": {
+      "label": "Carry event",
+      "candidates": [
+        "farmers-carry/farmers_handles",
+        "yoke-carry/yoke",
+        "sandbag-carry/sandbag",
+        "farmers-carry/dumbbells"
+      ]
+    },
+    "event-load": {
+      "label": "Loading event",
+      "candidates": [
+        "atlas-stone/stone",
+        "sandbag-load/sandbag",
+        "keg-load/keg"
+      ]
+    },
+    "event-press": {
+      "label": "Press event",
+      "candidates": [
+        "log-press/log",
+        "overhead-press/axle",
+        "push-press/barbell",
+        "push-press/dumbbells"
+      ]
+    }
   },
   "goalOverrides": {
-    "strongman": { "ohp": ["log-press/log", "overhead-press/axle", "overhead-press/barbell", "overhead-press/dumbbells"], "hinge": ["deadlift/trap_bar", "deadlift/axle", "deadlift/barbell"] },
-    "powerlifting": { "squat": ["back-squat/barbell"], "bench": ["bench-press/barbell"], "hinge": ["deadlift/barbell", "sumo-deadlift/barbell"] }
+    "strongman": {
+      "ohp": [
+        "log-press/log",
+        "overhead-press/axle",
+        "overhead-press/barbell",
+        "overhead-press/dumbbells"
+      ],
+      "hinge": [
+        "deadlift/trap_bar",
+        "deadlift/axle",
+        "deadlift/barbell"
+      ]
+    },
+    "powerlifting": {
+      "squat": [
+        "back-squat/barbell"
+      ],
+      "bench": [
+        "bench-press/barbell"
+      ],
+      "hinge": [
+        "deadlift/barbell",
+        "sumo-deadlift/barbell"
+      ]
+    }
+  },
+  "needs": {
+    "note": "Place extras a candidate needs (coach-spec §1a). A place with no extras list has them all.",
+    "rack": [
+      "back-squat/barbell",
+      "back-squat/safety_squat_bar",
+      "front-squat/barbell",
+      "bench-press/barbell",
+      "incline-bench-press/barbell",
+      "close-grip-bench/barbell",
+      "overhead-press/barbell",
+      "pin-press/barbell",
+      "box-squat/barbell"
+    ],
+    "bench": [
+      "bench-press/*",
+      "incline-bench-press/*",
+      "close-grip-bench/*",
+      "larsen-press/*",
+      "chest-supported-row/dumbbells",
+      "preacher-curl/*"
+    ],
+    "pullup_bar": [
+      "pull-up/bodyweight",
+      "chin-up/bodyweight",
+      "pull-up/resistance_band",
+      "hanging-knee-raise/bodyweight",
+      "dead-hang/bodyweight"
+    ]
+  },
+  "experienceOverrides": {
+    "note": "Under 6 months starts on machines and dumbbells (Aaron, 2026-11-02); the barbell is suggested later, accept-only.",
+    "under6m": {
+      "squat": [
+        "leg-press/plate_loaded_machine",
+        "goblet-squat/dumbbells",
+        "hack-squat/plate_loaded_machine",
+        "back-squat/barbell"
+      ],
+      "bench": [
+        "bench-press/dumbbells",
+        "bench-press/machine",
+        "push-up/bodyweight",
+        "bench-press/barbell"
+      ],
+      "ohp": [
+        "overhead-press/dumbbells",
+        "overhead-press/machine",
+        "overhead-press/barbell"
+      ],
+      "hinge": [
+        "deadlift/trap_bar",
+        "romanian-deadlift/dumbbells",
+        "deadlift/barbell"
+      ],
+      "hinge-2": [
+        "romanian-deadlift/dumbbells",
+        "back-extension/bodyweight",
+        "romanian-deadlift/barbell"
+      ],
+      "row": [
+        "chest-supported-row/machine",
+        "seated-row/cable",
+        "single-arm-row/dumbbells"
+      ],
+      "close-grip": [
+        "bench-press/dumbbells",
+        "triceps-dip/machine",
+        "close-grip-bench/barbell"
+      ],
+      "glute-main": [
+        "hip-thrust/machine",
+        "glute-bridge/dumbbells",
+        "hip-thrust/barbell"
+      ]
+    }
   }
 }
