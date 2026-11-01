@@ -41,7 +41,11 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    Within a section, the **order on the page** is the order of work; item
    numbers are labels and don't always run in sequence (D12 was moved up
    2026-10-31, D8–D9 moved to the end of D; E5 and the new D16 moved ahead of
-   D8 the same day).
+   D8 the same day; E1–E2 were done early at Aaron's request, 0.63.0).
+
+   **Where things stand (2026-11-01, 0.63.0):** everything in A–D is built
+   except D8 and D9. A4 and A6 are waiting on Aaron, so the next build item is
+   **D8**, then D9, then E3 onwards.
 2. **Check the code before trusting a status here.** Some items were marked from
    memory of planning chats, not from the code. If something is already built,
    tick it, note the version, and move on.
@@ -115,10 +119,12 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
       that report on the real log is part of A4.
 - [x] Changelog (24 Sep 2026): `CHANGELOG.md` (repo root since A2), backfilled from commit
       history.
-- [ ] Composed exercise model (movement + equipment + laterality, PRs per variant,
+- [x] Composed exercise model (movement + equipment + laterality, PRs per variant,
       parent page rolls up variants) — specs `r&d/specs/exercise-system.md` and
-      `r&d/specs/exercise-system-phase1.md`. **Status unconfirmed — check how far
-      phase 1 got before building anything that depends on it.**
+      `r&d/specs/exercise-system-phase1.md`. Confirmed in the code 2026-11-01:
+      the model and migration shipped 0.7.0, the workout page on it 0.22.0, any
+      equipment for any movement 0.53.0 (B9). Leaf keys, `allExercises()`,
+      `variantLabel()` and the axis picker are what everything since builds on.
 - ~~PR detection against history~~ — not a bug (Aaron's logging error, 2026-09-24).
 
 ---
@@ -205,6 +211,19 @@ these come back; report anything that fails):
    use (bike, rower, elliptical, stairs…). Are the cue steps sensible — not
    too timid, not too big — and do the limits match the machine? Note any
    number that felt wrong; they all live in `CARDIO_MACHINES`.
+9. **Mobility (0.60.0–0.61.0):** run the morning routine from Train →
+   Mobility. Do the hold countdowns, side switches and ticks behave with the
+   screen on? Are the **five hypermobility swaps** (wrists, pigeon, deep squat,
+   forward fold, prone quad) the right calls? Try the balance test on Health:
+   does holding the pad time it, and does it switch legs?
+10. **Fit (0.62.1):** the app opens at the right size, pinch-zoom is off, and
+    nothing runs off the right edge in either skin (Settings footer, 98 top
+    bar).
+11. **Coach report (0.63.0):** Tools → Coach report → *Share text* opens the
+    share sheet (or copies); *PDF* → Save as PDF prints only the report, not
+    the app behind it.
+12. **PR card (0.63.0):** after a session with a PR, *↗ Share* on the PR
+    opens the share sheet with the image; *Save image* saves it.
 
 ### [x] A5. Checks against Blast's bugs — checked 0.27.1 (superset item waits for B3)
 Blast shipped these; make sure Ironlog doesn't have them. Tick each.
@@ -274,7 +293,7 @@ Without these, volume and PR figures are wrong (Blast #70; research).
 - Warm-ups stay out of volume and PRs.
 - Related: supersets in `r&d/notes/backlog.md`.
 
-### [x] B4. Plate loader and warm-up ramp from the set — shipped 0.31.0 (Tools page entry waits for D11)
+### [x] B4. Plate loader and warm-up ramp from the set — shipped 0.31.0 (on the Tools page too since D11, 0.56.0)
 (Blast #101; research.) Reachable by tapping a set's weight on the workout page,
 and from the Tools page (D11).
 - Target kg → plates per side.
@@ -491,7 +510,7 @@ exercises are picked when building a session or program. Only trust it once
 muscle shares for commonly trained lifts have been checked — derived shares are
 placeholders.
 
-### [x] D12. Layout rework — Home · Calendar · Train · Stats · Health — shipped 0.54.0 (spec `r&d/specs/layout-spec.md`; Mobility start and the Home mobility line wait for E5, the machine picker for D15)
+### [x] D12. Layout rework — Home · Calendar · Train · Stats · Health — shipped 0.54.0 (spec `r&d/specs/layout-spec.md`; the cardio machine picker came with D15 in 0.59.0, the Mobility start and Home mobility line with E5 in 0.60.0)
 Decided 2026-10-31. **Do this before D13 (Health) and E5 (Mobility)** — they
 need somewhere to live. Write `r&d/specs/layout-spec.md` first; it covers both
 skins (the 98 menu bar mirrors the same pages).
@@ -562,7 +581,7 @@ maths that's already in the app — `bmrKcal` / `suggestedTargets`, `e1rm`,
 - DOTS / IPF GL points calculator.
 - RPE ↔ RIR mapping table for coaches who think in RPE.
 
-### [x] D13. Health page — everything about the body in one place — shipped 0.57.0 (spec `r&d/specs/health-page-spec.md`; recovery map stays on Stats → Muscles with a link from Health; E5 tests and E6 land here when built)
+### [x] D13. Health page — everything about the body in one place — shipped 0.57.0 (spec `r&d/specs/health-page-spec.md`; recovery map stays on Stats → Muscles with a link from Health; mobility and balance tests added 0.61.0 (E5), blood pressure and glucose 0.62.0 (D16); E6 still to land here)
 Added 2026-10-31. A page of its own (not a tab under Stats) for health and
 body data. Write `r&d/specs/health-page-spec.md` before building.
 - **Moves in from Stats → Body (E4):** bodyweight with the 7-day average,
