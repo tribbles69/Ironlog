@@ -786,6 +786,28 @@ window.smoke = async function smoke(opts) {
     }
   });
 
+  await step('flow: coach chat answers locally (D9 §6–§7)', async () => {
+    const keep = JSON.stringify(S.coach || {});
+    try {
+      const want = { 'why has my bench stalled?': 'stall', 'what should I do today': 'today', 'should I deload': 'deload', "what's my weakest lift": 'weak',
+        'how long until my meet': 'event', 'am I doing enough volume': 'volume', 'how am I sleeping': 'recovery', 'should I cut': 'body',
+        'review my week': 'review', 'how did my last session go': 'debrief', 'what does RIR mean': 'faq', 'remember that I hate lunges': 'remember' };
+      const wrong = Object.entries(want).filter(([q, t]) => (coMatch(q) || {}).topic !== t).map(([q, t]) => `"${q}" → ${(coMatch(q) || {}).topic} not ${t}`);
+      if (wrong.length) throw new Error(wrong.join('; '));
+      if (coMatch('what is the meaning of life')) throw new Error('matched nonsense');
+      const D = coachDigest();
+      S.coach = { ...JSON.parse(keep), setupDone: true };
+      openCoach(); await wait(80);
+      const topics = ['today', 'review', 'debrief', 'stall', 'lift', 'deload', 'weak', 'event', 'volume', 'recovery', 'body', 'plan'];
+      topics.forEach(t => coAnswerTopic(t, (t === 'lift' || t === 'stall') && D.lifts[0] ? D.lifts[0].key : undefined));
+      const bubbles = document.querySelectorAll('.co-b.coach').length;
+      if (bubbles < topics.length + 1) throw new Error(`${bubbles} coach bubbles for ${topics.length} answers`);
+      if (!document.querySelector('#coText')) throw new Error('no typed-question box');
+      close();
+      return `${Object.keys(want).length} questions matched; ${topics.length} answers rendered; deload score ${coDeloadScore(D).score}`;
+    } finally { S.coach = JSON.parse(keep); save(); close(); }
+  });
+
   await step('food removed: tab gone, old route lands home', async () => {
     close();
     if (document.querySelector('#nav [data-page="food"]')) throw new Error('Food tab still in the nav');

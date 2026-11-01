@@ -13,6 +13,20 @@ rather than guessed.
 
 ---
 
+## 0.69.0 — 1 Nov 2026
+- **The coach now talks, with no AI needed.** Ask it from chips built from your own training, or just type a question. It answers from your log:
+  - what's today's session, with a readiness note from your check-in
+  - how a lift is going, and why it's stalled, with likely reasons and what to try
+  - whether to take a lighter week
+  - your weakest area
+  - how long to your event, and where you are in its blocks
+  - your volume per muscle, your recovery, and your bodyweight trend
+  - what's on your plan, and anything from Help & FAQ ("what does RIR mean?")
+- **Coach debrief** after every session (a new button on the session summary): sets against the plan, effort against the RIR targets, real PRs, rep-range verdicts, stalls, pain flags, and **one thing for next time**.
+- **Weekly review** on Home once a week: sessions done, PRs, how your main lifts moved, low-volume muscles, sleep and energy, bodyweight, your event, and **one focus for next week**.
+- Type "remember …" and the coach offers to keep it as a note.
+- With your AI key, a typed question the coach can't place goes to Claude, with your training numbers. Without a key, it says so and shows what it can answer.
+
 ## 0.68.0 — 1 Nov 2026
 - **The coach asks first whether you want a plan:** *Build me a plan*, *I've got a plan — bring it in*, or *No plan — I'll just log*. If you bring your own, it skips the plan questions.
 - **New: Bring in a plan** (from the coach, or Settings → Training program). Any plan works, from a coach, a spreadsheet or your notes:
