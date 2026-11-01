@@ -634,6 +634,50 @@ window.smoke = async function smoke(opts) {
     } finally { S.settings.debug = was; }
   });
 
+  await step('flow: fitting test (E12)', async () => {
+    const keep = { w: S.workouts.length, m: (S.mobTests || []).length, f: (S.fitTests || []).length, d: S.fitDraft };
+    const D = fitNewDraft('full');
+    D.bw = 93; D.sex = 'male'; D.age = 40;
+    Object.assign(D.home, { k2w: { L: 9, R: 13 }, scratch: { L: 5, R: 20 }, ohs: { flat: 1, heels: 2 }, bal: { L: 6, R: 12 } });
+    D.power = { mode: 'jump', cm: 45 };
+    // the spec's worked example (§4): 93 kg, trap bar high handles
+    const L = D.ladder.hinge;
+    if (fitLadderNext(L, 'hinge', 93).kg !== 47.5) throw new Error('hinge should start at 47.5');
+    [[47.5, 8, 6], [92.5, 5, 5], [140, 3, 3], [162.5, 2, 1]].forEach(([kg, r, rir]) => L.sets.push({ kg, r, rpe: rirToRpe(rir) }));
+    const nx = fitLadderNext(L, 'hinge', 93);
+    if (!nx.stop || !nx.canExtra) throw new Error('RIR 1 should offer a stop or +10%');
+    L.done = true;
+    D.ladder.press.sets.push({ kg: 70, r: 5, rpe: rirToRpe(1) });
+    D.tol = { kg: 200, r: 11 }; D.grip = { mode: 'bar', sec: 25 }; D.engine = { sec: 105, hrEnd: 170, hr60: 150 };
+    const R = fitResults(D), hinge = R.strength.find(s => s.id === 'hinge');
+    if (Math.abs(hinge.e1 - 178.75) > 0.01) throw new Error(`hinge e1RM ${hinge.e1}, spec says 178.8`);
+    if (hinge.score !== 2) throw new Error(`hinge score ${hinge.score}`);
+    // ankles and balance both score 2 at age 40; ties go to the first non-strength test
+    if (!/lagging/.test(R.type) || !/work on ankles/.test(R.type)) throw new Error(`profile "${R.type}"`);
+    if (!R.flags.some(f => f.id === 'ohs') || !R.flags.some(f => f.id === 'k2w_gap')) throw new Error('missing ohs / asymmetry flags');
+    S.fitDraft = D;
+    const t = fitSave(D);
+    try {
+      const wo = S.workouts.find(w => w.fitTest === t.id);
+      if (!wo || wo.exercises.length !== 3) throw new Error('ladder session not logged');
+      if (S.mobTests.filter(m => m.fit === t.id).length !== 8) throw new Error('home results not in mobility tests');
+      S.settings.debug = true;
+      const tr = WHY.fit.fn(t.id, 'balance');
+      if (!tr || tr.checks.some(c => !c.same)) throw new Error('fit trace disagrees');
+      openFitResults(t.id); await wait(80);
+      if (modalTitle() !== 'Fitting test results') throw new Error(`results opened "${modalTitle()}"`);
+      close();
+      return `${R.strength.length} patterns, ${R.others.length} tests, ${R.flags.length} flags — "${R.type}"`;
+    } finally {
+      S.settings.debug = false;
+      S.workouts = S.workouts.filter(w => w.fitTest !== t.id);
+      S.mobTests = S.mobTests.filter(m => m.fit !== t.id);
+      S.fitTests = S.fitTests.filter(x => x.id !== t.id);
+      S.fitDraft = keep.d; bust(); save();
+      if (S.workouts.length !== keep.w || S.mobTests.length !== keep.m || S.fitTests.length !== keep.f) throw new Error('cleanup left data behind');
+    }
+  });
+
   await step('food removed: tab gone, old route lands home', async () => {
     close();
     if (document.querySelector('#nav [data-page="food"]')) throw new Error('Food tab still in the nav');

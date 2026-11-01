@@ -236,6 +236,12 @@ h3{font-size:13.5px;margin:0 0 8px}
 .whytab tr.res td{font-weight:750}
 .whyok{margin-top:10px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);border-left:4px solid var(--green);font-size:13px;color:var(--txt)}
 .whyok.bad{border-left-color:var(--red)}
+.fit-type{font-size:16px;font-weight:750;line-height:1.3;margin-bottom:6px}
+.fit-flags{margin:4px 0 0;padding-left:18px;font-size:13px;line-height:1.45}
+.fitrow{padding:8px 0;border-bottom:1px solid var(--line)}
+.fitbar{height:8px;border-radius:4px;background:var(--bg2);margin:5px 0 4px;overflow:hidden;border:1px solid var(--line)}
+.fitbar > i{display:block;height:100%;background:var(--accent)}
+.fitbar.lag > i{background:var(--gold)}
 #printRoot{display:none}
 @media print{
   body > *:not(#printRoot){display:none !important}
@@ -1369,6 +1375,8 @@ const DEFAULT_STATE = {
   mobTests: [],   // {id,date,test,side:'L'|'R'|null,v,mt} — E5 mobility and balance tests (MOB_TESTS)
   bp: [],         // {id,date,time,sys,dia,pulse?,arm?,note?,mt} — D16 blood pressure, mmHg
   glucose: [],    // {id,date,time,mmol,ctx,note?,mt} — D16 blood glucose, always stored in mmol/L
+  fitTests: [],   // {id,date,mode:'home'|'full',bw,sex,age,home,power,ladder:{pattern:{variation,sets:[{kg,r,rpe}]}},tol,grip,engine,mt} — E12
+  fitDraft: null, // the fitting test in progress, this device only (not synced)
 };
 
 /* Persistence runs through IndexedDB — it's async (so the call sites below don't
@@ -1563,7 +1571,7 @@ const SYNC_FILE = 'Ironlog backup.json', SYNC_FORMAT = 'ironlog-sync', SYNC_V = 
 // collection -> how a record is keyed
 const SYNC_SETS = {
   workouts: x => x.id, goals: x => x.id, meets: x => x.id, imports: x => x.id,
-  checkins: x => x.date, measures: x => x.id, calipers: x => x.id, mobTests: x => x.id, bp: x => x.id, glucose: x => x.id,
+  checkins: x => x.date, measures: x => x.id, calipers: x => x.id, mobTests: x => x.id, bp: x => x.id, glucose: x => x.id, fitTests: x => x.id,
   customEx: x => (typeof x === 'string' ? x : JSON.stringify(x)), programs: x => String(x),
 };
 const SYNC_MAPS = ['exAliases', 'programStarts'];
@@ -2082,7 +2090,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.64.0';
+const APP_VERSION = '0.65.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4752,6 +4760,7 @@ function viewHealth() {
   ${viewBody()}
   ${bpCard()}
   ${gluCard()}
+  ${fitCard()}
   ${mobTestsCard()}
   <div class="card" style="margin-bottom:13px">
     <div class="eyebrow" style="margin-bottom:6px">Physique</div>
@@ -5344,6 +5353,18 @@ const WHY = {
       }
     }
     return t;
+  } },
+
+  fit: { label: 'fitting test score', fn: (id, item) => {
+    const t = (S.fitTests || []).find(x => x.id === id) || (S.fitDraft && S.fitDraft.id === id ? S.fitDraft : null);
+    if (!t) return null;
+    const isP = !!FIT.patterns[item], T = trace(`${isP ? FIT.patterns[item].label : FIT.others[item].label} — fitting test`);
+    const r = isP ? fitStrength(t, item, T) : fitOther(t, item, T);
+    if (!r) return T.note('Not tested.');
+    T.result('Score', `${r.score} of 5 — ${r.rating}`);
+    if (!isP && r.flag) T.result('Flag', FIT.others[item].action, `score ${FIT.flagAt} or lower`);
+    const app = fitResults(t)[isP ? 'strength' : 'others'].find(x => x.id === item);
+    return T.check('Score', r.score, app ? app.score : NaN);
   } },
 
   cardio: { label: 'heart-rate cue', fn: () => {
@@ -11492,6 +11513,7 @@ function wire() {
     wireBody(v);
     wireVitals(v);
     wireMobTests(v);
+    wireFit(v);
     v.querySelectorAll('[data-hl]').forEach(b => b.onclick = () => { const c = $('#' + b.dataset.hl); if (c) c.scrollIntoView({ behavior: 'smooth', block: 'start' }); });
     v.querySelectorAll('[data-tool]').forEach(b => b.onclick = () => openTool(b.dataset.tool));
     $('#hlRecovery').onclick = () => { analyticsTab = 'muscles'; go('analytics'); };
@@ -13062,6 +13084,12 @@ const MOB_TESTS = [
     how: 'Hip flexor length. Sit on the end of a bench, hug one knee and roll back. Where does the other thigh rest? Below the bench line is a pass.' },
   { id: 'wallflex', label: 'Wall shoulder flexion', unit: 'cm', better: -1, step: 0.5,
     how: 'Back, head and hips on a wall, lower back flat. Raise straight arms overhead. The gap between thumbs and wall — 0 is touching.' },
+  { id: 'scratch', label: 'Shoulder scratch', unit: 'cm', sides: true, better: -1, step: 0.5,
+    how: 'Fists behind the back, one over the shoulder and one up from below. The gap between the fists, named by the arm on top; overlap counts as 0.' },
+  { id: 'ohs', label: 'Overhead squat · flat', scale: ['Quarter', 'Half', 'Full'], better: 1,
+    how: 'Broomstick overhead, arms straight, feet flat. Three slow reps: how deep with the stick still overhead?' },
+  { id: 'ohs_heels', label: 'Overhead squat · heels up', scale: ['Quarter', 'Half', 'Full'], better: 1,
+    how: 'The same with the heels on a 2–3 cm lift. Full depth only with heels up points at the ankles, not the hips.' },
   { id: 'bal_ec', label: 'Balance · eyes closed', unit: 's', sides: true, better: 1, balance: true,
     how: 'Single-leg stand, eyes closed. Run it from the Balance test.' },
   { id: 'bal_eo', label: 'Balance · eyes open', unit: 's', sides: true, better: 1, balance: true,
@@ -13191,7 +13219,7 @@ function openMobTest(id) {
    leg, eyes closed; hold the pad while the foot is up, let go when it touches
    down. Times to 0.1 s, anything under a second is ignored, the standing leg
    switches after each attempt. Every counted attempt is saved at once. */
-function openBalanceTest() {
+function openBalanceTest(onDone) {
   let leg = 'L', eyes = 'ec', t0 = null, iv = null, last = null;
   const testId = () => eyes === 'ec' ? 'bal_ec' : 'bal_eo';
   const todays = () => (S.mobTests || []).filter(x => x.test === testId() && x.date === today());
@@ -13208,7 +13236,7 @@ function openBalanceTest() {
     title: 'Balance test',
     body: draw(),
     foot: '<button class="btn primary wide" data-close>Done</button>',
-    onClose: () => { clearInterval(iv); Awake.release('balance'); render(); },
+    onClose: () => { clearInterval(iv); Awake.release('balance'); render(); if (onDone) onDone(); },
     onOpen: bg => {
       Awake.hold('balance');
       const redraw = () => { $('.modal-body', bg).innerHTML = draw(); bind(); a11yPass($('.modal-body', bg)); };
@@ -13245,6 +13273,510 @@ function openBalanceTest() {
       bind();
     },
   });
+}
+
+/* ---------------- strength fitting test (E12, r&d/specs/fitting-test-spec.md) ----------------
+   One hour, no true maxes: a home screen of mobility and balance tests, then
+   power, a rep ladder per movement pattern, rep tolerance, grip and a 500 m
+   row. Every scored test is 0–5 against five cutoffs, so lifts and mobility
+   compare directly; the results name a profile type and raise flags. Stored
+   as S.fitTests; an unfinished run is S.fitDraft, on this phone only. */
+const FIT = {
+  strengthLabels: ['Below beginner', 'Beginner', 'Novice', 'Intermediate', 'Advanced', 'Elite'],
+  otherLabels: ['Very poor', 'Poor', 'Below average', 'Average', 'Good', 'Excellent'],
+  /* Standards are Ironlog's own STD rows (Aaron, 2026-11-01), so the test and
+     Stats → Rankings never disagree. */
+  patterns: {
+    hinge: { label: 'Hinge', std: 'Deadlift', start: 0.5 },
+    squat: { label: 'Squat', std: 'Back Squat', start: 0.4 },
+    press: { label: 'Press', std: 'Bench Press', start: 0.25 },
+    pull: { label: 'Pull', std: 'Cable Row', start: 0.3 },
+  },
+  /* The variation's 1RM against the barbell lift its standard is for (§8a).
+     Kept in one table so they can be tuned. */
+  variations: [
+    { id: 'trap_high', pattern: 'hinge', name: 'Trap bar deadlift, high handles', key: 'deadlift/trap_bar/bilateral/none', factor: 1.15, basis: 'sourced', note: 'ECU study: high-handle hex bar 1RM ~15% above conventional' },
+    { id: 'trap_low', pattern: 'hinge', name: 'Trap bar deadlift, low handles', key: 'deadlift/trap_bar/bilateral/none', factor: 1, basis: 'estimated', note: 'unknown — needs data' },
+    { id: 'deadlift', pattern: 'hinge', name: 'Deadlift, barbell', key: 'deadlift/barbell/bilateral/none', factor: 1, basis: 'standard', note: 'the standard is for this lift' },
+    { id: 'smith_squat', pattern: 'squat', name: 'Smith machine squat', key: 'back-squat/smith/bilateral/none', factor: 1, basis: 'estimated', note: 'studies find the Smith 1RM higher, size unclear — tune' },
+    { id: 'back_squat', pattern: 'squat', name: 'Back squat, barbell', key: 'back-squat/barbell/bilateral/none', factor: 1, basis: 'standard', note: 'the standard is for this lift' },
+    { id: 'bench', pattern: 'press', name: 'Bench press, barbell', key: 'bench-press/barbell/bilateral/none', factor: 1, basis: 'standard', note: 'the standard is for this lift' },
+    { id: 'smith_bench', pattern: 'press', name: 'Bench press, Smith', key: 'bench-press/smith/bilateral/none', factor: 1, basis: 'estimated', note: 'unknown — tune' },
+    { id: 'machine_bench', pattern: 'press', name: 'Bench press, machine', key: 'bench-press/machine/bilateral/none', factor: 1, basis: 'estimated', note: 'unknown — tune' },
+    { id: 'cable_row', pattern: 'pull', name: 'Seated cable row', key: 'seated-row/cable/bilateral/v_handle', factor: 1, basis: 'standard', note: 'the standard is for this lift' },
+  ],
+  defaults: { hinge: 'trap_high', squat: 'smith_squat', press: 'bench', pull: 'cable_row' },
+  rungs: [8, 5, 3, 2, 1],
+  /* Cutoffs 1→5; basis per cutoff, so the UI and debug mode can say which are sourced. */
+  others: {
+    ankles: { label: 'Ankles', what: 'knee to wall, worse side', unit: 'cm', better: 1, cuts: [4, 7, 10, 12.5, 15],
+      basis: ['estimated', 'estimated', 'estimated', 'sourced', 'estimated'], src: '12.5 cm is the published normal (score 4); the other steps are estimated', action: 'Heel lift for squats, ankle mobility work' },
+    shoulders: { label: 'Shoulders', what: 'shoulder scratch, worse side', unit: 'cm', better: -1, cuts: [40, 27, 18, 9, 0],
+      basis: ['estimated', 'sourced', 'sourced', 'estimated', 'estimated'], src: 'FMS: within one hand (~18 cm) good, 1.5 hands (~27 cm) fair; the rest estimated', action: 'Overhead mobility work' },
+    balance: { label: 'Balance', what: 'eyes-closed single-leg stand, worse leg, as a % of the norm for your age', unit: '%', better: 1, cuts: [25, 50, 75, 100, 150],
+      basis: ['estimated', 'estimated', 'estimated', 'sourced', 'estimated'], src: 'The age norm (Springer et al. 2007) is score 4; the other steps are estimated', action: 'Single-leg balance work, weaker side first' },
+    power: { label: 'Power', what: 'jump and reach', unit: 'cm', better: 1, cuts: { male: [21, 31, 41, 51, 61], female: [11, 21, 31, 41, 51] },
+      basis: ['sourced', 'sourced', 'sourced', 'sourced', 'sourced'], src: 'Topend Sports vertical jump bands', action: 'Jumps and speed work' },
+    grip: { label: 'Grip', what: 'bodyweight bar hold', unit: 's', better: 1, cuts: [10, 20, 30, 45, 60],
+      basis: ['estimated', 'estimated', 'estimated', 'estimated', 'estimated'], src: 'An estimate — there are no published norms', action: 'Holds and carries' },
+    recovery: { label: 'Recovery', what: 'heart-rate drop 60 s after the row', unit: 'bpm', better: 1, cuts: [12, 15, 18, 22, 30],
+      basis: ['sourced', 'sourced', 'sourced', 'sourced', 'estimated'], src: 'Under 12 is a clinical warning sign; 14–22 is typical; the top step is estimated', action: 'Conditioning work' },
+  },
+  /* Eyes closed, mean of best of 3, seconds: [age from, men, women] — Springer et al. 2007. */
+  balanceNorms: [[18, 16.9, 13.1], [40, 12.0, 13.5], [50, 8.6, 7.9], [60, 5.1, 3.6], [70, 2.6, 3.7], [80, 1.8, 2.1]],
+  ohsScale: ['Quarter', 'Half', 'Full'],
+  asym: 30, flagAt: 2, homeEvery: 14,
+};
+const FIT_ORDER = ['ankles', 'shoulders', 'balance', 'power', 'grip', 'recovery'];
+function fitVariation(pattern, id) {
+  if (id && String(id).startsWith('key:')) {
+    const key = String(id).slice(4);
+    return { id, pattern, name: leafName(key), key, factor: 1, basis: 'estimated', note: 'any exercise counts at 1.00 until there is data for it' };
+  }
+  return FIT.variations.find(v => v.id === id && v.pattern === pattern) || FIT.variations.find(v => v.id === FIT.defaults[pattern]);
+}
+/* How many cutoffs a value reaches: the score. */
+function fitCut(v, cuts, better, T, unit, names, basis) {
+  let n = 0;
+  cuts.forEach((c, i) => {
+    const hit = better > 0 ? v >= c : v <= c;
+    if (hit) n++;
+    if (T) T.step(names ? names[i] : `Cutoff ${i + 1}`, `${better > 0 ? '≥' : '≤'} ${nice(c)}${unit ? ' ' + unit : ''}`, `${hit ? 'reached' : 'not reached'}${basis ? ' · ' + basis[i] : ''}`);
+  });
+  return n;
+}
+function fitStartKg(pattern, bw, leaf) { return roundLoadFor(FIT.patterns[pattern].start * bw, leaf); }
+/* What the ladder asks for next (§4): a rung, or a reason to stop. */
+function fitLadderNext(L, pattern, bw) {
+  const V = fitVariation(pattern, L.variation), leaf = keyLeaf(V.key), n = L.sets.length;
+  if (L.done) return { stop: 'done' };
+  if (!n) return { kg: fitStartKg(pattern, bw, leaf), r: FIT.rungs[0], rung: 1, jump: `${Math.round(FIT.patterns[pattern].start * 100)}% bodyweight to start` };
+  if (n >= FIT.rungs.length) return { stop: 'Five rungs done.' };
+  const last = L.sets[n - 1], rir = rpeToRir(last.rpe);
+  const up = (f, why2) => ({ kg: roundLoadFor(last.kg + f * bw, leaf), r: FIT.rungs[n], rung: n + 1, jump: why2 });
+  if (rir >= 5) return up(0.5, `RIR ${rir}: +50% bodyweight`);
+  if (rir >= 3) return up(0.25, `RIR ${rir}: +25% bodyweight`);
+  if (rir >= 1 && L.extra === n) return up(0.1, `one more at +10% bodyweight`);
+  return { stop: rir <= 0 ? 'RIR 0 — that\'s the top of this ladder.' : `RIR ${rir} — stop here, or one more at +10% if it moved well.`, canExtra: rir >= 1 };
+}
+/* The pattern's e1RM (Aaron, 2026-11-01): the heaviest set that stopped at
+   3 RIR or less — the most trustworthy — else the best e1RM of any set. */
+function fitPick(sets, T) {
+  const rows = (sets || []).filter(s => s.kg > 0 && s.r > 0).map(s => ({ ...s, rir: rpeToRir(s.rpe), e1: e1rm(s.kg, s.r, s.rpe) }));
+  if (T) rows.forEach((s, i) => T.step(`Rung ${i + 1}`, `${wt(s.kg)} × ${s.r} @ RIR ${s.rir}`, `e1RM ${wt(s.e1)}`));
+  if (!rows.length) return null;
+  const close = rows.filter(s => s.rir <= 3);
+  const pick = close.length ? close.reduce((a, b) => b.kg > a.kg || (b.kg === a.kg && b.e1 > a.e1) ? b : a)
+    : rows.reduce((a, b) => b.e1 > a.e1 ? b : a);
+  if (T) T.step('Set used', `${wt(pick.kg)} × ${pick.r} @ RIR ${pick.rir}`, close.length ? 'the heaviest set that stopped at 3 RIR or less' : 'no set stopped at 3 RIR or less, so the best e1RM');
+  return pick;
+}
+function fitStrength(t, p, T) {
+  const L = (t.ladder || {})[p];
+  if (!L || !(L.sets || []).length) return null;
+  const P = FIT.patterns[p], V = fitVariation(p, L.variation), bw = t.bw;
+  if (T) T.step('Exercise', V.name, `variation factor ${V.factor.toFixed(2)} — ${V.basis}: ${V.note}`);
+  const pick = fitPick(L.sets, T);
+  if (!pick || !(bw > 0)) return null;
+  const raw = STD[P.std], fem = t.sex === 'female', th = raw.slice(0, 5).map(x => x * (fem ? raw[5] : 1));
+  const judged = pick.e1 / bw / V.factor;
+  if (T) {
+    T.step('Bodyweight', wt(bw));
+    T.step('Judged', `${nice(dw(pick.e1))} ÷ ${nice(dw(bw))} ÷ ${V.factor.toFixed(2)} = ${judged.toFixed(3)}× bw`, 'e1RM ÷ bodyweight ÷ variation factor');
+    T.step('Standard', `STD "${P.std}"${fem ? ` × ${raw[5]} (female)` : ''}`, 'the same table Stats → Rankings uses');
+    T.head('Tier marks');
+  }
+  const score = fitCut(judged, th, 1, T, '× bw', FIT.strengthLabels.slice(1));
+  const pctInt = judged / th[2] * 100, nextKg = score < 5 ? th[score] * bw * V.factor : null;
+  if (T) {
+    T.step('% of intermediate', `${judged.toFixed(3)} ÷ ${th[2].toFixed(2)} = ${pctInt.toFixed(0)}%`, 'finer than the tier; picks strongest and lagging');
+    T.step('Next tier at', nextKg ? `${th[score].toFixed(2)} × ${nice(dw(bw))} × ${V.factor.toFixed(2)} = ${wt(nextKg)}` : 'at the top', 'on this exercise');
+  }
+  return { id: p, label: P.label, variation: V, set: pick, e1: pick.e1, judged, score, rating: FIT.strengthLabels[score], pctInt, nextKg };
+}
+function fitAgeNorm(age, sex) {
+  const row = FIT.balanceNorms.filter(r => (age || 18) >= r[0]).pop() || FIT.balanceNorms[0];
+  return { from: row[0], s: sex === 'female' ? row[2] : row[1] };
+}
+const fitNum = v => v == null || v === '' || isNaN(+v) ? null : +v;
+/* The worse of left and right, for a test where higher (better 1) or lower is better. */
+function fitWorse(o, better) {
+  const L = fitNum(o && o.L), R = fitNum(o && o.R);
+  if (L == null && R == null) return null;
+  if (L == null || R == null) return { v: L != null ? L : R, side: L != null ? 'L' : 'R', one: true };
+  const pickL = better > 0 ? L <= R : L >= R;
+  return { v: pickL ? L : R, side: pickL ? 'L' : 'R', L, R };
+}
+function fitOther(t, id, T) {
+  const X = FIT.others[id], h = t.home || {};
+  let v = null, side = null, text = '';
+  const sideTxt = w2 => w2.one ? `${w2.side === 'L' ? 'left' : 'right'} only` : `L ${nice(w2.L)} · R ${nice(w2.R)}, worse is ${w2.side === 'L' ? 'left' : 'right'}`;
+  if (id === 'ankles' || id === 'shoulders') {
+    const w2 = fitWorse(id === 'ankles' ? h.k2w : h.scratch, X.better);
+    if (!w2) return null;
+    v = w2.v; side = w2.side; text = `${nice(v)} cm`;
+    if (T) T.step(X.what, `${nice(v)} cm`, sideTxt(w2));
+  } else if (id === 'balance') {
+    const w2 = fitWorse(h.bal, 1);
+    if (!w2) return null;
+    const N = fitAgeNorm(t.age, t.sex);
+    v = w2.v / N.s * 100; side = w2.side; text = `${nice(w2.v)} s`;
+    if (T) {
+      T.step('Eyes closed, worse leg', `${nice(w2.v)} s`, sideTxt(w2));
+      T.step('Norm for your age', `${N.s} s`, `${t.sex === 'female' ? 'women' : 'men'} ${N.from}+${t.age ? `, age ${t.age}` : ', age unknown — youngest band'} (Springer et al. 2007)`);
+      T.step('As a % of the norm', `${nice(w2.v)} ÷ ${N.s} = ${v.toFixed(0)}%`);
+    }
+  } else if (id === 'power') {
+    const p = t.power || {};
+    if (p.mode !== 'jump' || !(fitNum(p.cm) > 0)) return null;
+    v = +p.cm; text = `${nice(v)} cm`;
+    if (T) T.step('Jump and reach', `${nice(v)} cm`, 'best of 3');
+  } else if (id === 'grip') {
+    const g = t.grip || {};
+    if (!(fitNum(g.sec) > 0)) return null;
+    v = +g.sec; text = `${nice(v)} s`;
+    if (T) T.step(g.mode === 'hang' ? 'Dead hang (the fallback)' : 'Bodyweight bar hold', `${nice(v)} s`, g.mode === 'hang' ? 'scored on the bar-hold cutoffs — not like for like' : '');
+  } else if (id === 'recovery') {
+    const e = t.engine || {}, a = fitNum(e.hrEnd), b = fitNum(e.hr60);
+    if (!(a > 0) || !(b > 0)) return null;
+    v = a - b; text = `${nice(v)} bpm`;
+    if (T) T.step('Drop', `${a} − ${b} = ${nice(v)} bpm`, 'HR at the finish − HR 60 s later');
+  }
+  const cuts = Array.isArray(X.cuts) ? X.cuts : X.cuts[t.sex === 'female' ? 'female' : 'male'];
+  if (T) T.head(`Cutoffs — ${X.src}`);
+  const score = fitCut(v, cuts, X.better, T, X.unit, null, X.basis);
+  return { id, label: X.label, value: v, text, side, score, rating: FIT.otherLabels[score], flag: score <= FIT.flagAt, action: X.action };
+}
+function fitTolerance(t) {
+  const r = fitNum(t.tol && t.tol.r);
+  if (!(r > 0)) return null;
+  return r <= 8 ? { r, word: 'low', note: 'heavy, low-rep work suits' } : r <= 14 ? { r, word: 'average', note: '' } : { r, word: 'high', note: 'suits volume' };
+}
+function fitResults(t) {
+  const strength = Object.keys(FIT.patterns).map(p => fitStrength(t, p)).filter(Boolean);
+  const others = FIT_ORDER.map(id => fitOther(t, id)).filter(Boolean);
+  const flags = others.filter(o => o.flag).map(o => ({ id: o.id, text: `${o.label}: ${o.action}` }));
+  const h = t.home || {};
+  [['k2w', 'Ankles'], ['bal', 'Balance']].forEach(([k, lab]) => {
+    const L = fitNum(h[k] && h[k].L), R = fitNum(h[k] && h[k].R);
+    if (!(L > 0) || !(R > 0)) return;
+    const gap = Math.abs(L - R) / Math.max(L, R) * 100;
+    if (gap > FIT.asym) flags.push({ id: k + '_gap', text: `${lab}: ${L < R ? 'left' : 'right'} ${gap.toFixed(0)}% behind — unilateral work on that side` });
+  });
+  const of = fitNum(h.ohs && h.ohs.flat), oh = fitNum(h.ohs && h.ohs.heels), full = FIT.ohsScale.length - 1;
+  if (of != null && oh != null && of < full) flags.push({ id: 'ohs', text: oh >= full ? 'Overhead squat: full depth only with heels raised — ankle-limited, not hips' : 'Overhead squat: limited even with heels raised — look at hips too' });
+  const tol = fitTolerance(t);
+  const avg = strength.length ? strength.reduce((a, s) => a + s.score, 0) / strength.length : null;
+  const byPct = [...strength].sort((a, b) => b.pctInt - a.pctInt);
+  const strongest = strength.length >= 2 ? byPct[0] : null, lagging = strength.length >= 2 ? byPct[byPct.length - 1] : null;
+  const pool = [...others.map(o => ({ label: o.label, score: o.score, k: 0, pct: 0 })), ...strength.map(s => ({ label: s.label, score: s.score, k: 1, pct: s.pctInt }))];
+  const weakest = pool.length ? pool.reduce((a, b) => b.score < a.score || (b.score === a.score && (b.k < a.k || (b.k === a.k && b.pct < a.pct))) ? b : a) : null;
+  const bits = [];
+  if (strongest) bits.push(`${strongest.label}-dominant, lagging ${lagging.label.toLowerCase()}`);
+  if (tol) bits.push(`${tol.word} volume tolerance`);
+  if (weakest) bits.push(`work on ${weakest.label.toLowerCase()}`);
+  const type = bits.length ? bits.join('; ').replace(/^./, c => c.toUpperCase()) : '';
+  return { strength, others, flags, tol, avg, strongest, lagging, weakest, type };
+}
+function fitTestsSorted() { return [...(S.fitTests || [])].sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : (a.mt || 0) - (b.mt || 0)); }
+function fitPrev(t) { const all = fitTestsSorted().filter(x => x.id !== t.id && (x.date < t.date || (x.date === t.date && (x.mt || 0) < (t.mt || 0)))); return all[all.length - 1] || null; }
+
+/* The results, for the sheet and the last step of the run. */
+function fitResultsHtml(t) {
+  const R = fitResults(t), prev = fitPrev(t), P = prev ? fitResults(prev) : null;
+  const was = (list, id) => P ? P[list].find(x => x.id === id) : null;
+  const delta = (cur, old, sameVar) => !old ? '' : sameVar === false ? ' <span class="dimmer">· variation changed</span>'
+    : cur.score === old.score ? ' <span class="dimmer">· same as last</span>'
+    : ` <span style="color:${cur.score > old.score ? 'var(--green)' : 'var(--gold)'}">${cur.score > old.score ? '▲' : '▼'}${Math.abs(cur.score - old.score)} since ${esc(fmtDate(prev.date, { day: 'numeric', month: 'short' }))}</span>`;
+  const bar = (s, lag) => `<div class="fitbar${lag ? ' lag' : ''}" role="img" aria-label="${s} of 5"><i style="width:${Math.max(4, s / 5 * 100)}%"></i></div>`;
+  const srow = s => {
+    const o = was('strength', s.id);
+    return `<div class="fitrow">
+      <div class="row between"><b>${esc(s.label)} <span class="dimmer" style="font-weight:500">· ${esc(s.variation.name)}</span></b><span class="mono">${s.score}/5</span></div>
+      ${bar(s.score, R.lagging && R.lagging.id === s.id)}
+      <div class="sub">${esc(s.rating)} · e1RM ${wt(s.e1)} · ${s.judged.toFixed(2)}× bw${s.variation.factor !== 1 ? ` (÷ ${s.variation.factor.toFixed(2)})` : ''} · ${s.pctInt.toFixed(0)}% of intermediate${s.nextKg ? ` · next tier at ${wt(s.nextKg)}` : ''}${delta(s, o, o ? (o.variation.key === s.variation.key && o.variation.factor === s.variation.factor) : null)} ${why('fit', t.id, s.id)}</div>
+    </div>`;
+  };
+  const orow = o => {
+    const X = FIT.others[o.id], ow = was('others', o.id);
+    return `<div class="fitrow">
+      <div class="row between"><b>${esc(o.label)} <span class="dimmer" style="font-weight:500">· ${esc(o.text)}${o.side ? ` (${o.side === 'L' ? 'left' : 'right'})` : ''}</span></b><span class="mono">${o.score}/5</span></div>
+      ${bar(o.score, o.flag)}
+      <div class="sub">${esc(o.rating)}${o.flag ? ` · <b>${esc(o.action)}</b>` : ''}${X.basis.some(b => b === 'estimated') ? ' · some cutoffs estimated' : ''}${delta(o, ow)} ${why('fit', t.id, o.id)}</div>
+    </div>`;
+  };
+  const p = t.power || {};
+  return `<div class="fit-type">${R.type ? esc(R.type) : 'Not enough tested for a profile yet.'}</div>
+    <div class="sub" style="margin-bottom:10px">${esc(fmtDate(t.date, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }))} · ${t.mode === 'home' ? 'home screen' : 'full test'} · ${wt(t.bw)} bodyweight${R.avg != null ? ` · strength score ${R.avg.toFixed(1)} / 5` : ''}</div>
+    ${R.flags.length ? `<div class="eyebrow" style="margin:6px 0 4px">Flags</div><ul class="fit-flags">${R.flags.map(f => `<li>${esc(f.text)}</li>`).join('')}</ul>` : '<div class="sub" style="margin:6px 0">No flags — nothing scored 2 or lower.</div>'}
+    ${R.strength.length ? `<div class="eyebrow" style="margin:12px 0 4px">Strength</div>${R.strength.map(srow).join('')}` : ''}
+    ${R.others.length ? `<div class="eyebrow" style="margin:12px 0 4px">Other tests</div>${R.others.map(orow).join('')}` : ''}
+    ${R.tol ? `<div class="sub" style="margin-top:10px"><b>Volume tolerance:</b> ${esc(R.tol.word)} — leg press ${t.tol.kg > 0 ? `${wt(t.tol.kg)} × ` : ''}${R.tol.r} to 1 RIR${R.tol.note ? `; ${esc(R.tol.note)}` : ''}.</div>` : ''}
+    ${p.mode === 'speed' && p.mps > 0 ? `<div class="sub" style="margin-top:6px"><b>Speed rep:</b> ${nice(p.mps)} m/s peak${p.kg > 0 ? ` at ${wt(p.kg)}` : ''} — not scored; a baseline for next time.</div>` : ''}
+    ${t.engine && fitNum(t.engine.sec) > 0 ? `<div class="sub" style="margin-top:6px"><b>500 m row:</b> ${mmss(+t.engine.sec)}</div>` : ''}
+    <div class="sub" style="margin-top:12px">Results and flags only for now — what the profile changes in your plan comes later. Scores are against general able-bodied standards: a reference point, not a verdict.</div>`;
+}
+function openFitResults(id) {
+  const t = (S.fitTests || []).find(x => x.id === id);
+  if (!t) return;
+  modal({
+    title: 'Fitting test results',
+    body: fitResultsHtml(t),
+    foot: `<button class="btn ghost danger" id="ftDel">Delete</button><button class="btn primary" data-close>Done</button>`,
+    onOpen: bg => {
+      $('#ftDel', bg).onclick = () => confirmDlg('Delete this fitting test? Its session and mobility results stay.', () => {
+        S.fitTests = S.fitTests.filter(x => x.id !== id); save(); closeAllModals(); render();
+      });
+    },
+  });
+}
+
+/* The Health card: the latest profile type and flags, and the way in. */
+function fitCard() {
+  const tests = fitTestsSorted(), last = tests[tests.length - 1], D = S.fitDraft;
+  const R = last ? fitResults(last) : null;
+  const since = last ? daysBetween(last.date, today()) : null;
+  const due = last ? (since >= FIT.homeEvery ? 'Home screen retest due' : `Home screen retest in ${FIT.homeEvery - since} day${FIT.homeEvery - since === 1 ? '' : 's'}`) : '';
+  return `<div class="card" id="hlFit" style="margin-bottom:13px">
+    <div class="row between" style="margin-bottom:8px"><div class="eyebrow">Fitting test</div>${last ? `<button class="btn xs" id="ftOpen">Results</button>` : ''}</div>
+    ${D ? `<div class="row between" style="gap:8px;margin-bottom:10px"><span class="sub">Unfinished ${D.mode === 'home' ? 'home screen' : 'test'} from ${esc(relDay(D.date))}</span>
+      <span class="row" style="gap:6px"><button class="btn xs" id="ftDrop">Discard</button><button class="btn xs primary" id="ftResume">Resume</button></span></div>` : ''}
+    ${last ? `<div class="fit-type">${R.type ? esc(R.type) : 'Not enough tested for a profile yet.'}</div>
+      ${R.flags.length ? `<ul class="fit-flags">${R.flags.slice(0, 4).map(f => `<li>${esc(f.text)}</li>`).join('')}</ul>` : '<div class="sub">No flags.</div>'}
+      <div class="sub" style="margin:6px 0 10px">${esc(fmtDate(last.date))} · ${esc(due)}</div>`
+      : `<div class="sub" style="margin-bottom:10px">Find your type before training it: a home screen of ankle, shoulder and balance tests (15 min), then a gym hour with a rep ladder per lift — no true maxes. Every result scores 0–5 and the lowest is what to fix first.</div>`}
+    <div class="row" style="gap:8px"><button class="btn sm grow" id="ftHome">Home screen · 15 min</button><button class="btn sm grow" id="ftFull">Full test · 1 h</button></div>
+  </div>`;
+}
+function wireFit(v) {
+  const o = $('#ftOpen', v); if (o) o.onclick = () => { const t = fitTestsSorted().pop(); if (t) openFitResults(t.id); };
+  const r = $('#ftResume', v); if (r) r.onclick = () => openFitTest();
+  const d = $('#ftDrop', v); if (d) d.onclick = () => confirmDlg('Discard the unfinished test?', () => { S.fitDraft = null; save(); render(); }, 'Discard');
+  const start = mode => () => S.fitDraft ? confirmDlg('Start again? The unfinished test is discarded.', () => { S.fitDraft = null; openFitTest(mode); }, 'Start again') : openFitTest(mode);
+  const h = $('#ftHome', v); if (h) h.onclick = start('home');
+  const f = $('#ftFull', v); if (f) f.onclick = start('full');
+}
+
+/* ---- the run: one part per screen, kept in S.fitDraft so closing loses nothing ---- */
+function fitNewDraft(mode) {
+  const today0 = today(), mob = (id, sd) => { const x = (S.mobTests || []).filter(m => m.test === id && (m.side || null) === sd && m.date === today0).pop(); return x ? x.v : null; };
+  const ladder = {};
+  Object.keys(FIT.patterns).forEach(p => {
+    const prev = fitTestsSorted().reverse().find(t => t.ladder && t.ladder[p]);   // same variation every retest (§4)
+    ladder[p] = { variation: prev ? prev.ladder[p].variation : FIT.defaults[p], sets: [], done: false, skip: false };
+  });
+  const lastPower = (fitTestsSorted().reverse().find(t => t.power && t.power.mode) || {}).power;
+  return {
+    id: uid(), date: today0, mode, step: 0, cur: 'hinge',
+    bw: bodyweightKg() || null, sex: S.settings.sex === 'female' ? 'female' : 'male', age: ageFrom(S.settings.dob), heightCm: +S.settings.heightCm || null,
+    home: { k2w: { L: mob('k2w', 'L'), R: mob('k2w', 'R') }, scratch: { L: mob('scratch', 'L'), R: mob('scratch', 'R') },
+      ohs: { flat: mob('ohs', null), heels: mob('ohs_heels', null) }, bal: { L: null, R: null }, balTimer: false },
+    power: { mode: lastPower ? lastPower.mode : (vbtAvailable() ? 'speed' : 'jump'), cm: null, mps: null, kg: null },
+    ladder, tol: { kg: null, r: null }, grip: { mode: 'bar', sec: null }, engine: { sec: null, hrEnd: null, hr60: null },
+  };
+}
+const FIT_STEPS = { home: ['intro', 'home', 'results'], full: ['intro', 'home', 'power', 'ladder', 'tol', 'grip', 'engine', 'results'] };
+const FIT_STEP_LABEL = { intro: 'Start', home: 'Home screen', power: 'Power', ladder: 'Rep ladder', tol: 'Rep tolerance', grip: 'Grip', engine: 'Engine', results: 'Results' };
+function fitGet(o, path) { return path.split('.').reduce((a, k) => a == null ? a : a[k], o); }
+function fitSetPath(o, path, v) { const ks = path.split('.'), last = ks.pop(); ks.reduce((a, k) => (a[k] = a[k] || {}), o)[last] = v; }
+/* A number box bound to a draft path. kg: shown in the user's unit, stored kg. */
+function fitInput(D, path, label, o = {}) {
+  const raw = fitGet(D, path), val = raw == null ? '' : o.kg ? nice(dw(raw)) : raw;
+  const id = 'ft_' + path.replace(/\./g, '_');
+  return `<div class="field" style="margin:0"><label for="${id}">${esc(label)}${o.kg ? ` (${U()})` : ''}</label>
+    <input id="${id}" type="number" inputmode="decimal" step="${o.step || 'any'}" min="0" data-fp="${path}"${o.kg ? ' data-kg="1"' : ''} value="${esc(val)}" placeholder="${esc(o.ph || '')}"></div>`;
+}
+function fitSelect(D, path, label, opts) {
+  const cur = fitGet(D, path), id = 'ft_' + path.replace(/\./g, '_');
+  return `<div class="field" style="margin:0"><label for="${id}">${esc(label)}</label><select id="${id}" data-fp="${path}" data-num="1">
+    <option value="">—</option>${opts.map((o, i) => `<option value="${i}" ${cur === i ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select></div>`;
+}
+function fitSeg(path, cur, opts) {
+  return `<div class="seg" data-fseg="${path}">${opts.map(([v, l]) => `<button type="button" data-v="${v}" class="${cur === v ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>`;
+}
+function fitLadderHtml(D) {
+  const p = D.cur, L = D.ladder[p], V = fitVariation(p, L.variation), nx = fitLadderNext(L, p, D.bw || 0);
+  const own = allExercises().filter(x => !FIT.variations.some(v => v.key === x.key)).map(x => `<option value="key:${esc(x.key)}" ${L.variation === 'key:' + x.key ? 'selected' : ''}>${esc(x.name)}${variantLabel(x.leaf) ? ` — ${esc(variantLabel(x.leaf))}` : ''}</option>`).join('');
+  const chips = Object.keys(FIT.patterns).map(q => { const Q = D.ladder[q]; return `<button type="button" class="chip${q === p ? ' blue' : ''}" data-fpat="${q}" aria-pressed="${q === p}">${Q.done ? '✓ ' : Q.skip ? '– ' : ''}${esc(FIT.patterns[q].label)}</button>`; }).join('');
+  return `<div class="row wrap" style="gap:6px;margin-bottom:10px">${chips}</div>
+    <div class="field"><label for="ftVar">Exercise — the same one every retest</label><select id="ftVar">
+      <optgroup label="Standard choices">${FIT.variations.filter(v => v.pattern === p).map(v => `<option value="${v.id}" ${V.id === v.id ? 'selected' : ''}>${esc(v.name)}${v.factor !== 1 ? ` (× ${v.factor.toFixed(2)})` : ''}</option>`).join('')}</optgroup>
+      ${own ? `<optgroup label="Any exercise you've logged (factor 1.00, estimated)">${own}</optgroup>` : ''}</select>
+      ${L.sets.length ? '<div class="sub" style="margin-top:4px">Changing it now keeps the rungs already logged.</div>' : ''}</div>
+    ${L.sets.length ? `<table class="vartable" style="margin-bottom:8px"><thead><tr><th scope="col">Rung</th><th scope="col">Set</th><th scope="col" class="r">e1RM</th></tr></thead><tbody>
+      ${L.sets.map((s, i) => `<tr><td>${i + 1}</td><td class="mono">${wt(s.kg)} × ${s.r} @ RIR ${rpeToRir(s.rpe)}</td><td class="r mono">${wt(e1rm(s.kg, s.r, s.rpe))}</td></tr>`).join('')}</tbody></table>
+      <button class="btn xs ghost" id="ftUndo" style="margin-bottom:8px">Undo last rung</button>` : ''}
+    ${!(D.bw > 0) ? '<div class="sub" style="color:var(--gold)">Enter your bodyweight on the Home screen step — every load starts from it.</div>'
+      : L.skip ? `<div class="sub">Skipped. <button class="btn xs" id="ftUnskip">Test it after all</button></div>`
+      : nx.stop ? `<div class="sub" style="margin:6px 0">${esc(nx.stop === 'done' ? 'Done.' : nx.stop)}</div>
+        ${nx.stop !== 'done' ? `<div class="row" style="gap:8px">${nx.canExtra ? '<button class="btn sm grow" id="ftExtra">One more (+10%)</button>' : ''}<button class="btn sm primary grow" id="ftLiftDone">Finish this lift</button></div>` : ''}`
+      : `<div class="card tight" style="margin:4px 0 8px"><div class="eyebrow">Rung ${nx.rung} of 5 · aim for ${nx.r} reps</div><div class="sub">${esc(nx.jump)} · rest 2–3 min · stop if form breaks or anything hurts (it still counts)</div>
+        <div class="grid3" style="gap:8px;margin-top:8px">
+          <div class="field" style="margin:0"><label for="ftKg">Load (${U()})</label><input id="ftKg" type="number" inputmode="decimal" step="any" value="${nice(dw(nx.kg))}"></div>
+          <div class="field" style="margin:0"><label for="ftR">Reps done</label><input id="ftR" type="number" inputmode="numeric" step="1" min="0" value="${nx.r}"></div>
+          <div class="field" style="margin:0"><label for="ftRir">RIR (reps left)</label><input id="ftRir" type="number" inputmode="numeric" step="1" min="0" max="10" placeholder="be honest"></div>
+        </div>
+        <div class="row" style="gap:8px;margin-top:8px"><button class="btn sm ghost" id="ftSkip">Skip this lift</button><button class="btn sm primary grow" id="ftLog">Log rung</button></div></div>`}
+    <div class="sub" style="margin-top:8px">Next load: RIR 5+ → +50% bodyweight, 3–4 → +25%, 1–2 → stop (or +10%), 0 → stop. Never a true max.</div>`;
+}
+function fitStepHtml(D) {
+  const steps = FIT_STEPS[D.mode], s = steps[D.step];
+  const head = `<div class="row wrap" style="gap:4px;margin-bottom:10px">${steps.map((x, i) => `<span class="chip${i === D.step ? ' blue' : ''}"${i === D.step ? ' aria-current="step"' : ''}>${i + 1}. ${esc(FIT_STEP_LABEL[x])}</span>`).join('')}</div>`;
+  let body = '';
+  if (s === 'intro') body = `<p class="sub" style="margin-top:0">${D.mode === 'home' ? 'The home screen: ankles, shoulders, overhead squat and balance — about 15 minutes. Retest every two weeks.'
+      : 'Home screen (15 min), then the gym (45 min) from least to most tiring: power, a rep ladder per lift, rep tolerance, grip, a 500 m row. Warm up for 5 minutes first.'}</p>
+    <ul class="fit-flags" style="margin-bottom:10px"><li>Never a true max — every set stops with reps left.</li><li>Stop any set where form breaks or something hurts. It still counts.</li><li>Be honest about reps in reserve: the whole test depends on it.</li></ul>
+    <div class="grid2" style="gap:8px">${fitInput(D, 'bw', 'Bodyweight', { kg: 1 })}${fitInput(D, 'age', 'Age', { step: 1 })}</div>
+    <div class="field" style="margin-top:8px"><label>Standards for</label>${fitSeg('sex', D.sex, [['male', 'Men'], ['female', 'Women']])}</div>`;
+  if (s === 'home') {
+    const sc = FIT.ohsScale;
+    body = `<div class="eyebrow">Knee to wall (cm)</div><div class="sub">Half-kneeling, heel down: the furthest toe-to-wall distance where the knee still touches.</div>
+      <div class="grid2" style="gap:8px;margin:6px 0 12px">${fitInput(D, 'home.k2w.L', 'Left', { step: 0.5 })}${fitInput(D, 'home.k2w.R', 'Right', { step: 0.5 })}</div>
+      <div class="eyebrow">Shoulder scratch (cm gap)</div><div class="sub">Fists behind the back, one over the shoulder, one up from below. Named by the arm on top; overlap = 0.</div>
+      <div class="grid2" style="gap:8px;margin:6px 0 12px">${fitInput(D, 'home.scratch.L', 'Left on top', { step: 0.5 })}${fitInput(D, 'home.scratch.R', 'Right on top', { step: 0.5 })}</div>
+      <div class="eyebrow">Overhead squat, broomstick</div><div class="sub">Three slow reps each: feet flat, then heels on a 2–3 cm lift.</div>
+      <div class="grid2" style="gap:8px;margin:6px 0 12px">${fitSelect(D, 'home.ohs.flat', 'Feet flat', sc)}${fitSelect(D, 'home.ohs.heels', 'Heels raised', sc)}</div>
+      <div class="eyebrow">Single-leg stand, eyes closed (s)</div><div class="sub">Best of 3 per leg. The timer saves its own tries; or type them.</div>
+      <div class="grid2" style="gap:8px;margin:6px 0 6px">${fitInput(D, 'home.bal.L', 'Standing on left', { step: 0.1 })}${fitInput(D, 'home.bal.R', 'Standing on right', { step: 0.1 })}</div>
+      <button class="btn sm wide" id="ftBal">Balance timer</button>`;
+  }
+  if (s === 'power') body = `<div class="field"><label>How</label>${fitSeg('power.mode', D.power.mode, [['speed', 'Speed rep (VBT)'], ['jump', 'Jump and reach']])}</div>
+    ${D.power.mode === 'jump' ? `<div class="sub" style="margin-bottom:8px">Chalked fingers, side-on to a wall: mark a standing reach, then jump from still and slap. Best of 3. Use the speed rep instead if jumping isn't safe for your joints.</div>
+        ${fitInput(D, 'power.cm', 'Jump and reach (cm)', { step: 1 })}`
+      : `<div class="sub" style="margin-bottom:8px">On the hinge ladder's first rung (50% bodyweight × 8), pull every rep as fast as you can with Measure on. Type the best peak velocity here. Not scored — a baseline for next time.</div>
+        <div class="grid2" style="gap:8px">${fitInput(D, 'power.mps', 'Best peak (m/s)', { step: 0.01 })}${fitInput(D, 'power.kg', 'At load', { kg: 1 })}</div>`}`;
+  if (s === 'ladder') body = fitLadderHtml(D);
+  if (s === 'tol') {
+    const sq = (D.ladder.squat.sets || []).slice(-1)[0];
+    body = `<div class="sub" style="margin-bottom:8px">Leg press at about 75% of a working max${sq ? ` — about ${wt(roundBar(sq.kg * 1.5))}, 1.5× your last squat rung` : ''}. Feet shoulder-width, knees to ~90°, reps until exactly 1 RIR.</div>
+      <div class="grid2" style="gap:8px">${fitInput(D, 'tol.kg', 'Load', { kg: 1 })}${fitInput(D, 'tol.r', 'Reps to 1 RIR', { step: 1 })}</div>
+      ${(t2 => t2 ? `<div class="sub" style="margin-top:8px">Volume tolerance: <b>${esc(t2.word)}</b>${t2.note ? ` — ${esc(t2.note)}` : ''}.</div>` : '')(fitTolerance(D))}`;
+  }
+  if (s === 'grip') body = `<div class="field"><label>How</label>${fitSeg('grip.mode', D.grip.mode, [['bar', 'Bar hold'], ['hang', 'Dead hang']])}</div>
+    <div class="sub" style="margin-bottom:8px">${D.grip.mode === 'bar' ? 'Barbell at bodyweight from knee height, double overhand, no straps, no hook. Stand it up and time until it slips or goes down.' : 'The fallback if a bodyweight bar isn\'t safe to stand up: hang from a bar, time until you let go. Scored on the bar-hold cutoffs, so not like for like.'}</div>
+    ${fitInput(D, 'grip.sec', 'Seconds', { step: 1 })}`;
+  if (s === 'engine') body = `<div class="sub" style="margin-bottom:8px">500 m row, damper 5, as fast as you can hold. Heart rate at the finish and 60 s later; without a monitor, the time alone.</div>
+    <div class="grid3" style="gap:8px">${fitInput(D, 'engine.sec', 'Time (s)', { step: 1, ph: 'e.g. 105' })}${fitInput(D, 'engine.hrEnd', 'HR at finish', { step: 1 })}${fitInput(D, 'engine.hr60', 'HR 60 s later', { step: 1 })}</div>
+    ${D.engine.sec > 0 ? `<div class="sub" style="margin-top:6px">${mmss(+D.engine.sec)}${D.engine.hrEnd > 0 && D.engine.hr60 > 0 ? ` · drop ${D.engine.hrEnd - D.engine.hr60} bpm` : ''}</div>` : ''}`;
+  if (s === 'results') body = fitResultsHtml(D);
+  return head + body;
+}
+function openFitTest(mode) {
+  if (mode || !S.fitDraft) { S.fitDraft = fitNewDraft(mode || 'home'); save(); }
+  const D = S.fitDraft;
+  let bg;
+  const steps = () => FIT_STEPS[D.mode];
+  const paint = () => {
+    const b = $('.modal-body', bg);
+    b.innerHTML = fitStepHtml(D);
+    const last = D.step >= steps().length - 1;
+    $('#ftBack', bg).disabled = D.step === 0;
+    $('#ftNext', bg).textContent = last ? 'Save' : 'Next';
+    bind();
+    a11yPass(b);
+  };
+  const keep = () => { S.fitDraft = D; save(); };
+  const bind = () => {
+    const b = $('.modal-body', bg);
+    b.querySelectorAll('[data-fp]').forEach(el => el.addEventListener(el.tagName === 'SELECT' ? 'change' : 'input', () => {
+      const raw = el.value.replace(',', '.');
+      let v = raw === '' ? null : el.dataset.num ? +raw : parseFloat(raw);
+      if (v != null && isNaN(v)) v = null;
+      if (v != null && el.dataset.kg) v = toKg(v);
+      fitSetPath(D, el.dataset.fp, v);
+      if (el.dataset.fp.startsWith('home.bal.')) D.home.balTimer = false;
+      keep();
+      if (el.tagName === 'SELECT' || ['tol.r', 'engine.sec', 'engine.hrEnd', 'engine.hr60'].includes(el.dataset.fp)) { const f = el.id; paint(); const n = document.getElementById(f); if (n && n.tagName !== 'SELECT') { n.focus(); const l = n.value.length; try { n.setSelectionRange(l, l); } catch (e) { /* number inputs */ } } }
+    }));
+    b.querySelectorAll('[data-fseg]').forEach(sg => sg.querySelectorAll('button').forEach(x => x.onclick = () => { fitSetPath(D, sg.dataset.fseg, x.dataset.v); keep(); paint(); }));
+    const bal = $('#ftBal', b);
+    if (bal) bal.onclick = () => openBalanceTest(() => {
+      const best = sd => { const a = (S.mobTests || []).filter(x => x.test === 'bal_ec' && x.side === sd && x.date === today()).map(x => x.v); return a.length ? Math.max(...a) : null; };
+      const l = best('L'), r = best('R');
+      if (l != null || r != null) { D.home.bal = { L: l, R: r }; D.home.balTimer = true; keep(); }
+      paint();
+    });
+    // ladder
+    b.querySelectorAll('[data-fpat]').forEach(x => x.onclick = () => { D.cur = x.dataset.fpat; keep(); paint(); });
+    const L = D.ladder[D.cur];
+    const v = $('#ftVar', b); if (v) v.onchange = () => { L.variation = v.value; keep(); paint(); };
+    const log = $('#ftLog', b);
+    if (log) log.onclick = () => {
+      const kg = toKg(parseFloat(String($('#ftKg', b).value).replace(',', '.')) || 0), r = parseInt($('#ftR', b).value, 10), rir = parseInt($('#ftRir', b).value, 10);
+      if (!(kg > 0) || !(r >= 0) || isNaN(rir) || rir < 0 || rir > 10) return toast('Enter the load, reps done and reps left');
+      L.sets.push({ kg, r, rpe: rirToRpe(rir) });
+      if (L.sets.length >= FIT.rungs.length || rir <= 0) L.done = true;
+      keep(); paint();
+    };
+    const undo = $('#ftUndo', b); if (undo) undo.onclick = () => { L.sets.pop(); L.done = false; if (L.extra > L.sets.length) L.extra = null; keep(); paint(); };
+    const ex = $('#ftExtra', b); if (ex) ex.onclick = () => { L.extra = L.sets.length; keep(); paint(); };
+    const fin = $('#ftLiftDone', b);
+    if (fin) fin.onclick = () => {
+      L.done = true;
+      const nextP = Object.keys(FIT.patterns).find(q => !D.ladder[q].done && !D.ladder[q].skip);
+      if (nextP) D.cur = nextP;
+      keep(); paint();
+    };
+    const sk = $('#ftSkip', b); if (sk) sk.onclick = () => { L.skip = true; const nextP = Object.keys(FIT.patterns).find(q => !D.ladder[q].done && !D.ladder[q].skip); if (nextP) D.cur = nextP; keep(); paint(); };
+    const un = $('#ftUnskip', b); if (un) un.onclick = () => { L.skip = false; keep(); paint(); };
+  };
+  bg = modal({
+    title: D.mode === 'home' ? 'Fitting test · home screen' : 'Fitting test',
+    body: '',
+    sticky: true,
+    foot: `<button class="btn ghost" data-close>Later</button><button class="btn" id="ftBack">Back</button><button class="btn primary" id="ftNext">Next</button>`,
+    onClose: () => render(),
+    onOpen: b0 => {
+      bg = b0;
+      $('#ftBack', bg).onclick = () => { if (D.step > 0) { D.step--; keep(); paint(); $('.modal-body', bg).scrollTop = 0; } };
+      $('#ftNext', bg).onclick = () => {
+        if (steps()[D.step] === 'intro' && !(D.bw > 0)) return toast('Enter your bodyweight — the scores and loads start from it');
+        if (D.step < steps().length - 1) { D.step++; keep(); paint(); $('.modal-body', bg).scrollTop = 0; return; }
+        const t = fitSave(D);
+        closeAllModals(); render();
+        toast('Fitting test saved', 'green');
+        openFitResults(t.id);
+      };
+      paint();
+    },
+  });
+}
+/* Saving: the test, its home-screen results into the mobility tests (so the
+   Health charts carry the trend) and its ladder and leg-press sets as a
+   normal session, so history and PRs see them (§4, §10). */
+function fitSave(D) {
+  const ladder = {};
+  Object.entries(D.ladder).forEach(([p, L]) => { if (L.sets.length) ladder[p] = { variation: L.variation, sets: L.sets.map(s => ({ kg: s.kg, r: s.r, rpe: s.rpe })) }; });
+  const full = D.mode === 'full';
+  const t = { id: D.id, date: D.date, mode: D.mode, bw: D.bw, sex: D.sex, age: D.age, heightCm: D.heightCm,
+    home: structuredClone(D.home), power: full ? { ...D.power } : null, ladder: full ? ladder : {},
+    tol: full ? { ...D.tol } : null, grip: full ? { ...D.grip } : null, engine: full ? { ...D.engine } : null, mt: Date.now() };
+  delete t.home.balTimer;
+  S.fitTests = S.fitTests || [];
+  S.fitTests.push(t);
+  S.mobTests = S.mobTests || [];
+  const add = (test, side, v) => { if (fitNum(v) == null) return; S.mobTests.push({ id: uid(), date: t.date, test, side, v: +v, mt: Date.now(), fit: t.id }); };
+  const h = D.home;
+  ['L', 'R'].forEach(sd => { add('k2w', sd, h.k2w[sd]); add('scratch', sd, h.scratch[sd]); if (!h.balTimer) add('bal_ec', sd, h.bal[sd]); });
+  add('ohs', null, h.ohs.flat); add('ohs_heels', null, h.ohs.heels);
+  if (full) {
+    const exercises = Object.entries(ladder).map(([p, L]) => {
+      const leaf = keyLeaf(fitVariation(p, L.variation).key);
+      return { leaf, legacyName: displayName(leaf), notes: 'Fitting test ladder', mods: [], sets: L.sets.map(s => ({ w: s.kg, r: s.r, rpe: s.rpe, done: true, setType: 'working' })) };
+    });
+    if (fitNum(D.tol.r) > 0 && fitNum(D.tol.kg) > 0) {
+      const leaf = keyLeaf('leg-press/plate_loaded_machine/bilateral/none');
+      exercises.push({ leaf, legacyName: displayName(leaf), notes: 'Fitting test rep tolerance', mods: [], sets: [{ w: +D.tol.kg, r: +D.tol.r, rpe: rirToRpe(1), done: true, setType: 'working' }] });
+    }
+    if (exercises.length) S.workouts.push({
+      id: uid(), date: t.date, name: 'Fitting test', status: 'completed', source: 'logged', fitTest: t.id, notes: '',
+      exercises, start: null, end: Date.now(),
+      summary: { mins: 0, prs: [], volume: exercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + s.w * s.r, 0), 0) },
+    });
+  }
+  S.fitDraft = null;
+  save(); bust();
+  return t;
 }
 
 /* ---------------- blood pressure and blood glucose (D16, health-page-spec §Vitals) ----------------
