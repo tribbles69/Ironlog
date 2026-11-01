@@ -794,6 +794,52 @@ block of CSS, not edits scattered through `index.html`.
 - Muscle map skins (0.23.0) are separate from themes — check they read well on
   dark backgrounds.
 
+### [ ] E11. Debug mode — show the working
+Added 2026-10-31 at Aaron's request, after seeing a step-by-step scoring trace
+for the strength fitting test's home screen. Goal: any number the app works out
+can show how it got there, so a wrong-looking result can be checked or reported.
+- **A Settings toggle, off by default.** When on, calculated values get a small
+  "show working" tap that opens the trace: the inputs, which value was picked
+  (e.g. the worse side), the formula with the numbers filled in, any cutoffs or
+  thresholds passed and missed, and the result.
+- **Start where results get questioned:** PR detection (`prKey` — which entry
+  beat which; read-only, see D10), estimated 1RM, strength tiers and standards,
+  mobility and balance test scores (E5), RIR ↔ RPE conversion, rep-range
+  verdicts (D5), VBT velocity, velocity loss and estimated RIR (D1), the
+  recovery heatmap (D7), DOTS, caliper body fat (E4), and cardio HR-zone cues
+  (D15).
+- **One shared trace helper**, so every calculation records steps in the same
+  shape (label, value, note) instead of each feature building its own debug UI.
+  No cost when debug is off.
+- **Read-only:** never changes data. A "copy trace" button puts it on the
+  clipboard as plain text, for pasting into a bug report or a Claude chat.
+- Trace sheets follow C4 (labels, contrast, text size).
+
+### [ ] E12. Strength fitting test — write-up done, check the open questions before building
+Added 2026-10-31 at Aaron's request. **Spec: `r&d/specs/fitting-test-spec.md`**
+(reference workbook with working formulas: `r&d/data/fitting-test/strength-fitting-test.xlsx`).
+Colour analysis for training: a one-hour test (15 min home, 45 min gym, no true
+maxes) that ranks every lift and physical quality, assigns a profile type and
+raises flags that change the plan.
+- **Home screen:** knee-to-wall, shoulder scratch (new test), broomstick overhead
+  squat flat and heels raised (new), eyes-closed single-leg stand, body
+  measurements. Reuses E5's tests and Health charts; retested every 2 weeks.
+- **Gym:** power (speed rep via D1 Measure, or jump and reach), a four-pattern
+  **RIR rep ladder** (8 → 5 → 3 → 2 → 1, jumps of +50 / +25 / +10% bodyweight
+  by reps left) giving an estimated 1RM per pattern, a leg press rep-tolerance
+  set, a bodyweight bar hold and a 500m row with 60 s HR recovery.
+- **Scoring:** every test scores 0–5 against five cutoffs, with sources marked
+  sourced or estimated. Strength uses bodyweight multiples plus a new
+  **variation factor** table (trap bar high handles ×1.15) so trap bar and
+  Smith lifts stop ranking against the barbell lift.
+- **Results:** tiers, strongest / lagging pattern, weakest area overall, volume
+  tolerance, a one-line profile type, and flags at score ≤ 2 or a left/right
+  gap over 30%. Every score traceable in debug mode (E11).
+- **Open before building** (spec §12): one standards source for Stats and the
+  test, where it lives in the app, and how ladder sets pick the e1RM. The plan
+  changes the profile drives are not specified yet — first build shows results
+  and flags only.
+
 ---
 
 ## Parked
