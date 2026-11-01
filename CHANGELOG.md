@@ -13,6 +13,17 @@ rather than guessed.
 
 ---
 
+## 0.74.0 — 1 Nov 2026
+- **The coach answers a lot more, still without AI.** New topics:
+  - **Training:** rest between sets (from your rest timer), reps and sets for your goal and experience, how to progress, training to failure, session length, cardio and stretching.
+  - **Your numbers:** your strength tier ("what's a good bench for my weight?"), DOTS and total (estimated if untested), goal progress, meet openers, your balance test and fitting test, when you last trained a muscle or lift, and how much you lifted this week.
+  - **Situations:** "I slept badly", "I'm sore", "I'm ill", "going on holiday", "can I train two days in a row?", "skip today", "I want to train 4 days a week".
+  - **General guidance:** protein for your bodyweight and creatine or caffeine. Clearly not medical or dietary advice.
+  - **A glossary:** AMRAP, tempo, top set, back-off, drop set, superset, deload, e1RM, RPE, RIR, double progression, and the training blocks.
+- **The coach can now move a session** a day later ("move my session to tomorrow"), or swap a named exercise in your upcoming sessions ("swap squat for leg press"). As always, nothing changes until you tap Apply, and Undo puts it back.
+- "I hate lunges" offers to remember it, and to swap lunges out of your plan.
+- **Fixed:** "when should I add weight" and "what's a good bench for my weight" no longer get the bodyweight answer, and "show my fitting test" no longer gets the event countdown.
+
 ## 0.73.0 — 1 Nov 2026
 - **New: Trend coach for heart-rate cardio** (a switch on the cardio setup, off to start). It watches which way your heart rate is heading over the last 90 seconds. When you're still in your zone but on course to leave it within a minute, it nudges you early with the smallest step: "Heart rate climbing. Set speed to 7.9". No more waiting until you've already overshot.
 - It works on every machine, follows the same limits as the regular cues, and needs no AI.

@@ -791,13 +791,20 @@ window.smoke = async function smoke(opts) {
     try {
       const want = { 'why has my bench stalled?': 'stall', 'what should I do today': 'today', 'should I deload': 'deload', "what's my weakest lift": 'weak',
         'how long until my meet': 'event', 'am I doing enough volume': 'volume', 'how am I sleeping': 'recovery', 'should I cut': 'body',
-        'review my week': 'review', 'how did my last session go': 'debrief', 'what does RIR mean': 'faq', 'remember that I hate lunges': 'remember' };
+        'review my week': 'review', 'how did my last session go': 'debrief', 'what does RIR mean': 'glossary', 'how do I back up my data': 'faq', 'remember that I hate lunges': 'remember' };
       const wrong = Object.entries(want).filter(([q, t]) => (coMatch(q) || {}).topic !== t).map(([q, t]) => `"${q}" → ${(coMatch(q) || {}).topic} not ${t}`);
       if (wrong.length) throw new Error(wrong.join('; '));
       if (coMatch('what is the meaning of life')) throw new Error('matched nonsense');
       const talk = { 'hey': 'greet', 'thanks!': 'thanks', 'how heavy should I go on bench for 5': 'weightfor', 'warm up for squat': 'warmup',
         'plates for 140': 'plates', "I've only got 30 minutes": 'short', "I'm at home today": 'home', "can't be bothered today": 'motivate',
         'I missed yesterday': 'missed', 'my knee hurts': 'pain', 'any PRs lately': 'prs', '100 lb in kg': 'convert', 'rpe 8 in rir': 'rirrpe', 'help': 'help' };
+      Object.assign(talk, { 'how much protein do I need': 'nutrition', 'should I take creatine': 'supps', 'should I do cardio': 'cardioq',
+        'how long should I rest between sets': 'restq', 'how many reps for strength': 'reps', 'when should I add weight': 'progress',
+        'is training to failure bad': 'failure', "what's a good bench for my weight": 'standards', "what's my dots": 'points',
+        'what should my openers be': 'openers', 'what is amrap': 'glossary', 'I slept badly': 'sleepbad', "I'm ill": 'ill',
+        'can I train two days in a row': 'consecutive', 'I want to train 4 days a week': 'days', 'can I change to 4 days': 'days',
+        'when did I last train legs': 'lasttrained', 'how much did I lift this week': 'tonnage', 'show my fitting test': 'fittest',
+        'I hate lunges': 'dislike', "I'm going on holiday": 'travel', 'move my session to tomorrow': 'reschedule', 'bye': 'bye' });
       const wrong2 = Object.entries(talk).filter(([q, t]) => (coMatch(q) || {}).topic !== t).map(([q, t]) => `"${q}" → ${(coMatch(q) || {}).topic} not ${t}`);
       if (wrong2.length) throw new Error(wrong2.join('; '));
       if (Math.abs(coAnsConvert('100 lb in kg').html.match(/= ([\d.]+)/)[1] - 45.4) > 0.05) throw new Error('lb → kg wrong');
