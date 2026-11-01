@@ -13,6 +13,11 @@ rather than guessed.
 
 ---
 
+## 0.70.1 — 1 Nov 2026
+- **Fixed:** choosing "No plan — I'll just log" in the coach now ends the setup, instead of carrying on with plan questions. Choosing to bring in a plan goes straight to the import.
+- If you already have a program on your calendar, the coach asks about that first: *Keep it*, *Build me a new one*, *Bring in a different one*, or *No plan*.
+- If you skipped the plan questions and later tap *Build my plan*, the coach asks the ones it needs first.
+
 ## 0.70.0 — 1 Nov 2026
 - **The coach is more conversational.** It keeps track of what you were talking about: "and squat?" or "what about deadlift?" asks the same question for another lift, "why?" explains its last answer, and "yes" takes the suggestion it just made. Replies vary, there's a short typing pause, and each answer offers sensible next questions.
 - **New things to ask:**

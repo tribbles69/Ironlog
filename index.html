@@ -2118,7 +2118,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.70.0';
+const APP_VERSION = '0.70.1';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -14150,19 +14150,26 @@ function coachPriorityOptions(A) {
 /* ---- the setup, as chat steps: ask, answer chips, what it stores ---- */
 /* Plan questions only matter when the coach is building the plan. */
 const coachBuilding = A => !A.planMode || A.planMode === 'build';
+/* A program already on the calendar with sessions still to come: the coach
+   asks about that before offering to build or import one. */
+function coExistingProg() {
+  return (S.programs || []).find(id => S.workouts.some(w => w.prog === id && w.status === 'planned' && w.date >= today())) || null;
+}
 const COACH_STEPS = [
-  { id: 'planMode', ask: () => 'Do you want me to build you a plan? If you already follow one, you can bring it in instead.', kind: 'single',
-    opts: () => [['build', 'Build me a plan'], ['import', 'I\'ve got a plan — bring it in'], ['none', 'No plan — I\'ll just log']] },
-  { id: 'goal', ask: () => 'What are you training for?', kind: 'single', opts: () => COACH_GOALS },
+  { id: 'planMode', kind: 'single',
+    ask: () => { const p = coExistingProg(); return p ? `You've already got ${programName(p)} on your calendar. Keep following it?` : 'Do you want me to build you a plan? If you already follow one, you can bring it in instead.'; },
+    opts: () => [...(coExistingProg() ? [['keep', 'Keep it']] : []), ['build', coExistingProg() ? 'Build me a new one' : 'Build me a plan'],
+      ['import', coExistingProg() ? 'Bring in a different one' : 'I\'ve got a plan — bring it in'], ['none', 'No plan — I\'ll just log']] },
+  { id: 'goal', ask: () => 'What are you training for?', kind: 'single', opts: () => COACH_GOALS, show: coachBuilding },
   /* Profile basics, asked only when the profile hasn't got them: every
      strength standard is a multiple of bodyweight, read for sex, and age
      sets balance norms, heart-rate zones and masters classes. */
   { id: 'sex', ask: () => 'Strength standards differ for men and women — which should I use?', kind: 'single',
-    opts: () => [['male', 'Men\'s'], ['female', 'Women\'s']], show: () => !S.settings.sex, apply: v => { S.settings.sex = v; } },
+    opts: () => [['male', 'Men\'s'], ['female', 'Women\'s']], show: A => coachBuilding(A) && !S.settings.sex, apply: v => { S.settings.sex = v; } },
   { id: 'dob', ask: () => 'What\'s your date of birth? Age sets balance norms, heart-rate zones and masters classes.', kind: 'dob',
-    show: () => !S.settings.dob, apply: v => { if (v !== 'skip') S.settings.dob = v; } },
+    show: A => coachBuilding(A) && !S.settings.dob, apply: v => { if (v !== 'skip') S.settings.dob = v; } },
   { id: 'bw', ask: () => 'What do you weigh? Every strength standard is a multiple of bodyweight.', kind: 'number', unit: () => U(),
-    show: () => !bodyweightKg(), apply: v => {
+    show: A => coachBuilding(A) && !bodyweightKg(), apply: v => {
       if (!(v > 0)) return;
       const c = S.checkins.find(x => x.date === today());
       if (c) c.weight = v; else S.checkins.push({ date: today(), weight: v, notes: '' });
@@ -14176,7 +14183,7 @@ const COACH_STEPS = [
   { id: 'days', ask: () => 'Which days can you train? Tap them — the number of days picks the split.', kind: 'days', show: coachBuilding },
   { id: 'dayPlace', ask: () => 'Which of those are gym days?', kind: 'dayPlace', show: A => coachBuilding(A) && A.where === 'both' },
   { id: 'minutes', ask: () => 'How long per session?', kind: 'single', opts: () => [[30, '30 min'], [45, '45 min'], [60, '60 min'], [90, '90 min']], show: coachBuilding },
-  { id: 'experience', ask: () => 'How long have you trained properly?', kind: 'single', opts: () => COACH_EXP },
+  { id: 'experience', ask: () => 'How long have you trained properly?', kind: 'single', opts: () => COACH_EXP, show: coachBuilding },
   { id: 'priority', ask: () => 'Which lifts do you care most about? They go first and get the most sets.', kind: 'multi', show: A => coachBuilding(A) && A.experience !== 'under6m',
     opts: A => coachPriorityOptions(A).map(k => [k, leafName(k) + (variantLabel(keyLeaf(k)) ? ` (${variantLabel(keyLeaf(k))})` : '')]) },
   { id: 'easy', ask: () => 'Anything to go easy on?', kind: 'multi', opts: () => MOB_JOINTS, none: 'Nothing', show: coachBuilding },
@@ -14233,7 +14240,7 @@ function openCoach(at) {
     const g = coachGuess(), A = C.answers;
     let pre = 0;
     Object.entries(g).forEach(([k, v]) => { if (A[k] == null) { A[k] = v; pre++; } });
-    coBubble('coach', `Hi — I'm your coach. A few taps and I'll build you a plan.${pre ? ' I\'ve filled in what your log already tells me; just confirm or change it.' : ''} No AI needed for this part.`);
+    coBubble('coach', `Hi — I'm your coach. A few quick taps so I know how you train${pre ? ' — I\'ve filled in what your log already tells me' : ''}. No AI needed.`);
     CO.mode = 'setup';
     return coNext();
   }
@@ -14263,7 +14270,7 @@ function coMenuPick(v, label) {
   coBubble('me', esc(label));
   if (v === 'menu') return coMenu();
   if (v === 'see') return coPreview(C.plan, true);
-  if (v === 'new') { C.answers.planMode = 'build'; return coInvite(); }
+  if (v === 'new') { C.answers.planMode = 'build'; save(); return coNext(); }   // asks any plan question skipped earlier, then builds
   if (v === 'import') return coImport();
   if (v === 'answers') return coAnswers();
   if (v === 'test') { closeAllModals(); return openFitTest('home'); }
@@ -14287,7 +14294,14 @@ function coNext() {
   if (!st) {
     S.coach.setupDone = true; S.coach.setupAt = S.coach.setupAt || today(); save();
     if (A.planMode === 'import') { coBubble('coach', 'Good — let\'s bring your plan in. Any format works; an AI turns it into Ironlog\'s.'); return coImport(); }
-    if (A.planMode === 'none') { coBubble('coach', 'No plan — just log. Your answers are saved; open me whenever you want a plan.'); return coMenu(); }
+    if (A.planMode === 'none') { coBubble('coach', coPick(['No plan — just log. I\'m here when you want one, and you can ask me about your training any time.', 'Fair enough — log as you go. Ask me anything about your training, or tap Build my plan whenever you want one.'])); return coMenu(); }
+    if (A.planMode === 'keep') {
+      const p = coExistingProg();
+      if (p) Object.assign(S.coach, { planProg: p, planName: programName(p), planAt: S.coach.planAt || today() });
+      save();
+      coBubble('coach', p ? `Good — I'll work with ${esc(programName(p))}. Ask me about any session or lift in it.` : 'That plan has no sessions left — want a new one?');
+      return coMenu();
+    }
     return coInvite();
   }
   coAsk(st, () => { (S.coach.asked = S.coach.asked || []).push(st.id); save(); coNext(); });
@@ -14486,7 +14500,7 @@ function coAnswers() {
     const st = COACH_STEPS.find(s => s.id === b.dataset.costep);
     coAsk(st, () => coAnswers());
   });
-  $('#coBuild', CO.bg).onclick = () => { coBubble('me', 'Build my plan'); S.coach.setupDone = true; A.planMode = 'build'; save(); coInvite(); };
+  $('#coBuild', CO.bg).onclick = () => { coBubble('me', 'Build my plan'); A.planMode = 'build'; save(); coNext(); };
 }
 function openCoachSettings() {
   const C = coachMem();
