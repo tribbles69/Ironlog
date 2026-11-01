@@ -13,6 +13,10 @@ rather than guessed.
 
 ---
 
+## 0.73.0 — 1 Nov 2026
+- **New: Trend coach for heart-rate cardio** (a switch on the cardio setup, off to start). It watches which way your heart rate is heading over the last 90 seconds. When you're still in your zone but on course to leave it within a minute, it nudges you early with the smallest step: "Heart rate climbing. Set speed to 7.9". No more waiting until you've already overshot.
+- It works on every machine, follows the same limits as the regular cues, and needs no AI.
+
 ## 0.72.0 — 1 Nov 2026
 - **New: Tailor it** (with your AI key). When the coach shows a new plan, *Tailor it with Claude* sends the plan and a summary of your log to Claude, which suggests a few changes, each with a reason. Examples: swap an incline press because chest volume is low, or add a set because a lift is lagging.
 - **Claude is kept on a short leash.** It can only choose from each exercise's own swap list and move sets by one. Ironlog re-checks every suggestion against your kit, your go-easy list and same-day clashes, and drops anything that breaks a rule (it says how many).

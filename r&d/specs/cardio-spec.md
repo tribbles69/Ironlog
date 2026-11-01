@@ -253,3 +253,13 @@ there is a distance, plus any readouts.
   cues, Done, +/−, pause, disconnect/stale HR, finish, card and chart render.
 - On a real phone: pairing a strap, cue audio + voice with the screen on,
   disconnect/reconnect.
+
+## Trend coach (0.73.0, coach-spec §8)
+
+Optional (cardio setup → Trend coach, `cfg.trend`). Built locally, not as the
+roadmap's once-a-minute Haiku call: `hrSlope()` fits bpm per minute to the
+last 90 s of samples (needs 45 s). At a check where 20-s HR is on target, a
+slope of 4+ bpm/min projected 60 s ahead that leaves the zone issues the
+smallest step early (`cue.trend`), through the same bounds, interval and
+response wait as every cue. Debug mode's cardio trace shows the slope and the
+projection.
