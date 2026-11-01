@@ -412,5 +412,57 @@
         "hip-thrust/barbell"
       ]
     }
+  },
+  "easyOn": {
+    "note": "Go-easy joints (Q8, the E5 joint list) and the candidates they rule out. A starting list — tune it.",
+    "neck": [
+      "shrug/*",
+      "behind-neck-press/*",
+      "upright-row/*"
+    ],
+    "shoulders": [
+      "behind-neck-press/*",
+      "upright-row/*",
+      "overhead-press/barbell",
+      "triceps-dip/*",
+      "chest-dip/*",
+      "skull-crusher/barbell",
+      "push-press/*"
+    ],
+    "elbows": [
+      "skull-crusher/*",
+      "close-grip-bench/barbell",
+      "preacher-curl/*",
+      "triceps-dip/*"
+    ],
+    "wrists": [
+      "front-squat/barbell",
+      "push-up/*",
+      "skull-crusher/barbell",
+      "close-grip-bench/barbell",
+      "wrist-curl/*",
+      "reverse-wrist-curl/*"
+    ],
+    "hips": [
+      "sumo-deadlift/*",
+      "hip-adduction/*",
+      "side-lunge/*",
+      "good-morning/*"
+    ],
+    "knees": [
+      "sissy-squat/*",
+      "leg-extension/*",
+      "pistol-squat/*",
+      "bulgarian-split-squat/*",
+      "reverse-lunge/*",
+      "split-squat/*",
+      "step-up/*",
+      "hack-squat/*"
+    ],
+    "ankles": [
+      "pistol-squat/*",
+      "calf-raise-standing/bodyweight",
+      "front-squat/barbell"
+    ]
   }
 }
