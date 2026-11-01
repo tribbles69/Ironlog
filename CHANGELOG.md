@@ -13,6 +13,11 @@ rather than guessed.
 
 ---
 
+## 0.70.2 — 1 Nov 2026
+- **Fixed:** the coach's answer panel took up most of the screen, and chat text showed through under it. The question chips are now single rows you swipe sideways, the panel covers the chat properly, and Coach settings moved into the Plan row, so the chat has room.
+- The coach now answers kit questions: belt, sleeves, wrist and knee wraps, straps, chalk, shoes and singlet ("Do I need my belt?").
+- The weekly review counts missed **days** on your coach's plan, so two programs planning the same day no longer double-count. A lift with no real change now reads "flat" instead of "▲ 0.0%".
+
 ## 0.70.1 — 1 Nov 2026
 - **Fixed:** choosing "No plan — I'll just log" in the coach now ends the setup, instead of carrying on with plan questions. Choosing to bring in a plan goes straight to the import.
 - If you already have a program on your calendar, the coach asks about that first: *Keep it*, *Build me a new one*, *Bring in a different one*, or *No plan*.
