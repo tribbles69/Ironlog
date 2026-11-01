@@ -1,0 +1,39 @@
+{
+  "note": "DRAFT for Aaron to read (coach-spec §2-§3). Each day lists slots in training order; session length keeps the first N (main never cut). b = the B-week pattern for 2+ years (A/B fortnight); without b the slot is the same both weeks.",
+  "id": "ppl",
+  "name": "Push / Pull / Legs",
+  "days": 3,
+  "eventDay": 2,
+  "dayList": [
+    { "name": "Push", "slots": [
+      { "p": "bench", "role": "main", "b": "bench-b" },
+      { "p": "ohp", "role": "secondary", "b": "ohp-b" },
+      { "p": "incline-press", "role": "accessory" },
+      { "p": "lateral-raise", "role": "accessory" },
+      { "p": "triceps", "role": "accessory" },
+      { "p": "chest-iso", "role": "accessory" },
+      { "p": "triceps-oh", "role": "accessory" },
+      { "p": "abs", "role": "finisher" }
+    ] },
+    { "name": "Pull", "slots": [
+      { "p": "hinge", "role": "main", "b": "glute-main" },
+      { "p": "row", "role": "secondary", "b": "pulldown" },
+      { "p": "pulldown", "role": "secondary", "b": "row" },
+      { "p": "shrug", "role": "accessory" },
+      { "p": "rear-delt", "role": "accessory" },
+      { "p": "biceps", "role": "accessory" },
+      { "p": "biceps-2", "role": "accessory" },
+      { "p": "obliques", "role": "finisher" }
+    ] },
+    { "name": "Legs", "slots": [
+      { "p": "squat", "role": "main", "b": "squat-machine" },
+      { "p": "single-leg", "role": "secondary" },
+      { "p": "ham-curl", "role": "accessory" },
+      { "p": "quad-iso", "role": "accessory" },
+      { "p": "glute-iso", "role": "accessory" },
+      { "p": "calves", "role": "finisher" },
+      { "p": "abs", "role": "finisher" },
+      { "p": "adductors", "role": "accessory" }
+    ] }
+  ]
+}

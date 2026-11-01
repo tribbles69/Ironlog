@@ -1,0 +1,57 @@
+{
+  "note": "DRAFT for Aaron to read (coach-spec §3 'Final rep / RIR numbers per goal'). Reps are [low, high]; rir is the target reps in reserve. Where rir is a pair [a, b], 2+ years gets a and everyone else b. Under 6 months never goes below RIR 2.",
+  "roles": {
+    "main": "The day's one heavy compound. Never trimmed.",
+    "secondary": "A second compound or close variation.",
+    "accessory": "Isolation and support work. Trimmed from the end when time is short.",
+    "finisher": "Calves, abs, obliques. Trimmed first."
+  },
+  "goals": {
+    "strength": {
+      "label": "Strength",
+      "main":      { "reps": [3, 5],   "rir": 2 },
+      "secondary": { "reps": [5, 8],   "rir": 2 },
+      "accessory": { "reps": [6, 10],  "rir": 2 },
+      "finisher":  { "reps": [10, 15], "rir": [1, 2] }
+    },
+    "size": {
+      "label": "Size",
+      "main":      { "reps": [6, 10],  "rir": 2 },
+      "secondary": { "reps": [8, 12],  "rir": 2 },
+      "accessory": { "reps": [10, 15], "rir": [1, 2] },
+      "finisher":  { "reps": [12, 20], "rir": [1, 2] }
+    },
+    "strongman": {
+      "label": "Strongman",
+      "base": "strength",
+      "event": { "note": "One event slot (carry, load or press) on the template's eventDay, after the main lift. Logged as a B1 shape: weight + distance/time, not reps.", "sets": 3 }
+    },
+    "powerlifting": {
+      "label": "Powerlifting meet",
+      "base": "strength",
+      "note": "Competition squat, bench and deadlift are the main lifts (patterns.json goalOverrides). With a meet date the plan becomes a C6 block counting down to it."
+    },
+    "general": {
+      "label": "General fitness",
+      "main":      { "reps": [8, 12],  "rir": [2, 3] },
+      "secondary": { "reps": [8, 12],  "rir": [2, 3] },
+      "accessory": { "reps": [10, 15], "rir": [2, 3] },
+      "finisher":  { "reps": [12, 20], "rir": [2, 3] }
+    }
+  },
+  "sets": {
+    "note": "Working sets per slot, by experience (Q6). Warm-ups are extra and come from the ramp.",
+    "under6m":  { "main": 3, "secondary": 2, "accessory": 2, "finisher": 2 },
+    "6mTo2y":   { "main": 3, "secondary": 3, "accessory": 3, "finisher": 2 },
+    "over2y":   { "main": 4, "secondary": 3, "accessory": 3, "finisher": 3 }
+  },
+  "experience": {
+    "under6m": { "abWeeks": false, "minRir": 2, "amrap": false, "loadStep": "+2.5 kg only after every set reaches the top of the range at the target RIR, two sessions running" },
+    "6mTo2y":  { "abWeeks": false, "minRir": 1, "amrap": false, "loadStep": "+2.5 kg when every set reaches the top of the range at the target RIR (the D5 double progression)" },
+    "over2y":  { "abWeeks": true,  "minRir": 1, "amrap": true,  "loadStep": "Autoregulated from the working e1RM (autoreg-spec); A weeks the heavy main lift, B weeks its variation" }
+  },
+  "minutes": {
+    "note": "Slots kept per day, counting from the top of the day's list; main slots are never cut. 45 min = Aaron's 5 (the PPLUL doc fits more with supersets — see README).",
+    "30": 4, "45": 5, "60": 6, "90": 8
+  }
+}

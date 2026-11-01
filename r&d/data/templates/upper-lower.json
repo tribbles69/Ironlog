@@ -1,0 +1,29 @@
+{
+  "note": "DRAFT for Aaron to read (coach-spec §2-§3). Each day lists slots in training order; session length keeps the first N (main never cut). b = the B-week pattern for 2+ years (A/B fortnight); without b the slot is the same both weeks.",
+  "id": "upper-lower",
+  "name": "Upper / Lower",
+  "days": 2,
+  "eventDay": 1,
+  "dayList": [
+    { "name": "Upper", "slots": [
+      { "p": "bench", "role": "main", "b": "bench-b" },
+      { "p": "row", "role": "secondary", "b": "pulldown" },
+      { "p": "ohp", "role": "secondary", "b": "ohp-b" },
+      { "p": "pulldown", "role": "accessory", "b": "row" },
+      { "p": "lateral-raise", "role": "accessory" },
+      { "p": "triceps", "role": "accessory" },
+      { "p": "biceps", "role": "accessory" },
+      { "p": "rear-delt", "role": "accessory" }
+    ] },
+    { "name": "Lower", "slots": [
+      { "p": "squat", "role": "main", "b": "squat-machine" },
+      { "p": "hinge", "role": "secondary", "b": "glute-main" },
+      { "p": "single-leg", "role": "accessory" },
+      { "p": "ham-curl", "role": "accessory" },
+      { "p": "quad-iso", "role": "accessory" },
+      { "p": "calves", "role": "finisher" },
+      { "p": "abs", "role": "finisher" },
+      { "p": "obliques", "role": "finisher" }
+    ] }
+  ]
+}
