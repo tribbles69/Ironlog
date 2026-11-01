@@ -239,4 +239,7 @@ the local cue engine still runs without it.
 
 - Final rep / RIR numbers per goal (§3).
 - Slot lists for each split — draft them in `r&d/data/templates/` and have
-  Aaron read them before the code.
+  Aaron read them before the code. **Drafted 2026-11-01:**
+  `r&d/data/templates/README.md` has every split as tables, the numbers, and
+  five questions for Aaron (supersets at 45 min, beginners on machines, the
+  numbers, the 6-day split, home lower days).

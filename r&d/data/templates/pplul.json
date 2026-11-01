@@ -1,0 +1,60 @@
+{
+  "note": "DRAFT for Aaron to read (coach-spec §2-§3). Each day lists slots in training order; session length keeps the first N (main never cut). b = the B-week pattern for 2+ years (A/B fortnight); without b the slot is the same both weeks.",
+  "id": "pplul",
+  "name": "Push / Pull / Legs / Upper / Lower",
+  "days": 5,
+  "eventDay": 4,
+  "reference": "Aaron's 77-week PPLUL (r&d/data/hunchback-pplul-77wk.txt)",
+  "dayList": [
+    { "name": "Push", "slots": [
+      { "p": "bench", "role": "main", "b": "bench-b" },
+      { "p": "incline-press", "role": "secondary" },
+      { "p": "triceps", "role": "accessory" },
+      { "p": "lateral-raise", "role": "accessory" },
+      { "p": "chest-iso", "role": "accessory" },
+      { "p": "abs", "role": "finisher" },
+      { "p": "triceps-oh", "role": "accessory" },
+      { "p": "rear-delt", "role": "accessory" }
+    ] },
+    { "name": "Pull", "slots": [
+      { "p": "row", "role": "main", "b": "pulldown" },
+      { "p": "shrug", "role": "secondary" },
+      { "p": "pulldown", "role": "secondary", "b": "row" },
+      { "p": "biceps", "role": "accessory" },
+      { "p": "rear-delt", "role": "accessory" },
+      { "p": "biceps-2", "role": "accessory" },
+      { "p": "abs", "role": "finisher" },
+      { "p": "lateral-raise", "role": "accessory" }
+    ] },
+    { "name": "Legs", "slots": [
+      { "p": "squat", "role": "main", "b": "squat-machine" },
+      { "p": "quad-iso", "role": "accessory" },
+      { "p": "ham-curl", "role": "accessory" },
+      { "p": "calves", "role": "finisher" },
+      { "p": "abs", "role": "finisher" },
+      { "p": "adductors", "role": "accessory" },
+      { "p": "glute-iso", "role": "accessory" },
+      { "p": "single-leg", "role": "accessory" }
+    ] },
+    { "name": "Upper", "slots": [
+      { "p": "ohp", "role": "main", "b": "ohp-b" },
+      { "p": "close-grip", "role": "secondary" },
+      { "p": "row", "role": "accessory" },
+      { "p": "triceps-oh", "role": "accessory" },
+      { "p": "lateral-raise", "role": "accessory" },
+      { "p": "rear-delt", "role": "accessory" },
+      { "p": "biceps", "role": "accessory" },
+      { "p": "abs", "role": "finisher" }
+    ] },
+    { "name": "Lower", "slots": [
+      { "p": "hinge", "role": "main", "b": "glute-main" },
+      { "p": "hinge-2", "role": "secondary" },
+      { "p": "ham-curl", "role": "accessory" },
+      { "p": "glute-iso", "role": "accessory" },
+      { "p": "calves", "role": "finisher" },
+      { "p": "obliques", "role": "finisher" },
+      { "p": "single-leg", "role": "accessory" },
+      { "p": "adductors", "role": "accessory" }
+    ] }
+  ]
+}
