@@ -814,6 +814,36 @@ window.smoke = async function smoke(opts) {
     } finally { S.coach = JSON.parse(keep); save(); close(); }
   });
 
+  await step('flow: coach suggested changes — apply and undo', async () => {
+    const keep = { coach: JSON.stringify(S.coach || {}), n: S.workouts.length, programs: [...S.programs] };
+    const bench = 'bench-press/barbell/bilateral/none', leaf = keyLeaf(bench), fly = completeLeaf(movementById('chest-fly'), { equipment: 'cable' });
+    const mk = (i, d) => ({ id: 'zzS' + i, date: addDaysISO(today(), d), name: 'Push', status: 'planned', prog: 'zzp', loads: 'rir',
+      exercises: [{ leaf, legacyName: 'Bench Press', notes: '', mods: [], sets: [1, 2, 3, 4].map(() => ({ w: 0, r: 5, t: 2, rpe: null, done: false, setType: 'working' })) },
+                  { leaf: fly, legacyName: 'Chest Fly', notes: '', mods: [], sets: [1, 2].map(() => ({ w: 0, r: 12, t: 1, rpe: null, done: false, setType: 'working' })) }] });
+    try {
+      S.workouts.push(mk(1, 1), mk(2, 9)); S.programs.push('zzp'); bust();
+      S.coach = { ...JSON.parse(keep.coach), setupDone: true, answers: {} };
+      openCoach(); await wait(60);
+      const s = id => S.workouts.find(w => w.id === id);
+      coApplyChange('swap', bench);
+      const to = s('zzS1').exercises[0].leaf.movement;
+      if (to === 'bench-press' || to === 'push-up') throw new Error(`stall swap went to ${to}`);
+      coUndoChange();
+      if (s('zzS1').exercises[0].leaf.movement !== 'bench-press') throw new Error('undo did not restore');
+      coApplyChange('vol', 'chest');
+      if (s('zzS1').exercises[1].sets.length !== 3 || s('zzS1').exercises[0].sets.length !== 4) throw new Error('extra set not on the accessory');
+      coUndoChange();
+      coApplyChange('deload');
+      if (s('zzS1').exercises[0].sets.length !== 2 || s('zzS1').exercises[0].sets[0].t < 3 || s('zzS2').exercises[0].sets.length !== 4) throw new Error('lighter week wrong');
+      coUndoChange();
+      return `swap → ${to}; extra set on the accessory; lighter week halves sets at RIR 3+; undo restores each`;
+    } finally {
+      S.workouts = S.workouts.filter(w => !String(w.id).startsWith('zzS')); S.programs = keep.programs;
+      S.coach = JSON.parse(keep.coach); bust(); save(); close();
+      if (S.workouts.length !== keep.n) throw new Error('cleanup left sessions behind');
+    }
+  });
+
   await step('food removed: tab gone, old route lands home', async () => {
     close();
     if (document.querySelector('#nav [data-page="food"]')) throw new Error('Food tab still in the nav');
