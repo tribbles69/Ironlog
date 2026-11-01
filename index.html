@@ -119,8 +119,14 @@ html[data-skin="win98"] #nav .navcoach{display:none}
 .co-b.coach{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:4px}
 .co-b.me{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
 .co-b.coach:has(.co-day){max-width:100%;width:100%}
-.co-ans{position:sticky;bottom:0;background:var(--bg2);padding-top:8px;border-top:1px solid var(--line)}
+/* The answer panel covers the sheet's bottom padding too, so no chat shows through under it. */
+.co-ans{position:sticky;bottom:-16px;margin:0 -16px -16px;padding:8px 16px calc(12px + env(safe-area-inset-bottom));background:var(--bg2);border-top:1px solid var(--line);z-index:1}
 .co-chip{min-height:36px}
+/* Menu chips: one swipeable row per group instead of a tall stack. */
+.co-row{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;padding:2px 0 4px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.co-row::-webkit-scrollbar{display:none}
+.co-row .chip{flex:none;white-space:nowrap}
+.co-lab{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim2);margin:6px 0 2px}
 .co-day{margin-top:10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px}
 .co-x{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
 .co-x:last-child{border-bottom:0}
@@ -2118,7 +2124,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.70.1';
+const APP_VERSION = '0.70.2';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -14215,17 +14221,15 @@ function coBubble(who, html) {
   requestAnimationFrame(() => { const b = $('.modal-body', CO.bg); if (b) b.scrollTop = b.scrollHeight; });
 }
 function coAnswer(html) { const a = $('#coAns', CO.bg); a.innerHTML = html; a11yPass(a); }
-function coChips(opts, on) {
-  return `<div class="row wrap" style="gap:6px">${opts.map(([v, l]) => `<button class="chip co-chip${on && on.includes(String(v)) ? ' on' : ''}" data-cov="${esc(String(v))}" aria-pressed="${!!(on && on.includes(String(v)))}">${esc(l)}</button>`).join('')}</div>`;
+function coChips(opts, on, row) {
+  return `<div class="${row ? 'co-row' : 'row wrap'}" style="gap:6px">${opts.map(([v, l]) => `<button class="chip co-chip${on && on.includes(String(v)) ? ' on' : ''}" data-cov="${esc(String(v))}" aria-pressed="${!!(on && on.includes(String(v)))}">${esc(l)}</button>`).join('')}</div>`;
 }
 function openCoach(at) {
   coachMem();
   const bg = modal({
     title: 'Coach',
     body: `<div class="co-log" id="coLog" aria-live="polite"></div><div class="co-ans" id="coAns"></div>`,
-    foot: `<button class="btn ghost" id="coMore">Coach settings</button><button class="btn primary" data-close>Close</button>`,
     onClose: () => { CO = null; render(); },
-    onOpen: b0 => { $('#coMore', b0).onclick = () => openCoachSettings(); },
   });
   CO = { bg, log: [] };
   const C = S.coach;
@@ -14258,8 +14262,8 @@ function coGreet() {
 }
 function coMenu() {
   const C = S.coach, D = coachDigest();
-  coAnswer(`<div class="eyebrow" style="margin-bottom:4px">Ask</div>${coChips(coAskChips(D))}
-    <div class="eyebrow" style="margin:10px 0 4px">Plan</div>${coChips([...(C.plan ? [['see', 'See my plan']] : []), ['new', C.plan ? 'New plan' : 'Build my plan'], ['import', 'Bring in my own plan'], ['answers', 'Change my answers'], ['test', 'Fitting test']])}
+  coAnswer(`<div class="co-lab">Ask</div>${coChips(coAskChips(D), null, true)}
+    <div class="co-lab">Plan</div>${coChips([...(C.plan ? [['see', 'See my plan']] : []), ['new', C.plan ? 'New plan' : 'Build my plan'], ['import', 'Bring in my own plan'], ['answers', 'Change my answers'], ['test', 'Fitting test'], ['settings', 'Coach settings']], null, true)}
     ${coFormHtml()}`);
   $('#coAns', CO.bg).querySelectorAll('[data-cov]').forEach(b => b.onclick = () => coMenuPick(b.dataset.cov, b.textContent));
   coFormWire();
@@ -14269,6 +14273,7 @@ function coMenuPick(v, label) {
   if (CO) CO.lastText = null;
   coBubble('me', esc(label));
   if (v === 'menu') return coMenu();
+  if (v === 'settings') { openCoachSettings(); return coMenu(); }
   if (v === 'see') return coPreview(C.plan, true);
   if (v === 'new') { C.answers.planMode = 'build'; save(); return coNext(); }   // asks any plan question skipped earlier, then builds
   if (v === 'import') return coImport();
@@ -14542,7 +14547,13 @@ function coCheckins(from, to) {   // days ago, from > to
 /* The digest every answer reads (spec §5). Built fresh each time. */
 function coachDigest() {
   const t = today(), wk = coLifted(7), prevWk = coLifted(14).filter(w => daysBetween(w.date, t) >= 7);
-  const missed = S.workouts.filter(w => w.status === 'planned' && w.date < t && daysBetween(w.date, t) < 7);
+  /* Missed days, not sessions: two programs planning the same day count once,
+     and a day with a session logged isn't missed. The coach's own plan wins
+     when there is one. */
+  const prog = S.coach && S.coach.planProg && S.programs.includes(S.coach.planProg) ? S.coach.planProg : null;
+  const doneDays = new Set(coLifted(7).map(w => w.date));
+  const missed = [...new Set(S.workouts.filter(w => w.status === 'planned' && w.date < t && daysBetween(w.date, t) < 7
+    && (!prog || w.prog === prog) && !doneDays.has(w.date)).map(w => w.date))];
   const lifts = mainLiftKeys().map(k => ({ key: k, name: leafName(k), now: historyE1(k), then: historyE1(k, addDaysISO(t, -14)), stall: stallFor(k), last: lastSession(k) }));
   const mus = {};
   wk.forEach(wo => sessionMuscles(wo).list.forEach(m => { mus[m.key] = (mus[m.key] || 0) + m.sets; }));
@@ -14568,7 +14579,8 @@ const coPct = (a, b) => b ? (a - b) / b * 100 : 0;
 function coLiftLine(l) {
   if (!l.now) return `${esc(l.name)}: not enough sessions yet.`;
   const d = l.then ? coPct(l.now, l.then) : null;
-  return `${esc(l.name)}: e1RM ${coKg(l.now)}${d != null ? ` (${d >= 0 ? '▲' : '▼'} ${Math.abs(d).toFixed(1)}% in 2 weeks)` : ''}${l.stall ? ' — <b>stalled</b>' : ''}`;
+  const trend = d == null ? '' : Math.abs(d) < 0.5 ? ' (flat over 2 weeks)' : ` (${d > 0 ? 'up' : 'down'} ${Math.abs(d).toFixed(1)}% in 2 weeks)`;
+  return `${esc(l.name)}: e1RM ${coKg(l.now)}${trend}${l.stall ? ' — <b>stalled</b>' : ''}`;
 }
 
 /* ---- the answers ---- */
@@ -14728,7 +14740,7 @@ function coDebrief(wo) {
 /* The weekly review (spec §6): the week, then one focus. */
 function coReview(D) {
   const L = [], focus = [];
-  L.push(`<b>Last 7 days:</b> ${D.week.done} session${D.week.done === 1 ? '' : 's'}${D.week.missed ? `, ${D.week.missed} planned one${D.week.missed === 1 ? '' : 's'} missed` : ''} (${D.week.prev} the week before).`);
+  L.push(`<b>This week:</b> ${D.week.done} session${D.week.done === 1 ? '' : 's'} (${D.week.prev} the week before).${D.week.missed ? ` Missed ${D.week.missed} planned day${D.week.missed === 1 ? '' : 's'}.` : ''}`);
   if (D.week.missed >= 2) focus.push([4, 'Consistency first: get every planned session in, even short ones.']);
   if (D.prs.length) L.push(`PRs: ${esc(D.prs.map(p => `${p.name} ${prText(p)}`).join(', '))}.`);
   const moving = D.lifts.filter(l => l.now && l.then && l.now > l.then * 1.01), stalled = D.lifts.filter(l => l.stall);
@@ -14737,7 +14749,9 @@ function coReview(D) {
   const low = Object.entries(D.muscles).filter(([, v]) => v < CO_LOW_SETS).map(([k]) => MUSCLES[k] || k);
   if (low.length && D.week.done) { L.push(`Low volume: ${esc(low.slice(0, 5).join(', '))}.`); focus.push([1, `Give ${low[0].toLowerCase()} a few more sets.`]); }
   const c = D.ci, p = D.ciPrev;
-  if (c.n) L.push(`Check-ins: sleep ${c.sleep ? nice(c.sleep) + ' h' : '—'}, energy ${c.energy ? nice(c.energy) + '/5' : '—'}, soreness ${c.soreness ? nice(c.soreness) + '/5' : '—'}${p.n ? ' (last week ' + [p.sleep ? nice(p.sleep) + ' h' : '', p.energy ? nice(p.energy) + '/5' : ''].filter(Boolean).join(', ') + ')' : ''}.`);
+  const now = [c.sleep ? `sleep ${nice(c.sleep)} h` : '', c.energy ? `energy ${nice(c.energy)}/5` : '', c.soreness ? `soreness ${nice(c.soreness)}/5` : ''].filter(Boolean);
+  const was = [p.sleep ? `${nice(p.sleep)} h` : '', p.energy ? `${nice(p.energy)}/5` : ''].filter(Boolean);
+  if (now.length) L.push(`Check-ins: ${now.join(', ')}${was.length ? ` (last week ${was.join(', ')})` : ''}.`);
   if (c.sleep && c.sleep < 6.5) focus.push([3, 'Sleep is the cheapest win this week — aim for 7–9 h.']);
   if (c.weight && D.bwThen) L.push(`Bodyweight ${coKg(c.weight)} (${c.weight >= D.bwThen ? '+' : '−'}${coKg(Math.abs(c.weight - D.bwThen))} in a month).`);
   if (D.event) L.push(`${esc(D.event.name || 'Event')} in ${daysBetween(D.t, D.event.date)} days${D.block ? ` — ${esc(D.block.kind.label.toLowerCase())} block, week ${D.block.week}` : ''}.`);
@@ -14841,6 +14855,7 @@ function coPlannedFor(key) {
 }
 const CO_INTENTS = [
   ['pain', /\b(hurt|hurts|hurting|injur\w*|pain\w*|tweak\w*|strain\w*|pulled|sprain\w*|twinge\w*)\b/],
+  ['gear', /\b(belt|sleeves?|knee wraps?|wrist wraps?|wraps?|straps?|chalk|lifting shoes|squat shoes|shoes|singlet|elbow sleeves?)\b/],
   ['convert', /\d+(\.\d+)?\s*(lb|lbs|pounds?|kg|kgs|kilos?)\b.*\b(in|to|into)\s*(kg|kgs|kilos?|lb|lbs|pounds?)\b/],
   ['rirrpe', /\b(rpe|rir)\s*\d/],
   ['plates', /\b(plates? (for|on)|how (do i|to) load|load (the )?bar)\b/],
@@ -14979,6 +14994,24 @@ function coAnsRirRpe(text) {
   const v = +m[2];
   return { html: m[1] === 'rpe' ? `RPE ${nice(v)} = RIR ${nice(10 - v)} — ${10 - v <= 0 ? 'nothing left' : `${nice(10 - v)} rep${10 - v === 1 ? '' : 's'} left in the tank`}.` : `RIR ${nice(v)} = RPE ${nice(10 - v)}.` };
 }
+/* Kit questions: when each piece of gear earns its place. General guidance, not a rule. */
+const CO_GEAR = [
+  [/belt/, 'Belt', 'Worth it on heavy squats, deadlifts and overhead presses — roughly sets of 5 or fewer at RIR 2 or less, or anything over about 80% of your max. Skip it for warm-ups, light work and machines, so you still learn to brace without it. Brace into it the same way: big breath, push your belly out against it.'],
+  [/knee wraps?/, 'Knee wraps', 'Only for equipped-style training or meets that allow them — they add pounds by storing energy at the bottom. For raw training, sleeves.'],
+  [/sleeves?/, 'Sleeves', 'Knee sleeves keep knees warm and comfortable on squat days — use them for every working set if you like; they don\'t change your numbers much. Elbow sleeves help some people on heavy pressing.'],
+  [/wrist wraps?|wraps?/, 'Wrist wraps', 'Useful on heavy bench and overhead presses if your wrists bend back under load. Wrap snug for top sets, loosen between. Not needed for light work.'],
+  [/straps?/, 'Straps', 'For when grip gives out before the target muscle — heavy rows, shrugs, RDLs, high-rep pulls. Avoid them on deadlifts you want to count for a raw total, and do some work without them so your grip keeps up.'],
+  [/chalk/, 'Chalk', 'Yes for anything you hold heavy — deadlifts, rows, carries, pull-ups. It\'s the cheapest grip upgrade there is.'],
+  [/shoes?/, 'Shoes', 'Raised-heel lifting shoes help squats if your ankles are tight (check your knee-to-wall). Flat, thin soles — or socks — for deadlifts. Avoid squashy running shoes for heavy work.'],
+  [/singlet/, 'Singlet', 'Only for meets that require one — check the federation\'s kit list.'],
+];
+function coAnsGear(D, text) {
+  const q = String(text || '').toLowerCase(), g = CO_GEAR.find(([re]) => re.test(q));
+  if (!g) return { html: 'Which kit — belt, sleeves, wraps, straps, chalk or shoes?' };
+  const n = D.next, main = n && n.exercises[0] ? exName(n.exercises[0]) : null;
+  const ctx = g[1] === 'Belt' && main && /squat|deadlift|press/i.test(main) ? `<br>Your next main lift is ${esc(main)} — belt up for the top sets.` : '';
+  return { html: `<b>${esc(g[1])}:</b> ${esc(g[2])}${ctx}` };
+}
 function coAnsPain() {
   return { html: 'Stop anything that hurts, and if it\'s still there in a day or two, get it checked by a physio or doctor. I can\'t advise on injuries.<br>What I can do is go easy on a joint: the plan then avoids exercises that load it.',
     act: MOB_JOINTS.slice(0, 7).map(([k, l]) => [`easy:${k}`, `Go easy on ${l.toLowerCase()}`]) };
@@ -15029,6 +15062,7 @@ function coAnswerTopic(topic, arg) {
   else if (topic === 'convert') r = coAnsConvert(arg);
   else if (topic === 'rirrpe') r = coAnsRirRpe(arg);
   else if (topic === 'pain') r = coAnsPain();
+  else if (topic === 'gear') r = coAnsGear(D, arg);
   else if (topic === 'why') r = coAnsWhy();
   else if (topic === 'today') r = coAnsToday(D);
   else if (topic === 'review') { r = coReview(D); S.coach.lastReview = D.t; save(); }
@@ -15059,7 +15093,7 @@ function coAnswerTopic(topic, arg) {
 /* Follow-up chips under an answer, then the usual menu. */
 function coFollow(act) {
   if (!act.length) return coMenu();
-  coAnswer(`${coChips([...act, ['menu', 'Something else']])}${coFormHtml()}`);
+  coAnswer(`${coChips([...act, ['menu', 'Something else']], null, true)}${coFormHtml()}`);
   $('#coAns', CO.bg).querySelectorAll('[data-cov]').forEach(b => b.onclick = () => coMenuPick(b.dataset.cov, b.textContent));
   coFormWire();
 }
