@@ -90,14 +90,15 @@ instead.
 |---|---|---|---|
 | 1 | What are you training for? | Strength · Size · Strongman · Powerlifting meet · General fitness | Rep ranges, target RIR, which lifts are "main" (§3) |
 | 2 | Got a date? *(meet and strongman only)* | Date · No event yet | With a date, the plan becomes a block counting down to it (C6, `blocks-spec.md`) |
-| 3 | Where do you train? | Gym · Home · Both | The place's kit and plates (D6). A new place gets a quick kit checklist |
+| 3 | Where do you train? | Gym · Home · Both | The place's kit (D6) — asked in two quick taps, not a full list (§1a) |
 | 4 | Which days? | Tap weekdays | **The number of days tapped picks the split** (§2). Split name and week preview update live as you tap. With "Both", each tapped day gets a gym/home toggle |
 | 5 | How long per session? | 30 · 45 · 60 · 90 min | Exercises per day: about 4 / 5 / 6 / 8, warm-ups included |
 | 6 | How long have you trained properly? | Under 6 months · 6 months–2 years · 2+ years | Progression speed and plan version (§3). Asked before Q7 so Q7 can be skipped |
 | 7 | Lifts you care most about? *(skipped for under 6 months)* | Pre-selected from Q1; add / remove | These go first in their session and get the most sets. Beginners get Q1's default main lifts |
 | 8 | Anything to go easy on? | Joints-to-leave-alone list (E5) and adaptation chips (C5) | Swaps exercises before the preview |
 
-Then **Preview → Accept** (or **Tailor it**, §4, when a key is set).
+Then the **fitting test invite** (§1b), then **Preview → Accept** (or
+**Tailor it**, §4, when a key is set).
 
 - There is **no separate "how many days" question** — tapping the days is the
   answer (Aaron, 2026-11-01).
@@ -105,6 +106,58 @@ Then **Preview → Accept** (or **Tailor it**, §4, when a key is set).
   back, and suggests a respaced week.
 - Every answer can be changed from the preview without starting over.
 - C4 rules: big targets, labels, works with TalkBack.
+
+## 1a. Kit — quick, not a checklist (Aaron, 2026-11-02)
+
+Nobody lists every piece of kit. The coach asks one question per place:
+
+- **Gym:** "Is it a standard gym — racks, barbells, dumbbells, cables and
+  machines?" Chips: **Yes, standard** (the *Commercial gym* preset) ·
+  **Strongman gym** (everything) · **Smaller than that** (then the home
+  chips below).
+- **Home:** "What have you got at home?" Multi-select chips: **Dumbbells** ·
+  **Barbell and plates** · **Squat rack** · **Bench** · **Kettlebells** ·
+  **Bands** · **Pull-up bar** · **Nothing — bodyweight**.
+- Answers become a normal D6 place (`S.settings.places`) with its `kit`.
+  *Squat rack*, *Bench* and *Pull-up bar* aren't equipment in the catalogue,
+  so they go on the place as `extras: ['rack', 'bench', 'pullup_bar']`.
+  `patterns.json → needs` says which candidates need them (a barbell squat or
+  press needs a rack, any bench press needs a bench, pull-ups need a bar). A
+  place without `extras` — every place made before this — counts as having
+  them all.
+- If the user already has places, the coach offers them first ("Use *Gym*?")
+  and only asks for a place that's missing.
+
+## 1b. The fitting test invite (Aaron, 2026-11-02)
+
+After the setup questions, before the preview, the coach invites the user to
+do the E12 fitting test, because it makes the plan fit them:
+
+> "Want to do the fitting test first? 15 minutes at home now, the gym hour
+> on your first gym day. It finds your weak spots and starting weights, and
+> the plan uses both."
+
+Chips: **Home screen now** · **Full test at the gym** · **Skip — build from my
+answers**. A test from the last 8 weeks is used without asking ("Using your
+fitting test from 3 Nov"). Skipping builds the plan now; the coach offers the
+test again on the next open and rebuilds the preview when a test lands —
+still accept-only.
+
+What a test changes, locally (no key needed):
+
+| From the test | Change to the plan |
+|---|---|
+| Ladder e1RMs | Starting weights for those lifts — so a new lifter (Chelsea) starts with real numbers instead of blanks |
+| Lagging pattern | +1 set on that pattern's main lift |
+| Ankles ≤ 2 | "Plates under heels" note on squat slots; calves always kept in the cut |
+| Shoulders ≤ 2 | Rear-delt slot moves up into the kept slots |
+| Balance ≤ 2, or a left/right gap over 30% | Single-leg slot moves up into the kept slots, weaker side first (note) |
+| Grip ≤ 2 | A farmers carry replaces one finisher a week |
+| Power ≤ 2, Recovery ≤ 2 | A note on the plan (jumps in the warm-up; conditioning) — no slot change |
+| Volume tolerance low / high | Accessory sets −1 / +1 |
+
+Each change is listed on the preview with its reason, and each can be undone
+there. With a key, *Tailor it* (§4) can go further.
 
 ## 2. Splits
 
@@ -130,6 +183,12 @@ built into the app, like the morning-stretch routine.
   is available at that day's place (D6), isn't on the go-easy list (Q8), and
   prefers the user's priority lifts (Q7). Each slot keeps a short ranked list
   so the preview can offer **Swap** with sensible alternatives.
+- **Supersets at 45 min and under** (Aaron, 2026-11-02): after the main and
+  secondary lifts, kept accessories and finishers are paired (1+2, 3+4…) so
+  45 min holds about 7 exercises like his PPLUL. Slots kept: 30 → 5,
+  45 → 7, 60 → 8, 90 → 8 (no pairing at 60 and over). Ironlog has no
+  superset feature yet (backlog), so a pair is marked in each exercise's
+  note — "Superset with Leg Curl" — as the PPLUL doc does.
 - **Session length** (Q5) trims slots from the end of the day: accessories go
   first, main slots never.
 - **Goal** (Q1) sets reps and RIR per role. Starting values (to be checked
@@ -142,7 +201,10 @@ built into the app, like the morning-stretch routine.
   - General fitness: 8–12 @ RIR 2–3 everywhere
 - **Experience** (Q6):
   - Under 6 months: one version every week, fewer sets, RIR never below 2,
-    no AMRAPs, and slower load increases.
+    no AMRAPs, and slower load increases. **Starts on machines and
+    dumbbells** (Aaron, 2026-11-02): leg press, DB bench, DB overhead press,
+    trap bar, machine rows (`patterns.json → experienceOverrides`). Moving
+    to the barbell is suggested later by the weekly review, accept-only.
   - 6 months–2 years: the standard template.
   - 2+ years: the **A/B-week version** (heavy comp-lift week / accessory
     week, so two ultra-heavy lifts never land in one session). Aaron's own
@@ -237,7 +299,9 @@ the local cue engine still runs without it.
 
 ## Open (decide before building)
 
-- Final rep / RIR numbers per goal (§3).
+- ~~Final rep / RIR numbers per goal (§3).~~ Agreed as drafted (Aaron,
+  2026-11-02), as were the 6-day split and home lower days without a heavy
+  squat or hinge.
 - Slot lists for each split — draft them in `r&d/data/templates/` and have
   Aaron read them before the code. **Drafted 2026-11-01:**
   `r&d/data/templates/README.md` has every split as tables, the numbers, and

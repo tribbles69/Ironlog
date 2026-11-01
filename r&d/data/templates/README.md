@@ -1,20 +1,22 @@
-# Coach plan templates — DRAFT for Aaron to read
+# Coach plan templates — agreed 2026-11-02
 
-Coach spec §3 says the slot lists and the per-goal numbers get read before any
-code. This is that read. The JSON files beside this one are the source; the
-tables below are generated from them (`patterns.json`, `goals.json` and one
-file per split). Change the JSON, not this page.
+Coach spec §3 asked for these to be read before any code; Aaron read them and
+answered on 2026-11-02 (below). The JSON files beside this one are the
+source; the tables are generated from them. Change the JSON, not this page.
 
 ## How a plan is built
 
 1. **Days tapped → split** (spec §2): 1 full body, 2 upper/lower, 3 PPL,
    4 ULUL, 5 PPLUL, 6 PPL ×2.
 2. Each day is **eight slots in training order**. Session length keeps the
-   first N: 30 min → 4, 45 → 5, 60 → 6, 90 → 8. **✂ marks the last slot
-   kept at 45 min.** The main slot is never cut.
+   first N: 30 min → 5, 45 → 7, 60 → 8, 90 → 8. **✂ marks the last slot
+   kept at 45 min.** The main slot is never cut. At 45 min and under, the
+   kept accessories and finishers are paired into supersets, marked in
+   each exercise's note.
 3. A slot is a **pattern** plus a **role**. The first candidate in the
    pattern's list that is at that day's place, isn't on the go-easy list and
-   breaks no rule is picked; the rest are the Swap list. Your **priority
+   breaks no rule (including kit it needs: a rack, a bench, a pull-up bar) is
+   picked; the rest are the Swap list. Your **priority
    lifts** jump to the front of any pattern they fit (e.g. trap bar deadlift
    in *Deadlift*).
 4. **Role + goal → reps and RIR**; **role + experience → sets** (tables
@@ -52,29 +54,30 @@ second. Under 6 months never goes below RIR 2.
 ## Your two test cases
 
 - **Aaron** — 5 days, gym, 45 min, strongman, 2+ years, priority trap bar
-  and OHP: the PPLUL below at 5 slots a day. Lower's main becomes trap bar
-  (priority, and strongman ranks it first), with the event slot after it;
-  B-week Lower is hip thrust. Legs B is leg press, which never meets the trap
-  bar or squat. OHP is the Upper main; strongman puts the log first where
-  the gym has one.
-- **Chelsea** — under 6 months: the A column every week, 3 / 2 / 2 / 2
-  sets, RIR 2 or more, no AMRAPs, weights blank until her first RIR sets.
+  and OHP: the PPLUL below at 7 slots a day, accessories in supersets.
+  Lower's main becomes trap bar (priority, and strongman ranks it first),
+  with the event slot after it; B-week Lower is hip thrust. Legs B is leg
+  press, which never meets the trap bar or squat. OHP is the Upper main;
+  strongman puts the log first where the gym has one.
+- **Chelsea** — under 6 months: the A column every week but on machines and
+  dumbbells (leg press, DB bench, DB press, trap bar, machine row), 3 / 2 /
+  2 / 2 sets, RIR 2 or more, no AMRAPs. If she does the fitting test, her
+  ladder e1RMs give her starting weights; if not, they're blank until her
+  first RIR sets.
 
-## Questions for you
+## Agreed with Aaron (2026-11-02)
 
-1. **45 minutes = 5 exercises.** Your PPLUL fits about 8–12 in 45 with
-   supersets. Should the coach pair accessories into supersets so 45 min
-   holds 7, or keep it simple at 5 for now?
-2. **Beginners and barbells.** Chelsea's squat and bench default to the
-   barbell (the first candidate). Start under-6-month lifters on machines and
-   dumbbells instead (leg press, DB bench), moving to the bar later?
-3. **Reps and RIR** — the table above is the spec's starting set plus a
-   secondary and finisher row. Change anything?
-4. **6 days** repeats PPL with OHP, pulldown and leg press as the second
-   round's mains. Fine, or would you rather 6 days be something else?
-5. **Home.** Every pattern ends with a dumbbell, band or bodyweight option, so
-   a home day always fills — but a home lower day has no heavy squat or
-   hinge without a barbell. Acceptable?
+1. **Supersets** so 45 min holds about 7 — yes.
+2. **Beginners start on machines and dumbbells**, barbell later — yes
+   (`patterns.json → experienceOverrides`).
+3. **Reps and RIR** — as drafted.
+4. **6 days** as PPL twice — fine.
+5. **Home lower days** without a heavy squat or hinge — fine.
+6. **Kit** is asked in two taps, not a list: gym — *standard?*; home —
+   dumbbells, barbell, rack, bench, kettlebells, bands, pull-up bar
+   (coach-spec §1a, `patterns.json → needs`).
+7. **The coach invites a fitting test** before building the plan, and uses
+   it (coach-spec §1b, `goals.json → fromFittingTest`).
 
 ## The splits
 
@@ -88,9 +91,9 @@ second. Under 6 months never goes below RIR 2.
 | 2 | Bench press | secondary | Bench Press | Bench Press (machine) |
 | 3 | Row | secondary | Seated Row (cable) | Lat Pulldown (cable) |
 | 4 | Second hinge | secondary | Romanian Deadlift | same |
-| 5 ✂ | Overhead press | accessory | Overhead Press | same |
+| 5 | Overhead press | accessory | Overhead Press | same |
 | 6 | Pulldown / pull-up | accessory | Lat Pulldown (cable) | Seated Row (cable) |
-| 7 | Abs | finisher | Crunch (cable) | same |
+| 7 ✂ | Abs | finisher | Crunch (cable) | same |
 | 8 | Calves | finisher | Calf Raise (standing) (Smith) | same |
 
 ### 2 days — Upper / Lower
@@ -103,9 +106,9 @@ second. Under 6 months never goes below RIR 2.
 | 2 | Row | secondary | Seated Row (cable) | Lat Pulldown (cable) |
 | 3 | Overhead press | secondary | Overhead Press | Overhead Press (Smith) |
 | 4 | Pulldown / pull-up | accessory | Lat Pulldown (cable) | Seated Row (cable) |
-| 5 ✂ | Lateral raise | accessory | Lateral Raise (cable) | same |
+| 5 | Lateral raise | accessory | Lateral Raise (cable) | same |
 | 6 | Triceps | accessory | Triceps Pushdown (cable) | same |
-| 7 | Biceps | accessory | Biceps Curl (DB) | same |
+| 7 ✂ | Biceps | accessory | Biceps Curl (DB) | same |
 | 8 | Rear delts | accessory | Face Pull (cable) | same |
 
 **Lower** (strongman event day)
@@ -116,9 +119,9 @@ second. Under 6 months never goes below RIR 2.
 | 2 | Deadlift | secondary | Deadlift | Hip Thrust |
 | 3 | Single-leg | accessory | Bulgarian Split Squat (DB) | same |
 | 4 | Hamstring curl | accessory | Leg Curl (machine) | same |
-| 5 ✂ | Quads | accessory | Leg Extension (machine) | same |
+| 5 | Quads | accessory | Leg Extension (machine) | same |
 | 6 | Calves | finisher | Calf Raise (standing) (Smith) | same |
-| 7 | Abs | finisher | Crunch (cable) | same |
+| 7 ✂ | Abs | finisher | Crunch (cable) | same |
 | 8 | Obliques | finisher | Side Bend (DB) | same |
 
 ### 3 days — Push / Pull / Legs
@@ -131,9 +134,9 @@ second. Under 6 months never goes below RIR 2.
 | 2 | Overhead press | secondary | Overhead Press | Overhead Press (Smith) |
 | 3 | Incline press | accessory | Incline Bench Press (DB) | same |
 | 4 | Lateral raise | accessory | Lateral Raise (cable) | same |
-| 5 ✂ | Triceps | accessory | Triceps Pushdown (cable) | same |
+| 5 | Triceps | accessory | Triceps Pushdown (cable) | same |
 | 6 | Chest fly | accessory | Chest Fly (cable) | same |
-| 7 | Overhead triceps | accessory | Overhead Triceps Extension (cable) | same |
+| 7 ✂ | Overhead triceps | accessory | Overhead Triceps Extension (cable) | same |
 | 8 | Abs | finisher | Crunch (cable) | same |
 
 **Pull**
@@ -144,9 +147,9 @@ second. Under 6 months never goes below RIR 2.
 | 2 | Row | secondary | Seated Row (cable) | Lat Pulldown (cable) |
 | 3 | Pulldown / pull-up | secondary | Lat Pulldown (cable) | Seated Row (cable) |
 | 4 | Shrug | accessory | Shrug | same |
-| 5 ✂ | Rear delts | accessory | Face Pull (cable) | same |
+| 5 | Rear delts | accessory | Face Pull (cable) | same |
 | 6 | Biceps | accessory | Biceps Curl (DB) | same |
-| 7 | Hammer curl | accessory | Hammer Curl (DB) | same |
+| 7 ✂ | Hammer curl | accessory | Hammer Curl (DB) | same |
 | 8 | Obliques | finisher | Side Bend (DB) | same |
 
 **Legs** (strongman event day)
@@ -157,9 +160,9 @@ second. Under 6 months never goes below RIR 2.
 | 2 | Single-leg | secondary | Bulgarian Split Squat (DB) | same |
 | 3 | Hamstring curl | accessory | Leg Curl (machine) | same |
 | 4 | Quads | accessory | Leg Extension (machine) | same |
-| 5 ✂ | Glutes | accessory | Hip Abduction (machine) | same |
+| 5 | Glutes | accessory | Hip Abduction (machine) | same |
 | 6 | Calves | finisher | Calf Raise (standing) (Smith) | same |
-| 7 | Abs | finisher | Crunch (cable) | same |
+| 7 ✂ | Abs | finisher | Crunch (cable) | same |
 | 8 | Adductors | accessory | Hip Adduction (machine) | same |
 
 ### 4 days — Upper / Lower / Upper / Lower
@@ -172,9 +175,9 @@ second. Under 6 months never goes below RIR 2.
 | 2 | Row | secondary | Seated Row (cable) | Lat Pulldown (cable) |
 | 3 | Incline press | accessory | Incline Bench Press (DB) | same |
 | 4 | Pulldown / pull-up | accessory | Lat Pulldown (cable) | Seated Row (cable) |
-| 5 ✂ | Lateral raise | accessory | Lateral Raise (cable) | same |
+| 5 | Lateral raise | accessory | Lateral Raise (cable) | same |
 | 6 | Triceps | accessory | Triceps Pushdown (cable) | same |
-| 7 | Biceps | accessory | Biceps Curl (DB) | same |
+| 7 ✂ | Biceps | accessory | Biceps Curl (DB) | same |
 | 8 | Rear delts | accessory | Face Pull (cable) | same |
 
 **Lower 1**
@@ -185,9 +188,9 @@ second. Under 6 months never goes below RIR 2.
 | 2 | Second hinge | secondary | Romanian Deadlift | same |
 | 3 | Single-leg | accessory | Bulgarian Split Squat (DB) | same |
 | 4 | Hamstring curl | accessory | Leg Curl (machine) | same |
-| 5 ✂ | Quads | accessory | Leg Extension (machine) | same |
+| 5 | Quads | accessory | Leg Extension (machine) | same |
 | 6 | Calves | finisher | Calf Raise (standing) (Smith) | same |
-| 7 | Abs | finisher | Crunch (cable) | same |
+| 7 ✂ | Abs | finisher | Crunch (cable) | same |
 | 8 | Obliques | finisher | Side Bend (DB) | same |
 
 **Upper 2**
@@ -198,9 +201,9 @@ second. Under 6 months never goes below RIR 2.
 | 2 | Pulldown / pull-up | secondary | Lat Pulldown (cable) | Seated Row (cable) |
 | 3 | Close-grip press | secondary | Close Grip Bench Press | same |
 | 4 | Row | accessory | Seated Row (cable) | Lat Pulldown (cable) |
-| 5 ✂ | Lateral raise | accessory | Lateral Raise (cable) | same |
+| 5 | Lateral raise | accessory | Lateral Raise (cable) | same |
 | 6 | Rear delts | accessory | Face Pull (cable) | same |
-| 7 | Overhead triceps | accessory | Overhead Triceps Extension (cable) | same |
+| 7 ✂ | Overhead triceps | accessory | Overhead Triceps Extension (cable) | same |
 | 8 | Hammer curl | accessory | Hammer Curl (DB) | same |
 
 **Lower 2** (strongman event day)
@@ -211,9 +214,9 @@ second. Under 6 months never goes below RIR 2.
 | 2 | Hip thrust | secondary | Hip Thrust | Romanian Deadlift |
 | 3 | Single-leg | accessory | Bulgarian Split Squat (DB) | same |
 | 4 | Hamstring curl | accessory | Leg Curl (machine) | same |
-| 5 ✂ | Glutes | accessory | Hip Abduction (machine) | same |
+| 5 | Glutes | accessory | Hip Abduction (machine) | same |
 | 6 | Calves | finisher | Calf Raise (standing) (Smith) | same |
-| 7 | Obliques | finisher | Side Bend (DB) | same |
+| 7 ✂ | Obliques | finisher | Side Bend (DB) | same |
 | 8 | Quads | accessory | Leg Extension (machine) | same |
 
 ### 5 days — Push / Pull / Legs / Upper / Lower
@@ -228,9 +231,9 @@ Reference: Aaron's 77-week PPLUL (r&d/data/hunchback-pplul-77wk.txt).
 | 2 | Incline press | secondary | Incline Bench Press (DB) | same |
 | 3 | Triceps | accessory | Triceps Pushdown (cable) | same |
 | 4 | Lateral raise | accessory | Lateral Raise (cable) | same |
-| 5 ✂ | Chest fly | accessory | Chest Fly (cable) | same |
+| 5 | Chest fly | accessory | Chest Fly (cable) | same |
 | 6 | Abs | finisher | Crunch (cable) | same |
-| 7 | Overhead triceps | accessory | Overhead Triceps Extension (cable) | same |
+| 7 ✂ | Overhead triceps | accessory | Overhead Triceps Extension (cable) | same |
 | 8 | Rear delts | accessory | Face Pull (cable) | same |
 
 **Pull**
@@ -241,9 +244,9 @@ Reference: Aaron's 77-week PPLUL (r&d/data/hunchback-pplul-77wk.txt).
 | 2 | Shrug | secondary | Shrug | same |
 | 3 | Pulldown / pull-up | secondary | Lat Pulldown (cable) | Seated Row (cable) |
 | 4 | Biceps | accessory | Biceps Curl (DB) | same |
-| 5 ✂ | Rear delts | accessory | Face Pull (cable) | same |
+| 5 | Rear delts | accessory | Face Pull (cable) | same |
 | 6 | Hammer curl | accessory | Hammer Curl (DB) | same |
-| 7 | Abs | finisher | Crunch (cable) | same |
+| 7 ✂ | Abs | finisher | Crunch (cable) | same |
 | 8 | Lateral raise | accessory | Lateral Raise (cable) | same |
 
 **Legs**
@@ -254,9 +257,9 @@ Reference: Aaron's 77-week PPLUL (r&d/data/hunchback-pplul-77wk.txt).
 | 2 | Quads | accessory | Leg Extension (machine) | same |
 | 3 | Hamstring curl | accessory | Leg Curl (machine) | same |
 | 4 | Calves | finisher | Calf Raise (standing) (Smith) | same |
-| 5 ✂ | Abs | finisher | Crunch (cable) | same |
+| 5 | Abs | finisher | Crunch (cable) | same |
 | 6 | Adductors | accessory | Hip Adduction (machine) | same |
-| 7 | Glutes | accessory | Hip Abduction (machine) | same |
+| 7 ✂ | Glutes | accessory | Hip Abduction (machine) | same |
 | 8 | Single-leg | accessory | Bulgarian Split Squat (DB) | same |
 
 **Upper**
@@ -267,9 +270,9 @@ Reference: Aaron's 77-week PPLUL (r&d/data/hunchback-pplul-77wk.txt).
 | 2 | Close-grip press | secondary | Close Grip Bench Press | same |
 | 3 | Row | accessory | Seated Row (cable) | same |
 | 4 | Overhead triceps | accessory | Overhead Triceps Extension (cable) | same |
-| 5 ✂ | Lateral raise | accessory | Lateral Raise (cable) | same |
+| 5 | Lateral raise | accessory | Lateral Raise (cable) | same |
 | 6 | Rear delts | accessory | Face Pull (cable) | same |
-| 7 | Biceps | accessory | Biceps Curl (DB) | same |
+| 7 ✂ | Biceps | accessory | Biceps Curl (DB) | same |
 | 8 | Abs | finisher | Crunch (cable) | same |
 
 **Lower** (strongman event day)
@@ -280,9 +283,9 @@ Reference: Aaron's 77-week PPLUL (r&d/data/hunchback-pplul-77wk.txt).
 | 2 | Second hinge | secondary | Romanian Deadlift | same |
 | 3 | Hamstring curl | accessory | Leg Curl (machine) | same |
 | 4 | Glutes | accessory | Hip Abduction (machine) | same |
-| 5 ✂ | Calves | finisher | Calf Raise (standing) (Smith) | same |
+| 5 | Calves | finisher | Calf Raise (standing) (Smith) | same |
 | 6 | Obliques | finisher | Side Bend (DB) | same |
-| 7 | Single-leg | accessory | Bulgarian Split Squat (DB) | same |
+| 7 ✂ | Single-leg | accessory | Bulgarian Split Squat (DB) | same |
 | 8 | Adductors | accessory | Hip Adduction (machine) | same |
 
 ### 6 days — Push / Pull / Legs × 2
@@ -295,9 +298,9 @@ Reference: Aaron's 77-week PPLUL (r&d/data/hunchback-pplul-77wk.txt).
 | 2 | Overhead press | secondary | Overhead Press | Overhead Press (Smith) |
 | 3 | Incline press | accessory | Incline Bench Press (DB) | same |
 | 4 | Lateral raise | accessory | Lateral Raise (cable) | same |
-| 5 ✂ | Triceps | accessory | Triceps Pushdown (cable) | same |
+| 5 | Triceps | accessory | Triceps Pushdown (cable) | same |
 | 6 | Chest fly | accessory | Chest Fly (cable) | same |
-| 7 | Abs | finisher | Crunch (cable) | same |
+| 7 ✂ | Abs | finisher | Crunch (cable) | same |
 | 8 | Overhead triceps | accessory | Overhead Triceps Extension (cable) | same |
 
 **Pull 1**
@@ -308,9 +311,9 @@ Reference: Aaron's 77-week PPLUL (r&d/data/hunchback-pplul-77wk.txt).
 | 2 | Row | secondary | Seated Row (cable) | Lat Pulldown (cable) |
 | 3 | Pulldown / pull-up | accessory | Lat Pulldown (cable) | Seated Row (cable) |
 | 4 | Shrug | accessory | Shrug | same |
-| 5 ✂ | Biceps | accessory | Biceps Curl (DB) | same |
+| 5 | Biceps | accessory | Biceps Curl (DB) | same |
 | 6 | Rear delts | accessory | Face Pull (cable) | same |
-| 7 | Obliques | finisher | Side Bend (DB) | same |
+| 7 ✂ | Obliques | finisher | Side Bend (DB) | same |
 | 8 | Hammer curl | accessory | Hammer Curl (DB) | same |
 
 **Legs 1**
@@ -321,9 +324,9 @@ Reference: Aaron's 77-week PPLUL (r&d/data/hunchback-pplul-77wk.txt).
 | 2 | Single-leg | secondary | Bulgarian Split Squat (DB) | same |
 | 3 | Hamstring curl | accessory | Leg Curl (machine) | same |
 | 4 | Quads | accessory | Leg Extension (machine) | same |
-| 5 ✂ | Calves | finisher | Calf Raise (standing) (Smith) | same |
+| 5 | Calves | finisher | Calf Raise (standing) (Smith) | same |
 | 6 | Abs | finisher | Crunch (cable) | same |
-| 7 | Glutes | accessory | Hip Abduction (machine) | same |
+| 7 ✂ | Glutes | accessory | Hip Abduction (machine) | same |
 | 8 | Adductors | accessory | Hip Adduction (machine) | same |
 
 **Push 2**
@@ -334,9 +337,9 @@ Reference: Aaron's 77-week PPLUL (r&d/data/hunchback-pplul-77wk.txt).
 | 2 | Incline press | secondary | Incline Bench Press (DB) | same |
 | 3 | Close-grip press | secondary | Close Grip Bench Press | same |
 | 4 | Lateral raise | accessory | Lateral Raise (cable) | same |
-| 5 ✂ | Overhead triceps | accessory | Overhead Triceps Extension (cable) | same |
+| 5 | Overhead triceps | accessory | Overhead Triceps Extension (cable) | same |
 | 6 | Chest fly | accessory | Chest Fly (cable) | same |
-| 7 | Abs | finisher | Crunch (cable) | same |
+| 7 ✂ | Abs | finisher | Crunch (cable) | same |
 | 8 | Rear delts | accessory | Face Pull (cable) | same |
 
 **Pull 2**
@@ -347,9 +350,9 @@ Reference: Aaron's 77-week PPLUL (r&d/data/hunchback-pplul-77wk.txt).
 | 2 | Row | secondary | Seated Row (cable) | Lat Pulldown (cable) |
 | 3 | Rear delts | accessory | Face Pull (cable) | same |
 | 4 | Hammer curl | accessory | Hammer Curl (DB) | same |
-| 5 ✂ | Shrug | accessory | Shrug | same |
+| 5 | Shrug | accessory | Shrug | same |
 | 6 | Biceps | accessory | Biceps Curl (DB) | same |
-| 7 | Obliques | finisher | Side Bend (DB) | same |
+| 7 ✂ | Obliques | finisher | Side Bend (DB) | same |
 | 8 | Lateral raise | accessory | Lateral Raise (cable) | same |
 
 **Legs 2** (strongman event day)
@@ -360,9 +363,9 @@ Reference: Aaron's 77-week PPLUL (r&d/data/hunchback-pplul-77wk.txt).
 | 2 | Second hinge | secondary | Romanian Deadlift | same |
 | 3 | Hip thrust | accessory | Hip Thrust | same |
 | 4 | Hamstring curl | accessory | Leg Curl (machine) | same |
-| 5 ✂ | Quads | accessory | Leg Extension (machine) | same |
+| 5 | Quads | accessory | Leg Extension (machine) | same |
 | 6 | Calves | finisher | Calf Raise (standing) (Smith) | same |
-| 7 | Adductors | accessory | Hip Adduction (machine) | same |
+| 7 ✂ | Adductors | accessory | Hip Adduction (machine) | same |
 | 8 | Abs | finisher | Crunch (cable) | same |
 
 ### Swap lists (pattern → ranked candidates)

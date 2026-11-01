@@ -9,22 +9,82 @@
   "goals": {
     "strength": {
       "label": "Strength",
-      "main":      { "reps": [3, 5],   "rir": 2 },
-      "secondary": { "reps": [5, 8],   "rir": 2 },
-      "accessory": { "reps": [6, 10],  "rir": 2 },
-      "finisher":  { "reps": [10, 15], "rir": [1, 2] }
+      "main": {
+        "reps": [
+          3,
+          5
+        ],
+        "rir": 2
+      },
+      "secondary": {
+        "reps": [
+          5,
+          8
+        ],
+        "rir": 2
+      },
+      "accessory": {
+        "reps": [
+          6,
+          10
+        ],
+        "rir": 2
+      },
+      "finisher": {
+        "reps": [
+          10,
+          15
+        ],
+        "rir": [
+          1,
+          2
+        ]
+      }
     },
     "size": {
       "label": "Size",
-      "main":      { "reps": [6, 10],  "rir": 2 },
-      "secondary": { "reps": [8, 12],  "rir": 2 },
-      "accessory": { "reps": [10, 15], "rir": [1, 2] },
-      "finisher":  { "reps": [12, 20], "rir": [1, 2] }
+      "main": {
+        "reps": [
+          6,
+          10
+        ],
+        "rir": 2
+      },
+      "secondary": {
+        "reps": [
+          8,
+          12
+        ],
+        "rir": 2
+      },
+      "accessory": {
+        "reps": [
+          10,
+          15
+        ],
+        "rir": [
+          1,
+          2
+        ]
+      },
+      "finisher": {
+        "reps": [
+          12,
+          20
+        ],
+        "rir": [
+          1,
+          2
+        ]
+      }
     },
     "strongman": {
       "label": "Strongman",
       "base": "strength",
-      "event": { "note": "One event slot (carry, load or press) on the template's eventDay, after the main lift. Logged as a B1 shape: weight + distance/time, not reps.", "sets": 3 }
+      "event": {
+        "note": "One event slot (carry, load or press) on the template's eventDay, after the main lift. Logged as a B1 shape: weight + distance/time, not reps.",
+        "sets": 3
+      }
     },
     "powerlifting": {
       "label": "Powerlifting meet",
@@ -33,25 +93,106 @@
     },
     "general": {
       "label": "General fitness",
-      "main":      { "reps": [8, 12],  "rir": [2, 3] },
-      "secondary": { "reps": [8, 12],  "rir": [2, 3] },
-      "accessory": { "reps": [10, 15], "rir": [2, 3] },
-      "finisher":  { "reps": [12, 20], "rir": [2, 3] }
+      "main": {
+        "reps": [
+          8,
+          12
+        ],
+        "rir": [
+          2,
+          3
+        ]
+      },
+      "secondary": {
+        "reps": [
+          8,
+          12
+        ],
+        "rir": [
+          2,
+          3
+        ]
+      },
+      "accessory": {
+        "reps": [
+          10,
+          15
+        ],
+        "rir": [
+          2,
+          3
+        ]
+      },
+      "finisher": {
+        "reps": [
+          12,
+          20
+        ],
+        "rir": [
+          2,
+          3
+        ]
+      }
     }
   },
   "sets": {
     "note": "Working sets per slot, by experience (Q6). Warm-ups are extra and come from the ramp.",
-    "under6m":  { "main": 3, "secondary": 2, "accessory": 2, "finisher": 2 },
-    "6mTo2y":   { "main": 3, "secondary": 3, "accessory": 3, "finisher": 2 },
-    "over2y":   { "main": 4, "secondary": 3, "accessory": 3, "finisher": 3 }
+    "under6m": {
+      "main": 3,
+      "secondary": 2,
+      "accessory": 2,
+      "finisher": 2
+    },
+    "6mTo2y": {
+      "main": 3,
+      "secondary": 3,
+      "accessory": 3,
+      "finisher": 2
+    },
+    "over2y": {
+      "main": 4,
+      "secondary": 3,
+      "accessory": 3,
+      "finisher": 3
+    }
   },
   "experience": {
-    "under6m": { "abWeeks": false, "minRir": 2, "amrap": false, "loadStep": "+2.5 kg only after every set reaches the top of the range at the target RIR, two sessions running" },
-    "6mTo2y":  { "abWeeks": false, "minRir": 1, "amrap": false, "loadStep": "+2.5 kg when every set reaches the top of the range at the target RIR (the D5 double progression)" },
-    "over2y":  { "abWeeks": true,  "minRir": 1, "amrap": true,  "loadStep": "Autoregulated from the working e1RM (autoreg-spec); A weeks the heavy main lift, B weeks its variation" }
+    "under6m": {
+      "abWeeks": false,
+      "minRir": 2,
+      "amrap": false,
+      "loadStep": "+2.5 kg only after every set reaches the top of the range at the target RIR, two sessions running"
+    },
+    "6mTo2y": {
+      "abWeeks": false,
+      "minRir": 1,
+      "amrap": false,
+      "loadStep": "+2.5 kg when every set reaches the top of the range at the target RIR (the D5 double progression)"
+    },
+    "over2y": {
+      "abWeeks": true,
+      "minRir": 1,
+      "amrap": true,
+      "loadStep": "Autoregulated from the working e1RM (autoreg-spec); A weeks the heavy main lift, B weeks its variation"
+    }
   },
   "minutes": {
-    "note": "Slots kept per day, counting from the top of the day's list; main slots are never cut. 45 min = Aaron's 5 (the PPLUL doc fits more with supersets — see README).",
-    "30": 4, "45": 5, "60": 6, "90": 8
+    "30": 5,
+    "45": 7,
+    "60": 8,
+    "90": 8,
+    "note": "Slots kept per day from the top of the list; main never cut. At 45 min and under, kept accessories and finishers are paired into supersets (1+2, 3+4...) and marked in the exercise notes (Aaron, 2026-11-02).",
+    "supersetsUpTo": 45
+  },
+  "fromFittingTest": {
+    "note": "coach-spec §1b: what a fitting test changes, locally.",
+    "lagging": "+1 set on that pattern main",
+    "ankles": "plates-under-heels note on squat slots; calves kept",
+    "shoulders": "rear-delt slot moves up",
+    "balance": "single-leg slot moves up",
+    "grip": "farmers carry replaces one finisher a week",
+    "volumeLow": "accessory sets -1",
+    "volumeHigh": "accessory sets +1",
+    "e1rm": "ladder e1RMs seed starting weights"
   }
 }
