@@ -1,6 +1,7 @@
 # Strength fitting test — spec
 
-Status: **agreed in chat 2026-10-31, not built.** Roadmap item E12.
+Status: **agreed in chat 2026-10-31; first build 0.65.0** (results and flags
+only — see §13 for the decisions taken when it was built). Roadmap item E12.
 Reference workbook with every formula working: `r&d/data/fitting-test/strength-fitting-test.xlsx`
 (tabs: Run sheet, Home screen, Ladder, Gym tests, Results, Rules). If this spec
 and the workbook disagree, this spec wins; tell Aaron.
@@ -294,6 +295,44 @@ lagging ones highlighted, the profile type as the headline, flags under it.
 - Real cutoffs for grip, the estimated mobility steps, and the Smith / landmine
   factors.
 - Bodyweight-dependent ratios instead of one ratio per tier.
+
+## 13. Decisions for the first build (2026-11-01)
+
+Aaron's answers:
+- **Standards: Ironlog's `STD` / `stdFor()`**, so the test and Stats → Rankings
+  never disagree. Rows: hinge → `Deadlift`, squat → `Back Squat`, press →
+  `Bench Press`, pull → `Cable Row`, with the row's female factor. Score = how
+  many of the five tier marks (Beginner … Elite) the judged ratio reaches.
+- **Pattern e1RM: the heaviest set that stopped at 3 RIR or less**; if no set
+  did, the best e1RM of any set. Each set's e1RM is the app's own `e1rm()`
+  (Epley with RIR added, capped at 12 reps), not an uncapped copy.
+- **Where: Health.** A Fitting test card starts it (Home screen only, or the
+  full hour), resumes an unfinished one, and shows the latest profile type and
+  flags; the full results open from there.
+- Every score has a debug-mode trace (E11 kind `fit`).
+
+Taken while building:
+- **Variations.** The catalogue has no landmine press, so the press list is
+  bench press (barbell, Smith, machine). Every pattern also offers *any
+  exercise you've logged*, at factor 1.00 marked *estimated*. Trap bar is
+  offered with high handles (1.15, sourced) and low handles (1.00, estimated —
+  "unknown, needs data"); both log to the trap bar deadlift leaf.
+- **Ladder stop.** RIR ≥ 5 → +50% BW, 3–4 → +25%, 1–2 → stop is suggested,
+  with *One more at +10%* offered; 0 → stop; and always after rung 5. Loads
+  round to what the equipment loads (`roundLoadFor`).
+- **Logging.** On save, ladder and leg-press sets become a completed session
+  named "Fitting test" (`fitTest` = the test's id), so history and PRs see
+  them. Home-screen results go into `S.mobTests` (new tests `scratch`, `ohs`
+  and `ohs_heels`) so E5's charts carry the trend; the balance timer saves its
+  own tries.
+- **Weakest area** ties go to the non-strength test first (cheapest to fix),
+  then the pattern with the lowest % of intermediate.
+- Grip with a dead hang uses the same cutoffs and says so.
+- Stored as `S.fitTests` (synced, in JSON export); an unfinished test lives in
+  `S.fitDraft` on the device only.
+
+Still open: adaptive standards (§12), real cutoffs for grip and the estimated
+mobility steps, bodyweight-dependent ratios, and the plan side of §9.
 
 ## Sources
 

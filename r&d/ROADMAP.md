@@ -45,8 +45,8 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
 
    **Where things stand (2026-11-01, 0.64.0):** everything in A–D is built
    except D8 and D9. A4 and A6 are waiting on Aaron. Aaron asked for E11 and
-   E12 next (E11 shipped 0.64.0); after E12 the next build item is **D8**, then
-   D9, then E3 onwards.
+   E12 next (E11 shipped 0.64.0, E12's first build 0.65.0); the next build item
+   is **D8**, then D9, then E3 onwards.
 2. **Check the code before trusting a status here.** Some items were marked from
    memory of planning chats, not from the code. If something is already built,
    tick it, note the version, and move on.
@@ -225,6 +225,13 @@ these come back; report anything that fails):
     the app behind it.
 12. **PR card (0.63.0):** after a session with a PR, *↗ Share* on the PR
     opens the share sheet with the image; *Save image* saves it.
+13. **Debug mode (0.64.0):** Settings → Debug mode on. Tap a few **how?**
+    buttons (Stats → Rankings, a PR, Tools → e1RM) and *Copy trace*. Every
+    sheet should end in a green tick, not a red ✗.
+14. **Fitting test (0.65.0):** run the home screen at least (Health → Fitting
+    test). Are the inputs quick enough mid-test, does the balance timer fill
+    the boxes, and does the profile line read right? The full hour is planned
+    for the Christmas test day.
 
 ### [x] A5. Checks against Blast's bugs — checked 0.27.1 (superset item waits for B3)
 Blast shipped these; make sure Ironlog doesn't have them. Tick each.
@@ -816,7 +823,7 @@ can show how it got there, so a wrong-looking result can be checked or reported.
   clipboard as plain text, for pasting into a bug report or a Claude chat.
 - Trace sheets follow C4 (labels, contrast, text size).
 
-### [ ] E12. Strength fitting test — write-up done, check the open questions before building
+### [x] E12. Strength fitting test — first build shipped 0.65.0 (results and flags only; decisions in spec §13: Ironlog's STD standards, heaviest set at ≤ 3 RIR for the ladder e1RM, lives on Health) **(check on phone; the plan side of §9 and the open cutoffs in §12 are still to do)**
 Added 2026-10-31 at Aaron's request. **Spec: `r&d/specs/fitting-test-spec.md`**
 (reference workbook with working formulas: `r&d/data/fitting-test/strength-fitting-test.xlsx`).
 Colour analysis for training: a one-hour test (15 min home, 45 min gym, no true

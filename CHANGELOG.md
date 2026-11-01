@@ -13,6 +13,12 @@ rather than guessed.
 
 ---
 
+## 0.65.0 — 1 Nov 2026
+- **New: Strength fitting test** (Health → Fitting test). Find your type before training it. The **home screen** takes 15 minutes: knee to wall, shoulder scratch, overhead squat flat and with heels raised, and eyes-closed balance. The **full test** adds an hour at the gym: power, a rep ladder for hinge, squat, press and pull (never a true max), leg-press rep tolerance, a grip hold and a 500 m row.
+- The rep ladder works out every next load from bodyweight and the reps you had left, and tells you when to stop.
+- Every result scores 0–5 against the same strength standards as Stats → Rankings, so lifts, mobility and fitness compare directly. You get a one-line profile (e.g. "Press-dominant, lagging squat; average volume tolerance; work on ankles"), flags for anything scoring 2 or lower, and left/right gaps over 30%.
+- Ladder sets are logged as a normal session, and home-screen results join your mobility tests on Health, including the new shoulder scratch and overhead squat tests. An unfinished test can be resumed. With debug mode on, every score shows its working.
+
 ## 0.64.0 — 1 Nov 2026
 - **New: Debug mode** (Settings → Debug mode — show the working). Off by default. When it's on, worked-out numbers get a small **how?** button: tap it to see the inputs, the sum with the numbers in, and the result, plus a line saying whether it matches what the app shows.
 - Covers estimated 1RM, PRs, strength tiers, RIR ↔ RPE, rep-range verdicts, bar speed and today's e1RM from VBT, the recovery map (tap a muscle), DOTS and IPF GL, caliper body fat, mobility tests and the cardio heart-rate cues.
