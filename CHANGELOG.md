@@ -13,6 +13,11 @@ rather than guessed.
 
 ---
 
+## 0.72.0 — 1 Nov 2026
+- **New: Tailor it** (with your AI key). When the coach shows a new plan, *Tailor it with Claude* sends the plan and a summary of your log to Claude, which suggests a few changes, each with a reason. Examples: swap an incline press because chest volume is low, or add a set because a lift is lagging.
+- **Claude is kept on a short leash.** It can only choose from each exercise's own swap list and move sets by one. Ironlog re-checks every suggestion against your kit, your go-easy list and same-day clashes, and drops anything that breaks a rule (it says how many).
+- You see the changes as a before → after list: *Use these changes* or *Keep the original*. Nothing goes on your calendar until you accept the plan. A tailor costs about $0.0005 on Claude Haiku 5.5.
+
 ## 0.71.0 — 1 Nov 2026
 - **The coach can now change your plan, but only when you tap Apply.** It offers three changes where your log points to them:
   - **Stalled lift:** swap it for a close variation for 6 weeks, then come back to it. Larsen or close-grip for bench; box, front or safety-bar squat for squat; sumo or trap bar for deadlift; push press for overhead press. It only picks kit your gym has.

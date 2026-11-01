@@ -844,6 +844,25 @@ window.smoke = async function smoke(opts) {
     }
   });
 
+  await step('flow: Tailor it keeps only changes that pass the rules', async () => {
+    const places0 = JSON.stringify(S.settings.places || []);
+    try {
+      S.settings.places = [...JSON.parse(places0), { id: 'zzgym', name: 'Gym', kit: ['bodyweight', ...PLACE_PRESETS[1].kit] }];
+      const plan = coachBuild({ goal: 'strength', where: 'gym', gymPlace: 'zzgym', days: ['mon', 'wed', 'fri'], minutes: 45, experience: '6mTo2y', priority: [], easy: [] }, null);
+      const x0 = plan.days[0].A[2], x1 = plan.days[1].A[3];
+      const r = coTailorCheck(plan, { changes: [
+        { day: 0, week: 'A', slot: 2, swap: x0.alts[0], reason: 'ok' },
+        { day: 0, week: 'A', slot: 3, swap: 'leg-press/plate_loaded_machine', reason: 'not on its list' },
+        { day: 1, week: 'A', slot: 3, sets: x1.sets + 1, reason: 'ok' },
+        { day: 1, week: 'A', slot: 4, sets: 9, reason: 'too big' },
+        { day: 7, week: 'A', slot: 0, sets: 3, reason: 'no such day' }] });
+      if (r.keep.length !== 2 || r.dropped !== 3) throw new Error(`kept ${r.keep.length}, dropped ${r.dropped}`);
+      const p = coTailorPrompt(plan);
+      if (!/can_swap_to/.test(p.system) || !JSON.parse(p.user).plan.length) throw new Error('prompt missing the rules or the plan');
+      return `2 kept, 3 dropped; prompt ${p.user.length} chars`;
+    } finally { S.settings.places = JSON.parse(places0); }
+  });
+
   await step('food removed: tab gone, old route lands home', async () => {
     close();
     if (document.querySelector('#nav [data-page="food"]')) throw new Error('Food tab still in the nav');
