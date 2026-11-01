@@ -1,6 +1,10 @@
 # Coach — plans, reviews and AI coaching (roadmap D9)
 
-Written 2026-11-01 from a planning chat with Aaron. Builds on D8
+Written 2026-11-01 from a planning chat with Aaron. **Parts 0–1 shipped in
+0.67.0** (code: "coach: chat, memory and the plan builder" in index.html;
+templates built in with r&d/tools/build-coach-templates.cjs). Adaptation
+chips (C5) in Q8 and the load/press strongman events are not in yet — the
+event slot is a carry. Builds on D8
 (`r&d/specs/ai-key-spec.md`): every AI call goes through `aiCall`, on the
 user's own key, under the monthly cap.
 

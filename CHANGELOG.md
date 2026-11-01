@@ -13,6 +13,16 @@ rather than guessed.
 
 ---
 
+## 0.67.0 — 1 Nov 2026
+- **New: the Coach** — a raised button in the middle of the bottom bar (a Coach menu in the 98 skin). The first time, it sets you up in a chat: your goal, any event date, where you train, which days (the number of days picks the split), session length, experience, the lifts you care about and anything to go easy on. Tap answers, no typing and no AI. It fills in what your log already knows, so you confirm rather than answer from scratch.
+- **Kit in two taps:** for a gym, "is it a standard gym?"; for home, tap what you've got (dumbbells, barbell, rack, bench, kettlebells, bands, pull-up bar).
+- It offers the **fitting test** before building, and uses it: your ladder lifts and their weights, an extra set on your lagging pattern, and moves for flagged ankles, shoulders, balance or grip.
+- **Your plan:**
+  - Splits from full body to six days. With 2+ years of training you get A/B weeks; newer lifters start on machines and dumbbells.
+  - At 45 minutes and under, accessories are paired into supersets. Squat and leg press, or trap bar and leg press, never share a session.
+  - You see the whole plan first and can **Swap** any exercise. Nothing goes on your calendar until you tap **Accept**.
+- The coach remembers your answers (Coach settings → change them, or Forget everything). Debriefs, weekly reviews and chat come next, on your AI key.
+
 ## 0.66.0 — 1 Nov 2026
 - **New: Settings → AI — on your own key.** Ironlog has no AI server: add your own Anthropic key and the phone calls Anthropic directly. **Check key** tells you straight away whether it works.
 - **Monthly cap** (default $1): AI pauses for the rest of the month once this phone's estimated spend reaches it. Set it to 0 to turn AI off.

@@ -46,7 +46,7 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    **Where things stand (2026-11-01, 0.66.0):** everything in A–D is built
    except D9. A4 and A6 are waiting on Aaron. Aaron asked for E11 and
    E12 next (E11 shipped 0.64.0, E12's first build 0.65.0); D8 shipped 0.66.0.
-   The next build item is **D9**, then E3 onwards.
+   The next build item is the rest of **D9** (part 2, the training digest, onward), then E3 onwards.
 2. **Check the code before trusting a status here.** Some items were marked from
    memory of planning chats, not from the code. If something is already built,
    tick it, note the version, and move on.
@@ -235,6 +235,10 @@ these come back; report anything that fails):
 15. **AI key (0.66.0):** Settings → AI → paste your key → *Check key* should
     say it works. Then say a set the grammar can't read and see whether
     Claude fills it in; *This month* should count the call.
+16. **Coach (0.67.0):** tap the middle Coach button and run the setup as
+    yourself, then as Chelsea would (under 6 months). Does the plan look like
+    a sane relative of your PPLUL? Swap a lift, Accept, and check the
+    calendar. Then Coach settings → Forget everything and try a home setup.
 
 ### [x] A5. Checks against Blast's bugs — checked 0.27.1 (superset item waits for B3)
 Blast shipped these; make sure Ironlog doesn't have them. Tick each.
@@ -715,7 +719,7 @@ No Ironlog AI server and no paid tier.
 - Every AI feature is optional and hidden or greyed until a key is added.
 - Remove any server-side AI function left after A1.
 
-### [ ] D9. Coach — template plans, then AI coaching
+### [ ] D9. Coach — template plans, then AI coaching — **parts 0–1 shipped 0.67.0** (Coach button, chat setup, memory, plan builder with preview/swap/accept; kit in two taps and the fitting-test invite added 2026-11-02). Still to come: digest, debrief, weekly review, Tailor it, Ask the coach, cardio trend coach
 **Spec: `r&d/specs/coach-spec.md`** (planned 2026-11-01 — the spec wins over
 this summary). Uses D8 for the AI parts.
 - **Build first: a raised Coach button mid-nav opening a chat with its own small memory (`S.coach`: setup done?, answers, notes), and the template plan builder run inside that chat, no AI.** Setup questions (goal,

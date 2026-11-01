@@ -95,7 +95,7 @@ a{color:var(--accent)}
   position:fixed;left:0;right:0;bottom:0;z-index:50;
   height:calc(var(--nav-h) + env(safe-area-inset-bottom));
   padding-bottom:env(safe-area-inset-bottom);
-  display:grid;grid-template-columns:repeat(5,1fr);
+  display:grid;grid-template-columns:repeat(6,1fr);
   background:rgba(17,20,27,.96);backdrop-filter:blur(14px);
   border-top:1px solid var(--line);
 }
@@ -107,6 +107,28 @@ a{color:var(--accent)}
 }
 #nav button .ico{font-size:16px;line-height:1}
 #nav button.active{color:var(--accent)}
+/* The coach sits raised in the middle (coach-spec §0): three tabs either side. */
+#nav{grid-template-columns:1fr 1fr 1fr 1.1fr 1fr 1fr}
+#nav .navcoach{order:0;position:relative;color:var(--txt)}
+#nav .navcoach .ico{width:46px;height:46px;border-radius:50%;margin-top:-22px;display:flex;align-items:center;justify-content:center;
+  background:var(--accent);color:#fff;font-size:22px;box-shadow:0 4px 14px rgba(0,0,0,.4);border:3px solid var(--bg)}
+html[data-skin="win98"] #nav{grid-template-columns:repeat(5,1fr)}
+html[data-skin="win98"] #nav .navcoach{display:none}
+.co-log{display:flex;flex-direction:column;gap:8px;margin-bottom:10px}
+.co-b{max-width:88%;padding:9px 12px;border-radius:14px;font-size:14px;line-height:1.4}
+.co-b.coach{align-self:flex-start;background:var(--card);border:1px solid var(--line);border-bottom-left-radius:4px}
+.co-b.me{align-self:flex-end;background:var(--accent);color:#fff;border-bottom-right-radius:4px}
+.co-b.coach:has(.co-day){max-width:100%;width:100%}
+.co-ans{position:sticky;bottom:0;background:var(--bg2);padding-top:8px;border-top:1px solid var(--line)}
+.co-chip{min-height:36px}
+.co-day{margin-top:10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px}
+.co-x{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+.co-x:last-child{border-bottom:0}
+html[data-skin="win98"] .co-b{border-radius:0}
+html[data-skin="win98"] .co-b.coach{background:#fff;color:#000;border:1px solid #808080}
+html[data-skin="win98"] .co-b.me{background:var(--w-navy);color:#fff}
+html[data-skin="win98"] .co-ans{background:var(--w-face)}
+html[data-skin="win98"] .co-day{border-color:#808080;border-radius:0}
 #nav button:active{transform:scale(.94)}
 
 /* ---------- generic ---------- */
@@ -1191,8 +1213,8 @@ html[data-skin="win98"] #nav button::before{
 html[data-skin="win98"] #nav button:nth-child(1)::before{content:'F1'}
 html[data-skin="win98"] #nav button:nth-child(2)::before{content:'F2'}
 html[data-skin="win98"] #nav button:nth-child(3)::before{content:'F3'}
-html[data-skin="win98"] #nav button:nth-child(4)::before{content:'F4'}
-html[data-skin="win98"] #nav button:nth-child(5)::before{content:'F5'}
+html[data-skin="win98"] #nav button:nth-child(5)::before{content:'F4'}
+html[data-skin="win98"] #nav button:nth-child(6)::before{content:'F5'}
 html[data-skin="win98"] #nav button .ico{font-size:15px;color:var(--w-dk)}
 html[data-skin="win98"] #nav button.active{
   background:var(--w-navy);color:#fff;box-shadow:var(--w-sink);
@@ -1294,6 +1316,7 @@ html[data-skin="win98"] .summary-hero .t{font-family:var(--w-mono)}
   <button data-page="home"><span class="ico" aria-hidden="true">◧</span><span>Home</span></button>
   <button data-page="calendar"><span class="ico" aria-hidden="true">▦</span><span>Calendar</span></button>
   <button data-page="workout"><span class="ico" aria-hidden="true">⬤</span><span>Train</span></button>
+  <button id="navCoach" class="navcoach" aria-label="Coach"><span class="ico" aria-hidden="true">◉</span><span>Coach</span></button>
   <button data-page="analytics"><span class="ico" aria-hidden="true">◫</span><span>Stats</span></button>
   <button data-page="health"><span class="ico" aria-hidden="true">✚</span><span>Health</span></button>
 </nav>
@@ -1377,6 +1400,7 @@ const DEFAULT_STATE = {
   glucose: [],    // {id,date,time,mmol,ctx,note?,mt} — D16 blood glucose, always stored in mmol/L
   fitTests: [],   // {id,date,mode:'home'|'full',bw,sex,age,home,power,ladder:{pattern:{variation,sets:[{kg,r,rpe}]}},tol,grip,engine,mt} — E12
   fitDraft: null, // the fitting test in progress, this device only (not synced)
+  coach: { setupDone: false, answers: {}, notes: [] },   // D9 coach memory: answers, notes, plan — synced
 };
 
 /* Persistence runs through IndexedDB — it's async (so the call sites below don't
@@ -1574,7 +1598,7 @@ const SYNC_SETS = {
   checkins: x => x.date, measures: x => x.id, calipers: x => x.id, mobTests: x => x.id, bp: x => x.id, glucose: x => x.id, fitTests: x => x.id,
   customEx: x => (typeof x === 'string' ? x : JSON.stringify(x)), programs: x => String(x),
 };
-const SYNC_MAPS = ['exAliases', 'programStarts'];
+const SYNC_MAPS = ['exAliases', 'programStarts', 'coach'];
 const SYNC_LOCAL_SETTINGS = ['lastSeenVersion', 'backupSnoozeUntil', 'lastExportAt'];
 
 /* Device-only bookkeeping, outside S so it never syncs itself:
@@ -2090,7 +2114,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.66.0';
+const APP_VERSION = '0.67.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4457,7 +4481,7 @@ function openWelcome(step = 1) {
       <div class="eyebrow" style="margin:12px 0 6px">Your main lifts</div>
       <div class="sub" style="margin-bottom:8px">They lead the Stats chart and drive your total, DOTS and attempt planning.</div>
       ${sel(0, 'Squat')}${sel(1, 'Bench')}${sel(2, 'Deadlift')}`,
-    foot: `<button class="btn ghost" id="wlBack">Back</button><button class="btn primary" id="wlDone">Done</button>`,
+    foot: `<button class="btn ghost" id="wlBack">Back</button><button class="btn" id="wlCoach">Set up your coach</button><button class="btn primary" id="wlDone">Done</button>`,
     onOpen: bg => {
       const label = () => $('#wlDone', bg).textContent = EVENT_TYPES[pick] ? 'Done — add my event' : 'Done';
       label();
@@ -4471,6 +4495,7 @@ function openWelcome(step = 1) {
         S.settings.priority = EVENT_TYPES[DEFAULT_EVENT_TYPE].lifts.map((l, i) => ({ slot: l.slot, leaf: keyLeaf($('#wlPri' + i, bg).value) }));
       };
       $('#wlBack', bg).onclick = () => { keep(); save(); closeModal(); openWelcome(2); };
+      $('#wlCoach', bg).onclick = () => { keep(); done(); closeModal(); render(); openCoach(); };
       $('#wlDone', bg).onclick = () => {
         keep(); done(); closeModal(); render();
         if (EVENT_TYPES[pick]) openMeet(null, pick);
@@ -9407,7 +9432,7 @@ function installProgram(P, startDate) {
         /* A program may pin the equipment, attachment or execution (a trap bar rack pull,
            a Smith incline). Only axes the movement actually allows are taken —
            anything else falls back to the movement's default, never a guess. */
-        const leaf = hit
+        let leaf = hit
           ? ((e.equipment || e.attachment || e.execution)
               ? completeLeaf(hit.movement, {
                   equipment: hit.movement.equipment.includes(e.equipment) ? e.equipment : hit.leaf.equipment,
@@ -9416,6 +9441,7 @@ function installProgram(P, startDate) {
                   execution: (hit.movement.execution || []).includes(e.execution) ? e.execution : hit.leaf.execution })
               : hit.leaf)
           : completeLeaf(ensureCustomMovement(e.name), null);   // registered, so it has a name and a page
+        if (e.leaf) leaf = e.leaf;                              // the coach's plans name the leaf outright
         const out = { leaf, legacyName: e.name, notes: e.notes || '', mods: modsFromNote(e.notes),
           sets: e.sets.map(s => {
             const o = { w: s.w || 0, r: e.iso ? null : s.r, rpe: null, done: false,
@@ -13835,6 +13861,8 @@ function openFitTest(mode) {
         const t = fitSave(D);
         closeAllModals(); render();
         toast('Fitting test saved', 'green');
+        /* The coach asked for this test (spec §1b): go back and build with it. */
+        if (S.coach && S.coach.awaitTest) { S.coach.awaitTest = false; save(); openCoach(); coBubble('coach', 'Test saved — here\'s your plan using it.'); return coBuildAndShow(t); }
         openFitResults(t.id);
       };
       paint();
@@ -13877,6 +13905,513 @@ function fitSave(D) {
   S.fitDraft = null;
   save(); bust();
   return t;
+}
+
+/* ---------------- coach: chat, memory and the plan builder (D9 parts 0–1) ----------------
+   r&d/specs/coach-spec.md. The Coach button opens a chat; the first time, the
+   chat is the setup (tap answers, no AI). Answers live in S.coach so it never
+   asks twice. The plan is built locally from the templates in
+   r&d/data/templates and installs as a normal loads:"rir" program — only on
+   Accept. */
+const COACH_TPL = {"patterns":{"squat":{"label":"Squat","candidates":["back-squat/barbell","back-squat/safety_squat_bar","back-squat/smith","front-squat/barbell","goblet-squat/dumbbells"]},"squat-machine":{"label":"Machine squat","candidates":["leg-press/plate_loaded_machine","hack-squat/plate_loaded_machine","pendulum-squat/plate_loaded_machine","back-squat/belt_squat","goblet-squat/dumbbells"]},"hinge":{"label":"Deadlift","candidates":["deadlift/barbell","deadlift/trap_bar","sumo-deadlift/barbell","romanian-deadlift/dumbbells"]},"hinge-2":{"label":"Second hinge","candidates":["romanian-deadlift/barbell","deadlift/trap_bar","romanian-deadlift/dumbbells","stiff-leg-deadlift/barbell","good-morning/barbell","back-extension/bodyweight"]},"glute-main":{"label":"Hip thrust","candidates":["hip-thrust/barbell","hip-thrust/machine","hip-thrust/smith","glute-bridge/dumbbells"]},"single-leg":{"label":"Single-leg","candidates":["bulgarian-split-squat/dumbbells","reverse-lunge/dumbbells","split-squat/dumbbells","step-up/dumbbells","split-squat/bodyweight"]},"quad-iso":{"label":"Quads","candidates":["leg-extension/machine","sissy-squat/bodyweight","split-squat/bodyweight"]},"ham-curl":{"label":"Hamstring curl","candidates":["leg-curl/machine","glute-ham-raise/bodyweight","nordic-curl/bodyweight","leg-curl/resistance_band"]},"glute-iso":{"label":"Glutes","candidates":["hip-abduction/machine","glute-kickback/cable","hip-abduction/resistance_band","glute-bridge/bodyweight"]},"adductors":{"label":"Adductors","candidates":["hip-adduction/machine","hip-adduction/cable","side-lunge/dumbbells"]},"calves":{"label":"Calves","candidates":["calf-raise-standing/smith","calf-raise-standing/machine","calf-raise-seated/machine","calf-raise-standing/dumbbells","calf-raise-standing/bodyweight"]},"bench":{"label":"Bench press","candidates":["bench-press/barbell","bench-press/dumbbells","bench-press/machine","push-up/bodyweight"]},"bench-b":{"label":"Chest press","candidates":["bench-press/machine","bench-press/dumbbells","bench-press/smith","larsen-press/barbell","push-up/bodyweight"]},"incline-press":{"label":"Incline press","candidates":["incline-bench-press/dumbbells","incline-bench-press/barbell","incline-bench-press/machine","incline-push-up/bodyweight"]},"close-grip":{"label":"Close-grip press","candidates":["close-grip-bench/barbell","pin-press/barbell","larsen-press/barbell","triceps-dip/bodyweight"]},"ohp":{"label":"Overhead press","candidates":["overhead-press/barbell","overhead-press/dumbbells","overhead-press/machine","arnold-press/dumbbells"]},"ohp-b":{"label":"Machine shoulder press","candidates":["overhead-press/smith","overhead-press/machine","overhead-press/dumbbells","arnold-press/dumbbells"]},"chest-iso":{"label":"Chest fly","candidates":["chest-fly/cable","pec-deck/machine","chest-fly/dumbbells","push-up/bodyweight"]},"lateral-raise":{"label":"Lateral raise","candidates":["lateral-raise/cable","lateral-raise/dumbbells","lateral-raise/machine","lateral-raise/resistance_band"]},"rear-delt":{"label":"Rear delts","candidates":["face-pull/cable","rear-delt-fly/machine","rear-delt-fly/dumbbells","face-pull/resistance_band"]},"triceps":{"label":"Triceps","candidates":["triceps-pushdown/cable","skull-crusher/barbell","triceps-dip/bodyweight","triceps-pushdown/resistance_band"]},"triceps-oh":{"label":"Overhead triceps","candidates":["overhead-triceps-extension/cable","overhead-triceps-extension/dumbbells","skull-crusher/dumbbells","overhead-triceps-extension/resistance_band"]},"row":{"label":"Row","candidates":["seated-row/cable","chest-supported-row/machine","bent-over-row/barbell","single-arm-row/dumbbells","inverted-row/bodyweight"]},"pulldown":{"label":"Pulldown / pull-up","candidates":["lat-pulldown/cable","pull-up/bodyweight","chin-up/bodyweight","pull-up/resistance_band"]},"shrug":{"label":"Shrug","candidates":["shrug/barbell","shrug/smith","shrug/trap_bar","shrug/dumbbells"]},"biceps":{"label":"Biceps","candidates":["biceps-curl/dumbbells","biceps-curl/cable","preacher-curl/machine","biceps-curl/barbell","biceps-curl/resistance_band"]},"biceps-2":{"label":"Hammer curl","candidates":["hammer-curl/dumbbells","hammer-curl/cable","reverse-curl/barbell","hammer-curl/resistance_band"]},"abs":{"label":"Abs","candidates":["cable-crunch/cable","hanging-knee-raise/bodyweight","ab-wheel/bodyweight","plank/bodyweight"]},"obliques":{"label":"Obliques","candidates":["side-bend/dumbbells","woodchopper/cable","pallof-press/cable","side-plank/bodyweight"]},"event-carry":{"label":"Carry event","candidates":["farmers-carry/farmers_handles","yoke-carry/yoke","sandbag-carry/sandbag","farmers-carry/dumbbells"]},"event-load":{"label":"Loading event","candidates":["atlas-stone/stone","sandbag-load/sandbag","keg-load/keg"]},"event-press":{"label":"Press event","candidates":["log-press/log","overhead-press/axle","push-press/barbell","push-press/dumbbells"]}},"rules":{"oneMainPerDay":true,"neverTogether":[["back-squat/*","leg-press/*"],["deadlift/trap_bar","leg-press/*"]]},"needs":{"rack":["back-squat/barbell","back-squat/safety_squat_bar","front-squat/barbell","bench-press/barbell","incline-bench-press/barbell","close-grip-bench/barbell","overhead-press/barbell","pin-press/barbell","box-squat/barbell"],"bench":["bench-press/*","incline-bench-press/*","close-grip-bench/*","larsen-press/*","chest-supported-row/dumbbells","preacher-curl/*"],"pullup_bar":["pull-up/bodyweight","chin-up/bodyweight","pull-up/resistance_band","hanging-knee-raise/bodyweight","dead-hang/bodyweight"]},"goalOverrides":{"strongman":{"ohp":["log-press/log","overhead-press/axle","overhead-press/barbell","overhead-press/dumbbells"],"hinge":["deadlift/trap_bar","deadlift/axle","deadlift/barbell"]},"powerlifting":{"squat":["back-squat/barbell"],"bench":["bench-press/barbell"],"hinge":["deadlift/barbell","sumo-deadlift/barbell"]}},"experienceOverrides":{"under6m":{"squat":["leg-press/plate_loaded_machine","goblet-squat/dumbbells","hack-squat/plate_loaded_machine","back-squat/barbell"],"bench":["bench-press/dumbbells","bench-press/machine","push-up/bodyweight","bench-press/barbell"],"ohp":["overhead-press/dumbbells","overhead-press/machine","overhead-press/barbell"],"hinge":["deadlift/trap_bar","romanian-deadlift/dumbbells","deadlift/barbell"],"hinge-2":["romanian-deadlift/dumbbells","back-extension/bodyweight","romanian-deadlift/barbell"],"row":["chest-supported-row/machine","seated-row/cable","single-arm-row/dumbbells"],"close-grip":["bench-press/dumbbells","triceps-dip/machine","close-grip-bench/barbell"],"glute-main":["hip-thrust/machine","glute-bridge/dumbbells","hip-thrust/barbell"]}},"easyOn":{"neck":["shrug/*","behind-neck-press/*","upright-row/*"],"shoulders":["behind-neck-press/*","upright-row/*","overhead-press/barbell","triceps-dip/*","chest-dip/*","skull-crusher/barbell","push-press/*"],"elbows":["skull-crusher/*","close-grip-bench/barbell","preacher-curl/*","triceps-dip/*"],"wrists":["front-squat/barbell","push-up/*","skull-crusher/barbell","close-grip-bench/barbell","wrist-curl/*","reverse-wrist-curl/*"],"hips":["sumo-deadlift/*","hip-adduction/*","side-lunge/*","good-morning/*"],"knees":["sissy-squat/*","leg-extension/*","pistol-squat/*","bulgarian-split-squat/*","reverse-lunge/*","split-squat/*","step-up/*","hack-squat/*"],"ankles":["pistol-squat/*","calf-raise-standing/bodyweight","front-squat/barbell"]},"goals":{"strength":{"label":"Strength","main":{"reps":[3,5],"rir":2},"secondary":{"reps":[5,8],"rir":2},"accessory":{"reps":[6,10],"rir":2},"finisher":{"reps":[10,15],"rir":[1,2]}},"size":{"label":"Size","main":{"reps":[6,10],"rir":2},"secondary":{"reps":[8,12],"rir":2},"accessory":{"reps":[10,15],"rir":[1,2]},"finisher":{"reps":[12,20],"rir":[1,2]}},"strongman":{"label":"Strongman","base":"strength","event":{"sets":3}},"powerlifting":{"label":"Powerlifting meet","base":"strength"},"general":{"label":"General fitness","main":{"reps":[8,12],"rir":[2,3]},"secondary":{"reps":[8,12],"rir":[2,3]},"accessory":{"reps":[10,15],"rir":[2,3]},"finisher":{"reps":[12,20],"rir":[2,3]}}},"sets":{"under6m":{"main":3,"secondary":2,"accessory":2,"finisher":2},"6mTo2y":{"main":3,"secondary":3,"accessory":3,"finisher":2},"over2y":{"main":4,"secondary":3,"accessory":3,"finisher":3}},"experience":{"under6m":{"abWeeks":false,"minRir":2,"amrap":false,"loadStep":"+2.5 kg only after every set reaches the top of the range at the target RIR, two sessions running"},"6mTo2y":{"abWeeks":false,"minRir":1,"amrap":false,"loadStep":"+2.5 kg when every set reaches the top of the range at the target RIR (the D5 double progression)"},"over2y":{"abWeeks":true,"minRir":1,"amrap":true,"loadStep":"Autoregulated from the working e1RM (autoreg-spec); A weeks the heavy main lift, B weeks its variation"}},"minutes":{"30":5,"45":7,"60":8,"90":8,"supersetsUpTo":45},"splits":{"full-body":{"name":"Full body","days":1,"eventDay":0,"dayList":[{"name":"Full body","slots":[{"p":"squat","role":"main","b":"squat-machine"},{"p":"bench","role":"secondary","b":"bench-b"},{"p":"row","role":"secondary","b":"pulldown"},{"p":"hinge-2","role":"secondary"},{"p":"ohp","role":"accessory"},{"p":"pulldown","role":"accessory","b":"row"},{"p":"abs","role":"finisher"},{"p":"calves","role":"finisher"}]}]},"upper-lower":{"name":"Upper / Lower","days":2,"eventDay":1,"dayList":[{"name":"Upper","slots":[{"p":"bench","role":"main","b":"bench-b"},{"p":"row","role":"secondary","b":"pulldown"},{"p":"ohp","role":"secondary","b":"ohp-b"},{"p":"pulldown","role":"accessory","b":"row"},{"p":"lateral-raise","role":"accessory"},{"p":"triceps","role":"accessory"},{"p":"biceps","role":"accessory"},{"p":"rear-delt","role":"accessory"}]},{"name":"Lower","slots":[{"p":"squat","role":"main","b":"squat-machine"},{"p":"hinge","role":"secondary","b":"glute-main"},{"p":"single-leg","role":"accessory"},{"p":"ham-curl","role":"accessory"},{"p":"quad-iso","role":"accessory"},{"p":"calves","role":"finisher"},{"p":"abs","role":"finisher"},{"p":"obliques","role":"finisher"}]}]},"ppl":{"name":"Push / Pull / Legs","days":3,"eventDay":2,"dayList":[{"name":"Push","slots":[{"p":"bench","role":"main","b":"bench-b"},{"p":"ohp","role":"secondary","b":"ohp-b"},{"p":"incline-press","role":"accessory"},{"p":"lateral-raise","role":"accessory"},{"p":"triceps","role":"accessory"},{"p":"chest-iso","role":"accessory"},{"p":"triceps-oh","role":"accessory"},{"p":"abs","role":"finisher"}]},{"name":"Pull","slots":[{"p":"hinge","role":"main","b":"glute-main"},{"p":"row","role":"secondary","b":"pulldown"},{"p":"pulldown","role":"secondary","b":"row"},{"p":"shrug","role":"accessory"},{"p":"rear-delt","role":"accessory"},{"p":"biceps","role":"accessory"},{"p":"biceps-2","role":"accessory"},{"p":"obliques","role":"finisher"}]},{"name":"Legs","slots":[{"p":"squat","role":"main","b":"squat-machine"},{"p":"single-leg","role":"secondary"},{"p":"ham-curl","role":"accessory"},{"p":"quad-iso","role":"accessory"},{"p":"glute-iso","role":"accessory"},{"p":"calves","role":"finisher"},{"p":"abs","role":"finisher"},{"p":"adductors","role":"accessory"}]}]},"ulul":{"name":"Upper / Lower / Upper / Lower","days":4,"eventDay":3,"dayList":[{"name":"Upper 1","slots":[{"p":"bench","role":"main","b":"bench-b"},{"p":"row","role":"secondary","b":"pulldown"},{"p":"incline-press","role":"accessory"},{"p":"pulldown","role":"accessory","b":"row"},{"p":"lateral-raise","role":"accessory"},{"p":"triceps","role":"accessory"},{"p":"biceps","role":"accessory"},{"p":"rear-delt","role":"accessory"}]},{"name":"Lower 1","slots":[{"p":"squat","role":"main","b":"squat-machine"},{"p":"hinge-2","role":"secondary"},{"p":"single-leg","role":"accessory"},{"p":"ham-curl","role":"accessory"},{"p":"quad-iso","role":"accessory"},{"p":"calves","role":"finisher"},{"p":"abs","role":"finisher"},{"p":"obliques","role":"finisher"}]},{"name":"Upper 2","slots":[{"p":"ohp","role":"main","b":"ohp-b"},{"p":"pulldown","role":"secondary","b":"row"},{"p":"close-grip","role":"secondary"},{"p":"row","role":"accessory","b":"pulldown"},{"p":"lateral-raise","role":"accessory"},{"p":"rear-delt","role":"accessory"},{"p":"triceps-oh","role":"accessory"},{"p":"biceps-2","role":"accessory"}]},{"name":"Lower 2","slots":[{"p":"hinge","role":"main","b":"glute-main"},{"p":"glute-main","role":"secondary","b":"hinge-2"},{"p":"single-leg","role":"accessory"},{"p":"ham-curl","role":"accessory"},{"p":"glute-iso","role":"accessory"},{"p":"calves","role":"finisher"},{"p":"obliques","role":"finisher"},{"p":"quad-iso","role":"accessory"}]}]},"pplul":{"name":"Push / Pull / Legs / Upper / Lower","days":5,"eventDay":4,"dayList":[{"name":"Push","slots":[{"p":"bench","role":"main","b":"bench-b"},{"p":"incline-press","role":"secondary"},{"p":"triceps","role":"accessory"},{"p":"lateral-raise","role":"accessory"},{"p":"chest-iso","role":"accessory"},{"p":"abs","role":"finisher"},{"p":"triceps-oh","role":"accessory"},{"p":"rear-delt","role":"accessory"}]},{"name":"Pull","slots":[{"p":"row","role":"main","b":"pulldown"},{"p":"shrug","role":"secondary"},{"p":"pulldown","role":"secondary","b":"row"},{"p":"biceps","role":"accessory"},{"p":"rear-delt","role":"accessory"},{"p":"biceps-2","role":"accessory"},{"p":"abs","role":"finisher"},{"p":"lateral-raise","role":"accessory"}]},{"name":"Legs","slots":[{"p":"squat","role":"main","b":"squat-machine"},{"p":"quad-iso","role":"accessory"},{"p":"ham-curl","role":"accessory"},{"p":"calves","role":"finisher"},{"p":"abs","role":"finisher"},{"p":"adductors","role":"accessory"},{"p":"glute-iso","role":"accessory"},{"p":"single-leg","role":"accessory"}]},{"name":"Upper","slots":[{"p":"ohp","role":"main","b":"ohp-b"},{"p":"close-grip","role":"secondary"},{"p":"row","role":"accessory"},{"p":"triceps-oh","role":"accessory"},{"p":"lateral-raise","role":"accessory"},{"p":"rear-delt","role":"accessory"},{"p":"biceps","role":"accessory"},{"p":"abs","role":"finisher"}]},{"name":"Lower","slots":[{"p":"hinge","role":"main","b":"glute-main"},{"p":"hinge-2","role":"secondary"},{"p":"ham-curl","role":"accessory"},{"p":"glute-iso","role":"accessory"},{"p":"calves","role":"finisher"},{"p":"obliques","role":"finisher"},{"p":"single-leg","role":"accessory"},{"p":"adductors","role":"accessory"}]}]},"pplppl":{"name":"Push / Pull / Legs × 2","days":6,"eventDay":5,"dayList":[{"name":"Push 1","slots":[{"p":"bench","role":"main","b":"bench-b"},{"p":"ohp","role":"secondary","b":"ohp-b"},{"p":"incline-press","role":"accessory"},{"p":"lateral-raise","role":"accessory"},{"p":"triceps","role":"accessory"},{"p":"chest-iso","role":"accessory"},{"p":"abs","role":"finisher"},{"p":"triceps-oh","role":"accessory"}]},{"name":"Pull 1","slots":[{"p":"hinge","role":"main","b":"glute-main"},{"p":"row","role":"secondary","b":"pulldown"},{"p":"pulldown","role":"accessory","b":"row"},{"p":"shrug","role":"accessory"},{"p":"biceps","role":"accessory"},{"p":"rear-delt","role":"accessory"},{"p":"obliques","role":"finisher"},{"p":"biceps-2","role":"accessory"}]},{"name":"Legs 1","slots":[{"p":"squat","role":"main","b":"squat-machine"},{"p":"single-leg","role":"secondary"},{"p":"ham-curl","role":"accessory"},{"p":"quad-iso","role":"accessory"},{"p":"calves","role":"finisher"},{"p":"abs","role":"finisher"},{"p":"glute-iso","role":"accessory"},{"p":"adductors","role":"accessory"}]},{"name":"Push 2","slots":[{"p":"ohp","role":"main","b":"ohp-b"},{"p":"incline-press","role":"secondary"},{"p":"close-grip","role":"secondary"},{"p":"lateral-raise","role":"accessory"},{"p":"triceps-oh","role":"accessory"},{"p":"chest-iso","role":"accessory"},{"p":"abs","role":"finisher"},{"p":"rear-delt","role":"accessory"}]},{"name":"Pull 2","slots":[{"p":"pulldown","role":"main","b":"row"},{"p":"row","role":"secondary","b":"pulldown"},{"p":"rear-delt","role":"accessory"},{"p":"biceps-2","role":"accessory"},{"p":"shrug","role":"accessory"},{"p":"biceps","role":"accessory"},{"p":"obliques","role":"finisher"},{"p":"lateral-raise","role":"accessory"}]},{"name":"Legs 2","slots":[{"p":"squat-machine","role":"main","b":"squat"},{"p":"hinge-2","role":"secondary"},{"p":"glute-main","role":"accessory"},{"p":"ham-curl","role":"accessory"},{"p":"quad-iso","role":"accessory"},{"p":"calves","role":"finisher"},{"p":"adductors","role":"accessory"},{"p":"abs","role":"finisher"}]}]}}};   // built by r&d/tools/build-coach-templates.cjs from r&d/data/templates — don't edit here
+const COACH_SPLIT = { 1: 'full-body', 2: 'upper-lower', 3: 'ppl', 4: 'ulul', 5: 'pplul', 6: 'pplppl' };
+const COACH_WD = [['mon', 'Mon', 1], ['tue', 'Tue', 2], ['wed', 'Wed', 3], ['thu', 'Thu', 4], ['fri', 'Fri', 5], ['sat', 'Sat', 6], ['sun', 'Sun', 0]];
+const COACH_GOALS = [['strength', 'Strength'], ['size', 'Size'], ['strongman', 'Strongman'], ['powerlifting', 'Powerlifting meet'], ['general', 'General fitness']];
+const COACH_EXP = [['under6m', 'Under 6 months'], ['6mTo2y', '6 months – 2 years'], ['over2y', '2+ years']];
+const COACH_HOME_KIT = [['dumbbells', 'Dumbbells', ['dumbbells'], []], ['barbell', 'Barbell and plates', ['barbell', 'plate'], []],
+  ['rack', 'Squat rack', [], ['rack']], ['bench', 'Bench', [], ['bench']], ['kettlebell', 'Kettlebells', ['kettlebell'], []],
+  ['band', 'Bands', ['resistance_band'], []], ['pullup', 'Pull-up bar', [], ['pullup_bar']]];
+const COACH_LOWER = ['squat', 'squat-machine', 'hinge', 'glute-main'];
+const COACH_TEST_PATTERN = { hinge: 'hinge', squat: 'squat', press: 'bench', pull: 'row' };
+function coachMem() {
+  S.coach = S.coach || {};
+  const c = S.coach;
+  if (!c.answers) c.answers = {};
+  if (!c.notes) c.notes = [];
+  return c;
+}
+const cmatch = (pat, c) => pat === c || (pat.endsWith('/*') && c.startsWith(pat.slice(0, -1)));
+const candKey = leaf => `${leaf.movement}/${leaf.equipment}`;
+function candLeaf(c) {
+  const [m, e] = c.split('/'), mv = movementById(m);
+  return mv && (mv.equipment || []).includes(e) ? completeLeaf(mv, { equipment: e }) : null;
+}
+function candName(c) { const l = candLeaf(c); return l ? `${displayName(l)}${variantLabel(l) ? ` (${variantLabel(l)})` : ''}` : c; }
+function coachPlace(id) { return id ? places().find(p => p.id === id) || null : null; }
+function coachGoalDef(id) { const g = COACH_TPL.goals[id] || COACH_TPL.goals.strength; return g.base ? { ...COACH_TPL.goals[g.base], ...g } : g; }
+function coachRir(v, exp) { const r = Array.isArray(v) ? (exp === 'over2y' ? v[0] : v[1]) : v; return exp === 'under6m' ? Math.max(2, r) : r; }
+function coachDays(A) { return COACH_WD.map(w => w[0]).filter(d => (A.days || []).includes(d)); }
+function coachSplitName(n) { const s = COACH_TPL.splits[COACH_SPLIT[n]]; return s ? s.name : ''; }
+/* Can this candidate go in today, at this place, given what's already in the day? */
+function coachOk(c, place, ctx, dayKeys) {
+  const T = COACH_TPL;
+  if (!candLeaf(c)) return false;
+  const eq = c.split('/')[1];
+  if (place && !kitHas(eq, place)) return false;
+  if (place && Array.isArray(place.extras)) {
+    for (const [need, list] of Object.entries(T.needs)) if (list.some(x => cmatch(x, c)) && !place.extras.includes(need)) return false;
+  }
+  if ((ctx.easy || []).some(j => (T.easyOn[j] || []).some(x => cmatch(x, c)))) return false;
+  if (dayKeys.includes(c)) return false;
+  for (const pair of T.rules.neverTogether) {
+    const mine = pair.findIndex(x => cmatch(x, c));
+    if (mine < 0) continue;
+    const other = pair[1 - mine];
+    if (dayKeys.some(k => cmatch(other, k))) return false;
+  }
+  return true;
+}
+/* A pattern's candidates for this lifter: beginner or goal list first, then
+   the base list; their priority lifts and fitting-test lifts to the front. */
+function coachCands(p, ctx) {
+  const T = COACH_TPL, base = T.patterns[p].candidates;
+  const over = (ctx.exp === 'under6m' && T.experienceOverrides.under6m[p]) || (T.goalOverrides[ctx.goal] || {})[p] || [];
+  let list = [...over, ...base].filter((c, i, a) => a.indexOf(c) === i);
+  const movs = new Set(list.map(c => c.split('/')[0]));
+  [...(ctx.front[p] || []), ...ctx.priority].reverse().forEach(c => {
+    if (!movs.has(c.split('/')[0]) || !candLeaf(c)) return;
+    list = [c, ...list.filter(x => x !== c)];
+  });
+  return list;
+}
+function coachFill(slot, p, place, ctx, dayKeys) {
+  const all = coachCands(p, ctx), ok = all.filter(c => coachOk(c, place, ctx, dayKeys));
+  if (!ok.length) return null;
+  const G = coachGoalDef(ctx.goal), role = slot.event ? 'secondary' : slot.role, R = G[role] || G.accessory;
+  let sets = COACH_TPL.sets[ctx.exp][role] || 3;
+  const notes = [];
+  if (slot.event) { sets = (G.event && G.event.sets) || 3; notes.push('strongman event'); }
+  if (role === 'main') notes.push('main lift');
+  if (role === 'main' && ctx.lagging === p) { sets++; notes.push('+1 set: lagging pattern on your fitting test'); }
+  if (role === 'accessory' && ctx.tol === 'low') sets = Math.max(1, sets - 1);
+  if (role === 'accessory' && ctx.tol === 'high') sets++;
+  if (ctx.ankles && (p === 'squat' || p === 'squat-machine') && /squat/.test(ok[0])) notes.push('plates under heels');
+  return { p, role, event: !!slot.event, key: ok[0], alts: ok.slice(1), sets,
+    reps: slot.event ? null : R.reps, rir: slot.event ? null : coachRir(R.rir, ctx.exp), notes };
+}
+function coachRecentTest() {
+  const t = fitTestsSorted().reverse().find(x => daysBetween(x.date, today()) <= 56);
+  return t || null;
+}
+/* The plan, built locally (spec §2–§3, §1b). Nothing is saved here. */
+function coachBuild(A, test) {
+  const T = COACH_TPL, days = coachDays(A), n = days.length, sid = COACH_SPLIT[n], split = T.splits[sid];
+  if (!split) return null;
+  const exp = A.experience || '6mTo2y', goal = A.goal || 'strength', mins = +A.minutes || 45;
+  const kept = T.minutes[String(mins)] || 7, superset = mins <= T.minutes.supersetsUpTo;
+  const R = test ? fitResults(test) : null, flag = id => !!(R && R.others.find(o => o.id === id && o.flag));
+  const front = {};
+  if (test) Object.entries(test.ladder || {}).forEach(([pat, L]) => { const V = fitVariation(pat, L.variation); if (V && COACH_TEST_PATTERN[pat]) front[COACH_TEST_PATTERN[pat]] = [V.key.split('/').slice(0, 2).join('/')]; });
+  const ctx = { exp, goal, easy: A.easy || [], priority: (A.priority || []).map(k => k.split('/').slice(0, 2).join('/')), front,
+    lagging: R && R.lagging ? COACH_TEST_PATTERN[R.lagging.id] : null, tol: R && R.tol ? R.tol.word : null, ankles: flag('ankles') };
+  const changes = [];
+  if (test) {
+    changes.push(`Using your fitting test from ${fmtDate(test.date)}.`);
+    if (Object.keys(front).length) changes.push('Your ladder lifts go first in their slots, so their starting weights come from the test.');
+    if (ctx.lagging) changes.push(`+1 set on the ${R.lagging.label.toLowerCase()} main lift — your lagging pattern.`);
+    if (ctx.tol && ctx.tol !== 'average') changes.push(`Accessory sets ${ctx.tol === 'low' ? '−1' : '+1'} — ${ctx.tol} volume tolerance.`);
+    if (ctx.ankles) changes.push('Ankles flagged: plates under heels on squats, and calves stay in.');
+  }
+  const promote = [...(ctx.ankles ? ['calves'] : []), ...(flag('shoulders') ? ['rear-delt'] : []),
+    ...(flag('balance') || (R && R.flags.some(f => f.id === 'bal_gap' || f.id === 'k2w_gap')) ? ['single-leg'] : [])];
+  if (flag('shoulders')) changes.push('Shoulders flagged: rear delts move up.');
+  if (promote.includes('single-leg')) changes.push('Balance or a left/right gap flagged: single-leg work moves up, weaker side first.');
+  let gripDone = !flag('grip');
+  const out = days.map((wd, i) => {
+    const D = split.dayList[i];
+    const placeId = A.where === 'home' ? A.homePlace : A.where === 'both' && (A.dayPlace || {})[wd] === 'home' ? A.homePlace : A.gymPlace;
+    const place = coachPlace(placeId);
+    let slots = D.slots.map(s => ({ ...s }));
+    if (goal === 'strongman' && i === split.eventDay) slots.splice(1, 0, { p: 'event-carry', role: 'secondary', event: true });
+    const keep = slots.slice(0, kept), rest = slots.slice(kept);
+    promote.forEach(pp => {
+      const j = rest.findIndex(s => s.p === pp);
+      if (j < 0 || keep.some(s => s.p === pp)) return;
+      let k = -1;
+      keep.forEach((s, x) => { if ((s.role === 'accessory' || s.role === 'finisher') && !promote.includes(s.p)) k = x; });
+      if (k < 0) return;
+      const was = keep[k]; keep[k] = rest[j]; rest[j] = was;
+    });
+    if (!gripDone) { const k = keep.map(s => s.role).lastIndexOf('finisher'); if (k > 0) { keep[k] = { p: 'event-carry', role: 'finisher', grip: true }; gripDone = true; changes.push(`Grip flagged: a farmers carry replaces a finisher on ${D.name}.`); } }
+    const week = ab => {
+      const keys = [], list = [];
+      keep.forEach(s => {
+        const p = ab === 'B' && s.b ? s.b : s.p;
+        const x = coachFill(s, p, place, ctx, keys);
+        if (!x) {
+          const easyOnly = coachFill(s, p, place, { ...ctx, easy: [] }, keys);
+          if (ab !== 'B') changes.push(`${D.name}: ${T.patterns[p].label.toLowerCase()} left out — ${easyOnly ? `you asked to go easy on ${ctx.easy.join(', ')}` : `nothing for it${place ? ` at ${place.name}` : ''}`}.`);
+          return;
+        }
+        if (s.grip) x.notes.push('grip — your fitting test');
+        keys.push(x.key); list.push(x);
+      });
+      if (superset) {
+        const tail = list.filter(x => x.role === 'accessory' || x.role === 'finisher');
+        for (let k = 0; k + 1 < tail.length; k += 2) {
+          tail[k].notes.push(`superset with ${candName(tail[k + 1].key)}`);
+          tail[k + 1].notes.push(`superset with ${candName(tail[k].key)}`);
+        }
+      }
+      return list;
+    };
+    return { wd, name: D.name, placeId: place ? place.id : null, placeName: place ? place.name : '', A: week('A'), B: exp === 'over2y' && T.experience.over2y.abWeeks ? week('B') : null };
+  });
+  const warnings = [];
+  const idx = d => COACH_WD.findIndex(w => w[0] === d);
+  out.forEach((d, i) => {
+    const nx = out[(i + 1) % out.length];
+    if (out.length < 2 || nx === d) return;
+    const gap = (idx(nx.wd) - idx(d.wd) + 7) % 7;
+    if (gap === 1 && COACH_LOWER.includes(d.A[0] && d.A[0].p) && COACH_LOWER.includes(nx.A[0] && nx.A[0].p))
+      warnings.push(`${d.name} and ${nx.name} are heavy lower days back to back — think about a rest day between them.`);
+  });
+  const weeks = /^\d{4}-\d\d-\d\d$/.test(A.eventDate || '') && A.eventDate > today() ? clamp(Math.ceil(daysBetween(today(), A.eventDate) / 7), 2, 16) : 8;
+  return { id: uid(), made: today(), split: sid, name: split.name, goal, exp, minutes: mins, weeks, days: out, changes, warnings, test: test ? test.id : null };
+}
+/* As a normal program: RIR targets, no weights (autoreg-spec → Plans with no weights). */
+function coachProgram(plan) {
+  const wdNum = Object.fromEntries(COACH_WD.map(w => [w[0], w[2]]));
+  const P = { id: 'coach-' + plan.id, name: `Coach · ${plan.name}`, loads: 'rir', weekdays: plan.days.map(d => wdNum[d.wd]), workouts: [] };
+  for (let w = 1; w <= plan.weeks; w++) plan.days.forEach((d, di) => {
+    const ab = d.B ? (w % 2 ? 'A' : 'B') : null, list = ab === 'B' ? d.B : d.A;
+    P.workouts.push({ week: w, day: di + 1, name: `${d.name}${ab ? ' ' + ab : ''}`, block: ab ? (ab === 'A' ? 'A · heavy' : 'B · variations') : `Week ${w}`,
+      exercises: list.map(x => {
+        const leaf = candLeaf(x.key);
+        return { name: displayName(leaf), leaf,
+          notes: [x.reps ? `${x.reps[0]}–${x.reps[1]} reps` : '', ...x.notes].filter(Boolean).join(' · '),
+          sets: Array.from({ length: x.sets }, () => x.event ? { w: null, m: 20, type: 'working' } : { w: null, r: x.reps[0], type: 'working', t: x.rir }) };
+      }) });
+  });
+  return P;
+}
+function coachAccept(plan, after) {
+  const C = coachMem(), P = coachProgram(plan), prev = C.planProg;
+  const others = (S.programs || []).filter(id => id !== prev && S.workouts.some(w => w.prog === id && w.status === 'planned' && w.date >= today()));
+  const go2 = dropOthers => {
+    if (prev) removeProgram(prev);
+    if (dropOthers) others.forEach(removeProgram);
+    const n = installProgram(P);
+    Object.assign(C, { plan, planId: plan.id, planProg: P.id, planAt: today(), draft: null });
+    save(); bust();
+    if (after) after(n);
+  };
+  if (!others.length) return go2(false);
+  const names = others.map(id => PROGRAM_MANIFEST && id === PROGRAM_MANIFEST.id ? PROGRAM_MANIFEST.name : id).join(', ');
+  modal({
+    title: 'Other planned sessions',
+    body: `<p class="sub" style="margin-top:0">You also have <b>${esc(names)}</b> planned. Keep those sessions as well, or replace them with this plan? Anything already trained stays either way.</p>`,
+    foot: `<button class="btn" id="coKeep">Keep both</button><button class="btn primary" id="coRepl">Replace them</button>`,
+    onOpen: bg => { $('#coKeep', bg).onclick = () => { closeModal(); go2(false); }; $('#coRepl', bg).onclick = () => { closeModal(); go2(true); }; },
+  });
+}
+
+/* ---- what the coach can guess from the log, so an existing user confirms rather than answers ---- */
+function coachGuess() {
+  const g = {}, done = S.workouts.filter(w => w.status === 'completed' && w.kind !== 'cardio' && w.kind !== 'mobility');
+  const first = done.map(w => w.date).sort()[0];
+  if (first) { const d = daysBetween(first, today()); g.experience = d < 183 ? 'under6m' : d < 730 ? '6mTo2y' : 'over2y'; }
+  const recent = done.filter(w => daysBetween(w.date, today()) <= 56), cnt = {};
+  recent.forEach(w => { const k = COACH_WD.find(x => x[2] === parseISO(w.date).getDay())[0]; cnt[k] = (cnt[k] || 0) + 1; });
+  const days = COACH_WD.map(w => w[0]).filter(k => cnt[k] >= 3).slice(0, 6);
+  if (days.length) g.days = days;
+  const mins = recent.map(w => w.summary && w.summary.mins).filter(m => m > 0);
+  if (mins.length) { const m = median(mins); g.minutes = [30, 45, 60, 90].reduce((a, b) => Math.abs(b - m) < Math.abs(a - m) ? b : a); }
+  const pk = priorityKeys().filter(k => typeof k === 'string' && k.includes('/'));
+  if (pk.length) g.priority = pk;
+  const ms = mobSettings();
+  if (ms.protect && ms.protect.length) g.easy = [...ms.protect];
+  return g;
+}
+function coachPriorityOptions(A) {
+  const def = { strongman: ['deadlift/trap_bar', 'log-press/log', 'overhead-press/barbell', 'back-squat/barbell', 'yoke-carry/yoke'],
+    size: ['bench-press/barbell', 'back-squat/barbell', 'seated-row/cable', 'overhead-press/barbell'] }[A.goal]
+    || ['back-squat/barbell', 'bench-press/barbell', 'deadlift/barbell', 'overhead-press/barbell'];
+  const keys = [...(A.priority || []), ...priorityKeys().filter(k => typeof k === 'string' && k.includes('/')), ...def.map(c => { const l = candLeaf(c); return l ? leafKey(l) : null; }).filter(Boolean)];
+  return keys.filter((k, i) => keys.indexOf(k) === i);
+}
+
+/* ---- the setup, as chat steps: ask, answer chips, what it stores ---- */
+const COACH_STEPS = [
+  { id: 'goal', ask: () => 'What are you training for?', kind: 'single', opts: () => COACH_GOALS },
+  { id: 'eventDate', ask: () => 'Got a date for it?', kind: 'date', show: A => A.goal === 'powerlifting' || A.goal === 'strongman' },
+  { id: 'where', ask: () => 'Where do you train?', kind: 'single', opts: () => [['gym', 'Gym'], ['home', 'Home'], ['both', 'Both']] },
+  { id: 'gymPlace', ask: () => places().length ? 'Which gym?' : 'Is it a standard gym — racks, barbells, dumbbells, cables and machines?', kind: 'place', which: 'gym',
+    show: A => (A.where === 'gym' || A.where === 'both') },
+  { id: 'homePlace', ask: () => places().length ? 'And at home?' : 'What have you got at home?', kind: 'place', which: 'home',
+    show: A => (A.where === 'home' || A.where === 'both') },
+  { id: 'days', ask: () => 'Which days can you train? Tap them — the number of days picks the split.', kind: 'days' },
+  { id: 'dayPlace', ask: () => 'Which of those are gym days?', kind: 'dayPlace', show: A => A.where === 'both' },
+  { id: 'minutes', ask: () => 'How long per session?', kind: 'single', opts: () => [[30, '30 min'], [45, '45 min'], [60, '60 min'], [90, '90 min']] },
+  { id: 'experience', ask: () => 'How long have you trained properly?', kind: 'single', opts: () => COACH_EXP },
+  { id: 'priority', ask: () => 'Which lifts do you care most about? They go first and get the most sets.', kind: 'multi', show: A => A.experience !== 'under6m',
+    opts: A => coachPriorityOptions(A).map(k => [k, leafName(k) + (variantLabel(keyLeaf(k)) ? ` (${variantLabel(keyLeaf(k))})` : '')]) },
+  { id: 'easy', ask: () => 'Anything to go easy on?', kind: 'multi', opts: () => MOB_JOINTS, none: 'Nothing' },
+];
+function coachAnswerText(step, A) {
+  const v = A[step.id];
+  if (v == null || (Array.isArray(v) && !v.length && step.id !== 'easy')) return '—';
+  if (step.kind === 'single') { const o = step.opts(A).find(x => String(x[0]) === String(v)); return o ? o[1] : String(v); }
+  if (step.kind === 'date') return v === 'none' ? 'No event yet' : fmtDate(v, { day: 'numeric', month: 'short', year: 'numeric' });
+  if (step.kind === 'place') { const p = coachPlace(v); return p ? p.name : '—'; }
+  if (step.kind === 'days') return `${coachDays(A).map(d => COACH_WD.find(w => w[0] === d)[1]).join(', ')} — ${coachSplitName(coachDays(A).length)}`;
+  if (step.kind === 'dayPlace') return coachDays(A).map(d => `${COACH_WD.find(w => w[0] === d)[1]} ${(A.dayPlace || {})[d] === 'home' ? 'home' : 'gym'}`).join(', ');
+  if (step.kind === 'multi') { const o = step.opts(A); return v.length ? v.map(k => (o.find(x => x[0] === k) || [k, k])[1]).join(', ') : 'Nothing'; }
+  return String(v);
+}
+
+/* ---- the chat sheet ---- */
+let CO = null;   // { bg, log: [{who, html}], mode }
+function coBubble(who, html) {
+  if (!CO) return;
+  CO.log.push({ who, html });
+  const el = document.createElement('div');
+  el.className = `co-b ${who === 'me' ? 'me' : 'coach'}`;
+  el.innerHTML = html;
+  const log = $('#coLog', CO.bg);
+  log.appendChild(el);
+  requestAnimationFrame(() => { const b = $('.modal-body', CO.bg); if (b) b.scrollTop = b.scrollHeight; });
+}
+function coAnswer(html) { const a = $('#coAns', CO.bg); a.innerHTML = html; a11yPass(a); }
+function coChips(opts, on) {
+  return `<div class="row wrap" style="gap:6px">${opts.map(([v, l]) => `<button class="chip co-chip${on && on.includes(String(v)) ? ' on' : ''}" data-cov="${esc(String(v))}" aria-pressed="${!!(on && on.includes(String(v)))}">${esc(l)}</button>`).join('')}</div>`;
+}
+function openCoach(at) {
+  coachMem();
+  const bg = modal({
+    title: 'Coach',
+    body: `<div class="co-log" id="coLog" aria-live="polite"></div><div class="co-ans" id="coAns"></div>`,
+    foot: `<button class="btn ghost" id="coMore">Coach settings</button><button class="btn primary" data-close>Close</button>`,
+    onClose: () => { CO = null; render(); },
+    onOpen: b0 => { $('#coMore', b0).onclick = () => openCoachSettings(); },
+  });
+  CO = { bg, log: [] };
+  const C = S.coach;
+  if (at === 'preview' && C.draft) { coBubble('coach', 'Here\'s your plan again.'); return coPreview(C.draft); }
+  if (at === 'answers') return coAnswers();
+  if (!C.setupDone) {
+    const g = coachGuess(), A = C.answers;
+    let pre = 0;
+    Object.entries(g).forEach(([k, v]) => { if (A[k] == null) { A[k] = v; pre++; } });
+    coBubble('coach', `Hi — I'm your coach. A few taps and I'll build you a plan.${pre ? ' I\'ve filled in what your log already tells me; just confirm or change it.' : ''} No AI needed for this part.`);
+    CO.mode = 'setup';
+    return coNext();
+  }
+  coGreet();
+}
+function coGreet() {
+  const C = S.coach, A = C.answers;
+  const wk = C.planAt ? Math.floor(daysBetween(C.planAt, today()) / 7) + 1 : null;
+  coBubble('coach', C.plan
+    ? `Hi again. You're on <b>${esc(C.plan.name)}</b>${wk ? `, week ${wk} of ${C.plan.weeks}` : ''} — ${esc(coachAnswerText(COACH_STEPS[0], A))}, ${C.plan.days.length} days, ${C.plan.minutes} min.`
+    : 'Hi again. Your answers are saved — want a plan from them?');
+  coMenu();
+}
+function coMenu() {
+  const C = S.coach;
+  coAnswer(`${coChips([...(C.plan ? [['see', 'See my plan']] : []), ['new', C.plan ? 'New plan' : 'Build my plan'], ['answers', 'Change my answers'], ['test', 'Fitting test']])}
+    <div class="sub" style="margin-top:8px">Session debriefs, weekly reviews and chat come next — they'll use your AI key.</div>`);
+  $('#coAns', CO.bg).querySelectorAll('[data-cov]').forEach(b => b.onclick = () => {
+    const v = b.dataset.cov;
+    coBubble('me', esc(b.textContent));
+    if (v === 'see') return coPreview(C.plan, true);
+    if (v === 'new') return coInvite();
+    if (v === 'answers') return coAnswers();
+    if (v === 'test') { closeAllModals(); return openFitTest('home'); }
+  });
+}
+/* The next unanswered step, or the fitting-test invite once they're all in. */
+function coNext() {
+  const A = S.coach.answers;
+  const st = COACH_STEPS.find(s => (!s.show || s.show(A)) && !(S.coach.asked || []).includes(s.id));
+  if (!st) { S.coach.setupDone = true; S.coach.setupAt = S.coach.setupAt || today(); save(); return coInvite(); }
+  coAsk(st, () => { (S.coach.asked = S.coach.asked || []).push(st.id); save(); coNext(); });
+}
+/* Ask one step; done() runs once it's answered. */
+function coAsk(st, done) {
+  const A = S.coach.answers;
+  coBubble('coach', esc(st.ask(A)));
+  const finish = text => { coBubble('me', esc(text)); save(); done(); };
+  const wire = fn => $('#coAns', CO.bg).querySelectorAll('[data-cov]').forEach(b => b.onclick = () => fn(b.dataset.cov, b));
+  if (st.kind === 'single') {
+    coAnswer(coChips(st.opts(A), A[st.id] != null ? [String(A[st.id])] : null));
+    wire(v => { A[st.id] = /^\d+$/.test(v) ? +v : v; finish(coachAnswerText(st, A)); });
+  } else if (st.kind === 'multi') {
+    const sel = new Set((A[st.id] || []).map(String));
+    const draw = () => {
+      coAnswer(`${coChips(st.opts(A), [...sel])}<button class="btn primary sm wide" id="coOk" style="margin-top:8px">${sel.size ? 'Done' : esc(st.none || 'Done')}</button>`);
+      wire((v, b) => { sel.has(v) ? sel.delete(v) : sel.add(v); b.classList.toggle('on'); b.setAttribute('aria-pressed', sel.has(v)); $('#coOk', CO.bg).textContent = sel.size ? 'Done' : (st.none || 'Done'); });
+      $('#coOk', CO.bg).onclick = () => { A[st.id] = [...sel]; finish(coachAnswerText(st, A)); };
+    };
+    draw();
+  } else if (st.kind === 'date') {
+    const nextMeet = (S.meets || []).filter(m => m.date > today()).sort((a, b) => a.date < b.date ? -1 : 1)[0];
+    const cur = A.eventDate && A.eventDate !== 'none' ? A.eventDate : nextMeet ? nextMeet.date : '';
+    coAnswer(`<div class="row" style="gap:8px;align-items:flex-end"><div class="field grow" style="margin:0"><label for="coDate">Event date</label><input type="date" id="coDate" min="${today()}" value="${esc(cur)}"></div>
+      <button class="btn primary sm" id="coDateOk">Use date</button></div>${coChips([['none', 'No event yet']])}`);
+    $('#coDateOk', CO.bg).onclick = () => { const v = $('#coDate', CO.bg).value; if (!v) return toast('Pick a date, or tap No event yet'); A.eventDate = v; finish(coachAnswerText(st, A)); };
+    wire(() => { A.eventDate = 'none'; finish('No event yet'); });
+  } else if (st.kind === 'days') {
+    const sel = new Set(A.days || []);
+    const line = () => sel.size ? `${sel.size} day${sel.size === 1 ? '' : 's'} → <b>${esc(coachSplitName(sel.size))}</b>` : 'Tap your training days.';
+    coAnswer(`${coChips(COACH_WD.map(w => [w[0], w[1]]), [...sel])}<div class="sub" id="coSplit" style="margin:8px 0" aria-live="polite">${line()}</div><button class="btn primary sm wide" id="coOk">Done</button>`);
+    wire((v, b) => {
+      if (!sel.has(v) && sel.size >= 6) return toast('Pick at least one rest day');
+      sel.has(v) ? sel.delete(v) : sel.add(v);
+      b.classList.toggle('on', sel.has(v)); b.setAttribute('aria-pressed', sel.has(v));
+      $('#coSplit', CO.bg).innerHTML = line();
+    });
+    $('#coOk', CO.bg).onclick = () => { if (!sel.size) return toast('Tap at least one day'); A.days = [...sel]; finish(coachAnswerText(st, A)); };
+  } else if (st.kind === 'dayPlace') {
+    const dp = { ...(A.dayPlace || {}) };
+    coAnswer(`${coachDays(A).map(d => `<div class="row between" style="margin:4px 0"><span>${COACH_WD.find(w => w[0] === d)[1]}</span>
+      <div class="seg" data-codp="${d}"><button data-v="gym" class="${dp[d] !== 'home' ? 'on' : ''}">Gym</button><button data-v="home" class="${dp[d] === 'home' ? 'on' : ''}">Home</button></div></div>`).join('')}
+      <button class="btn primary sm wide" id="coOk" style="margin-top:8px">Done</button>`);
+    $('#coAns', CO.bg).querySelectorAll('[data-codp]').forEach(sg => sg.querySelectorAll('button').forEach(b => b.onclick = () => {
+      dp[sg.dataset.codp] = b.dataset.v; sg.querySelectorAll('button').forEach(x => x.classList.toggle('on', x === b));
+    }));
+    $('#coOk', CO.bg).onclick = () => { A.dayPlace = dp; finish(coachAnswerText(st, A)); };
+  } else if (st.kind === 'place') coAskPlace(st, A, finish);
+}
+/* Kit in two taps (spec §1a): an existing place, a standard gym, or a few chips. */
+function coAskPlace(st, A, finish) {
+  const gym = st.which === 'gym';
+  const make = (name, kit, extras) => {
+    const p = { id: uid(), name, kit: ['bodyweight', ...kit].filter((v, i, a) => a.indexOf(v) === i), ...(extras ? { extras } : {}) };
+    S.settings.places = [...places(), p];
+    return p.id;
+  };
+  const chipsKit = () => {
+    const sel = new Set();
+    coAnswer(`${coChips(COACH_HOME_KIT.map(k => [k[0], k[1]]))}<button class="btn primary sm wide" id="coOk" style="margin-top:8px">Nothing — bodyweight</button>`);
+    $('#coAns', CO.bg).querySelectorAll('[data-cov]').forEach(b => b.onclick = () => {
+      const v = b.dataset.cov; sel.has(v) ? sel.delete(v) : sel.add(v);
+      b.classList.toggle('on', sel.has(v)); b.setAttribute('aria-pressed', sel.has(v));
+      $('#coOk', CO.bg).textContent = sel.size ? 'Done' : 'Nothing — bodyweight';
+    });
+    $('#coOk', CO.bg).onclick = () => {
+      const picked = COACH_HOME_KIT.filter(k => sel.has(k[0]));
+      A[st.id] = make(gym ? 'Gym' : 'Home', picked.flatMap(k => k[2]), picked.flatMap(k => k[3]));
+      finish(picked.length ? picked.map(k => k[1]).join(', ') : 'Nothing — bodyweight');
+    };
+  };
+  const fresh = () => {
+    if (!gym) return chipsKit();
+    coAnswer(coChips([['std', 'Yes, standard'], ['sm', 'Strongman gym'], ['small', 'Smaller than that']]));
+    $('#coAns', CO.bg).querySelectorAll('[data-cov]').forEach(b => b.onclick = () => {
+      const v = b.dataset.cov;
+      if (v === 'small') { coBubble('me', 'Smaller than that'); coBubble('coach', 'What has it got?'); return chipsKit(); }
+      const preset = PLACE_PRESETS.find(p => p.name === (v === 'sm' ? 'Strongman gym' : 'Commercial gym'));
+      const kit = preset.kit || (catalogue().V.equipment || []).map(e => e.id || e);
+      A[st.id] = make(v === 'sm' ? 'Strongman gym' : 'Gym', kit, null);
+      finish(b.textContent);
+    });
+  };
+  if (!places().length) return fresh();
+  coAnswer(coChips([...places().map(p => [p.id, p.name]), ['new', gym ? 'Another gym' : 'Set up home']], A[st.id] ? [A[st.id]] : null));
+  $('#coAns', CO.bg).querySelectorAll('[data-cov]').forEach(b => b.onclick = () => {
+    const v = b.dataset.cov;
+    if (v !== 'new') { A[st.id] = v; return finish(b.textContent); }
+    coBubble('me', esc(b.textContent));
+    coBubble('coach', esc(gym ? 'Is it a standard gym — racks, barbells, dumbbells, cables and machines?' : 'What have you got at home?'));
+    fresh();
+  });
+}
+/* Spec §1b: offer the fitting test before building, or use a recent one. */
+function coInvite() {
+  const t = coachRecentTest();
+  if (t) { coBubble('coach', `Using your fitting test from ${esc(fmtDate(t.date))} — it shapes the plan.`); return coBuildAndShow(t); }
+  coBubble('coach', 'Want to do the fitting test first? 15 minutes at home now, the gym hour on your first gym day. It finds your weak spots and starting weights, and the plan uses both.');
+  coAnswer(coChips([['home', 'Home screen now'], ['full', 'Full test at the gym'], ['skip', 'Skip — build from my answers']]));
+  $('#coAns', CO.bg).querySelectorAll('[data-cov]').forEach(b => b.onclick = () => {
+    const v = b.dataset.cov;
+    coBubble('me', esc(b.textContent));
+    if (v === 'home') { S.coach.awaitTest = true; save(); closeAllModals(); return openFitTest('home'); }
+    if (v === 'full') { S.coach.awaitTest = true; coBubble('coach', 'Good — here\'s a plan from your answers for now. When the test is in, I\'ll rebuild it with your results.'); }
+    coBuildAndShow(null);
+  });
+}
+function coBuildAndShow(test) {
+  const plan = coachBuild(S.coach.answers, test);
+  if (!plan) return coBubble('coach', 'I need at least one training day to build a plan.');
+  S.coach.draft = plan; save();
+  coPreview(plan);
+}
+/* The plan as day cards, with Swap on each exercise and Accept. */
+function coPreview(plan, readOnly) {
+  const fmtX = x => x.event ? `${x.sets} × 20 m carry` : `${x.sets} × ${x.reps[0]}–${x.reps[1]} @ RIR ${x.rir}`;
+  const dayHtml = (d, di, w) => (d[w] || []).map((x, xi) => `<div class="co-x"><div class="grow"><b>${esc(candName(x.key))}</b>
+      <div class="sub">${fmtX(x)}${x.notes.length ? ` · ${esc(x.notes.join(' · '))}` : ''}</div></div>
+      ${!readOnly && x.alts.length ? `<button class="btn xs ghost" data-coswap="${di}|${w}|${xi}" aria-label="Swap ${esc(candName(x.key))}">Swap</button>` : ''}</div>`).join('');
+  coBubble('coach', `<b>${esc(plan.name)}</b> · ${plan.days.length} day${plan.days.length === 1 ? '' : 's'} · ${plan.minutes} min · ${plan.weeks} weeks${plan.days[0].B ? ' · A/B weeks' : ''}
+    ${plan.changes.length ? `<ul class="fit-flags" style="margin:6px 0">${plan.changes.map(c => `<li>${esc(c)}</li>`).join('')}</ul>` : ''}
+    ${plan.warnings.map(w => `<div class="sub" style="color:var(--gold);margin:4px 0">⚠ ${esc(w)}</div>`).join('')}
+    <div id="coPlan">${plan.days.map((d, di) => `<div class="co-day"><div class="row between"><b>${esc(COACH_WD.find(w => w[0] === d.wd)[1])} · ${esc(d.name)}</b><span class="sub">${esc(d.placeName)}</span></div>
+      ${d.B ? `<div class="eyebrow" style="margin-top:4px">A week</div>${dayHtml(d, di, 'A')}<div class="eyebrow" style="margin-top:6px">B week</div>${dayHtml(d, di, 'B')}` : dayHtml(d, di, 'A')}</div>`).join('')}</div>`);
+  const log = $('#coLog', CO.bg), card = log.lastElementChild;
+  card.querySelectorAll('[data-coswap]').forEach(b => b.onclick = () => coSwap(plan, b.dataset.coswap));
+  if (readOnly) return coMenu();
+  coAnswer(`${coChips([['accept', 'Accept — put it on my calendar'], ['answers', 'Change my answers']])}
+    <div class="sub" style="margin-top:6px">Nothing changes until you accept. Weights fill in from your history and your first RIR sets.</div>`);
+  $('#coAns', CO.bg).querySelectorAll('[data-cov]').forEach(b => b.onclick = () => {
+    coBubble('me', esc(b.textContent));
+    if (b.dataset.cov === 'answers') return coAnswers();
+    coachAccept(plan, n => {
+      coBubble('coach', `Done — ${n} session${n === 1 ? '' : 's'} on your calendar, starting ${esc(relDay(S.workouts.filter(w => w.prog === 'coach-' + plan.id && w.status === 'planned').map(w => w.date).sort()[0] || today()).toLowerCase())}. Open me any time to change it.`);
+      coMenu();
+    });
+  });
+}
+function coSwap(plan, ref) {
+  const [di, w, xi] = ref.split('|'), d = plan.days[+di], list = d[w], x = list[+xi];
+  modal({
+    title: `Swap ${candName(x.key)}`,
+    body: x.alts.map(c => `<button class="axrow" data-coalt="${esc(c)}"><span class="lbl">${esc(candName(c))}</span></button>`).join(''),
+    foot: '<button class="btn ghost" data-close>Cancel</button>',
+    onOpen: bg => bg.querySelectorAll('[data-coalt]').forEach(b => b.onclick = () => {
+      const c = b.dataset.coalt, place = coachPlace(d.placeId);
+      const others = list.filter((y, i) => i !== +xi).map(y => y.key);
+      if (!coachOk(c, place, { easy: S.coach.answers.easy || [] }, others)) return toast('That clashes with something else that day');
+      x.alts = [x.key, ...x.alts.filter(a => a !== c)]; x.key = c;
+      S.coach.draft = plan; save(); closeModal();
+      const row = $(`[data-coswap="${ref}"]`, CO.bg);
+      if (row) row.closest('.co-x').querySelector('b').textContent = candName(c);
+    }),
+  });
+}
+/* Every answer, pre-filled; change one and go straight back to building. */
+function coAnswers() {
+  const A = S.coach.answers;
+  coBubble('coach', 'Your answers — tap one to change it.');
+  const steps = COACH_STEPS.filter(s => !s.show || s.show(A));
+  coAnswer(`<div class="co-answers">${steps.map(s => `<button class="axrow" data-costep="${s.id}"><span class="lbl">${esc(s.ask(A))}<span class="dimmer" style="display:block">${esc(coachAnswerText(s, A))}</span></span></button>`).join('')}</div>
+    <button class="btn primary sm wide" id="coBuild" style="margin-top:8px">Build my plan</button>`);
+  $('#coAns', CO.bg).querySelectorAll('[data-costep]').forEach(b => b.onclick = () => {
+    const st = COACH_STEPS.find(s => s.id === b.dataset.costep);
+    coAsk(st, () => coAnswers());
+  });
+  $('#coBuild', CO.bg).onclick = () => { coBubble('me', 'Build my plan'); S.coach.setupDone = true; save(); coInvite(); };
+}
+function openCoachSettings() {
+  const C = coachMem();
+  modal({
+    title: 'Coach settings',
+    body: `<div class="eyebrow">What the coach remembers</div>
+      <div class="sub" style="margin:4px 0 10px">Stored with your training data — on this phone, in exports and in Drive sync. Training data isn't touched by anything here.</div>
+      <button class="btn sm wide" id="csAns">See and change my answers</button>
+      <div class="eyebrow" style="margin-top:14px">Notes</div>
+      ${C.notes.length ? C.notes.map((n, i) => `<div class="row between" style="margin:4px 0"><span>${esc(n)}</span><button class="btn xs ghost" data-csdel="${i}" aria-label="Forget this note">✕</button></div>`).join('')
+        : '<div class="sub">No notes yet. The coach will ask before remembering anything.</div>'}
+      <button class="btn sm danger wide" id="csForget" style="margin-top:14px">Forget everything</button>`,
+    foot: '<button class="btn primary" data-close>Done</button>',
+    onOpen: bg => {
+      $('#csAns', bg).onclick = () => { closeModal(); if (CO) coAnswers(); };
+      bg.querySelectorAll('[data-csdel]').forEach(b => b.onclick = () => { C.notes.splice(+b.dataset.csdel, 1); save(); closeModal(); openCoachSettings(); });
+      $('#csForget', bg).onclick = () => confirmDlg('Forget your answers, notes and plan draft? Your training log and any plan already on the calendar stay.', () => {
+        S.coach = { setupDone: false, answers: {}, notes: [], asked: [], forgotAt: Date.now() }; save(); closeAllModals(); render(); toast('The coach has forgotten everything');
+      }, 'Forget');
+    },
+  });
 }
 
 /* ---------------- blood pressure and blood glucose (D16, health-page-spec §Vitals) ----------------
@@ -16517,6 +17052,11 @@ const W98_MENUS = [
     ['Health', () => go('health')],
     ['Events', () => go('meets')],
   ] },
+  { label: 'Coach', items: [
+    ['Coach…', () => openCoach()],
+    ['My answers…', () => openCoach('answers')],
+    ['Fitting test…', () => openFitTest('home')],
+  ] },
   { label: 'Tools', items: [
     ['Tools…', () => openTools()],
     '-',
@@ -16609,7 +17149,8 @@ function aboutDlg() {
 /* ============================================================
    BOOT
    ============================================================ */
-document.querySelectorAll('#nav button').forEach(b => b.onclick = () => go(b.dataset.page));
+document.querySelectorAll('#nav button[data-page]').forEach(b => b.onclick = () => go(b.dataset.page));
+$('#navCoach').onclick = () => openCoach();
 $('#settingsBtn').onclick = openSettings;
 $('#profileBtn').onclick = () => openProfile();
 $('#toolsBtn').onclick = () => openTools();

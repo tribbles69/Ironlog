@@ -706,6 +706,53 @@ window.smoke = async function smoke(opts) {
     }
   });
 
+  await step('flow: coach — setup chat, plan builder, accept (D9)', async () => {
+    const keep = { coach: JSON.stringify(S.coach || {}), places: JSON.stringify(S.settings.places || []), programs: [...S.programs], n: S.workouts.length };
+    let pid = null;
+    try {
+      const gym = { id: 'zzgym', name: 'Gym', kit: ['bodyweight', ...PLACE_PRESETS[1].kit] };
+      const home = { id: 'zzhome', name: 'Home', kit: ['bodyweight', 'dumbbells', 'resistance_band'], extras: ['bench'] };
+      S.settings.places = [...JSON.parse(keep.places), gym, home];
+      // the spec's two test cases
+      const aaron = coachBuild({ goal: 'strongman', where: 'gym', gymPlace: 'zzgym', days: ['mon', 'tue', 'wed', 'thu', 'fri'], minutes: 45,
+        experience: 'over2y', priority: ['deadlift/trap_bar/bilateral/none'], easy: [] }, null);
+      const lower = aaron.days.find(d => d.name === 'Lower');
+      if (lower.A[0].key !== 'deadlift/trap_bar') throw new Error(`Lower main ${lower.A[0].key}`);
+      if (!lower.A.some(x => x.event)) throw new Error('no strongman event on Lower');
+      if (aaron.days.some(d => d.A.length !== 7)) throw new Error('45 min should hold 7');
+      aaron.days.forEach(d => ['A', 'B'].forEach(w => { const ks = (d[w] || []).map(x => x.key);
+        if (ks.some(k => k.startsWith('leg-press/')) && ks.some(k => k.startsWith('back-squat/') || k === 'deadlift/trap_bar')) throw new Error(`${d.name} ${w}: leg press with squat or trap bar`); }));
+      const chelsea = coachBuild({ goal: 'general', where: 'both', gymPlace: 'zzgym', homePlace: 'zzhome', days: ['mon', 'wed', 'fri'],
+        dayPlace: { wed: 'home' }, minutes: 45, experience: 'under6m', easy: ['knees'] }, null);
+      if (chelsea.days.some(d => d.B)) throw new Error('beginners get no B week');
+      if (chelsea.days.some(d => d.A.some(x => x.rir != null && x.rir < 2))) throw new Error('beginner RIR under 2');
+      if (chelsea.days[0].A[0].key !== 'bench-press/dumbbells') throw new Error(`beginner bench ${chelsea.days[0].A[0].key}`);
+      const homeDay = chelsea.days.find(d => d.placeName === 'Home');
+      if (homeDay.A.some(x => !kitHas(x.key.split('/')[1], home))) throw new Error('home day uses kit that isn\'t at home');
+      // the chat: open, answer the first step, accept a plan
+      S.coach = { setupDone: false, answers: {}, notes: [] };
+      openCoach(); await wait(80);
+      if (modalTitle() !== 'Coach') throw new Error(`coach opened "${modalTitle()}"`);
+      const chip = document.querySelector('#coAns [data-cov="strength"]');
+      if (!chip) throw new Error('first question has no Strength chip');
+      chip.click(); await wait(40);
+      if (S.coach.answers.goal !== 'strength') throw new Error('answer not stored');
+      close();
+      let n = 0;
+      coachAccept(aaron, k => { n = k; });
+      await wait(40);
+      if (modalTitle() === 'Other planned sessions') { document.querySelector('#coKeep').click(); await wait(40); }
+      pid = S.coach.planProg;
+      const ws = S.workouts.filter(w => w.prog === pid);
+      if (!n || ws.length !== n || ws[0].loads !== 'rir' || ws[0].exercises.some(e => !e.leaf)) throw new Error(`accept installed ${ws.length}/${n}`);
+      return `Aaron: ${aaron.days.map(d => d.A[0].key.split('/')[0]).join(', ')}; Chelsea starts ${chelsea.days.map(d => d.A[0].key.split('/')[0]).join(', ')}; accept → ${n} sessions`;
+    } finally {
+      if (pid) removeProgram(pid);
+      S.coach = JSON.parse(keep.coach); S.settings.places = JSON.parse(keep.places); S.programs = keep.programs; bust(); save(); close();
+      if (S.workouts.length !== keep.n) throw new Error('cleanup left sessions behind');
+    }
+  });
+
   await step('food removed: tab gone, old route lands home', async () => {
     close();
     if (document.querySelector('#nav [data-page="food"]')) throw new Error('Food tab still in the nav');
