@@ -2124,7 +2124,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.73.0';
+const APP_VERSION = '0.74.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -14294,7 +14294,11 @@ function coMenuPick(v, label) {
   if (v === 'checkin') { closeAllModals(); return openCheckin(today()); }
   if (v.startsWith('ramp:')) { const [, k, kg] = v.split(':'); return openRamp(k, +kg || 0); }
   if (v.startsWith('plates:')) { const kg = +v.split(':')[1] || 0; if (/Open the plate loader/.test(label)) return openPlates(kg); return coAnswerTopic('plates', String(nice(dw(kg)))); }
-  if (v.startsWith('sugg:')) { const [, kind, arg] = v.split(':'); return coOfferChange(kind, arg); }
+  if (v.startsWith('sugg:')) { const [, kind, ...rest] = v.split(':'); return coOfferChange(kind, rest.join(':') || undefined); }
+  if (v.startsWith('fitres:')) return openFitResults(v.slice(7));
+  if (v === 'cardio') { closeAllModals(); return openCardioSetup(); }
+  if (v === 'mobility') { closeAllModals(); const r = BUILTIN_ROUTINES[0]; return r && openMobility(r.id, today()); }
+  if (v.startsWith('note:')) { const t = v.slice(5), M = coachMem(); M.notes = [...M.notes, `Doesn't like ${t}`].slice(-20); save(); coBubble('coach', 'Saved to your notes.'); return coMenu(); }
   if (v.startsWith('apply:')) { const [, kind, arg] = v.split(':'); return coApplyChange(kind, arg); }
   if (v === 'undo') return coUndoChange();
   if (v.startsWith('easy:')) {
@@ -14914,7 +14918,7 @@ const CO_TOPICS = [
   ['review', /\b(week|weekly|review|summary|how am i doing|progress overall|recap)\b/],
   ['today', /\b(today|tonight|next session|session today|workout today|what (do|should) i (do|train|lift))\b/],
   ['plan', /\b(plan|program\w*|routine|split|schedule)\b/],
-  ['lift', /\b(e1rm|1rm|max|going|strength|stronger|pr|prs)\b/],
+  ['lift', /\b(e1rm|1rm|max|going|strength|stronger|pr|prs)\b|\bhow('?s| is) my\b/],
 ];
 const CO_STOP = new Set('what when where which with have does that this your about should there from much many they then them into will would could been were their make need want know tell really the and you how can why are for its mean means doing'.split(' '));
 /* Which logged lift the text names: the longest matching exercise name, then
@@ -14985,6 +14989,34 @@ const CO_INTENTS = [
   ['warmup', /\b(warm ?ups?|ramp up)\b/],
   ['weightfor', /\b(how heavy|what weight|how much (weight )?(should|do|can) i|what should i (lift|use|put on)|working weight|weight for \d+)\b/],
   ['max', /\b(1rm|one rep max|my max|max (on|for)|what('s| is) my (best|max))\b/],
+  ['swapreq', /\b(swap|replace|switch|change|sub(stitute)?)\b.+\b(for|with|to|instead( of)?)\b/],
+  ['reschedule', /\b(move|reschedule|push back|shift|postpone)\b.*\b(session|workout|today|tomorrow|day)\b|\btomorrow instead\b/],
+  ['skip', /\b(skip(ping)? (today|this|the session|training|it)|not training today|day off today|taking (today|the day) off)\b/],
+  ['consecutive', /\b(two days in a row|days in a row|back to back|consecutive days|every day|same muscle)\b/],
+  ['days', /\b(train|training|lift|go)\b.*\b(\d|one|two|three|four|five|six) (days?|times)\b|\b(change|fewer|more|different) (training )?days\b|\bto (\d|one|two|three|four|five|six) days\b/],
+  ['lasttrained', /\bwhen did i (last )?(train|do|hit|work)\b|\blast (time i )?(trained|did|hit)\b/],
+  ['tonnage', /\b(how much (did i lift|weight did i (lift|move)|volume)|tonnage|total volume|kg moved)\b/],
+  ['fittest', /\b(fitting test|test results?|my profile( type)?)\b/],
+  ['balanceq', /\b(my )?balance\b/],
+  ['standards', /\b(tier|rank(ing|ed)?|standards?|strength level|how strong am i|good (\w+ )?for my (weight|size|age)|elite|intermediate|novice)\b/],
+  ['points', /\b(dots|ipf|gl points|wilks|my total|total is|powerlifting total)\b/],
+  ['goal', /\b(my goals?|goal progress|(close|far) (am i )?(from|to) my goal|hit my goal)\b/],
+  ['openers', /\b(openers?|attempts?|third attempt|second attempt|what should i open)\b/],
+  ['progress', /\b(how (do|should) i progress|progressive overload|(when|how) (should|do) i (add|increase|put on) (weight|load|kg)|go up in weight|increase the weight)\b/],
+  ['failure', /\b(to failure|failure training|rir 0|grind(ing)?|go to failure)\b/],
+  ['restq', /\b(rest (between|time|period)|how long (should i |do i )?rest|rest timer)\b/],
+  ['glossary', /\b(what('s| is| are| does)|explain|define|meaning of)\b.*\b(amrap|tempo|top ?set|back-?off|drop ?sets?|super ?sets?|warm-?up sets?|deload|e1rm|rpe|rir|double progression|accumulation|intensification|taper|peak(ing)?)\b/],
+  ['reps', /\b(how many reps|rep range|reps for (strength|size|muscle|growth))\b/],
+  ['sets', /\b(how many sets|sets per (week|muscle|session))\b/],
+  ['length', /\b(how long (should )?(a |my )?(session|workout)s?|session length|workout length)\b/],
+  ['nutrition', /\b(eat|eating|food|diet|protein|calories|kcal|carbs|macros|meals?|nutrition)\b/],
+  ['supps', /\b(creatine|supplements?|caffeine|pre-?workout|vitamins?|whey)\b/],
+  ['cardioq', /\b(should i do cardio|cardio|conditioning|zone 2|running|steps)\b/],
+  ['mobility', /\b(stretch\w*|mobility|flexib\w*|tight hips|tight hamstrings)\b/],
+  ['sleepbad', /\b(slept (badly|bad|poorly|terribly|awful)|bad (night|sleep)|no sleep|didn'?t sleep|tired today|i'?m sore|feel(ing)? sore|sore today|feel(ing)? (weak|flat|rubbish|awful|off|terrible)|weaker today|off day)\b/],
+  ['ill', /\b(ill|sick|a cold|flu|covid|fever|unwell|poorly)\b/],
+  ['travel', /\b(holiday|vacation|away (for|next)|travel\w*|trip)\b/],
+  ['dislike', /\b(i (hate|don'?t like|dislike|can'?t do|cannot do|can'?t stand)|not a fan of)\b/],
   ['short', /\b(short on time|no time|in a rush|quick session|only (have|got) \d+|\d+ ?min(ute)?s? (only|today|left)|hurry|pushed for time)\b/],
   ['home', /\b(at home|home today|no gym|gym('s| is)? (closed|shut)|travel\w*|hotel|away from (the )?gym)\b/],
   ['motivate', /\b(don'?t feel like|unmotivated|no motivation|can'?t be bothered|lazy|not feeling it|motivat\w*|want to skip|thinking of skipping)\b/],
@@ -14993,6 +15025,8 @@ const CO_INTENTS = [
   ['count', /\b(how many (sessions|workouts|times)|streak|sessions this (week|month|year)|consisten\w*|how often)\b/],
   ['help', /\b(what can you do|what do you do|help me|how do (i use|you work)|what can i ask)\b|^\s*help\b/],
   ['who', /\b(who are you|are you (a bot|an? ai|real|human|chatgpt|claude)|what are you)\b/],
+  ['bye', /^\s*(bye|goodbye|see ya|see you|cya|later|laters|night|goodnight|ttyl)\b/],
+  ['laugh', /^\s*(lol|lmao|haha\w*|hehe|ha|😂|🤣|😅|nice|cool)\s*[!.]*\s*$/],
   ['greet', /^\s*(hi|hey|hello|hiya|yo|sup|alright|morning|afternoon|evening|good (morning|afternoon|evening))\b/],
   ['thanks', /\b(thanks|thank you|cheers|nice one|legend|ta)\b/],
 ];
@@ -15006,8 +15040,8 @@ function coMatchMore(text, q) {
   if (follow && /^\s*(and|what about|how about|same for|now|ok and)\b/.test(q)) return { topic: ctx.topic, arg: lift };
   if (/^\s*(yes|yeah|yep|sure|ok|okay|go on|please|cool|right)\s*$/.test(q)) return ctx.next ? { topic: ctx.next[0], arg: ctx.next[1] } : { topic: 'okay' };
   if (/^\s*(no|nope|nah|no thanks|not now)\s*$/.test(q)) return { topic: 'nothanks' };
-  const hit = CO_INTENTS.find(([, re]) => re.test(q));
-  if (hit && !((hit[0] === 'greet' || hit[0] === 'thanks') && !short)) {   // "thanks, should I deload?" is a question
+  const hit = CO_INTENTS.find(([t, re]) => re.test(q) && !(t === 'swapreq' && !lift));   // a swap needs a lift to swap
+  if (hit && !((hit[0] === 'greet' || hit[0] === 'thanks' || hit[0] === 'bye') && !short)) {   // "thanks, should I deload?" is a question
     return { topic: hit[0], arg: CO_LIFT_TOPICS.includes(hit[0]) ? lift : text };
   }
   /* "squat?" on its own, after a lift answer: the same question for that lift. */
@@ -15194,6 +15228,18 @@ function coSuggestion(kind, arg) {
       /* the last one of the session: the accessory, not the main lift */
       edit: w => { const e = [...w.exercises].reverse().find(x => x.leaf && coPrimeMuscle(x.leaf) === arg && x.sets.length); if (e) e.sets.push({ ...e.sets[e.sets.length - 1], done: false, rpe: null }); } };
   }
+  if (kind === 'swapto') {
+    const [from, to] = String(arg).split('>'), leaf = candLeaf(to), ws = coFuture(42).filter(w => w.exercises.some(e => exKey(e) === from));
+    if (!leaf || !ws.length) return null;
+    return { text: `Swap ${leafName(from)} for ${candName(to)} in your upcoming sessions.`, ws,
+      edit: w => w.exercises.forEach(e => { if (exKey(e) !== from) return; e.leaf = leaf; e.legacyName = displayName(leaf); delete e.auto; e.sets.forEach(s => { s.w = 0; delete s.planW; delete s.auto; }); }) };
+  }
+  if (kind === 'move') {
+    const n = coFuture(60).sort((a, b) => a.date < b.date ? -1 : 1)[0];
+    if (!n) return null;
+    const to = addDaysISO(n.date, 1);
+    return { text: `Move ${n.name} from ${fmtDate(n.date)} to ${fmtDate(to)}.`, ws: [n], edit: w => { w.date = to; } };
+  }
   if (kind === 'deload') {
     const ws = coFuture(7);
     if (!ws.length) return null;
@@ -15215,7 +15261,7 @@ function coApplyChange(kind, arg) {
   const sg = coSuggestion(kind, arg);
   if (!sg) return coBubble('coach', 'Nothing to change any more.');
   const C = coachMem();
-  C.lastChange = { at: Date.now(), text: sg.text, before: sg.ws.map(w => ({ id: w.id, exercises: structuredClone(w.exercises), light: !!w.light })) };
+  C.lastChange = { at: Date.now(), text: sg.text, before: sg.ws.map(w => ({ id: w.id, date: w.date, exercises: structuredClone(w.exercises), light: !!w.light })) };
   sg.ws.forEach(sg.edit);
   bust(); save();
   coBubble('coach', `Done — ${sg.ws.length} session${sg.ws.length === 1 ? '' : 's'} changed. Weights fill in from your RIR as usual.`);
@@ -15225,10 +15271,181 @@ function coUndoChange() {
   const C = coachMem(), L = C.lastChange;
   if (!L) return coBubble('coach', 'Nothing to undo.');
   let n = 0;
-  L.before.forEach(b => { const w = S.workouts.find(x => x.id === b.id && x.status === 'planned'); if (w) { w.exercises = b.exercises; if (b.light) w.light = true; else delete w.light; n++; } });
+  L.before.forEach(b => { const w = S.workouts.find(x => x.id === b.id && x.status === 'planned'); if (w) { w.exercises = b.exercises; if (b.date) w.date = b.date; if (b.light) w.light = true; else delete w.light; n++; } });
   C.lastChange = null; bust(); save();
   coBubble('coach', `Undone — ${n} session${n === 1 ? '' : 's'} back as they were.`);
   coMenu();
+}
+/* ---- the gap-fillers (0.74.0): training how-tos, your numbers, situations ---- */
+const CO_GLOSSARY = [
+  [/amrap/, 'AMRAP', 'As many reps as possible — in Ironlog, as many clean reps as you can, stopping one shy of failure. It shows where you really are on the day.'],
+  [/tempo/, 'Tempo', 'Four numbers for how long each part of a rep takes: down, pause at the bottom, up, pause at the top. 3-1-1-0 is three seconds down, a one-second pause, one second up. X means as fast as you can.'],
+  [/top ?set/, 'Top set', 'Your heaviest working set of the day for a lift — usually one hard set, then back-off sets after it.'],
+  [/back-?off/, 'Back-off sets', 'Lighter sets after the top set, for extra practice and volume without the strain of repeating the heavy one.'],
+  [/drop ?sets?/, 'Drop set', 'Straight after a set, take weight off and keep going. Counts for volume but never for PRs.'],
+  [/super ?sets?/, 'Superset', 'Two exercises back to back with little rest between, usually working different muscles — it fits more into the time. Ironlog marks pairs in the exercise notes.'],
+  [/warm-?up sets?/, 'Warm-up sets', 'Lighter sets building to your working weight. They stay out of volume and PRs.'],
+  [/deload/, 'Deload', 'A lighter week — about half the sets and easier effort (RIR 3–4) — to let fatigue drop so progress can carry on.'],
+  [/e1rm/, 'e1RM', 'Estimated one-rep max: what a set says you could lift once, from the weight, reps and reps in reserve. It lets 100 × 5 be compared with 110 × 2.'],
+  [/rpe/, 'RPE', 'Rate of perceived exertion, 1–10. RPE 10 is a true max; RPE 8 means two reps left. Ironlog stores RPE and shows RIR.'],
+  [/rir/, 'RIR', 'Reps in reserve: how many more you could have done. 0 is failure, 2 is two left.'],
+  [/double progression/, 'Double progression', 'Work up the reps in a range (say 6–10) at one weight; when every set hits the top at the target RIR, add weight and start back at the bottom.'],
+  [/accumulation|intensification|taper|peak/, 'Training blocks', 'Accumulation builds volume at moderate weights; intensification gets heavier with fewer reps; peak is heavy singles and doubles; taper keeps the weights but halves the sets so you arrive fresh.'],
+];
+function coAnsGlossary(text) {
+  const q = String(text || '').toLowerCase(), g = CO_GLOSSARY.find(([re]) => re.test(q));
+  return g ? { html: `<b>${esc(g[1])}:</b> ${esc(g[2])}` } : { html: 'Which term? Try AMRAP, tempo, top set, back-off, drop set, superset, deload, e1RM or RIR.' };
+}
+function coAnsRest() {
+  const m = S.settings.restDefault || 180, a = S.settings.restAccessory || 90, goal = (S.coach.answers || {}).goal;
+  return { html: `Your rest timer: <b>${fmtSec(m)}</b> after main lifts, <b>${fmtSec(a)}</b> after everything else (Settings → Rest timer).<br>${goal === 'size'
+    ? 'For size, 1½–3 minutes on compounds and 1–2 on isolation keeps the quality up — rushing it costs reps.'
+    : 'For strength, 3–5 minutes on heavy sets is normal — rest until you could do the set again properly. Supersets save time on the accessories.'}` };
+}
+function coAnsRepsSets(kind) {
+  const A = S.coach.answers || {}, gid = A.goal || 'strength', G = coachGoalDef(gid), exp = A.experience || '6mTo2y';
+  const sets = COACH_TPL.sets[exp];
+  const goal = (COACH_GOALS.find(g => g[0] === gid) || [gid, gid])[1].toLowerCase();
+  if (kind === 'reps') return { html: `For ${esc(goal)}: main lifts ${G.main.reps.join('–')} reps, second compounds ${G.secondary.reps.join('–')}, accessories ${G.accessory.reps.join('–')}, at about RIR ${coachRir(G.main.rir, exp)}.<br>Strength lives at the low end; size grows across a wide range as long as sets end close to failure.` };
+  return { html: `For your experience: ${sets.main} working sets on a main lift, ${sets.secondary} on a second compound, ${sets.accessory} on accessories.<br>Across the week, roughly 10–20 hard sets per muscle — fewer if you're new or recovering, more for a muscle you're prioritising.`, act: [['volume', 'My volume this week']] };
+}
+function coAnsProgress(D) {
+  const k = (CO && CO.ctx && CO.ctx.lift) || (D.lifts[0] || {}).key;
+  return { html: 'Two ways, and Ironlog does both:<br>• <b>RIR plans:</b> when a set feels easier than its target RIR, your e1RM goes up and next session\'s weights follow — automatically.<br>• <b>Rep ranges:</b> hit the top of the range on every set at the target RIR, then add weight (2.5 kg, or 2 kg on dumbbells) and start at the bottom again.<br>Either way: log honest RIR, and small jumps beat big ones.',
+    act: k ? [[`weightfor:${k}`, `Next ${shortLift(leafName(k)).toLowerCase()} weight`]] : [] };
+}
+function coAnsFailure() {
+  return { html: 'Mostly, stop 1–3 reps short. Going to failure costs a lot of recovery for little extra gain, and grinders on heavy squats and deadlifts are where form breaks. Fine on the last set of an isolation exercise, or an AMRAP that\'s meant to test you. Your plans already aim for RIR 1–2.' };
+}
+function coAnsStandards(D, key) {
+  const ranks = allRanks();
+  if (!bodyweightKg()) return { html: 'Strength standards are multiples of bodyweight — log your weight in a check-in and I can rank you.', act: [['checkin', 'Check in now']] };
+  const r = key ? rankFor(key) : null;
+  if (key && !r) return { html: `${esc(leafName(key))} has no strength standard, or isn't logged yet.` };
+  if (r) return { html: `<b>${esc(r.name)}</b>: ${esc(r.tierName)} — ${r.ratio.toFixed(2)}× bodyweight (e1RM ${wt(r.e1)}), score ${Math.round(r.score)}/100.${r.nextName ? ` ${wt(r.toNext)} more to ${esc(r.nextName)}.` : ''}<br>These are general able-bodied tables — a reference point, not a verdict.` };
+  if (!ranks.length) return { html: 'Nothing ranked yet — rankings cover lifts with a strength standard once they\'re logged.' };
+  return { html: `Your ranked lifts:<br>${ranks.slice(0, 6).map(x => `• ${esc(x.name)} — ${esc(x.tierName)} (${Math.round(x.score)})`).join('<br>')}<br>General able-bodied tables — a reference point, not a verdict.` };
+}
+function coAnsPoints() {
+  const ps = priorityStats();
+  if (!ps.bw) return { html: 'DOTS needs your bodyweight — log it in a check-in.', act: [['checkin', 'Check in now']] };
+  if (!ps.untested) return { html: `Tested total: <b>${wt(ps.total)}</b> (${ps.lifts.map(l => `${esc(shortLift(l.name))} ${wt(l.kg)}`).join(', ')}) — DOTS <b>${Math.round(ps.dots)}</b> at ${wt(ps.bw)}.` };
+  const est = ps.lifts.map(l => ({ ...l, kg: l.tested ? l.kg : bestSingleInfo(l.key).kg }));
+  const tot = est.reduce((a, l) => a + l.kg, 0), d = dots(tot, ps.bw, S.settings.sex);
+  return { html: `${ps.untested} of your lifts ${ps.untested === 1 ? 'hasn\'t' : 'haven\'t'} been tested, so this is an estimate from your best sets: total about <b>${wt(tot)}</b>, DOTS about <b>${Math.round(d)}</b>.<br>Log a test (Calendar → Events → Log test) for the real figure.` };
+}
+function coAnsGoal() {
+  const gs = S.goals || [];
+  if (!gs.length) return { html: 'No goals set. Add one on Home → Goals — a lift target, a bodyweight or a number of sessions — and I\'ll track it.' };
+  return { html: gs.slice(0, 5).map(g => {
+    const cur = goalCurrent(g), isCount = g.type === 'sessions', f = v => isCount ? Math.round(v) : wt(v);
+    const left = g.deadline ? daysBetween(today(), g.deadline) : null;
+    return `• <b>${esc(g.name || 'Goal')}</b>: ${f(cur)} of ${f(g.target)}${left != null ? ` · ${left >= 0 ? `${left} days left` : 'deadline passed'}` : ''}`;
+  }).join('<br>') };
+}
+function coAnsOpeners(D) {
+  const ps = priorityStats(), pct = openerPct();
+  const rows = ps.lifts.map(l => { const b = l.tested ? l.kg : bestSingleInfo(l.key).kg; return b ? `• ${esc(shortLift(l.name))}: about <b>${wt(roundBar(b * pct / 100))}</b> (${pct}% of ${l.tested ? 'your tested' : 'your estimated'} ${wt(b)})` : `• ${esc(shortLift(l.name))}: no data yet`; });
+  return { html: `Openers — a weight you could triple on a bad day:<br>${rows.join('<br>')}${D.event ? `<br>Calendar → ${esc(D.event.name || 'your event')} → Meet day plans all three attempts.` : ''}` };
+}
+function coAnsLength() {
+  const A = S.coach.answers || {}, mins = coLifted(30).map(w => w.summary && w.summary.mins).filter(m => m >= 10);
+  return { html: `${A.minutes ? `Your plan is built for ${A.minutes} minutes. ` : ''}${mins.length ? `Your sessions have run about ${Math.round(median(mins))} minutes this month. ` : ''}45–75 minutes covers most good sessions: the main lift first and fully rested, then accessories — supersets if time is short.` };
+}
+function coAnsNutrition() {
+  const bw = bodyweightKg(), goal = (S.coach.answers || {}).goal;
+  return { html: `General guidance, not dietary advice: ${bw ? `about <b>${Math.round(bw * 1.6)}–${Math.round(bw * 2.2)} g of protein a day</b> at ${wt(bw)} (1.6–2.2 g per kg)` : 'about 1.6–2.2 g of protein per kg of bodyweight a day'}, spread over 3–5 meals. ${goal === 'size' ? 'For size, eat a little over maintenance — gaining 0.25–0.5% of bodyweight a week.' : 'Eat at maintenance for strength; a deficit makes PRs hard.'} Carbs before training help heavy sessions.<br>Ironlog doesn't track food — that's moving to its own app. If you have a medical condition, follow your doctor or dietitian.` };
+}
+function coAnsSupps() {
+  const bw = bodyweightKg();
+  return { html: `General information, not medical advice. The two with good evidence for lifting: <b>creatine monohydrate</b>, 3–5 g every day (timing doesn't matter), and <b>caffeine</b>, about ${bw ? `${Math.round(bw * 3)} mg` : '3 mg per kg'} 30–60 minutes before training if you tolerate it. Protein powder is just convenient food. Most others have little evidence. Check with a pharmacist or doctor if you take medication or have a health condition.` };
+}
+function coAnsCardio() {
+  return { html: 'Yes, some. Two or three sessions of 20–40 minutes at an easy pace (zone 2 — you can still talk) help recovery between sets and heart health, and barely touch strength. Keep hard cardio away from heavy leg days. Train → Cardio coaches you by heart rate.', act: [['cardio', 'Set up cardio']] };
+}
+function coAnsMobility() {
+  const r = BUILTIN_ROUTINES[0], n = r ? mobDone(r.id, today()) : 0, total = r ? mobTotal(r) : 0;
+  return { html: `${r ? `<b>${esc(r.name)}</b>: ${n >= total ? 'done today ✓' : `${n} of ${total} today`}. ` : ''}Mobility pays off most as strength at the end of the range — loaded stretches and slow eccentrics — rather than long passive holds, especially if you're hypermobile. Before lifting, a few minutes of easy movement and lighter sets is plenty.`, act: r ? [['mobility', n && n < total ? 'Resume the routine' : 'Start the routine']] : [] };
+}
+function coAnsBalance() {
+  const l = mobTestLatest('bal_ec', 'L'), r = mobTestLatest('bal_ec', 'R');
+  if (!l && !r) return { html: 'No balance tests yet. The eyes-closed single-leg stand is on Health → Mobility tests → Balance test, and in the fitting test.' };
+  const g = mobTestGap('bal_ec');
+  return { html: `Eyes closed: left ${l ? nice(l.v) + ' s' : '—'}, right ${r ? nice(r.v) + ' s' : '—'}${g && !g.even ? ` — ${g.weak === 'L' ? 'left' : 'right'} ${g.gap.toFixed(0)}% behind` : ''}.<br>Train the weaker side first: single-leg stands while brushing your teeth, then harder (eyes closed, soft surface).` };
+}
+function coAnsFitTest() {
+  const t = fitTestsSorted().pop();
+  if (!t) return { html: 'No fitting test yet. The home screen takes 15 minutes and shapes your plan.', act: [['test', 'Fitting test']] };
+  const R = fitResults(t);
+  return { html: `<b>${esc(R.type || 'Your profile')}</b> (${esc(fmtDate(t.date))}).${R.flags.length ? `<br>Flags: ${R.flags.slice(0, 4).map(f => esc(f.text)).join('; ')}.` : ' No flags.'}`, act: [[`fitres:${t.id}`, 'Full results'], ['test', 'Retest']] };
+}
+function coAnsSleepBad(D) {
+  return { html: coPick(['A rough day happens. Warm up and see how the first working set moves. If it\'s slow, stay at the easy end of every RIR target — or mark it an off day (the ⋯ on the session) so it doesn\'t count against your progress.',
+    'Train, but take it as it comes: keep the main lift, aim for RIR 2–3 instead of 1, and drop the last accessory. Off days are allowed and don\'t reset anything.']),
+    act: [['short', 'Shorter session'], ['checkin', 'Log my check-in']] };
+}
+function coAnsIll() {
+  return { html: 'Rest until you\'re well — I can\'t give medical advice, so if it\'s more than a cold, see a doctor. When you\'re back, make the first session lighter (RIR 3–4) and build up over a week; your plan carries on from there.' };
+}
+function coAnsTravel() {
+  return { html: 'A week off won\'t cost you anything you can\'t get back fast — it can even work as a deload. If you want to train, a hotel gym or bodyweight work (push-ups, split squats, rows on a table, carries with a bag) keeps things ticking. Back home, start a little lighter and you\'ll be at your numbers within a week or two.', act: [['home', 'Today at home'], ['sugg:deload', 'Make next week lighter']] };
+}
+function coAnsConsecutive() {
+  return { html: 'Yes — just not the same thing hard twice. Different muscles on back-to-back days is fine (that\'s what splits are for). Heavy squats or deadlifts two days running is where fatigue piles up; give those 48 hours.' };
+}
+function coAnsTonnage() {
+  const ws = coLifted(7), T = ws.map(sessionTotals);
+  const vol = T.reduce((a, x) => a + x.volume, 0), sets = T.reduce((a, x) => a + x.sets, 0);
+  const prev = coLifted(14).filter(w => daysBetween(w.date, today()) >= 7).map(sessionTotals).reduce((a, x) => a + x.volume, 0);
+  return { html: ws.length ? `This week: ${ws.length} session${ws.length === 1 ? '' : 's'}, ${sets} working sets, <b>${wt(vol, 0)}</b> moved${prev ? ` (${wt(prev, 0)} the week before)` : ''}.` : 'Nothing logged this week yet.', act: [['volume', 'By muscle']] };
+}
+const CO_BODY_WORDS = { legs: ['quads', 'hams', 'glutes'], leg: ['quads', 'hams', 'glutes'], quads: ['quads'], hamstrings: ['hams'], glutes: ['glutes'], chest: ['chest'], back: ['lats', 'upperback'], lats: ['lats'],
+  shoulders: ['fdelts', 'sdelts'], delts: ['fdelts', 'sdelts'], arms: ['biceps', 'triceps'], biceps: ['biceps'], triceps: ['triceps'], calves: ['calves'], abs: ['abs'], core: ['abs'], traps: ['traps'] };
+function coAnsLastTrained(text) {
+  const q = ' ' + String(text || '').toLowerCase().replace(/[^a-z ]/g, ' ') + ' ';
+  const word = Object.keys(CO_BODY_WORDS).find(w => q.includes(` ${w} `));
+  if (word) {
+    const ks = CO_BODY_WORDS[word];
+    const wo = S.workouts.filter(w => w.status === 'completed').sort((a, b) => a.date < b.date ? 1 : -1)
+      .find(w => sessionMuscles(w).list.some(m => ks.includes(m.key) && m.sets > 0));
+    return { html: wo ? `You last trained ${esc(word)} ${esc(relDay(wo.date).toLowerCase())} — ${esc(wo.name)}, ${esc(fmtDate(wo.date))}.` : `No ${esc(word)} work logged yet.` };
+  }
+  const k = coFindLift(q);
+  if (k) { const l = lastSession(k); return { html: l ? `Last ${esc(leafName(k))}: ${esc(relDay(l.date).toLowerCase())} (${esc(fmtDate(l.date))}).` : `No ${esc(leafName(k))} logged yet.` }; }
+  const last = coLifted(400).sort((a, b) => a.date < b.date ? 1 : -1)[0];
+  return { html: last ? `Your last session was ${esc(relDay(last.date).toLowerCase())} — ${esc(last.name)}.` : 'Nothing logged yet.' };
+}
+function coAnsDays() {
+  return { html: 'Change it any time: tap <b>Change my answers</b>, pick your new days, then build a new plan. The number of days picks the split (3 = push/pull/legs, 4 = upper/lower twice, 5 = PPL + upper/lower).', act: [['answers', 'Change my answers'], ['new', 'Build a new plan']] };
+}
+function coAnsSkip(D) {
+  const n = D.next && D.next.date === D.t ? D.next : null;
+  return { html: `That's fine — one session changes nothing. Don't double up later.${n ? ' Want me to move today\'s session to tomorrow, or just leave it?' : ''}`, act: n ? [['sugg:move', 'Move it to tomorrow'], ['short', 'Do a short one instead']] : [] };
+}
+function coAnsReschedule(D) {
+  const n = D.next;
+  if (!n) return { html: 'Nothing planned to move.' };
+  return { html: `Your next session is <b>${esc(n.name)}</b>, ${esc(relDay(n.date).toLowerCase())}. I can push it back a day.`, act: [['sugg:move', 'Move it a day later']] };
+}
+/* "swap squat for leg press": the named lift, to the named exercise, in upcoming sessions. */
+function coAnsSwapReq(D, text) {
+  const q = ' ' + String(text || '').toLowerCase() + ' ', parts = q.split(/\b(?:for|with|to|instead of)\b/);
+  const from = coFindLift(' ' + parts[0] + ' ');
+  const hit = parts[1] ? resolveName(parts.slice(1).join(' ').replace(/[^a-z0-9 -]/g, ' ').trim()) : null;
+  if (!from) return { html: 'Which exercise do you want to swap? Try "swap squat for leg press".' };
+  if (!hit) return { html: `Swap ${esc(leafName(from))} for what? Name the exercise — "swap ${esc(shortLift(leafName(from)).toLowerCase())} for …".` };
+  const to = `${hit.leaf.movement}/${hit.leaf.equipment}`;
+  if (!coSuggestion('swapto', `${from}>${to}`)) return { html: `${esc(leafName(from))} isn't in any upcoming session.` };
+  coOfferChange('swapto', `${from}>${to}`);
+  return { html: null };
+}
+function coAnsDislike(text) {
+  const t = String(text).replace(/^.*?\b(hate|don'?t like|dislike|can'?t do|cannot do|can'?t stand|not a fan of)\b\s*/i, '').replace(/[.!?]+$/, '').trim();
+  if (!t) return { html: 'What don\'t you like?' };
+  const k = (S.workouts.find(w => w.status === 'planned' && w.date >= today() && w.exercises.some(e => displayName(e.leaf || {}).toLowerCase().includes(t.toLowerCase().replace(/s$/, '')))) || null);
+  const e = k && k.exercises.find(x => displayName(x.leaf || {}).toLowerCase().includes(t.toLowerCase().replace(/s$/, '')));
+  return { html: `Noted — you don't like ${esc(t)}. Want me to remember that${e ? ' and swap it in your plan' : ''}?`,
+    act: [[`note:${t}`, 'Remember it'], ...(e && coSuggestion('swap', exKey(e)) ? [[`sugg:swap:${exKey(e)}`, 'Swap it in my plan']] : [])] };
 }
 function coAnsWhy() {
   const c = (CO && CO.ctx) || {};
@@ -15277,12 +15494,45 @@ function coAnswerTopic(topic, arg) {
   else if (topic === 'rirrpe') r = coAnsRirRpe(arg);
   else if (topic === 'pain') r = coAnsPain();
   else if (topic === 'gear') r = coAnsGear(D, arg);
+  else if (topic === 'glossary') r = coAnsGlossary(arg);
+  else if (topic === 'restq') r = coAnsRest();
+  else if (topic === 'reps' || topic === 'sets') r = coAnsRepsSets(topic);
+  else if (topic === 'progress') r = coAnsProgress(D);
+  else if (topic === 'failure') r = coAnsFailure();
+  else if (topic === 'standards') r = coAnsStandards(D, coFindLift(' ' + String(arg || '').toLowerCase() + ' ') || (arg && String(arg).includes('/') ? arg : null));
+  else if (topic === 'points') r = coAnsPoints();
+  else if (topic === 'goal') r = coAnsGoal();
+  else if (topic === 'openers') r = coAnsOpeners(D);
+  else if (topic === 'length') r = coAnsLength();
+  else if (topic === 'nutrition') r = coAnsNutrition();
+  else if (topic === 'supps') r = coAnsSupps();
+  else if (topic === 'cardioq') r = coAnsCardio();
+  else if (topic === 'mobility') r = coAnsMobility();
+  else if (topic === 'balanceq') r = coAnsBalance();
+  else if (topic === 'fittest') r = coAnsFitTest();
+  else if (topic === 'sleepbad') r = coAnsSleepBad(D);
+  else if (topic === 'ill') r = coAnsIll();
+  else if (topic === 'travel') r = coAnsTravel();
+  else if (topic === 'consecutive') r = coAnsConsecutive();
+  else if (topic === 'tonnage') r = coAnsTonnage();
+  else if (topic === 'lasttrained') r = coAnsLastTrained(arg);
+  else if (topic === 'days') r = coAnsDays();
+  else if (topic === 'skip') r = coAnsSkip(D);
+  else if (topic === 'reschedule') r = coAnsReschedule(D);
+  else if (topic === 'dislike') r = coAnsDislike(arg);
+  else if (topic === 'swapreq') { r = coAnsSwapReq(D, arg); if (r.html == null) return; }
+  else if (topic === 'bye') r = { html: coPick(['See you — train well.', 'Later. Go get it.', 'Bye — I\'m here when you need me.']) };
+  else if (topic === 'laugh') r = { html: coPick(['😄', 'Ha.', '🙂 Anything else?']) };
   else if (topic === 'why') r = coAnsWhy();
   else if (topic === 'today') r = coAnsToday(D);
   else if (topic === 'review') { r = coReview(D); S.coach.lastReview = D.t; save(); }
   else if (topic === 'debrief') r = coDebrief(arg ? S.workouts.find(w => w.id === arg) : D.lastDone);
   else if (topic === 'stall') r = arg ? coAnsStall(D, arg) : (D.lifts.find(l => l.stall) ? coAnsStall(D, D.lifts.find(l => l.stall).key) : { html: 'None of your main lifts is stalled — each has beaten its mark within its last five sessions.' });
-  else if (topic === 'lift') r = arg ? coAnsLift(D, arg) : { html: D.lifts.map(coLiftLine).join('<br>') || 'No main lifts logged yet.' };
+  else if (topic === 'lift') {
+    /* "how's my deadlift" with no deadlift logged: say so, then the main lifts. */
+    const named = !arg && CO && CO.lastText && (String(CO.lastText).toLowerCase().match(/\b(deadlift|bench|squat|overhead press|ohp|row|curl|pull-?up|log press)\b/) || [])[1];
+    r = arg ? coAnsLift(D, arg) : { html: `${named ? `No ${esc(named)} logged yet.${D.lifts.length ? ' Your main lifts:<br>' : ''}` : ''}${D.lifts.map(coLiftLine).join('<br>') || (named ? '' : 'No main lifts logged yet.')}` };
+  }
   else if (topic === 'deload') r = coAnsDeload(D);
   else if (topic === 'weak') r = coAnsWeak(D);
   else if (topic === 'event') r = coAnsEvent(D);
@@ -15295,7 +15545,7 @@ function coAnswerTopic(topic, arg) {
   coBubble('coach', r.html + (debugOn() ? ' ' + why('digest') : ''));
   /* Remember what this was about, so "and my squat?" and "why?" work next. */
   const lift = arg && String(arg).includes('/') && !String(arg).includes(' ') ? arg : null;
-  if (['why', 'thanks', 'nothanks', 'okay', 'greet', 'help', 'who'].includes(topic)) return coFollow(r.act || []);   // small talk keeps the thread
+  if (['why', 'thanks', 'nothanks', 'okay', 'greet', 'help', 'who', 'bye', 'laugh'].includes(topic)) return coFollow(r.act || []);   // small talk keeps the thread
   CO.ctx = { topic, lift: lift || (CO.ctx || {}).lift || null, because: r.because || null, next: (r.act || [])[0] ? String(r.act[0][0]).split(':') : null };
   if (topic === 'stall' && !r.because) CO.ctx.because = 'A lift counts as stalled when, over its last five sessions, none of the last four beat the first by more than 1% (e1RM, off days left out). The reasons come from your RIR against targets, sleep, bodyweight, the muscle\'s weekly sets and missed sessions.';
   if (topic === 'deload' && !r.because) { const s = coDeloadScore(D); CO.ctx.because = s.pts.length ? `Score ${s.score}: ${s.pts.map(p => `${p[1]} (+${p[0]})`).join(', ')}. 3 or more says take a lighter week.` : 'Nothing in your log adds to the deload score — no stalls, effort on target, sleep and energy steady.'; }
