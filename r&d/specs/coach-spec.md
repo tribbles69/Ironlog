@@ -263,6 +263,15 @@ says what it's based on. AI is only the fallback for a typed question the
 local matcher can't place (§7). §6 and §7 below are now local; the AI notes
 in them apply only to that fallback.
 
+**Tailor it — built 0.72.0.** `coTailorPrompt` sends every slot (exercise,
+role, sets, reps, RIR, up to 5 `can_swap_to`) plus the digest; Claude must
+return `{changes:[{day, week, slot, swap, sets, reason}]}`, at most 6.
+`coTailorCheck` keeps a swap only if it's in that slot's list and passes
+`coachOk` (kit, extras, go-easy, same-day duplicates and never-together), and
+a set change only if it's ±1 within 1–6; the rest are counted as dropped.
+The diff is shown with *Use these changes* / *Keep the original*; one tailor
+per plan.
+
 ## 5. Training digest (local)
 
 One function, `coachDigest(weeks)`, builds a compact summary the AI features

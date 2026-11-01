@@ -2124,7 +2124,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.71.0';
+const APP_VERSION = '0.72.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -11412,6 +11412,7 @@ const AI_MODEL = 'claude-haiku-5-5';
 const AI_FEATURES = [
   { id: 'voice', name: 'Voice logging, hard sentences', what: 'Reads a spoken set when the on-device grammar can\'t', tokIn: 450, tokOut: 40, per: 'set' },
   { id: 'plan', name: 'Plan writer', what: 'Turns your own plan, in any format, into an Ironlog plan', tokIn: 4500, tokOut: 2500, per: 'plan' },
+  { id: 'tailor', name: 'Tailor it', what: 'Claude fits a coach-built plan to your log — swaps and set changes you approve', tokIn: 3500, tokOut: 400, per: 'plan' },
   { id: 'ask', name: 'Coach, odd questions', what: 'Only for typed questions the coach can\'t answer on its own', tokIn: 700, tokOut: 180, per: 'question' },
 ];
 const AI_CAP_DEFAULT = 1;
@@ -14469,16 +14470,118 @@ function coPreview(plan, readOnly) {
   const log = $('#coLog', CO.bg), card = log.lastElementChild;
   card.querySelectorAll('[data-coswap]').forEach(b => b.onclick = () => coSwap(plan, b.dataset.coswap));
   if (readOnly) return coMenu();
-  coAnswer(`${coChips([['accept', 'Accept — put it on my calendar'], ['answers', 'Change my answers']])}
-    <div class="sub" style="margin-top:6px">Nothing changes until you accept. Weights fill in from your history and your first RIR sets.</div>`);
+  const ai = aiStatus(), tailored = !!plan.tailored;
+  coAnswer(`${coChips([['accept', 'Accept — put it on my calendar'], ...(ai === 'on' && !tailored ? [['tailor', 'Tailor it with Claude']] : []), ['answers', 'Change my answers']])}
+    <div class="sub" style="margin-top:6px">Nothing changes until you accept. Weights fill in from your history and your first RIR sets.${ai !== 'on' && !tailored ? ' <i>Tailor it</i> — Claude fitting the plan to your log — needs your AI key (Settings → AI).' : ''}</div>`);
   $('#coAns', CO.bg).querySelectorAll('[data-cov]').forEach(b => b.onclick = () => {
     coBubble('me', esc(b.textContent));
     if (b.dataset.cov === 'answers') return coAnswers();
+    if (b.dataset.cov === 'tailor') return coTailor(plan);
     coachAccept(plan, n => {
       coBubble('coach', `Done — ${n} session${n === 1 ? '' : 's'} on your calendar, starting ${esc(relDay(S.workouts.filter(w => w.prog === 'coach-' + plan.id && w.status === 'planned').map(w => w.date).sort()[0] || today()).toLowerCase())}. Open me any time to change it.`);
       coMenu();
     });
   });
+}
+/* Tailor it (coach-spec §4): one Claude call over the built plan and the
+   training digest. Claude may only pick swaps from each slot's own swap list
+   and move set counts by one; every answer is re-checked here and anything
+   that fails is dropped. Shown as a diff; nothing changes until accepted. */
+function coTailorPrompt(plan) {
+  const D = coachDigest(), C = S.coach, A = C.answers || {};
+  const slots = [];
+  plan.days.forEach((d, di) => ['A', 'B'].forEach(w => (d[w] || []).forEach((x, si) => slots.push({
+    day: di, week: w, slot: si, name: `${d.name}${d.B ? ' ' + w : ''}`, exercise: x.key, role: x.role, sets: x.sets,
+    reps: x.reps ? x.reps.join('-') : 'carry', rir: x.rir, can_swap_to: x.alts.slice(0, 5) }))));
+  return {
+    system: 'You tailor a strength plan inside the Ironlog app. Reply with JSON only: {"changes":[{"day":0,"week":"A","slot":2,"swap":"movement/equipment or null","sets":3 or null,"reason":"one short line"}]}. '
+      + 'Rules: at most 6 changes; only change something the lifter\'s data gives a reason for (a stalled or lagging lift, low volume for a muscle, fitting-test flags, notes, goal); '
+      + '"swap" must be one of that slot\'s can_swap_to values exactly; "sets" may only be the current sets plus or minus 1; never touch a main lift\'s exercise unless it is stalled; '
+      + 'no medical or injury advice. If nothing needs changing, reply {"changes":[]}.',
+    user: JSON.stringify({
+      lifter: { goal: A.goal, experience: A.experience, minutes: A.minutes, go_easy_on: A.easy || [], notes: C.notes || [] },
+      log: { lifts: D.lifts.map(l => ({ name: l.name, e1rm_kg: l.now && +l.now.toFixed(1), stalled: !!l.stall })),
+        sets_per_muscle_this_week: Object.fromEntries(Object.entries(D.muscles).map(([k, v]) => [MUSCLES[k] || k, +v.toFixed(1)])),
+        rir_vs_target: D.rirGap != null ? +D.rirGap.toFixed(1) : null,
+        fitting_test: D.testR ? { profile: D.testR.type, flags: D.testR.flags.map(f => f.text) } : null },
+      plan: slots }),
+  };
+}
+/* Keep only what passes the local rules; say how many were dropped. */
+function coTailorCheck(plan, reply) {
+  const keep = [], easy = (S.coach.answers || {}).easy || [];
+  let dropped = 0;
+  (Array.isArray(reply && reply.changes) ? reply.changes : []).slice(0, 6).forEach(c => {
+    const d = plan.days[c.day], list = d && d[c.week === 'B' ? 'B' : 'A'], x = list && list[c.slot];
+    if (!x) { dropped++; return; }
+    const out = { day: c.day, week: c.week === 'B' ? 'B' : 'A', slot: c.slot, reason: String(c.reason || '').slice(0, 140) };
+    if (c.swap && c.swap !== x.key) {
+      const others = list.filter((y, i) => i !== c.slot).map(y => y.key);
+      if (!x.alts.includes(c.swap) || !coachOk(c.swap, coachPlace(d.placeId), { easy }, others)) { dropped++; return; }
+      out.swap = c.swap;
+    }
+    if (c.sets != null && +c.sets !== x.sets) {
+      const n = Math.round(+c.sets);
+      if (!(Math.abs(n - x.sets) === 1 && n >= 1 && n <= 6)) { if (!out.swap) { dropped++; return; } }
+      else out.sets = n;
+    }
+    if (out.swap || out.sets) keep.push(out);
+  });
+  return { keep, dropped };
+}
+async function coTailor(plan) {
+  coBubble('coach', '<span class="co-typing" aria-label="Claude is working">•••</span>');
+  const dots = $('#coLog', CO.bg).lastElementChild;
+  let res;
+  try {
+    const p = coTailorPrompt(plan);
+    const r = await aiCall({ feature: 'tailor', system: p.system, user: p.user, maxTokens: 1500 });
+    res = coTailorCheck(plan, planParse(r.text));
+  } catch (e) {
+    dots.remove();
+    coBubble('coach', esc(e.nokey || e.capped || e.net || e.status ? aiWhy(e) : 'Claude\'s reply didn\'t make sense, so I\'ve kept the plan as it is.'));
+    return coPreviewChips(plan);
+  }
+  dots.remove();
+  coTailorShow(plan, res);
+}
+function coTailorShow(plan, res) {
+  if (!res.keep.length) {
+    coBubble('coach', `Claude had nothing to change${res.dropped ? ` that passed my checks (${res.dropped} suggestion${res.dropped === 1 ? '' : 's'} broke a rule and were dropped)` : ' — the plan already fits your log'}.`);
+    plan.tailored = true; S.coach.draft = plan; save();
+    return coPreviewChips(plan);
+  }
+  const line = c => {
+    const d = plan.days[c.day], x = d[c.week][c.slot];
+    const what = [c.swap ? `${candName(x.key)} → <b>${esc(candName(c.swap))}</b>` : `<b>${esc(candName(x.key))}</b>`, c.sets ? `${x.sets} → ${c.sets} sets` : ''].filter(Boolean).join(', ');
+    return `• ${esc(d.name)}${d.B ? ' ' + c.week : ''}: ${what}${c.reason ? `<div class="sub">${esc(c.reason)}</div>` : ''}`;
+  };
+  coBubble('coach', `<b>Claude suggests ${res.keep.length} change${res.keep.length === 1 ? '' : 's'}:</b><br>${res.keep.map(line).join('<br>')}${res.dropped ? `<div class="sub" style="margin-top:4px">${res.dropped} more broke a rule (kit, go-easy list, same-day clash, or too big a jump) and were dropped.</div>` : ''} <span class="chip blue">CLAUDE</span>`);
+  coAnswer(`${coChips([['use', 'Use these changes'], ['keep', 'Keep the original']], null, true)}`);
+  $('#coAns', CO.bg).querySelectorAll('[data-cov]').forEach(b => b.onclick = () => {
+    coBubble('me', esc(b.textContent));
+    plan.tailored = true;
+    if (b.dataset.cov === 'use') {
+      res.keep.forEach(c => {
+        const x = plan.days[c.day][c.week][c.slot];
+        if (c.swap) { x.alts = [x.key, ...x.alts.filter(a => a !== c.swap)]; x.key = c.swap; x.notes = [...x.notes.filter(n => !/^tailored/.test(n)), 'tailored'].filter(Boolean); }
+        if (c.sets) x.sets = c.sets;
+      });
+      plan.changes = [...plan.changes, `Tailored by Claude: ${res.keep.length} change${res.keep.length === 1 ? '' : 's'}.`];
+    }
+    S.coach.draft = plan; save();
+    coPreview(plan);
+  });
+}
+/* The preview's own buttons, without redrawing the plan. */
+function coPreviewChips(plan) {
+  const log = $('#coLog', CO.bg);
+  const card = [...log.querySelectorAll('.co-b.coach')].reverse().find(b => b.querySelector('#coPlan'));
+  if (!card) return coPreview(plan);
+  const keepLog = log.innerHTML;
+  coPreview(plan);
+  log.innerHTML = keepLog;   // the plan is already on screen; only the buttons were needed
+  log.querySelectorAll('[data-coswap]').forEach(b => b.onclick = () => coSwap(plan, b.dataset.coswap));
 }
 function coSwap(plan, ref) {
   const [di, w, xi] = ref.split('|'), d = plan.days[+di], list = d[w], x = list[+xi];
