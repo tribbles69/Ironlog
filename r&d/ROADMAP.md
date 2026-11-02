@@ -865,6 +865,17 @@ raises flags that change the plan.
   changes the profile drives are not specified yet — first build shows results
   and flags only.
 
+### [x] E13. Grippers and finger extension bands — shipped 0.75.0 (Aaron asked 2026-11-02)
+Two new movements in `r&d/data/exercises.json`: **Gripper Close** (equipment
+`gripper`) and **Finger Extension** (equipment `extension_band`, or a normal
+resistance band). Both default to one hand and are `loadOverride: per_side`, so
+the weight is the gripper's (or band's) rating per hand. Reps log as normal;
+timed holds use the existing isometric toggle ("Log as isometric hold"), with
+records per rating. Grip kit is pocket kit (`POCKET_KIT`): never flagged as
+missing at a place. Not done: gripper presets by brand/rating (lb → kg), and
+the rep-range "add weight" step still assumes 2.5 kg, which a fixed-rating
+gripper can't do.
+
 ---
 
 ## Parked

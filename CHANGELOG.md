@@ -13,6 +13,12 @@ rather than guessed.
 
 ---
 
+## 0.75.0 — 2 Nov 2026
+- **New: grip work.** Two new exercises — **Gripper Close** and **Finger Extension** (extension bands). Find them in the exercise picker under arms, or by typing "gripper" or "extension band".
+- Both are logged per hand: put your gripper's or band's rating in the weight box (in kg) and the reps.
+- **Timed holds:** open the exercise's menu and tap *Log as isometric hold* to log crush holds or band holds in seconds instead of reps. Holds keep their own records, separate from your rep sets.
+- Grippers and extension bands count as kit you carry, so they're never flagged as missing at a gym or place.
+
 ## 0.74.0 — 1 Nov 2026
 - **The coach answers a lot more, still without AI.** New topics:
   - **Training:** rest between sets (from your rest timer), reps and sets for your goal and experience, how to progress, training to failure, session length, cardio and stretching.

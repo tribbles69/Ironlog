@@ -24,7 +24,9 @@
       "stone",
       "farmers_handles",
       "sled",
-      "conan_wheel"
+      "conan_wheel",
+      "gripper",
+      "extension_band"
     ],
     "execution": ["bilateral", "alternating", "unilateral"],
     "load": {
@@ -577,6 +579,50 @@
       "aliases": [
         { "name": "Zottman Curl" },
         { "name": "Biceps Zottman" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "gripper-close",
+      "name": "Gripper Close",
+      "category": "arms",
+      "type": "strength",
+      "equipment": ["gripper"],
+      "defaultEquipment": "gripper",
+      "execution": ["unilateral", "alternating", "bilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["grip", "forearms"],
+      "secondary": [],
+      "loadOverride": "per_side",
+      "aliases": [
+        { "name": "Gripper" },
+        { "name": "Grippers" },
+        { "name": "Hand Gripper" },
+        { "name": "Hand Grippers" },
+        { "name": "Gripper Closes" },
+        { "name": "CoC Gripper" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "finger-extension",
+      "name": "Finger Extension",
+      "category": "arms",
+      "type": "strength",
+      "equipment": ["extension_band", "resistance_band"],
+      "defaultEquipment": "extension_band",
+      "execution": ["unilateral", "alternating", "bilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["forearms"],
+      "secondary": ["grip"],
+      "loadOverride": "per_side",
+      "aliases": [
+        { "name": "Finger Extensions" },
+        { "name": "Band Finger Extension" },
+        { "name": "Extension Band" },
+        { "name": "Extension Bands" },
+        { "name": "Finger Extensor" },
+        { "name": "Hand Extensor Band" }
       ],
       "verified": false
     },
