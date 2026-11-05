@@ -24,6 +24,7 @@ All run from the repo root.
 | --- | --- |
 | `node "r&d/tools/serve.mjs"` | Local server on http://localhost:5178 |
 | `node "r&d/tools/bump.cjs" 0.17.0` | Bumps `APP_VERSION`, `sw.js` and `version.json` together |
+| `node "r&d/tools/check-version.cjs"` | Checks those three and the changelog's top entry agree |
 | `node "r&d/tools/lint-scope.js"` | Finds undeclared identifiers across all script blocks |
 | `node "r&d/tools/validate-exercises.js"` | Checks `data/exercises.json` against the program and the phase 1 spec |
 | `node "r&d/tools/build-catalogue.cjs"` | Inlines `data/exercises.json` into `index.html` |
