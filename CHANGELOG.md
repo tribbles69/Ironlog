@@ -13,6 +13,10 @@ rather than guessed.
 
 ---
 
+## 0.79.0 — 5 Nov 2026
+- **New: choose the AI model for each feature.** In Settings → AI, voice logging, the plan writer, Tailor it and coach questions can each use **Haiku** (the default, cheapest), **Sonnet** or **Opus**. The cost per use and how many you get for $1 update as you change them.
+- Sonnet costs about 20× Haiku and Opus about 40×, so every use still costs a few pence at most. The bigger models are worth it for the plan writer, which reads messy plans and runs rarely.
+
 ## 0.78.1 — 5 Nov 2026
 - **Fixed:** the coach report and the Drive summary showed **0kg** total volume whenever a carry or timed hold was in range. It now adds up properly, and per-side lifts count both sides, as the rest of the app does.
 

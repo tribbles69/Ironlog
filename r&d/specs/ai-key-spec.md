@@ -66,3 +66,14 @@ logging ($1 / $5 — ten times the price).
 
 D9's coach, the cardio trend coach, prompt caching (no prompt here is long
 enough to cache yet), streaming.
+
+
+## Model per feature (0.79.0, Aaron 2026-11-05)
+
+`AI_MODELS` lists Haiku 5.5 ($0.10 / $0.50), Sonnet 5.5 ($2 / $10) and
+Opus 5.5 ($4 / $20) per million tokens in / out (Haiku's rate is for
+prompts under 100K tokens; every Ironlog call is far under). Each feature's
+model is `S.settings.aiModels[featureId]` (synced with settings), read through
+`aiModelFor()`; unset means Haiku. Settings → AI shows a picker per feature,
+and the cost hint and usage pricing use the chosen model. `aiCall` sends
+that model and records usage against the model the API reports.
