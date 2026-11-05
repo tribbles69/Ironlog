@@ -34,7 +34,8 @@ plus check-ins, goals and the next 7 planned days (`driveSummaryText`). Its
 id is kept as `summaryId` in the sync meta. It is output only: never read
 back or merged, and a failure to write it never fails the sync. Purpose:
 open on a phone, and let Claude read training through the Drive connector
-(the 1 MB+ backup is too large for that).
+(the 1 MB+ backup is too large for that). Its format follows
+`shared-summary-spec.md`, the cross-app convention for Aaron's apps.
 
 **Backup on Done** (0.78.0, Aaron 2026-11-05): tapping Done on the
 session-complete sheet runs `driveSync(true)` (`finishBackup`) when connected,
