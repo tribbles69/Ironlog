@@ -1532,7 +1532,8 @@ function backupDue() {
   // a Drive sync is a backup too (B6)
   const last = Math.max(st.lastExportAt || 0, syncMeta().lastSyncAt || 0) || null;
   const since = last || first;
-  return now - since > BACKUP_EVERY ? { last, days: Math.floor((now - since) / 864e5), drive: !!syncMeta().connected } : null;
+  /* Connected to Drive, backing up is one tap — so the reminder comes after 3 days, not 14. */
+  return now - since > (syncMeta().connected ? 3 * 864e5 : BACKUP_EVERY) ? { last, days: Math.floor((now - since) / 864e5), drive: !!syncMeta().connected } : null;
 }
 /* ---------------- Home as the landing page (D14, r&d/specs/home-landing-spec.md)
    Someone who hasn't installed Ironlog, or hasn't logged a session yet, sees
@@ -1858,6 +1859,17 @@ async function driveSync(interactive) {
 }
 /* After finishing or editing a session: sync quietly if this session is
    already signed in; never pops a sign-in by itself. */
+/* Backup on the Done tap. Google's token lasts an hour and there's no server
+   to renew it, so a sync can't run unseen later — but a tap is a user gesture,
+   which lets the sign-in run. With consent already given it's usually a quick
+   flash. Skipped if a sync finished in the last two minutes (autoSync on a
+   live token already did it). */
+function finishBackup() {
+  const m = syncMeta();
+  if (!m.connected || m.autoFinish === false) return;
+  if (m.lastSyncAt && Date.now() - m.lastSyncAt < 120e3) return;
+  driveSync(true).then(r => { if (r) toast('Backed up to Drive', 'green'); }).catch(e => toast(`Backup didn't run — ${e.message || 'try Sync now in Settings'}`));
+}
 function autoSync() {
   if (!syncMeta().connected || !driveTokenValid()) return;
   driveSync(false).then(r => { if (r) refreshSyncLine(); }).catch(() => { /* next manual sync will say */ });
@@ -1878,6 +1890,8 @@ function syncLine() {
         <button class="btn sm primary wide" id="stSyncNow" style="margin-bottom:8px">Connect Google Drive</button>`}
     ${cid ? `<label class="row" style="gap:8px;align-items:center;margin-bottom:8px"><input type="checkbox" id="stSyncKey" ${m.includeKey ? 'checked' : ''} style="width:auto">
       <span class="sub">Include my AI key in the backup</span></label>` : ''}
+    ${m.connected ? `<label class="row" style="gap:8px;align-items:center;margin-bottom:8px"><input type="checkbox" id="stSyncFinish" ${m.autoFinish !== false ? 'checked' : ''} style="width:auto">
+      <span class="sub">Back up when I tap Done after a session (Google may flash its sign-in)</span></label>` : ''}
     <details style="margin-bottom:6px"><summary class="sub">Advanced: Google client ID</summary>
       <input id="stClientId" value="${esc(m.clientId || '')}" placeholder="${esc(GOOGLE_CLIENT_ID || '….apps.googleusercontent.com')}" autocomplete="off" spellcheck="false" style="margin-top:6px">
       <div class="sub" style="margin-top:4px">Only needed if this copy wasn't built with one. Setup: r&amp;d/specs/drive-sync-spec.md.</div></details>
@@ -1897,6 +1911,8 @@ function refreshSyncLine(bg) {
   const now = $('#stSyncNow', host), off = $('#stSyncOff', host), key = $('#stSyncKey', host), cid = $('#stClientId', host);
   if (cid) cid.onchange = () => { const v = cid.value.trim(); const m = syncMeta(); if (v) m.clientId = v; else delete m.clientId; setSyncMeta(m); refreshSyncLine(); };
   if (key) key.onchange = () => setSyncMeta({ ...syncMeta(), includeKey: key.checked });
+  const fin = $('#stSyncFinish', host);
+  if (fin) fin.onchange = () => setSyncMeta({ ...syncMeta(), autoFinish: fin.checked });
   if (off) off.onclick = () => confirmDlg('Disconnect Google Drive? The backup file stays in your Drive; this phone just stops syncing to it.',
     async () => { await driveDisconnect(); refreshSyncLine(); toast('Disconnected'); }, 'Disconnect');
   if (now) now.onclick = async () => {
@@ -7742,7 +7758,8 @@ function showSummary(wo) {
       $('#sumShare', bg).onclick = () => openShare(wo);
       $('#sumCoach', bg).onclick = () => { closeAllModals(); render(); openCoach(`ask:debrief:${wo.id}`); };
       bg.querySelectorAll('[data-prshare]').forEach(b => b.onclick = () => openPRShare(prs[+b.dataset.prshare], wo));
-      $('#sumDone', bg).onclick = () => { closeAllModals(); go('home'); };
+      if (syncMeta().connected && syncMeta().autoFinish !== false) loadGis().catch(() => {});   // ready before Done, so the tap still counts for the sign-in
+      $('#sumDone', bg).onclick = () => { closeAllModals(); go('home'); finishBackup(); };
       if (prs.length) setTimeout(() => toast(`★ ${prs.length} new PR${prs.length === 1 ? '' : 's'}`, 'gold'), 300);
     },
   });
