@@ -43,6 +43,7 @@ for (const id of Object.keys(E.DEMO_MAP)) {
   const d = E.demoFor(m);
   for (const eq of m.equipment) {
     const tag = `${id}:${eq}`;
+    if (E.demoPose(d, eq, 0).g('skip')) continue;   // deliberately no figure for this variant
     let drift = 0, reach = 0, sink = 0, float = Infinity;
     try {
       for (let i = 0; i <= 10; i++) {

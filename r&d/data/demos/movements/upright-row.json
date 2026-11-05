@@ -1,0 +1,49 @@
+{
+  "pattern": "overhead",
+  "o": {
+    "path": null,
+    "torso": 0,
+    "elbow": "up",
+    "hand": [["root", 0.05, -0.575], ["root", 0.1, -0.06]],
+    "labels": [
+      "Arms long, bar against your thighs",
+      "Pull up, leading with the elbows",
+      "Elbows at shoulder height",
+      "Lower under control"
+    ],
+    "eq": {
+      "_": {
+        "draw": "barbell",
+        "plateR": 0.2
+      },
+      "cable": {
+        "draw": "cable",
+        "anchor": [0.12, 0.04]
+      },
+      "resistance_band": {
+        "draw": "band",
+        "anchor": [0.05, 0.02]
+      }
+    }
+  },
+  "text": {
+    "setup": "Stand tall holding the bar against your thighs, hands about shoulder-width or a little wider.",
+    "cues": [
+      "Lift your elbows up and out to the sides; the bar follows close to your body.",
+      "Stop when your elbows reach shoulder height.",
+      "Lower slowly back to your thighs."
+    ],
+    "mistakes": [
+      "Hands so close together that the shoulders pinch at the top.",
+      "Pulling higher than shoulder height.",
+      "Swinging the bar up with your hips."
+    ],
+    "variants": {
+      "barbell": "A wider grip is easier on the shoulders than a close one.",
+      "dumbbells": "Bells let each hand find a comfortable path.",
+      "cable": "A straight bar or rope on a low pulley keeps tension at the bottom.",
+      "smith": "The fixed track keeps the bar close to you.",
+      "resistance_band": "Stand on the band; it gets harder the higher you pull."
+    }
+  }
+}

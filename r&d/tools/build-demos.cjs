@@ -35,13 +35,14 @@ const KEYS = new Set([
   'thighA', 'shinA', 'kneePad', 'backPad', 'footPlate',
   'incline', 'legsUp', 'rootFrom', 'rootTo', 'abduct', 'elbowBend',
   'draw', 'rail', 'ssb', 'plateR', 'anchor', 'box', 'pins', 'preacher', 'chestPad',
+  'heel', 'skip',
 ]);
 const ENUMS = {
   base: ['stand', 'split', 'seat', 'bench', 'hang', 'front'],
   concentric: ['go', 'back'],
   path: ['midfoot', null],
   solve: ['midfoot', null],
-  hold: ['back', 'front', 'goblet', 'hands'],
+  hold: ['back', 'front', 'goblet', 'hands', null],
   arms: ['hold', 'target', 'angles'],
   elbow: ['down', 'up', 'fwd', 'back'],
   draw: ['barbell', 'trap', 'log', 'dumbbell', 'kettlebell', 'plate', 'cable', 'band', 'belt', 'none'],

@@ -13,6 +13,10 @@ rather than guessed.
 
 ---
 
+## 0.81.0 — 5 Nov 2026
+- **New exercise demos:** face pull, upright row, rear-delt row, Y-raise, straight-arm pulldown, pullover, concentration curl, spider curl, drag curl, sissy squat and hack squat — each with an animated figure, setup, cues, common mistakes and variant notes.
+- The barbell hack squat (bar behind the legs) is a different lift from the machine one, so it shows no figure rather than a wrong one.
+
 ## 0.80.1 — 5 Nov 2026
 - **New:** the front raise has an animated demo.
 - **Fixed:** a dark box could appear behind the exercise figure when Bar path was on.
