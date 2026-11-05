@@ -1,0 +1,20 @@
+{
+  "pattern": "hinge",
+  "o": {
+    "shin": [[0, 6], [0.45, 2], [1, 0]],
+    "thigh": [[0, 58], [0.45, 30], [1, -2]]
+  },
+  "text": {
+    "setup": "Wide stance, toes turned out, shins close to vertical. Grip inside your knees with arms straight down.",
+    "cues": [
+      "Push your knees out over your toes and pull the slack out.",
+      "Spread the floor apart with your feet as you stand.",
+      "Finish by squeezing your hips through."
+    ],
+    "mistakes": [
+      "Hips rising first and the knees caving in.",
+      "A stance so wide you can't push the knees out.",
+      "Starting with the hips too low."
+    ]
+  }
+}

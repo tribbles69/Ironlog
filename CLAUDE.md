@@ -19,5 +19,11 @@ root unless the app loads it. Quote the folder in the shell: `"r&d"`.
 
 Where a spec exists, it wins over the roadmap summary.
 
+**Exercise demos** (the animated figures on the Info tab) are data in
+`r&d/data/demos/`, built into `index.html` by `r&d/tools/build-demos.cjs` —
+never edit the `DEMO_PATTERNS` / `DEMO_MAP` / `DEMO_TEXT` lines by hand. To
+add or change one, follow `r&d/specs/exercise-demo-spec.md` §8 and finish with
+`r&d/tools/demo-check.cjs`.
+
 The app is a single large `index.html`. Grep before editing; line numbers in
 specs drift.

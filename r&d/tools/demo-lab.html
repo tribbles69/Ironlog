@@ -1,0 +1,318 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo Lab — Ironlog</title>
+<link rel="icon" href="data:,">
+<!--
+  Pose editor for exercise demos (spec r&d/specs/exercise-demo-spec.md §8).
+  Open through the local server, from the repo root:
+      node "r&d/tools/serve.mjs"   →   http://localhost:5178/r%26d/tools/demo-lab.html
+  It runs the app's own figure engine (read out of index.html), so what you
+  see here is exactly what the Info tab draws. Save & build writes
+  r&d/data/demos/movements/<id>.json and runs build-demos.cjs.
+-->
+<style>
+:root{--bg:#0d0f14;--card:#171c26;--line:#252c3a;--txt:#e8ecf3;--dim:#a4adbd;--accent:#ff5c35;--gold:#ffc542;--red:#ff4d4d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--txt);font:14px/1.4 system-ui,sans-serif}
+header{display:flex;gap:10px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+header h1{font-size:16px;margin:0 12px 0 0}
+main{display:grid;grid-template-columns:minmax(300px,440px) 1fr;gap:16px;padding:16px}
+@media (max-width:820px){main{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}
+h2{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);margin:0 0 8px}
+label{display:block;font-size:12px;color:var(--dim);margin:6px 0 2px}
+select,input,textarea,button{font:inherit;color:var(--txt);background:#141821;border:1px solid var(--line);border-radius:8px;padding:6px 8px}
+textarea{width:100%;resize:vertical}
+input[type=range]{width:100%;padding:0;border:0;background:none}
+button{cursor:pointer}button.on{border-color:var(--accent)}button.primary{background:var(--accent);border-color:var(--accent);color:#14110f;font-weight:650}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.k{display:grid;grid-template-columns:90px 1fr 48px;gap:8px;align-items:center;margin:2px 0}
+.k span{font-size:12px;color:var(--dim)}.k output{font:12px ui-monospace,monospace;text-align:right}
+.k.over span{color:var(--accent)}
+.note{font-size:12px;color:var(--dim)}
+#status{white-space:pre-wrap;font:12px ui-monospace,monospace;margin-top:8px}
+#status.err{color:var(--red)}
+/* the figure: same tokens as the app (--dm-*) */
+.fig{--dm-bg:#141821;--dm-ink:#a4adbd;--dm-body:#1e2431;--dm-kit:#858fa1;--dm-path:#4aa8ff}
+.fig.w98{--dm-bg:#fff;--dm-ink:#000;--dm-body:#fff;--dm-kit:#808080;--dm-path:#000080;--gold:#ffe000;--red:#ff2020}
+.fig svg{display:block;width:100%;aspect-ratio:1;background:var(--dm-bg);border:1px solid var(--line);border-radius:10px}
+.strip{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;margin-top:6px}
+.strip svg{border-radius:6px}
+.phase{text-align:center;font-weight:650;margin:6px 0}
+.dm-plate{fill:#888;fill-opacity:.1;stroke:var(--dm-kit);stroke-width:.014}.dm-rim{fill:none;stroke:var(--dm-kit);stroke-width:.008}
+.dm-bar{fill:var(--dm-ink)}.dm-mid{stroke:var(--dm-path);stroke-width:.009;stroke-dasharray:.04 .03;stroke-opacity:.7}
+.dm-trail{stroke:var(--dm-path);stroke-width:.016;stroke-linecap:round}.dm-ground{stroke:var(--dm-kit);stroke-width:.012}
+.dm-rail{stroke:var(--dm-kit);stroke-width:.02}.dm-cable{stroke:var(--dm-kit);stroke-width:.012;fill:none}
+.dm-band{stroke:var(--dm-kit);stroke-width:.01;stroke-dasharray:.03 .015;fill:none}.dm-pad{fill:var(--line);stroke:var(--dm-kit);stroke-width:.01}
+</style>
+</head>
+<body>
+<header>
+  <h1>Demo Lab</h1>
+  <label for="mv" style="margin:0">Movement</label><select id="mv"></select>
+  <label for="eq" style="margin:0">Equipment</label><select id="eq"></select>
+  <label for="pat" style="margin:0">Pattern</label><select id="pat"></select>
+  <span class="note" id="mapped"></span>
+</header>
+<main>
+  <section>
+    <div class="card fig" id="fig">
+      <svg id="big" role="img" aria-label="Preview"></svg>
+      <div class="phase" id="phase"></div>
+      <div class="row">
+        <button id="play" aria-label="Pause">❚❚</button>
+        <button id="slow">Slow</button>
+        <button id="mus" class="on">Muscles</button>
+        <button id="path" class="on">Bar path</button>
+        <button id="skin">98 skin</button>
+      </div>
+      <label for="scrub">Scrub (pauses)</label><input type="range" id="scrub" min="0" max="1000" value="0">
+      <div class="strip" id="strip"></div>
+      <div class="note">Start · ¼ · ½ · ¾ · far end of the movement</div>
+    </div>
+  </section>
+  <section>
+    <div class="card"><h2>Pose</h2>
+      <div class="note">Orange = overridden for this movement (double-click a slider to reset it to the pattern). Angles are degrees from vertical, forward positive.</div>
+      <div id="pose"></div>
+      <div class="grid2" id="choices"></div>
+    </div>
+    <div class="card"><h2>Phase labels</h2><div class="grid2" id="labels"></div></div>
+    <div class="card"><h2>Text</h2>
+      <label for="tSetup">Setup (1–2 lines)</label><textarea id="tSetup" rows="2"></textarea>
+      <label>The movement (3 cues)</label><input id="tC0" style="width:100%"><input id="tC1" style="width:100%;margin-top:4px"><input id="tC2" style="width:100%;margin-top:4px">
+      <label for="tMis">Common mistakes (one per line, 2–3)</label><textarea id="tMis" rows="3"></textarea>
+      <label for="tVar">Variant note for <b id="tVarEq"></b></label><textarea id="tVar" rows="2"></textarea>
+      <div class="note">Leave text blank to use the pattern's. Original wording only.</div>
+    </div>
+    <div class="card"><h2>Movement file</h2>
+      <textarea id="json" rows="12" spellcheck="false" style="font:12px ui-monospace,monospace"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button class="primary" id="save">Save &amp; build</button>
+        <button id="copy">Copy JSON</button>
+        <button id="dl">Download</button>
+        <button id="revert">Revert</button>
+      </div>
+      <div id="status" class="note"></div>
+    </div>
+  </section>
+</main>
+<script>
+/* ---------- the app's engine, read out of index.html ---------- */
+const START = 'EXERCISE DEMOS — r&d/specs/exercise-demo-spec.md', END = "let _mvTab = 'info';";
+let E, CAT, cur = { id: null, file: null, saved: '' };
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+async function loadEngine() {
+  const html = await (await fetch('/index.html', { cache: 'no-store' })).text();
+  const s = html.indexOf(START), e = html.indexOf(END);
+  if (s < 0 || e < 0) throw new Error('demo block not found in index.html');
+  const src = html.slice(html.lastIndexOf('/*', s), e);
+  E = new Function('esc', '$', 'S', 'save', 'EQ_TITLE', `${src}\nreturn { DEMO_PATTERNS, DEMO_MAP, DEMO_TEXT, DEMO_MUSCLES, demoSVG, demoBox, demoTimeline, demoAt, demoPose };`)(esc, () => null, { exNotes: {} }, () => {}, {});
+}
+
+/* ---------- what the sliders cover, per base ---------- */
+const POSE_KEYS = {
+  stand: [['shin', -10, 50], ['thigh', -20, 120], ['torso', -30, 90], ['upperArm', -180, 360], ['foreArm', -180, 360], ['barX', -0.2, 0.2, 0.005]],
+  split: [['torso', -20, 40], ['frontX', 0.1, 0.5, 0.01], ['upperArm', -180, 360], ['foreArm', -180, 360]],
+  seat: [['thighA', -30, 60], ['shinA', -30, 90], ['torso', -45, 60], ['upperArm', -180, 360], ['foreArm', -180, 360]],
+  bench: [['incline', -20, 60], ['upperArm', -180, 360], ['foreArm', -180, 360]],
+  hang: [['torso', -30, 30]],
+  front: [['abduct', 0, 180], ['elbowBend', 0, 90]],
+};
+const CHOICES = {
+  base: ['stand', 'split', 'seat', 'bench', 'hang', 'front'], concentric: ['go', 'back'],
+  arms: ['hold', 'target', 'angles'], hold: ['back', 'front', 'goblet', 'hands'], elbow: ['down', 'up', 'fwd', 'back'],
+  solve: ['midfoot', 'none'], path: ['midfoot', 'none'],
+  draw: ['barbell', 'trap', 'log', 'dumbbell', 'kettlebell', 'plate', 'cable', 'band', 'belt', 'none'],
+};
+
+const movement = () => CAT.find(m => m.id === $('#mv').value);
+const file = () => cur.file;
+const o = () => (cur.file.o = cur.file.o || {});
+const pat = () => E.DEMO_PATTERNS[cur.file.pattern];
+/* the same lookup order as the engine: o.eq[eq] → o → pattern eq → pattern */
+function val(k) {
+  const eq = $('#eq').value, f = cur.file, p = pat();
+  const oe = Object.assign({}, ((f.o || {}).eq || {})._, ((f.o || {}).eq || {})[eq]);
+  const pe = Object.assign({}, p.eq._, p.eq[eq]);
+  return oe[k] !== undefined ? oe[k] : (f.o || {})[k] !== undefined ? f.o[k] : pe[k] !== undefined ? pe[k] : p[k];
+}
+const overridden = k => (cur.file.o || {})[k] !== undefined;
+
+/* ---------- drawing ---------- */
+const OPTS = { playing: true, slow: false, muscles: true, path: true };
+let t = 0, last = null, scrubP = null, trail = [];
+const demo = () => ({ pat: pat(), o: cur.file.o || {}, name: cur.file.pattern });
+function frameSVG(p, e, withTrail) {
+  const d = demo(), eq = $('#eq').value, m = movement(), box = E.demoBox(d, eq);
+  return `<svg viewBox="${box.x} ${box.y} ${box.w} ${box.h}"><g transform="scale(1,-1)"><line x1="${box.x}" y1="0" x2="${box.x + box.w}" y2="0" class="dm-ground"/>${E.demoSVG(d, eq, p, e, OPTS, m, withTrail ? trail : [])}</g></svg>`;
+}
+function strip() { $('#strip').innerHTML = [0, 0.25, 0.5, 0.75, 1].map(p => frameSVG(p, 0.2 + 0.7 * p, false)).join(''); }
+function tick(now) {
+  try {
+    const dt = last == null ? 0 : Math.min(0.1, (now - last) / 1000); last = now;
+    const tl = E.demoTimeline({ concentric: val('concentric') });
+    if (OPTS.playing && scrubP == null) t += dt * (OPTS.slow ? 0.35 : 1);
+    const st = scrubP != null ? { p: scrubP, phase: scrubP > 0.5 ? 2 : 0, e: 0.5 } : E.demoAt(tl, t);
+    const svg = frameSVG(st.p, st.e, true);
+    const m = svg.match(/viewBox="([^"]+)"/);
+    $('#big').setAttribute('viewBox', m[1]); $('#big').innerHTML = svg.replace(/^<svg[^>]*>|<\/svg>$/g, '');
+    if (OPTS.path) { const P = E.demoPose(demo(), $('#eq').value, st.p); const b = P && (P.bar || P.hand); if (b) { trail.push(b); if (trail.length > 70) trail.shift(); } }
+    $('#phase').textContent = (val('labels') || [])[st.phase] || '';
+    if (scrubP == null) $('#scrub').value = Math.round(st.p * 1000);
+  } catch (err) { $('#phase').textContent = '⚠ ' + err.message; }
+  requestAnimationFrame(tick);
+}
+
+/* ---------- editors ---------- */
+function poseUI() {
+  const keys = POSE_KEYS[val('base')] || [];
+  $('#pose').innerHTML = keys.map(([k, lo, hi, step]) => {
+    const v = val(k), over = overridden(k) ? ' over' : '';
+    if (v === undefined) return `<div class="k"><span>${k}</span><button data-add="${k}">set</button><output>—</output></div>`;
+    if (typeof v === 'number') return `<div class="k${over}"><span>${k}</span><input type="range" data-k="${k}" min="${lo}" max="${hi}" step="${step || 1}" value="${v}"><output>${v}</output></div>
+      <div class="k"><span></span><button data-anim="${k}">animate start → end</button><span></span></div>`;
+    if (Array.isArray(v) && v.length === 2 && typeof v[0] === 'number')
+      return [0, 1].map(i => `<div class="k${over}"><span>${k} ${i ? 'end' : 'start'}</span><input type="range" data-k="${k}" data-i="${i}" min="${lo}" max="${hi}" step="${step || 1}" value="${v[i]}"><output>${v[i]}</output></div>`).join('');
+    return `<div class="k${over}"><span>${k}</span><span class="note">curve with stops — edit in the JSON</span><span></span></div>`;
+  }).join('');
+  $('#choices').innerHTML = Object.entries(CHOICES).map(([k, opts]) => {
+    const v = val(k);
+    return `<div><label for="c_${k}" style="${overridden(k) ? 'color:var(--accent)' : ''}">${k}</label><select id="c_${k}" data-c="${k}">${['', ...opts].map(x => `<option value="${x}" ${String(v ?? '') === x || (x === 'none' && v === null) ? 'selected' : ''}>${x || '(pattern)'}</option>`).join('')}</select></div>`;
+  }).join('');
+  $('#pose').querySelectorAll('input[data-k]').forEach(r => {
+    r.oninput = () => {
+      const k = r.dataset.k, n = +r.value;
+      if (r.dataset.i != null) { const cv = val(k).slice(); cv[+r.dataset.i] = n; o()[k] = cv; } else o()[k] = n;
+      r.nextElementSibling.textContent = n; r.parentElement.classList.add('over'); changed(false);
+    };
+    r.ondblclick = () => { delete o()[r.dataset.k]; changed(); };
+  });
+  $('#pose').querySelectorAll('[data-anim]').forEach(b => b.onclick = () => { const v = val(b.dataset.anim); o()[b.dataset.anim] = [v, v]; changed(); });
+  $('#pose').querySelectorAll('[data-add]').forEach(b => b.onclick = () => { o()[b.dataset.add] = 0; changed(); });
+  $('#choices').querySelectorAll('select').forEach(s => s.onchange = () => {
+    const k = s.dataset.c;
+    if (!s.value) delete o()[k]; else o()[k] = s.value === 'none' ? null : s.value;
+    changed();
+  });
+}
+function labelsUI() {
+  const L = val('labels') || ['', '', '', ''];
+  const names = ['Start (hold)', 'Going', 'Far end (pause)', 'Coming back'];
+  $('#labels').innerHTML = L.map((x, i) => `<div><label for="l${i}">${names[i]}</label><input id="l${i}" value="${esc(x)}" style="width:100%"></div>`).join('');
+  $('#labels').querySelectorAll('input').forEach(inp => inp.oninput = () => {
+    const nl = [0, 1, 2, 3].map(i => $('#l' + i).value);
+    if (JSON.stringify(nl) === JSON.stringify(pat().labels)) delete o().labels; else o().labels = nl;
+    changed(false, true);
+  });
+}
+function textUI() {
+  const tx = cur.file.text || {}, eq = $('#eq').value;
+  const pt = (E.DEMO_TEXT.pattern[cur.file.pattern] || {});
+  $('#tSetup').value = tx.setup || ''; $('#tSetup').placeholder = pt.setup || '';
+  [0, 1, 2].forEach(i => { $('#tC' + i).value = (tx.cues || [])[i] || ''; $('#tC' + i).placeholder = (pt.cues || [])[i] || ''; });
+  $('#tMis').value = (tx.mistakes || []).join('\n'); $('#tMis').placeholder = (pt.mistakes || []).join('\n');
+  $('#tVarEq').textContent = eq; $('#tVar').value = (tx.variants || {})[eq] || ''; $('#tVar').placeholder = (pt.variants || {})[eq] || '(none — hidden)';
+}
+function readText() {
+  const tx = {}, eq = $('#eq').value;
+  if ($('#tSetup').value.trim()) tx.setup = $('#tSetup').value.trim();
+  const cues = [0, 1, 2].map(i => $('#tC' + i).value.trim()); if (cues.some(Boolean)) tx.cues = cues.filter(Boolean);
+  const mis = $('#tMis').value.split('\n').map(s => s.trim()).filter(Boolean); if (mis.length) tx.mistakes = mis;
+  const vars = Object.assign({}, (cur.file.text || {}).variants);
+  if ($('#tVar').value.trim()) vars[eq] = $('#tVar').value.trim(); else delete vars[eq];
+  if (Object.keys(vars).length) tx.variants = vars;
+  if (Object.keys(tx).length) cur.file.text = tx; else delete cur.file.text;
+}
+['#tSetup', '#tC0', '#tC1', '#tC2', '#tMis', '#tVar'].forEach(s => $(s).oninput = () => { readText(); changed(false, true); });
+
+function tidy(f) {
+  const c = JSON.parse(JSON.stringify(f));
+  if (c.o && !Object.keys(c.o).length) delete c.o;
+  return c;
+}
+function changed(redrawUI = true, keepText = false) {
+  trail = [];
+  $('#json').value = JSON.stringify(tidy(cur.file), null, 2);
+  $('#status').textContent = $('#json').value === cur.saved ? '' : 'Unsaved changes';
+  $('#status').className = 'note';
+  if (redrawUI) { poseUI(); labelsUI(); if (!keepText) textUI(); }
+  strip();
+}
+$('#json').oninput = () => {
+  try { cur.file = JSON.parse($('#json').value); if (!E.DEMO_PATTERNS[cur.file.pattern]) throw new Error('unknown pattern'); $('#status').textContent = 'Unsaved changes'; $('#status').className = 'note'; poseUI(); labelsUI(); textUI(); strip(); }
+  catch (e) { $('#status').textContent = 'JSON: ' + e.message; $('#status').className = 'err'; }
+};
+
+/* ---------- picking ---------- */
+async function pick(id) {
+  const m = CAT.find(x => x.id === id);
+  const r = await fetch(`/r%26d/data/demos/movements/${id}.json`, { cache: 'no-store' });
+  cur = { id, file: r.ok ? await r.json() : { pattern: guessPattern(m) } };
+  cur.saved = r.ok ? JSON.stringify(tidy(cur.file), null, 2) : '';
+  $('#mapped').textContent = r.ok ? 'has a figure' : 'new — no figure yet';
+  $('#eq').innerHTML = m.equipment.map(e => `<option ${e === m.defaultEquipment ? 'selected' : ''}>${e}</option>`).join('');
+  $('#pat').value = cur.file.pattern;
+  history.replaceState(null, '', '#' + id);
+  changed();
+}
+/* a starting guess for a new movement: the pattern a sibling uses */
+function guessPattern(m) {
+  const sib = Object.entries(E.DEMO_MAP).find(([k]) => k.split('-').some(w => m.id.includes(w) && w.length > 4));
+  return sib ? sib[1].pattern : { legs: 'squat', back: 'row', chest: 'press', shoulders: 'overhead', arms: 'curl' }[m.category] || 'squat';
+}
+$('#mv').onchange = () => pick($('#mv').value);
+$('#eq').onchange = () => changed();
+$('#pat').onchange = () => { cur.file.pattern = $('#pat').value; changed(); };
+
+/* ---------- controls ---------- */
+$('#play').onclick = () => { OPTS.playing = !OPTS.playing; if (OPTS.playing) scrubP = null; $('#play').textContent = OPTS.playing ? '❚❚' : '▶'; };
+const toggle = (id, k) => $(id).onclick = () => { OPTS[k] = !OPTS[k]; $(id).classList.toggle('on', OPTS[k]); trail = []; strip(); };
+toggle('#slow', 'slow'); toggle('#mus', 'muscles'); toggle('#path', 'path');
+$('#skin').onclick = () => { $('#fig').classList.toggle('w98'); $('#skin').classList.toggle('on'); };
+$('#scrub').oninput = () => { scrubP = $('#scrub').value / 1000; trail = []; OPTS.playing = false; $('#play').textContent = '▶'; };
+
+/* ---------- saving ---------- */
+$('#copy').onclick = () => navigator.clipboard.writeText($('#json').value).then(() => { $('#status').textContent = 'Copied'; });
+$('#dl').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([$('#json').value + '\n'], { type: 'application/json' })); a.download = cur.id + '.json'; a.click(); };
+$('#revert').onclick = () => pick(cur.id);
+$('#save').onclick = async () => {
+  $('#status').textContent = 'Saving…'; $('#status').className = 'note';
+  try {
+    const r = await fetch(`/__demos/${cur.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: $('#json').value });
+    const out = await r.text();
+    $('#status').textContent = out.trim() || (r.ok ? 'Saved' : 'Failed');
+    $('#status').className = r.ok ? 'note' : 'err';
+    if (r.ok) { cur.saved = $('#json').value; await loadEngine(); fill(); }
+  } catch (e) { $('#status').textContent = 'Save needs the local server (node "r&d/tools/serve.mjs"). Use Download instead.'; $('#status').className = 'err'; }
+};
+
+function fill() {
+  const keep = $('#mv').value;
+  $('#mv').innerHTML = [...CAT].sort((a, b) => a.category.localeCompare(b.category) || a.name.localeCompare(b.name))
+    .filter(m => m.category !== 'cardio')
+    .map(m => `<option value="${m.id}">${E.DEMO_MAP[m.id] ? '✓ ' : '· '}${esc(m.name)} — ${m.category}</option>`).join('');
+  if (keep) $('#mv').value = keep;
+  $('#pat').innerHTML = Object.keys(E.DEMO_PATTERNS).map(k => `<option>${k}</option>`).join('');
+  if (cur.file) $('#pat').value = cur.file.pattern;
+}
+
+(async () => {
+  try {
+    await loadEngine();
+    CAT = (await (await fetch('/r%26d/data/exercises.json')).json()).movements;
+    fill();
+    const want = location.hash.slice(1);
+    $('#mv').value = CAT.some(m => m.id === want) ? want : 'back-squat';
+    await pick($('#mv').value);
+    requestAnimationFrame(tick);
+  } catch (e) { document.body.insertAdjacentHTML('afterbegin', `<p style="color:#ff4d4d;padding:16px">${esc(e.message)} — open this through node "r&amp;d/tools/serve.mjs".</p>`); }
+})();
+</script>
+</body>
+</html>

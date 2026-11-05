@@ -1,0 +1,21 @@
+{
+  "pattern": "squat",
+  "o": {
+    "hold": "front",
+    "elbow": "up",
+    "shin": [0, 40],
+    "thigh": [7, 110]
+  },
+  "text": {
+    "setup": "Bar on your front delts, fingertips under it, elbows high. Feet shoulder-width, toes slightly out.",
+    "cues": [
+      "Keep your elbows up the whole time.",
+      "Sit straight down between your heels with your torso upright.",
+      "Drive up, leading with your elbows."
+    ],
+    "mistakes": ["Elbows dropping so the bar rolls forward.", "Rounding the upper back.", "Heels lifting."],
+    "variants": {
+      "barbell": "If the rack position hurts your wrists, crossed arms or straps on the bar work too."
+    }
+  }
+}

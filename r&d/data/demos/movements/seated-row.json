@@ -1,0 +1,33 @@
+{
+  "pattern": "row",
+  "o": {
+    "base": "seat",
+    "thighA": 16,
+    "shinA": 62,
+    "footPlate": true,
+    "torso": [14, -6],
+    "elbow": "down",
+    "hand": [["root", 0.55, -0.14], ["chest", 0.38, 0.05]],
+    "eq": {
+      "_": {
+        "draw": "cable",
+        "anchor": [1, 0.36]
+      }
+    },
+    "labels": [
+      "Sit tall, arms long",
+      "Pull to your belly",
+      "Squeeze your shoulder blades",
+      "Let it pull you forward, slowly"
+    ]
+  },
+  "text": {
+    "setup": "Feet on the platform, knees soft, sitting tall with arms reaching to the handle.",
+    "cues": [
+      "Pull the handle to your belly, elbows close.",
+      "Squeeze your shoulder blades together.",
+      "Let your arms go long and your shoulder blades spread, without rounding your back."
+    ],
+    "mistakes": ["Rocking back and forward to move the weight.", "Shrugging the handle up."]
+  }
+}

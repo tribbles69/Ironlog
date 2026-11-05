@@ -1,0 +1,40 @@
+{
+  "pattern": "triceps",
+  "o": {
+    "base": "bench",
+    "concentric": "back",
+    "upperArm": 194,
+    "foreArm": [194, 292],
+    "labels": [
+      "Arms straight over your shoulders",
+      "Bend at the elbows only",
+      "Just behind your head",
+      "Extend back up"
+    ],
+    "eq": {
+      "_": {
+        "draw": "barbell",
+        "plateR": 0.16
+      },
+      "dumbbells": {
+        "draw": "dumbbell"
+      },
+      "cable": {
+        "draw": "cable",
+        "anchor": [-0.9, 0.3]
+      }
+    }
+  },
+  "text": {
+    "setup": "Lie on a bench, arms straight over your shoulders, slightly tilted back towards your head.",
+    "cues": [
+      "Bend only at the elbows to lower the bar behind your head.",
+      "Keep your upper arms still.",
+      "Extend back to straight arms."
+    ],
+    "mistakes": ["Elbows flaring out.", "Turning it into a press by moving the upper arms."],
+    "variants": {
+      "barbell": "An EZ bar is kinder to the wrists."
+    }
+  }
+}

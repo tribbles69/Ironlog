@@ -1,0 +1,19 @@
+{
+  "pattern": "curl",
+  "o": {
+    "base": "seat",
+    "torso": -34,
+    "backPad": true,
+    "upperArm": -4,
+    "foreArm": [-4, 128]
+  },
+  "text": {
+    "setup": "Sit back on a bench at about 45°, arms hanging straight down behind your body.",
+    "cues": [
+      "Curl up without moving your upper arms forward.",
+      "Squeeze at the top.",
+      "Lower all the way for the stretch."
+    ],
+    "mistakes": ["Elbows swinging forward.", "Shoulders lifting off the bench."]
+  }
+}

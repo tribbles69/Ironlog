@@ -13,6 +13,11 @@ rather than guessed.
 
 ---
 
+## 0.80.1 — 5 Nov 2026
+- **New:** the front raise has an animated demo.
+- **Fixed:** a dark box could appear behind the exercise figure when Bar path was on.
+- Behind the scenes: new exercise demos are now much quicker to add, so more lifts will get figures soon.
+
 ## 0.80.0 — 5 Nov 2026
 - **New: exercise demos.** Open any exercise's page → Info and most lifts now show an animated figure doing the movement, with the working muscles lighting up through the hard part of the rep, the bar path, and a short label for each phase. Pause it, slow it down, turn the muscles or bar path off, or drag the slider to any point in the rep.
 - The figure changes with the variant you pick — barbell, Smith, dumbbells, cable, trap bar and so on.

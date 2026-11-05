@@ -1,0 +1,33 @@
+{
+  "pattern": "vpull",
+  "o": {
+    "base": "hang",
+    "rootFrom": [-0.02, -0.585],
+    "rootTo": [-0.1, -0.2],
+    "torso": [-6, -14],
+    "eq": {
+      "_": {
+        "draw": "none"
+      }
+    },
+    "labels": ["Dead hang, brace", "Drive your elbows down", "Chin over the bar", "Lower all the way"]
+  },
+  "text": {
+    "setup": "Hands a little wider than shoulder-width, palms away, hanging with straight arms.",
+    "cues": [
+      "Pull your shoulders down first, then drive your elbows to your sides.",
+      "Get your chin over the bar.",
+      "Lower all the way to straight arms."
+    ],
+    "mistakes": [
+      "Kipping or swinging to get up.",
+      "Half reps that never reach straight arms.",
+      "Craning the neck to get the chin over."
+    ],
+    "variants": {
+      "machine": "An assisted machine takes off some body weight — less assistance means harder.",
+      "resistance_band": "A band under your knees or feet helps most at the bottom.",
+      "plate": "Weight on a belt or between your feet; keep the legs still."
+    }
+  }
+}
