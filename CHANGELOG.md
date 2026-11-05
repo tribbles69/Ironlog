@@ -13,6 +13,11 @@ rather than guessed.
 
 ---
 
+## 0.77.0 — 5 Nov 2026
+- **New: everyday goals in the coach.** When it builds you a plan you can now pick **Lose weight**, **Get fitter and healthier**, **Build muscle / tone up** or **Move better, ease aches**, as well as the strength goals.
+- **Lose weight** keeps you lifting with enough weight to hold onto muscle. It asks for a target weight and adds it to your goals, and the coach's food and weigh-in answers now talk about a steady deficit.
+- **Move better, ease aches** uses moderate reps with plenty left in the tank.
+- Questions read less like they're for athletes. For example, it asks about favourite exercises (or none) instead of which lifts you care about.
 ## 0.76.1 — 5 Nov 2026
 - **Bar speed on old workouts.** When you open a past workout, any exercise you measured now shows the same bar-speed panel as during the session. Each set has its speed, RIR and per-rep bars, and you can tap a set for the full chart. The warm-up profile chart and e1RM range appear too, if you took one.
 
