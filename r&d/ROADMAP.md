@@ -797,8 +797,8 @@ needs a server to receive messages. Rethink before building.
 
 ### [ ] E9. Only if there's nothing else to do
 Strava (Blast #115) · Whoop (#111) · translations (#116, #85) · reorder and sort
-routines (#80, #9) · separate muscle heads for arms (#63) · picture
-instructions (#21) · suspension trainer, rings and jump rope exercises (#105,
+routines (#80, #9) · separate muscle heads for arms (#63) · ~~picture
+instructions (#21)~~ (E14) · suspension trainer, rings and jump rope exercises (#105,
 #93, #40).
 
 ### [ ] E10. More themes — dark mode, Frutiger Metro, Ceefax
@@ -879,6 +879,14 @@ records per rating. Grip kit is pocket kit (`POCKET_KIT`): never flagged as
 missing at a place. Not done: gripper presets by brand/rating (lb → kg), and
 the rep-range "add weight" step still assumes 2.5 kg, which a fixed-rating
 gripper can't do.
+
+### [x] E14. Exercise demos on the Info tab — shipped 0.80.0 (spec `r&d/specs/exercise-demo-spec.md`; Aaron asked 2026-11-05)
+Animated side-view outline figure (inline SVG, one engine, patterns as data —
+ten patterns, 45 movements mapped), effort-tinted primary muscles, bar path,
+phase labels and controls; setup / cues / mistakes / variant note text in
+original wording; **Your notes** per movement (`S.exNotes`, synced). Covers
+Blast #21 (picture instructions, was in E9). Later: front-view toggle and
+replaying the lifter's own VBT tempo.
 
 ---
 

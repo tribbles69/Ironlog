@@ -13,6 +13,13 @@ rather than guessed.
 
 ---
 
+## 0.80.0 — 5 Nov 2026
+- **New: exercise demos.** Open any exercise's page → Info and most lifts now show an animated figure doing the movement, with the working muscles lighting up through the hard part of the rep, the bar path, and a short label for each phase. Pause it, slow it down, turn the muscles or bar path off, or drag the slider to any point in the rep.
+- The figure changes with the variant you pick — barbell, Smith, dumbbells, cable, trap bar and so on.
+- **New: how to do it.** Under the figure: setup, three cues, common mistakes, and a note on what your chosen variant changes.
+- **New: Your notes** for each exercise, saved on your phone and included in backups and Drive sync.
+- Covers squats, deadlifts and hinges, bench and overhead presses, rows, pulldowns and pull-ups, lateral raises, curls, triceps work and split squats/lunges. Exercises without a figure yet just show your notes.
+
 ## 0.79.0 — 5 Nov 2026
 - **New: choose the AI model for each feature.** In Settings → AI, voice logging, the plan writer, Tailor it and coach questions can each use **Haiku** (the default, cheapest), **Sonnet** or **Opus**. The cost per use and how many you get for $1 update as you change them.
 - Sonnet costs about 20× Haiku and Opus about 40×, so every use still costs a few pence at most. The bigger models are worth it for the plan writer, which reads messy plans and runs rarely.
