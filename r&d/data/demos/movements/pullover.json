@@ -1,0 +1,49 @@
+{
+  "pattern": "triceps",
+  "o": {
+    "base": "bench",
+    "concentric": "back",
+    "upperArm": [182, 258],
+    "foreArm": [190, 266],
+    "labels": [
+      "Arms up over your chest",
+      "Lower in an arc behind your head",
+      "Big stretch, ribs down",
+      "Pull back over your chest"
+    ],
+    "eq": {
+      "_": {
+        "draw": "dumbbell"
+      },
+      "barbell": {
+        "draw": "barbell",
+        "plateR": 0.16
+      },
+      "cable": {
+        "draw": "cable",
+        "anchor": [-1, 0.35]
+      },
+      "machine": {
+        "draw": "none"
+      }
+    }
+  },
+  "text": {
+    "setup": "Lie on a bench holding one dumbbell over your chest with both hands, elbows slightly bent.",
+    "cues": [
+      "Lower the weight in an arc behind your head, keeping the elbow bend fixed.",
+      "Go until you feel a stretch through your lats and chest, ribs kept down.",
+      "Pull it back up over your chest along the same arc."
+    ],
+    "mistakes": [
+      "Bending and straightening the elbows, which turns it into a triceps extension.",
+      "Arching the lower back to get more range.",
+      "Going too heavy to control at the stretch."
+    ],
+    "variants": {
+      "barbell": "An EZ bar is kinder to the wrists.",
+      "cable": "Lie with your head towards a low pulley.",
+      "machine": "The machine sets the arc — line your shoulders up with its pivot."
+    }
+  }
+}

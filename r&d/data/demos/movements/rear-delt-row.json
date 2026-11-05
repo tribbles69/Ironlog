@@ -1,0 +1,34 @@
+{
+  "pattern": "row",
+  "o": {
+    "torso": 70,
+    "thigh": 38,
+    "elbow": "up",
+    "hand": [["root", 0, -0.585], ["chest", 0.8, 0.1]],
+    "labels": [
+      "Hinge over, arms long",
+      "Row wide, elbows out",
+      "Elbows high, squeeze the back of your shoulders",
+      "Lower slowly"
+    ]
+  },
+  "text": {
+    "setup": "Hinge forward until your torso is close to parallel with the floor, flat back, arms hanging straight.",
+    "cues": [
+      "Pull with your elbows flared out to the sides, not tucked in.",
+      "Bring the weight towards your upper chest rather than your belly.",
+      "Squeeze the back of your shoulders at the top, then lower slowly."
+    ],
+    "mistakes": [
+      "Tucking the elbows, which makes it a normal row.",
+      "Shrugging the weight up with the traps.",
+      "Standing up as you pull."
+    ],
+    "variants": {
+      "dumbbells": "A light bell in each hand; let the elbows travel wide.",
+      "barbell": "A wide overhand grip helps keep the elbows out.",
+      "cable": "Use a rope on a low pulley in front of you.",
+      "machine": "Set the chest pad so your arms are straight when you reach the handles."
+    }
+  }
+}

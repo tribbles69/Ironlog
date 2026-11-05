@@ -1,0 +1,51 @@
+{
+  "pattern": "squat",
+  "o": {
+    "concentric": "back",
+    "solve": null,
+    "path": null,
+    "hold": null,
+    "arms": "angles",
+    "heel": [0, 32],
+    "shin": [0, 68],
+    "thigh": [-2, 46],
+    "torso": [0, -40],
+    "upperArm": [40, 70],
+    "foreArm": [60, 80],
+    "labels": [
+      "Stand tall, hold a support",
+      "Knees forward, lean back",
+      "Knees far over the toes, hips open",
+      "Drive the knees back up"
+    ],
+    "eq": {
+      "_": {
+        "draw": "none"
+      },
+      "plate": {
+        "draw": "plate"
+      },
+      "machine": {
+        "draw": "none",
+        "backPad": false
+      }
+    }
+  },
+  "text": {
+    "setup": "Hold a support with one hand, feet hip-width. Rise onto the balls of your feet.",
+    "cues": [
+      "Push your knees forward and lean back, keeping a straight line from knees to shoulders.",
+      "Lower until your knees are well past your toes and you feel the stretch in your quads.",
+      "Drive your knees back to stand tall."
+    ],
+    "mistakes": [
+      "Bending at the hips so it becomes a normal squat.",
+      "Dropping fast into the bottom.",
+      "Going deeper than your knees are ready for — build the range slowly."
+    ],
+    "variants": {
+      "plate": "Hold a plate against your chest with your free hand once bodyweight is easy.",
+      "machine": "A sissy squat stand locks your feet and pads the shins, so you can lean back further."
+    }
+  }
+}

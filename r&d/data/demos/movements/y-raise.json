@@ -1,0 +1,39 @@
+{
+  "pattern": "curl",
+  "o": {
+    "torso": 0,
+    "upperArm": [6, 150],
+    "foreArm": [8, 152],
+    "labels": ["Arms down, thumbs up", "Raise up and out into a Y", "Arms beside your ears", "Lower slowly"],
+    "eq": {
+      "_": {
+        "draw": "dumbbell"
+      },
+      "cable": {
+        "draw": "cable",
+        "anchor": [0.3, 0.08]
+      },
+      "resistance_band": {
+        "draw": "band",
+        "anchor": [0.05, 0.02]
+      }
+    }
+  },
+  "text": {
+    "setup": "Stand tall with very light bells, arms hanging in front of you, thumbs pointing up.",
+    "cues": [
+      "Raise your arms up and out at about 30° from your sides, making a Y.",
+      "Pull your shoulder blades down and back as the arms rise.",
+      "Lower slowly — the lowering is half the work."
+    ],
+    "mistakes": [
+      "Too heavy, so the shoulders shrug and the back arches.",
+      "Raising the arms straight to the front instead of out into a Y.",
+      "Letting the arms drop."
+    ],
+    "variants": {
+      "cable": "Two low pulleys, crossing the cables, keep tension at the bottom.",
+      "resistance_band": "Stand on the band; a light one is plenty."
+    }
+  }
+}

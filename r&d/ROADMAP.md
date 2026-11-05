@@ -890,8 +890,16 @@ replaying the lifter's own VBT tempo.
 **0.80.1:** demos moved to data (`r&d/data/demos/`, `build-demos.cjs`) with a
 pose editor (`r&d/tools/demo-lab.html`) and a checker/contact sheet
 (`demo-check.cjs`) — spec §8. Front raise added through the lab (44 mapped).
-Next candidates by how often they're logged: hip thrust, leg press, push-up,
-calf raises, shrug, face pull.
+**0.81.0:** first batch through the tools — face pull, upright row, rear-delt
+row, Y-raise, straight-arm pulldown, pullover, concentration, spider and drag
+curls, sissy squat, hack squat (55 mapped). Engine gained `heel` (heel lift),
+a standing `backPad` and per-variant `skip`.
+Next: batch 2 needs small tweaks (leg curl/extension, hanging raises, dead
+hang, step-up, pendulum, TruSquat, stone/keg/sandbag loads); calf raises are
+now cheap thanks to `heel`. Then one engine change per family: plank
+(push-ups, planks, ab wheel), floor (sit-up, bridge, hip thrust), shrug, leg
+press, posterior-chain benches, dips. Cross-body moves (flyes, pec deck,
+rear-delt fly, hip ab/adduction) wait for the front-view toggle.
 
 ---
 

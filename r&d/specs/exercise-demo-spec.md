@@ -256,7 +256,7 @@ number (fixed), `[start, end]`, or stops `[[p, v], …]` for a curve
 | `torso` | torso lean (negative = leaning back) |
 | `solve` | `midfoot`: torso solved each frame so the hold point is over midfoot (ignores `torso`) |
 | `barX` | nudge for the solver's target, metres |
-| `hold` | where the load sits: `back` · `front` (rack) · `goblet` · `hands` (straight arms) |
+| `hold` | where the load sits: `back` · `front` (rack) · `goblet` · `hands` (straight arms) · `null` (nothing held) |
 | `arms` | `hold` (hands to the hold point) · `target` (hands follow `hand`) · `angles` (`upperArm`, `foreArm`) |
 | `elbow` | which way the IK bends: `down` · `up` · `fwd` · `back` |
 | `hand` | targets `[[anchor, a, b], [anchor, a, b]]` or stops `[[p, anchor, a, b], …]`. Anchors: `root` (shoulder joint +dx, +dy) · `chest` (a = fraction hip→shoulder, b = distance off the chest) · `mid` (over midfoot +dx, b above the shoulder joint) · `world` (x, y) |
@@ -268,7 +268,9 @@ number (fixed), `[start, end]`, or stops `[[p, v], …]` for a curve
 | `abduct`, `elbowBend` | front: arm angle out to the side; elbow bend |
 | `draw` | `barbell` · `trap` · `log` · `dumbbell` · `kettlebell` · `plate` · `cable` · `band` · `belt` · `none` |
 | `rail`, `ssb`, `plateR`, `anchor` | Smith rail; SSB handles; plate radius (m); cable/band anchor `[x, y]`, `above` or `across` |
-| `box`, `pins`, `preacher`, `chestPad` | kit: box height (m); pins (a height, or `true` = at the start of the hand path); preacher pad; chest pad |
+| `box`, `pins`, `preacher`, `chestPad`, `backPad` | kit: box height (m); pins (a height, or `true` = at the start of the hand path); preacher pad; chest pad; back pad (seat, or a sled behind a standing lifter) |
+| `heel` | stand: degrees the heel lifts, pivoting on the toes (keyframe) |
+| `skip` | `true` (usually per equipment): no figure for that variant, because it's a different lift the pattern can't show |
 
 Body proportions (metres, a 1.75 m lifter): shin 0.44, thigh 0.43, torso
 0.52, upper arm 0.30, forearm to the bar 0.30.
