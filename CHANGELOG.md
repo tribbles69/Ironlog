@@ -13,6 +13,12 @@ rather than guessed.
 
 ---
 
+## 0.78.0 — 5 Nov 2026
+- **New: a readable summary in your Google Drive.** Each time Ironlog syncs, it also writes **Ironlog summary.md** next to your backup. It covers the last four weeks in plain text: every session and set with RIR and bar speed, your check-ins (weight, sleep, energy, soreness, notes), your goals and the week ahead. Open it on your phone, or let Claude read it.
+- Your full backup stays the same. The summary is just an easier way to read it.
+- **New: back up when you finish.** If you're connected to Google Drive, tapping Done after a session now backs up straight away. Google may briefly flash its sign-in, and you can turn this off in Settings → Drive.
+- The backup reminder on Home now shows after 3 days without a sync, instead of 14, when you're connected to Drive.
+
 ## 0.77.2 — 5 Nov 2026
 - **Fixed:** the "Update available" sheet no longer keeps coming back after you update. Since 0.75.1 the app had been reporting its own version wrongly, so it never believed it was up to date.
 

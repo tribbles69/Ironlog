@@ -27,6 +27,23 @@ again. That is the cost of having no backend.
 **What syncs:** workouts, check-ins, goals, meets, imports, custom exercises,
 programs, exercise aliases, program start dates, and settings.
 
+**Readable summary** (0.78.0, Aaron 2026-11-05): after each successful
+write, `Ironlog summary.md` (text/markdown) is rewritten beside the backup —
+the last 28 days via `reportData(..., { warm, notes, vbt })` / `reportText`,
+plus check-ins, goals and the next 7 planned days (`driveSummaryText`). Its
+id is kept as `summaryId` in the sync meta. It is output only: never read
+back or merged, and a failure to write it never fails the sync. Purpose:
+open on a phone, and let Claude read training through the Drive connector
+(the 1 MB+ backup is too large for that).
+
+**Backup on Done** (0.78.0, Aaron 2026-11-05): tapping Done on the
+session-complete sheet runs `driveSync(true)` (`finishBackup`) when connected,
+unless sync meta `autoFinish` is false (Settings checkbox) or a sync finished
+in the last two minutes. The tap is the user gesture GIS needs; GIS is
+preloaded when the sheet opens so the gesture hasn't expired by the time
+`requestAccessToken` runs. The home backup reminder uses 3 days instead of
+14 while Drive is connected.
+
 **What never syncs:**
 - the workout in progress;
 - device-only bookkeeping (`lastSeenVersion`, backup reminder state);
