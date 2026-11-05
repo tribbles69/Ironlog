@@ -2209,7 +2209,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.78.0';
+const APP_VERSION = '0.78.1';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -7244,7 +7244,9 @@ function sessionTotals(wo) {
     ws,
     sets: ws.reduce((n, o) => n + o.sets.filter(s => !isDrop(s)).length, 0),   // a drop chain is one set
     reps: ws.reduce((n, o) => n + o.sets.reduce((a, s) => a + s.r, 0), 0),
-    volume: ws.reduce((n, o) => n + o.sets.reduce((a, s) => a + s.w * s.r, 0), 0),
+    /* setVolume, not s.w * s.r: a carry or hold has no reps, and one undefined
+       turned the whole report's volume into NaN, printed as "0kg". */
+    volume: ws.reduce((n, o) => n + o.sets.reduce((a, s) => a + (o.e.leaf ? setVolume(o.e.leaf, s) : (s.w || 0) * (s.r || 0)), 0), 0),
     mins: wo.summary && wo.summary.mins ? wo.summary.mins : 0,
     prs: prsFor(wo),
   };
