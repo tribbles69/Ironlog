@@ -13,6 +13,11 @@ rather than guessed.
 
 ---
 
+## 0.77.1 — 5 Nov 2026
+- **Missed reps are now flagged.** If the bar-speed sensor finds fewer reps than you logged, the set shows it (for example "1/5") and warns you that its speed and RIR aren't reliable. Ironlog also no longer fills in RIR or calibrates from a set like that.
+- The "rpe-out-of-range" label that appeared on every rep is gone. It only meant your bar-speed profile isn't calibrated yet, so that's now said once at the bottom.
+- **New: bar-speed debug.** In Settings you can keep the raw sensor traces from your last 30 measured sets and export them. They stay on your phone and aren't included in your backup. This is for fixing rep detection.
+
 ## 0.77.0 — 5 Nov 2026
 - **New: everyday goals in the coach.** When it builds you a plan you can now pick **Lose weight**, **Get fitter and healthier**, **Build muscle / tone up** or **Move better, ease aches**, as well as the strength goals.
 - **Lose weight** keeps you lifting with enough weight to hold onto muscle. It asks for a target weight and adds it to your goals, and the coach's food and weigh-in answers now talk about a steady deficit.
