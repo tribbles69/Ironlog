@@ -1,0 +1,20 @@
+{
+  "pattern": "lunge",
+  "o": {
+    "rear": [-0.6, 0.53],
+    "rearToe": [-0.78, 0.5],
+    "rearBench": true,
+    "frontX": 0.24,
+    "hipKF": [["world", -0.1, 0.86], ["world", -0.07, 0.5]],
+    "torso": [6, 16]
+  },
+  "text": {
+    "setup": "Rear foot on a bench behind you, laces down. Front foot far enough forward that your front heel stays down at the bottom.",
+    "cues": [
+      "Drop straight down until your front thigh is about parallel.",
+      "A small forward lean is fine.",
+      "Drive up through your front foot."
+    ],
+    "mistakes": ["Front foot too close, so the heel lifts.", "Pushing off the back foot.", "Bench too high."]
+  }
+}

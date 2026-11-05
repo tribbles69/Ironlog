@@ -1,0 +1,38 @@
+{
+  "pattern": "hinge",
+  "o": {
+    "concentric": "back",
+    "hold": "back",
+    "arms": "hold",
+    "elbow": "down",
+    "solve": null,
+    "path": null,
+    "shin": [0, 7],
+    "thigh": [-2, 18],
+    "torso": [4, 72],
+    "labels": [
+      "Bar on your back, brace",
+      "Hips back, chest down",
+      "Flat back, feel the stretch",
+      "Drive your hips through"
+    ],
+    "eq": {
+      "_": {
+        "draw": "barbell"
+      }
+    }
+  },
+  "text": {
+    "setup": "Bar on your upper back as for a squat, knees softly bent.",
+    "cues": [
+      "Push your hips back and let your chest come down.",
+      "Keep a flat back; stop when you feel a strong hamstring stretch.",
+      "Drive your hips forward to stand back up."
+    ],
+    "mistakes": [
+      "Bending the knees so it becomes a squat.",
+      "Rounding the back.",
+      "Going heavy before the movement is grooved."
+    ]
+  }
+}

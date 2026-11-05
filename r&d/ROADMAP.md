@@ -882,11 +882,16 @@ gripper can't do.
 
 ### [x] E14. Exercise demos on the Info tab — shipped 0.80.0 (spec `r&d/specs/exercise-demo-spec.md`; Aaron asked 2026-11-05)
 Animated side-view outline figure (inline SVG, one engine, patterns as data —
-ten patterns, 45 movements mapped), effort-tinted primary muscles, bar path,
+ten patterns, 43 movements mapped), effort-tinted primary muscles, bar path,
 phase labels and controls; setup / cues / mistakes / variant note text in
 original wording; **Your notes** per movement (`S.exNotes`, synced). Covers
 Blast #21 (picture instructions, was in E9). Later: front-view toggle and
 replaying the lifter's own VBT tempo.
+**0.80.1:** demos moved to data (`r&d/data/demos/`, `build-demos.cjs`) with a
+pose editor (`r&d/tools/demo-lab.html`) and a checker/contact sheet
+(`demo-check.cjs`) — spec §8. Front raise added through the lab (44 mapped).
+Next candidates by how often they're logged: hip thrust, leg press, push-up,
+calf raises, shrug, face pull.
 
 ---
 

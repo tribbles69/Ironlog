@@ -1,0 +1,16 @@
+{
+  "pattern": "row",
+  "o": {
+    "torso": 72,
+    "thigh": 34
+  },
+  "text": {
+    "setup": "One hand and knee on a bench, flat back, the dumbbell hanging straight below your shoulder.",
+    "cues": [
+      "Pull your elbow back towards your hip.",
+      "Squeeze at the top without twisting your torso.",
+      "Lower to a full stretch."
+    ],
+    "mistakes": ["Twisting to throw the weight up.", "Pulling the elbow out wide."]
+  }
+}

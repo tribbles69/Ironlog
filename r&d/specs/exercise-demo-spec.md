@@ -171,8 +171,11 @@ Rules:
   `SYNC_MAPS` entry (newest `mt` wins; clearing the note deletes the key, so
   the delete syncs as a tombstone).
 - No schema bump: a missing `exNotes` is read as `{}`.
-- Text and patterns live in `index.html` (`DEMO_PATTERNS`, `DEMO_MAP`,
-  `DEMO_TEXT`) — the app is one file and needs nothing extra cached.
+- Patterns, the movement map and all the text are **data in
+  `r&d/data/demos/`**, inlined into `index.html` as the `DEMO_PATTERNS`,
+  `DEMO_MAP` and `DEMO_TEXT` lines by `r&d/tools/build-demos.cjs` (since
+  0.80.1) — the app is still one file and needs nothing extra cached. Never
+  edit those three lines by hand. See §8.
 
 ## 5. Accessibility (C4)
 - The SVG is `role="img"` with a label naming the movement and that it's an
@@ -190,3 +193,82 @@ Rules:
 - Front-view toggle (knees caving on the squat, bar path on the bench).
 - Replay the lifter's own VBT tempo and range of motion on the figure.
 - More patterns (hip thrust, leg press, carries, push-up, fly, calf raise).
+
+## 8. Adding or changing a movement
+
+Everything is data; the engine only changes when a movement needs something
+it can't draw yet (a new base, hold or piece of kit).
+
+### Files
+- `r&d/data/demos/patterns.json` — the patterns, each with its `text`.
+- `r&d/data/demos/movements/<movement-id>.json` — one per movement with a
+  figure. The id must exist in `r&d/data/exercises.json`.
+
+```json
+{
+  "pattern": "curl",
+  "o": { "upperArm": [4, 90], "foreArm": [8, 96], "labels": ["…", "…", "…", "…"] },
+  "text": { "setup": "…", "cues": ["…", "…", "…"], "mistakes": ["…", "…"], "variants": { "cable": "…" } }
+}
+```
+`o` (overrides) and `text` are optional: a file with only `pattern` borrows
+everything. Text that's missing falls back to the pattern's — but a
+movement that moves differently from its pattern (a front raise built on
+the curl) needs its own cues, or it shows the wrong ones.
+
+### Three ways in
+1. **Demo Lab** (desktop): `node "r&d/tools/serve.mjs"`, open
+   `http://localhost:5178/r%26d/tools/demo-lab.html`. Pick the movement and
+   a pattern to start from, drag the pose sliders, set the phase labels and
+   text, watch it play in either skin, then **Save & build**. It runs the
+   app's own engine, so the preview is what the Info tab draws. A file the
+   build rejects is not saved.
+2. **By hand or by Claude**: write the JSON file, then
+   `node "r&d/tools/build-demos.cjs"`.
+3. **A new pattern**: add it to `patterns.json` (needs `base`, `labels`,
+   `eq._` and its `text`), then movements as above.
+
+### Then, every time
+```bash
+node "r&d/tools/build-demos.cjs"      # validates; unknown keys are errors
+node "r&d/tools/demo-check.cjs" --98 --png   # poses every movement × equipment, writes a contact sheet
+```
+`demo-check` fails on NaN, a body through the floor, or a throw, and warns
+when a hand can't reach its target, the bar leaves midfoot, or the planted
+foot floats. It also lists movements still without a figure and equipment
+with no variant note. Look at the sheet before shipping — the checks catch
+broken maths, not ugly poses. Then bump, changelog, PR as usual.
+
+### Key reference
+A key is looked up: movement `o.eq[equipment]` → movement `o` → pattern
+`eq[equipment]` → pattern `eq._` → pattern. Angles are degrees from
+vertical, forward (the way the lifter faces) positive. A keyframe is a
+number (fixed), `[start, end]`, or stops `[[p, v], …]` for a curve
+(p 0 = start, 1 = far end).
+
+| Key | Meaning |
+|---|---|
+| `base` | `stand` (FK from a fixed ankle) · `split` (both feet planted, legs by IK) · `seat` · `bench` (lying, head left) · `hang` (from a bar) · `front` (front view) |
+| `concentric` | `go`: start → far end is the hard way (deadlift, curl). `back`: lower first (squat, bench) |
+| `labels` | 4 phase labels: start (hold) · going · far end (pause) · coming back |
+| `path` | `midfoot` draws the dashed midfoot line |
+| `shin`, `thigh` | stand: shin lean, and thigh angle (hip behind the knee is positive) |
+| `torso` | torso lean (negative = leaning back) |
+| `solve` | `midfoot`: torso solved each frame so the hold point is over midfoot (ignores `torso`) |
+| `barX` | nudge for the solver's target, metres |
+| `hold` | where the load sits: `back` · `front` (rack) · `goblet` · `hands` (straight arms) |
+| `arms` | `hold` (hands to the hold point) · `target` (hands follow `hand`) · `angles` (`upperArm`, `foreArm`) |
+| `elbow` | which way the IK bends: `down` · `up` · `fwd` · `back` |
+| `hand` | targets `[[anchor, a, b], [anchor, a, b]]` or stops `[[p, anchor, a, b], …]`. Anchors: `root` (shoulder joint +dx, +dy) · `chest` (a = fraction hip→shoulder, b = distance off the chest) · `mid` (over midfoot +dx, b above the shoulder joint) · `world` (x, y) |
+| `upperArm`, `foreArm` | arm angles from straight down, in world space (180 = straight up) |
+| `frontX`, `rear`, `rearToe`, `rearBench`, `hipKF` | split: front ankle x, rear ankle [x, y], rear toe [x, y], bench under the rear foot, hip targets (as `hand`) |
+| `thighA`, `shinA`, `kneePad`, `backPad`, `footPlate` | seat: thigh above horizontal, shin from vertical, and the kit |
+| `incline`, `legsUp` | bench: back-pad angle; Larsen legs |
+| `rootFrom`, `rootTo` | hang: shoulder offset from the bar at the start and the end |
+| `abduct`, `elbowBend` | front: arm angle out to the side; elbow bend |
+| `draw` | `barbell` · `trap` · `log` · `dumbbell` · `kettlebell` · `plate` · `cable` · `band` · `belt` · `none` |
+| `rail`, `ssb`, `plateR`, `anchor` | Smith rail; SSB handles; plate radius (m); cable/band anchor `[x, y]`, `above` or `across` |
+| `box`, `pins`, `preacher`, `chestPad` | kit: box height (m); pins (a height, or `true` = at the start of the hand path); preacher pad; chest pad |
+
+Body proportions (metres, a 1.75 m lifter): shin 0.44, thigh 0.43, torso
+0.52, upper arm 0.30, forearm to the bar 0.30.

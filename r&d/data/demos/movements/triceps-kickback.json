@@ -1,0 +1,33 @@
+{
+  "pattern": "triceps",
+  "o": {
+    "shin": 10,
+    "thigh": 36,
+    "torso": 66,
+    "upperArm": -82,
+    "foreArm": [0, -82],
+    "labels": ["Hinge over, upper arm along your side", "Extend back", "Arm straight, squeeze", "Lower to 90°"],
+    "eq": {
+      "_": {
+        "draw": "dumbbell"
+      },
+      "cable": {
+        "draw": "cable",
+        "anchor": [0.55, 0.25]
+      },
+      "resistance_band": {
+        "draw": "band",
+        "anchor": [0.55, 0.05]
+      }
+    }
+  },
+  "text": {
+    "setup": "Hinge forward with a flat back, upper arm along your side and parallel to the floor.",
+    "cues": [
+      "Straighten your arm behind you.",
+      "Squeeze with the arm fully straight.",
+      "Lower to 90° under control."
+    ],
+    "mistakes": ["Upper arm dropping as you tire.", "Swinging the weight."]
+  }
+}

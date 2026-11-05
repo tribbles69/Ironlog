@@ -1,0 +1,18 @@
+{
+  "pattern": "press",
+  "o": {
+    "concentric": "go",
+    "pins": true,
+    "hand": [["chest", 0.8, 0.09], ["root", 0.06, 0.575]],
+    "labels": ["Bar resting on the pins, brace", "Press from a dead stop", "Lock out", "Lower back to the pins"]
+  },
+  "text": {
+    "setup": "Set the pins so the bar rests at the height you want to train, often an inch or two off the chest.",
+    "cues": [
+      "Get tight under the bar while it rests on the pins.",
+      "Press from a dead stop.",
+      "Lower back to the pins and let it settle each rep."
+    ],
+    "mistakes": ["Bouncing off the pins.", "Losing your set-up between reps."]
+  }
+}

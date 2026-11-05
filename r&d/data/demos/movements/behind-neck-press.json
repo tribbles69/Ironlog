@@ -1,0 +1,17 @@
+{
+  "pattern": "overhead",
+  "o": {
+    "torso": [3, 2],
+    "hand": [["root", -0.07, 0.05], ["mid", 0, 0.575]],
+    "labels": ["Bar on your traps, brace", "Press straight up", "Lock out", "Lower to your traps"]
+  },
+  "text": {
+    "setup": "Bar on your upper traps, grip a little wider than a normal press. Only if your shoulders are comfortable here.",
+    "cues": [
+      "Press straight up from behind your head.",
+      "Lock out over the back of your head.",
+      "Lower under control to your traps."
+    ],
+    "mistakes": ["Forcing a range your shoulders don't have.", "Head jutting forward."]
+  }
+}

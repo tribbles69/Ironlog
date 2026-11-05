@@ -1,0 +1,21 @@
+{
+  "pattern": "overhead",
+  "o": {
+    "shin": [[0, 0], [0.16, 13], [0.32, 0], [1, 0]],
+    "thigh": [[0, -2], [0.16, 22], [0.32, -2], [1, -2]],
+    "hand": [[0, "root", 0.12, 0], [0.32, "root", 0.12, 0.06], [1, "mid", 0, 0.575]],
+    "labels": ["Brace", "Dip and drive", "Lock out", "Lower to your collarbones"]
+  },
+  "text": {
+    "cues": [
+      "Dip by bending the knees a few inches, torso upright.",
+      "Drive hard with your legs and press as the bar leaves your shoulders.",
+      "Lock out with your head through."
+    ],
+    "mistakes": [
+      "Dipping forward onto your toes.",
+      "A slow dip that lets the bar sink.",
+      "Pressing before the legs finish."
+    ]
+  }
+}
