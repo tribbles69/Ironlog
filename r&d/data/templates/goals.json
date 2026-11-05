@@ -8,7 +8,7 @@
   },
   "goals": {
     "strength": {
-      "label": "Strength",
+      "label": "Get stronger",
       "main": {
         "reps": [
           3,
@@ -42,7 +42,7 @@
       }
     },
     "size": {
-      "label": "Size",
+      "label": "Build muscle / tone up",
       "main": {
         "reps": [
           6,
@@ -92,7 +92,7 @@
       "note": "Competition squat, bench and deadlift are the main lifts (patterns.json goalOverrides). With a meet date the plan becomes a C6 block counting down to it."
     },
     "general": {
-      "label": "General fitness",
+      "label": "Get fitter and healthier",
       "main": {
         "reps": [
           8,
@@ -122,6 +122,79 @@
           2,
           3
         ]
+      },
+      "finisher": {
+        "reps": [
+          12,
+          20
+        ],
+        "rir": [
+          2,
+          3
+        ]
+      }
+    },
+    "fat-loss": {
+      "label": "Lose weight",
+      "note": "Keep lifting fairly heavy so the weight lost is fat, not muscle (Aaron, 2026-11-05: added for gen-pop users). Nutrition and the target-weight goal do the rest.",
+      "main": {
+        "reps": [
+          6,
+          10
+        ],
+        "rir": 2
+      },
+      "secondary": {
+        "reps": [
+          8,
+          12
+        ],
+        "rir": 2
+      },
+      "accessory": {
+        "reps": [
+          10,
+          15
+        ],
+        "rir": [
+          1,
+          2
+        ]
+      },
+      "finisher": {
+        "reps": [
+          12,
+          20
+        ],
+        "rir": [
+          1,
+          2
+        ]
+      }
+    },
+    "move": {
+      "label": "Move better, ease aches",
+      "note": "Gentle loading for everyday strength and joints: moderate reps, plenty in reserve (Aaron, 2026-11-05).",
+      "main": {
+        "reps": [
+          8,
+          12
+        ],
+        "rir": 3
+      },
+      "secondary": {
+        "reps": [
+          10,
+          12
+        ],
+        "rir": 3
+      },
+      "accessory": {
+        "reps": [
+          12,
+          15
+        ],
+        "rir": 3
       },
       "finisher": {
         "reps": [

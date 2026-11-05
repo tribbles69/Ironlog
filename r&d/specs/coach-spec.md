@@ -218,7 +218,19 @@ built into the app, like the morning-stretch routine.
   - Strongman: Strength, plus an event slot (carry, load or press medley
     from B1) on one day
   - Powerlifting meet: Strength with the competition lifts as main
-  - General fitness: 8–12 @ RIR 2–3 everywhere
+  - General fitness ("Get fitter and healthier"): 8–12 @ RIR 2–3 everywhere
+  - **Everyday goals** (Aaron, 2026-11-05, from Chelsea: the coach read as
+    athlete-only). Listed first: Lose weight, Get fitter and healthier, Build
+    muscle / tone up (= Size), Move better / ease aches. Strength, Strongman
+    and Powerlifting follow.
+    - Lose weight: main 6–10 @ RIR 2, accessories 10–15 @ RIR 1–2 — keep
+      lifting fairly heavy so the loss is fat, not muscle. Asks for a target
+      weight and saves it as a bodyweight goal. Coach answers on nutrition,
+      rest and the weigh-in trend speak to a deficit.
+    - Move better / ease aches: main 8–12 @ RIR 3, accessories 12–15 @ RIR 3.
+    - Question wording drops strength-sport framing for these goals (sex and
+      bodyweight questions, "favourite exercises" instead of lifts, which
+      can be skipped).
 - **Experience** (Q6):
   - Under 6 months: one version every week, fewer sets, RIR never below 2,
     no AMRAPs, and slower load increases. **Starts on machines and
