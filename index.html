@@ -524,6 +524,22 @@ tr.pr td input{background:rgba(255,197,66,.1);border-color:rgba(255,197,66,.35)}
 .lv-today{stroke:var(--accent);stroke-width:2}
 .lv-pt{fill:var(--accent)}
 .lv-pt.hollow{fill:none;stroke:var(--accent);stroke-width:1.5}
+/* per-rep bar speed: a spark in the set row, the full chart when opened */
+details.vbtrep>summary{list-style:none;cursor:pointer}
+details.vbtrep>summary::-webkit-details-marker{display:none}
+details.vbtrep>summary .chev{display:inline-block;color:var(--dim2);font-size:10px;width:10px;transition:transform .15s}
+details.vbtrep[open]>summary .chev{transform:rotate(90deg)}
+.repspark{vertical-align:middle;margin-left:6px}
+.rp-bar{fill:var(--purple)}
+.rp-bar.near{fill:var(--gold)}
+.rp-bar.flag{opacity:.45}
+.rp-peak{fill:var(--txt);opacity:.7}
+.repdetail{padding:4px 0 6px}
+.reptable{width:100%;border-collapse:collapse;font-size:11.5px;margin-top:6px;font-variant-numeric:tabular-nums}
+.reptable th{font-weight:600;color:var(--dim2);text-align:right;padding:2px 4px;white-space:nowrap}
+.reptable td{text-align:right;padding:2px 4px;border-top:1px solid rgba(255,255,255,.05)}
+.reptable th:first-child,.reptable td:first-child{text-align:left}
+.reptable td.fl{text-align:left;color:var(--gold);font-size:10.5px}
 .hrbox{display:flex;flex-wrap:wrap;align-items:center;gap:8px;min-height:44px;padding:8px 12px;border:1px solid var(--line);border-radius:12px}
 .dot-on{width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 0 3px rgba(61,220,132,.2)}
 .rangeline{margin-top:6px}
@@ -6370,16 +6386,72 @@ function setRefText(sets, si) {
   const n = setNumber(sets, si), s = sets[si];
   return n === 'W' ? `W ${wt(s.w)}` : `Set ${n}`;
 }
+/* Per rep. Each measured set opens to its reps: a bar per rep (mean speed),
+   a tick for peak speed, the lift's limit dashed across, and a table of what
+   Slew read — speed, peak, range, time up, RIR and any quality flags. Gold is
+   a rep at RIR 1 or less; a faded bar is one Slew flagged. Open/closed is
+   remembered for the session so a live re-render doesn't fold it away. */
+const VBT_OPEN = new Set();
+document.addEventListener('toggle', ev => {
+  const d = ev.target;
+  if (!d || !d.dataset || d.dataset.vbtrep == null) return;
+  if (d.open) VBT_OPEN.add(d.dataset.vbtrep); else VBT_OPEN.delete(d.dataset.vbtrep);
+}, true);
+const repRir = r => r.rpe == null ? null : rpeToRir(r.rpe);
+const repCls = r => `rp-bar${repRir(r) != null && repRir(r) <= 1 ? ' near' : ''}${(r.flags || []).length ? ' flag' : ''}`;
+function repSpark(v) {
+  const reps = (v && v.reps) || [];
+  if (!reps.length) return '';
+  const max = Math.max(...reps.map(r => r.v), 0.01), bw = 5, gap = 2, H = 14;
+  const W = reps.length * (bw + gap) - gap;
+  return `<svg class="repspark" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" role="img" aria-label="${reps.length} reps, ${reps.map(r => r.v.toFixed(2)).join(', ')} m/s">${reps.map((r, i) => {
+    const bh = Math.max(2, r.v / max * H);
+    return `<rect x="${i * (bw + gap)}" y="${(H - bh).toFixed(1)}" width="${bw}" height="${bh.toFixed(1)}" rx="1" class="${repCls(r)}"/>`;
+  }).join('')}</svg>`;
+}
+function repDetail(v) {
+  const reps = (v && v.reps) || [];
+  if (!reps.length) return '';
+  const mvt = v.lift ? mvtFor(v.lift) : 0;
+  const top = Math.max(...reps.map(r => Math.max(r.v, r.peak || 0)), mvt, 0.3) * 1.12;
+  const W = 300, H = 120, L = 30, B = 16, T = 12, R = 6;
+  const slot = (W - L - R) / reps.length, bw = Math.min(26, slot * 0.62);
+  const Y = x => T + (1 - x / top) * (H - T - B);
+  const romBest = Math.max(...reps.map(r => r.rom || 0));
+  const chart = `<svg class="lvchart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Bar speed per rep: ${reps.map((r, i) => `rep ${i + 1} ${r.v.toFixed(2)} m/s`).join(', ')}">
+    <line x1="${L}" y1="${H - B}" x2="${W - R}" y2="${H - B}" class="lv-axis"/><line x1="${L}" y1="${T}" x2="${L}" y2="${H - B}" class="lv-axis"/>
+    <text x="${L - 4}" y="${T + 4}" text-anchor="end" class="lv-t">${top.toFixed(1)}</text><text x="${L - 4}" y="${H - B}" text-anchor="end" class="lv-t">0</text>
+    ${reps.map((r, i) => {
+      const cx = L + slot * (i + 0.5), y = Y(r.v), rir = repRir(r);
+      return `<rect x="${(cx - bw / 2).toFixed(1)}" y="${y.toFixed(1)}" width="${bw.toFixed(1)}" height="${(H - B - y).toFixed(1)}" rx="2" class="${repCls(r)}"/>
+        ${r.peak ? `<rect x="${(cx - bw / 2).toFixed(1)}" y="${(Y(r.peak) - 1).toFixed(1)}" width="${bw.toFixed(1)}" height="2" class="rp-peak"/>` : ''}
+        ${rir != null ? `<text x="${cx.toFixed(1)}" y="${(Math.min(y, r.peak ? Y(r.peak) : y) - 3).toFixed(1)}" text-anchor="middle" class="lv-t">${nice(rir)}</text>` : ''}
+        <text x="${cx.toFixed(1)}" y="${H - 4}" text-anchor="middle" class="lv-t">${i + 1}</text>`;
+    }).join('')}
+    ${mvt ? `<line x1="${L}" y1="${Y(mvt).toFixed(1)}" x2="${W - R}" y2="${Y(mvt).toFixed(1)}" class="lv-mvt"/><text x="${W - R}" y="${(Y(mvt) - 3).toFixed(1)}" text-anchor="end" class="lv-t">limit ${mvt.toFixed(2)}</text>` : ''}
+  </svg>`;
+  const rows = reps.map((r, i) => {
+    const short = romBest > 0 && r.rom < romBest * 0.88;
+    const fl = [...(r.flags || []), ...(short ? ['short ROM'] : [])];
+    return `<tr><td>${i + 1}</td><td>${r.v.toFixed(2)}</td><td>${r.peak ? r.peak.toFixed(2) : '—'}</td><td>${r.rom ? (r.rom * 100).toFixed(0) : '—'}</td><td>${r.con ? r.con.toFixed(1) : '—'}</td><td style="color:var(--purple)">${repRir(r) != null ? nice(repRir(r)) : '—'}</td><td class="fl">${esc(fl.join(', '))}</td></tr>`;
+  }).join('');
+  return `<div class="repdetail">${chart}
+    <table class="reptable"><thead><tr><th>Rep</th><th>m/s</th><th>Peak</th><th>cm</th><th>↑ s</th><th>RIR</th><th></th></tr></thead><tbody>${rows}</tbody></table>
+    <div class="sub" style="font-size:11px;margin-top:4px">Velocity loss ${v.loss.toFixed(0)}%${v.est ? ` · set RIR ${nice(rpeToRir(v.est.rpe))}${v.est.method ? ` (${esc(v.est.method)})` : ''}` : ''} · ${v.rate} Hz · confidence ${(v.conf * 100).toFixed(0)}%${v.place === 'pocket' ? ' · pocket' : ''}</div>
+  </div>`;
+}
 function vbtStrip(e) {
   const rows = e.sets.map((s, i) => ({ s, i })).filter(x => x.s.vbt);
   if (!rows.length) return '';
   return `<div class="vbtstrip">${rows.map(({ s, i }) => {
-    const v = s.vbt;
-    return `<div class="row between">
-      <span class="sub">${setRefText(e.sets, i)}</span>
-      <span class="mono grow">${v.best.toFixed(2)} m/s${v.loss >= 5 ? ` <span class="dimmer">▾${v.loss.toFixed(0)}%</span>` : ''}${e.tempo ? vbtTimes(v) : ''}</span>
+    const v = s.vbt, key = String(v.at);
+    return `<details class="vbtrep" data-vbtrep="${key}"${VBT_OPEN.has(key) ? ' open' : ''}>
+      <summary class="row between" aria-label="${esc(setRefText(e.sets, i))}: ${v.best.toFixed(2)} metres per second. Show each rep">
+      <span class="sub"><span class="chev" aria-hidden="true">▸</span>${setRefText(e.sets, i)}</span>
+      <span class="mono grow">${v.best.toFixed(2)} m/s${v.loss >= 5 ? ` <span class="dimmer">▾${v.loss.toFixed(0)}%</span>` : ''}${e.tempo ? vbtTimes(v) : ''}${repSpark(v)}</span>
       ${v.est ? `<span class="mono sub" style="color:var(--purple)">RIR ${nice(rpeToRir(v.est.rpe))}</span>` : ''}${why('vbt', v)}
-    </div>`;
+      </summary>${repDetail(v)}
+    </details>`;
   }).join('')}</div>`;
 }
 
@@ -7589,13 +7661,13 @@ function viewCompleted(id) {
       ${wo.exercises.map(e => `
         <div class="card tight" style="background:var(--card)">
           <div style="font-weight:700;margin-bottom:7px">${exNameHtml(e)}${modsHtml(e)}</div>
-          ${e.sets.map((s, i) => `<div class="exline"><span class="dimmer">${setListLabel(e.sets, i)}</span>
+          ${e.sets.map((s, i) => `${s.vbt ? `<details class="vbtrep" data-vbtrep="h${s.vbt.at}"${VBT_OPEN.has('h' + s.vbt.at) ? ' open' : ''}><summary` : '<div'} class="exline"><span class="dimmer">${s.vbt ? '<span class="chev" aria-hidden="true">▸</span>' : ''}${setListLabel(e.sets, i)}</span>
             <span class="mono">${kindOf(e) !== 'reps' && !isTimed(e)
     ? esc(setText(e, s))
     : isTimed(e)
     ? `${holdLabel(s)}${isIso(e) && s.rpe != null ? ` @ ${rpeToRir(s.rpe)}` : ''}`
     : `${wt(s.w)} × ${s.r}${sidesText(s)}${s.rpe ? ` @ ${rpeToRir(s.rpe)}` : ''}${isPRSet(s) ? ` <span class="dimmer">· e1RM ${wt(e1rm(s.w, s.r))}</span>` : ''}`}${roleSuffix(s)}${feelSuffix(s)}${s.vbt
-      ? ` <span class="dimmer">· ${s.vbt.best.toFixed(2)} m/s${s.vbt.loss >= 5 ? ` ▾${s.vbt.loss.toFixed(0)}%` : ''}</span>` : ''}</span></div>`).join('')}
+      ? ` <span class="dimmer">· ${s.vbt.best.toFixed(2)} m/s${s.vbt.loss >= 5 ? ` ▾${s.vbt.loss.toFixed(0)}%` : ''}</span>${repSpark(s.vbt)}` : ''}</span>${s.vbt ? `</summary>${repDetail(s.vbt)}</details>` : '</div>'}`).join('')}
         </div>`).join('')}
     `,
     foot: `<button class="btn danger" id="delWo">Delete</button><button class="btn sm ghost" id="editWo">✎ Edit</button><button class="btn sm ghost" id="woShare">↗ Share</button><button class="btn primary" data-close>Close</button>`,
