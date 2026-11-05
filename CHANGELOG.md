@@ -13,6 +13,9 @@ rather than guessed.
 
 ---
 
+## 0.76.1 — 5 Nov 2026
+- **Bar speed on old workouts.** When you open a past workout, any exercise you measured now shows the same bar-speed panel as during the session. Each set has its speed, RIR and per-rep bars, and you can tap a set for the full chart. The warm-up profile chart and e1RM range appear too, if you took one.
+
 ## 0.76.0 — 5 Nov 2026
 - **New: bar speed per rep.** Every measured set now shows a small bar for each rep next to its speed. Tap the set to open a chart of every rep against your limit, with peak speed, range of motion, time up and RIR for each one.
 - Gold bars are reps at RIR 1 or less. Faded bars are reps the sensor wasn't sure about, and short reps are labelled.

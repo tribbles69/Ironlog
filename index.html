@@ -6440,11 +6440,21 @@ function repDetail(v) {
     <div class="sub" style="font-size:11px;margin-top:4px">Velocity loss ${v.loss.toFixed(0)}%${v.est ? ` · set RIR ${nice(rpeToRir(v.est.rpe))}${v.est.method ? ` (${esc(v.est.method)})` : ''}` : ''} · ${v.rate} Hz · confidence ${(v.conf * 100).toFixed(0)}%${v.place === 'pocket' ? ' · pocket' : ''}</div>
   </div>`;
 }
-function vbtStrip(e) {
+/* A finished workout shows bar speed the way the live card did: every
+   measured set with its RIR and reps, and the warm-up profile if one was
+   taken. Open/closed keys are prefixed so they don't clash with the live card. */
+function vbtHistory(e) {
+  if (!e.sets.some(s => s.vbt) && !(e.lvp && e.lvp.points && e.lvp.points.length)) return '';
+  const d = e.lvp && e.lvp.points && e.lvp.points.length ? lvDay(e) : null;
+  const prof = e.lvp && e.lvp.points && e.lvp.points.length
+    ? `<div class="vbtstrip"><div class="row between" style="font-size:12px"><b>Warm-up profile</b>${d ? `<span class="mono">e1RM ${wt(d.lo)}–${wt(d.hi)}</span>` : '<span class="sub">not enough spread for an estimate</span>'}</div>${lvChart(e)}</div>` : '';
+  return `<div style="margin-top:8px">${vbtStrip(e, 'h')}${prof}</div>`;
+}
+function vbtStrip(e, pre = '') {
   const rows = e.sets.map((s, i) => ({ s, i })).filter(x => x.s.vbt);
   if (!rows.length) return '';
   return `<div class="vbtstrip">${rows.map(({ s, i }) => {
-    const v = s.vbt, key = String(v.at);
+    const v = s.vbt, key = pre + v.at;
     return `<details class="vbtrep" data-vbtrep="${key}"${VBT_OPEN.has(key) ? ' open' : ''}>
       <summary class="row between" aria-label="${esc(setRefText(e.sets, i))}: ${v.best.toFixed(2)} metres per second. Show each rep">
       <span class="sub"><span class="chev" aria-hidden="true">▸</span>${setRefText(e.sets, i)}</span>
@@ -7661,13 +7671,14 @@ function viewCompleted(id) {
       ${wo.exercises.map(e => `
         <div class="card tight" style="background:var(--card)">
           <div style="font-weight:700;margin-bottom:7px">${exNameHtml(e)}${modsHtml(e)}</div>
-          ${e.sets.map((s, i) => `${s.vbt ? `<details class="vbtrep" data-vbtrep="h${s.vbt.at}"${VBT_OPEN.has('h' + s.vbt.at) ? ' open' : ''}><summary` : '<div'} class="exline"><span class="dimmer">${s.vbt ? '<span class="chev" aria-hidden="true">▸</span>' : ''}${setListLabel(e.sets, i)}</span>
+          ${e.sets.map((s, i) => `<div class="exline"><span class="dimmer">${setListLabel(e.sets, i)}</span>
             <span class="mono">${kindOf(e) !== 'reps' && !isTimed(e)
     ? esc(setText(e, s))
     : isTimed(e)
     ? `${holdLabel(s)}${isIso(e) && s.rpe != null ? ` @ ${rpeToRir(s.rpe)}` : ''}`
     : `${wt(s.w)} × ${s.r}${sidesText(s)}${s.rpe ? ` @ ${rpeToRir(s.rpe)}` : ''}${isPRSet(s) ? ` <span class="dimmer">· e1RM ${wt(e1rm(s.w, s.r))}</span>` : ''}`}${roleSuffix(s)}${feelSuffix(s)}${s.vbt
-      ? ` <span class="dimmer">· ${s.vbt.best.toFixed(2)} m/s${s.vbt.loss >= 5 ? ` ▾${s.vbt.loss.toFixed(0)}%` : ''}</span>${repSpark(s.vbt)}` : ''}</span>${s.vbt ? `</summary>${repDetail(s.vbt)}</details>` : '</div>'}`).join('')}
+      ? ` <span class="dimmer">· ${s.vbt.best.toFixed(2)} m/s</span>` : ''}</span></div>`).join('')}
+          ${vbtHistory(e)}
         </div>`).join('')}
     `,
     foot: `<button class="btn danger" id="delWo">Delete</button><button class="btn sm ghost" id="editWo">✎ Edit</button><button class="btn sm ghost" id="woShare">↗ Share</button><button class="btn primary" data-close>Close</button>`,
