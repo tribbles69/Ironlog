@@ -6364,15 +6364,21 @@ function vbtTimes(v) {
   const m = a => (a.reduce((x, y) => x + y, 0) / a.length).toFixed(1);
   return ` <span class="dimmer">${ecc.length ? `↓${m(ecc)} ` : ''}↑${m(con)} s</span>`;
 }
+/* How a set is named outside the table — the same number the set box shows,
+   so "Set 1" here is set 1 on the card, and warm-ups say so with their weight. */
+function setRefText(sets, si) {
+  const n = setNumber(sets, si), s = sets[si];
+  return n === 'W' ? `W ${wt(s.w)}` : `Set ${n}`;
+}
 function vbtStrip(e) {
   const rows = e.sets.map((s, i) => ({ s, i })).filter(x => x.s.vbt);
   if (!rows.length) return '';
   return `<div class="vbtstrip">${rows.map(({ s, i }) => {
     const v = s.vbt;
     return `<div class="row between">
-      <span class="sub">Set ${i + 1}</span>
+      <span class="sub">${setRefText(e.sets, i)}</span>
       <span class="mono grow">${v.best.toFixed(2)} m/s${v.loss >= 5 ? ` <span class="dimmer">▾${v.loss.toFixed(0)}%</span>` : ''}${e.tempo ? vbtTimes(v) : ''}</span>
-      ${v.est ? `<span class="mono sub" style="color:var(--purple)">RIR ${rpeToRir(v.est.rpe)}</span>` : ''}${why('vbt', v)}
+      ${v.est ? `<span class="mono sub" style="color:var(--purple)">RIR ${nice(rpeToRir(v.est.rpe))}</span>` : ''}${why('vbt', v)}
     </div>`;
   }).join('')}</div>`;
 }
@@ -10607,7 +10613,8 @@ function openVbtRecord(ei, opts = {}) {
           ...(loadKg > 0 ? { loadKg } : {}),
         });
         const reps = liftId ? Slew.withRpe(out.reps, profile) : out.reps;
-        const est = liftId ? Slew.estimateSet(reps, profile, out.failure) : null;
+        const failure = trustFailure(out.failure, out.reps, liftId, profile);
+        const est = liftId ? Slew.estimateSet(reps, profile, failure) : null;
         const rate = motion.length > 1
           ? (motion.length - 1) / ((motion[motion.length - 1].t - motion[0].t) / 1000 || 1) : 0;
         const rec = {
@@ -10617,12 +10624,27 @@ function openVbtRecord(ei, opts = {}) {
         vbtCapture = null;
         closeModal();
         const packed = packVbt(rec, est, liftId, place);
-        if (opts.onRecorded) return opts.onRecorded(packed, est, out.failure);
+        if (opts.onRecorded) return opts.onRecorded(packed, est, failure);
         if (mode === 'profile') return lvRecorded(ei, packed);
-        vbtReviewDlg(ei, packed, est, out.failure);
+        vbtReviewDlg(ei, packed, est, failure);
       };
     },
   });
+}
+
+/* A missed rep or a near-stall means the last finished rep was at the limit —
+   so it can't have been moving fast. Pin and dead-stop presses fool the
+   detector: re-racking or lifting the bar off the pins after the set reads as a
+   part-rep, and a set at 0.68 m/s came out as RIR 0. When the last finished rep
+   was more than about three reps' worth of speed above the limit, the evidence
+   is dropped and the estimate falls back to the speed trend. Dropped evidence
+   also never calibrates the limit (attachVbt reads est.measuredV0). */
+function trustFailure(f, reps, liftId, profile) {
+  if (!f || !liftId || !(f.failedAttempt || f.grind) || !reps || !reps.length) return f;
+  const lastV = reps[reps.length - 1].concentric.meanVelocity;
+  const ceiling = mvtFor(liftId) + 3 * ((profile && profile.slope) || 0.05);
+  if (!(lastV > ceiling)) return f;
+  return { ...f, failedAttempt: false, grind: false, ignored: true, ignoredV: lastV, terminalVelocity: undefined };
 }
 
 /* Review before it is attached to anything. The rep table is the whole point:
@@ -10633,7 +10655,7 @@ function vbtReviewDlg(ei, v, est, failure) {
   const rows = v.reps.map((r, i) => `<div class="row between" style="padding:3px 0;font-size:13px">
       <span class="sub" style="width:44px">Set rep ${i + 1}</span>
       <span class="mono grow">${r.v.toFixed(2)} m/s <span class="dimmer">peak ${r.peak.toFixed(2)} · ${(r.rom * 100).toFixed(0)} cm</span></span>
-      <span class="mono sub">${r.rpe == null ? '' : 'RIR ' + rpeToRir(r.rpe)}</span>
+      <span class="mono sub">${r.rpe == null ? '' : 'RIR ' + nice(rpeToRir(r.rpe))}</span>
     </div>`).join('');
 
   modal({
@@ -10642,11 +10664,12 @@ function vbtReviewDlg(ei, v, est, failure) {
       <div class="stats grid3" style="margin-bottom:10px">
         <div class="stat"><div class="k">Best</div><div class="v">${v.best.toFixed(2)}<small>m/s</small></div></div>
         <div class="stat"><div class="k">Velocity loss</div><div class="v" style="color:${v.loss >= 25 ? 'var(--gold)' : 'var(--text)'}">${v.loss.toFixed(0)}<small>%</small></div></div>
-        <div class="stat"><div class="k">Effort</div><div class="v" style="color:var(--purple)">${v.est ? 'RIR ' + rpeToRir(v.est.rpe) : '—'}</div></div>
+        <div class="stat"><div class="k">Effort</div><div class="v" style="color:var(--purple)">${v.est ? 'RIR ' + nice(rpeToRir(v.est.rpe)) : '—'}</div></div>
       </div>
       ${rows}
       ${v.est ? `<div class="sub" style="margin-top:9px">${esc(v.est.because)}${v.est.spread ? ` <span class="dimmer">±${v.est.spread} RIR</span>` : ''}</div>` : `<div class="sub" style="margin-top:9px">Speed and reps only — this movement has no velocity profile, so effort is not estimated.</div>`}
       ${failure && failure.failedAttempt ? `<div class="chip gold" style="margin-top:9px">A missed rep was detected and left out of the count</div>` : ''}
+      ${failure && failure.ignored ? `<div class="sub" style="margin-top:9px">Something after the set looked like a missed rep, but your last rep moved at ${failure.ignoredV.toFixed(2)} m/s — too fast to be a failure — so it was ignored.</div>` : ''}
       <div class="sub" style="margin-top:9px">${v.rate} Hz · confidence ${(v.conf * 100).toFixed(0)}%${v.reps.some(r => r.flags.length) ? ' · ' + [...new Set(v.reps.flatMap(r => r.flags))].join(', ') : ''}</div>`
       : `<div class="empty">No reps came out of that recording. The bar has to travel at least ${Math.round((Slew.defaultProfile('Machine (stack)').minRom) * 100)} cm and come to rest between reps.</div>`,
     foot: `<button class="btn ghost" data-close>Discard</button>${v.reps.length ? `<button class="btn primary" id="vbAttach">Attach to this exercise</button>` : ''}`,
@@ -10684,7 +10707,7 @@ function attachVbt(ei, v, est) {
     addMvtObservation(v.lift, est.measuredV0);
     toast(`Calibrated ${v.lift} — failure speed ${est.measuredV0.toFixed(2)} m/s, limit now ${mvtFor(v.lift).toFixed(2)} m/s`, 'gold');
   } else {
-    toast(`Set ${target + 1} measured — ${v.best.toFixed(2)} m/s`, 'green');
+    toast(`${setRefText(ex.sets, target)} measured — ${v.best.toFixed(2)} m/s`, 'green');
   }
   save(); bust(); render();
 }
@@ -10739,7 +10762,18 @@ function lvFit(points) {
   return { a, b, n: pts.length, rse, heavy: maxKg, light: minKg, out };
 }
 /* The day's e1RM for an entry: where today's line meets the MVT, as a range. */
+/* A point keeps the weight of the set it was measured on. If that set's weight
+   is corrected afterwards, the point follows it — otherwise the line is drawn
+   through a weight that was never lifted. */
+function lvSync(e) {
+  const pts = (e && e.lvp && e.lvp.points) || [];
+  pts.forEach(p => {
+    const s = e.sets && e.sets[p.si];
+    if (s && s.vbt && s.vbt.at === p.at && s.w > 0) p.kg = s.w;
+  });
+}
 function lvDay(e) {
+  lvSync(e);
   const f = lvFit(e && e.lvp && e.lvp.points);
   const liftId = e && e.leaf ? slewLiftFor(e.leaf) : null;
   if (!f || !liftId) return null;
@@ -10793,6 +10827,7 @@ function lvRecorded(ei, v) {
   ex.lvp.points.push({ kg: s.w, v: v.best, place: v.place, si, at: v.at });
   s.vbt = v;
   if (!s.r) s.r = v.reps.length;
+  if (!isWarm(s) && s.rpe == null && v.est) s.rpe = Math.round(v.est.rpe * 2) / 2;   // a working set measured in profile mode logs its RIR, as attaching does
   if (isWarm(s)) s.done = true;                        // a measured warm-up is a done warm-up
   save(); bust(); render();
   const d = lvDay(ex);
@@ -10801,6 +10836,7 @@ function lvRecorded(ei, v) {
 /* The load-velocity chart: today's points and line, the stored line dashed,
    the MVT across, and the e1RM range where they meet. */
 function lvChart(e) {
+  lvSync(e);
   const pts = (e.lvp && e.lvp.points) || [];
   if (!pts.length) return '';
   const d = lvDay(e), stored = (S.settings.lvProfiles || {})[exKey(e)];
@@ -10822,6 +10858,7 @@ function lvChart(e) {
   </svg>`;
 }
 function lvPanel(e, ei) {
+  lvSync(e);
   const pts = (e.lvp && e.lvp.points) || [];
   if (e.vbtMode !== 'profile' && !pts.length) return '';
   const liftId = e.leaf ? slewLiftFor(e.leaf) : null;
@@ -10837,7 +10874,7 @@ function lvPanel(e, ei) {
     ${d ? `<div style="font-size:15px;margin:4px 0">e1RM today <b>${nice(dw(d.lo, 0))}–${nice(dw(d.hi, 0))}</b> ${U()} <span class="sub">±${d.half.toFixed(0)}%${d.pctHeavy < 80 ? ` · heaviest warm-up ${d.pctHeavy.toFixed(0)}% — go a little heavier to tighten it` : ''}</span></div>`
       : `<div class="sub" style="margin:4px 0">${bar < 3 ? `Measure ${3 - bar} more warm-up${3 - bar === 1 ? '' : 's'} on the bar — 1–2 fast reps each, rising weight.` : 'The warm-ups are too close together, or the speed barely drops across them — add a heavier one.'}</div>`}
     ${rd ? `<div class="sub">Bar speed ${rd.word} (${rd.diff > 0 ? '+' : ''}${rd.diff.toFixed(0)}% at ${wt(d.fit.heavy)})${rd.storedE1 ? ` · usual e1RM ${wt(rd.storedE1, 0)}` : ''}</div>` : d ? '<div class="sub">No stored profile yet — finishing today saves one.</div>' : ''}
-    ${sg ? `<div class="row between" style="margin-top:6px;gap:8px"><span>Set ${sg.si + 1}: <b>${wt(sg.kg)} × ${sg.r}</b> <span class="sub">@ RIR ${sg.t}</span></span>
+    ${sg ? `<div class="row between" style="margin-top:6px;gap:8px"><span>${setRefText(e.sets, sg.si)}: <b>${wt(sg.kg)} × ${sg.r}</b> <span class="sub">@ RIR ${sg.t}</span></span>
       <button class="btn xs primary" data-lvuse="${ei}">Use it</button></div>` : ''}
     ${lvChart(e)}
     ${d ? why('lv', { leaf: e.leaf, lvp: e.lvp }) : ''}

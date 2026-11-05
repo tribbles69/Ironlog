@@ -13,6 +13,13 @@ rather than guessed.
 
 ---
 
+## 0.75.1 — 5 Nov 2026
+- **Fixed: bar-speed RIR on pin and dead-stop presses.** Re-racking or lifting the bar off the pins after a set could read as a missed rep and log RIR 0 on an easy set. If the last rep was clearly fast, that's now ignored, and it can no longer skew your failure speed.
+- **Fixed:** sets measured in warm-up profile mode now log their RIR on working sets, like any other measured set.
+- **Fixed:** set numbers in the bar-speed list and the warm-up profile now match the set numbers in your log, with warm-ups shown as W and their weight.
+- **Fixed:** if you correct a warm-up's weight after measuring it, the profile line now uses the corrected weight.
+- **Fixed:** RIR values like 3.9000000000000004 now show as 3.9.
+
 ## 0.75.0 — 2 Nov 2026
 - **New: grip work.** Two new exercises — **Gripper Close** and **Finger Extension** (extension bands). Find them in the exercise picker under arms, or by typing "gripper" or "extension band".
 - Both are logged per hand: put your gripper's or band's rating in the weight box (in kg) and the reps.
