@@ -13,6 +13,11 @@ rather than guessed.
 
 ---
 
+## 0.76.0 — 5 Nov 2026
+- **New: bar speed per rep.** Every measured set now shows a small bar for each rep next to its speed. Tap the set to open a chart of every rep against your limit, with peak speed, range of motion, time up and RIR for each one.
+- Gold bars are reps at RIR 1 or less. Faded bars are reps the sensor wasn't sure about, and short reps are labelled.
+- It works in your workout history too. Tap a measured set to see its reps.
+
 ## 0.75.1 — 5 Nov 2026
 - **Fixed: bar-speed RIR on pin and dead-stop presses.** Re-racking or lifting the bar off the pins after a set could read as a missed rep and log RIR 0 on an easy set. If the last rep was clearly fast, that's now ignored, and it can no longer skew your failure speed.
 - **Fixed:** sets measured in warm-up profile mode now log their RIR on working sets, like any other measured set.
