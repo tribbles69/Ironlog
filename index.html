@@ -1736,6 +1736,55 @@ async function driveRead(token, id) {
   if (r.status === 404) return undefined;   // gone: make a new one
   return r.json();
 }
+/* A readable companion to the backup, rewritten on every sync: the last four
+   weeks in plain text — every set with RIR and bar speed, daily check-ins,
+   goals and the week ahead. Small enough to open on a phone, or for Claude to
+   read through the Drive connector; the backup stays the source of truth. */
+const SYNC_SUMMARY = 'Ironlog summary.md';
+function driveSummaryText() {
+  const to = today(), from = addDaysISO(to, -27);
+  const R = reportData(from, to, { warm: true, notes: true, vbt: true });
+  const d = s => fmtDate(s, { weekday: 'short', day: 'numeric', month: 'short' });
+  const out = [`# Ironlog summary`, `Written ${new Date().toISOString().slice(0, 16).replace('T', ' ')} UTC by Ironlog ${APP_VERSION}. Last 28 days. Weights in ${U()}; "@ 2" = 2 reps in reserve (RIR). Bar-speed notes in [brackets]: best m/s, velocity loss, the sensor's RIR, and each rep's speed. The full record is "${SYNC_FILE}".`, ''];
+  const cis = S.checkins.filter(c => c.date >= from && c.date <= to).sort((a, b) => a.date < b.date ? 1 : -1);
+  if (cis.length) {
+    out.push('## Check-ins (newest first)');
+    cis.forEach(c => {
+      const bits = [c.weight > 0 ? `${wt(c.weight)}` : '', c.sleepH > 0 ? `sleep ${nice(c.sleepH)} h` : '',
+        ...Object.entries(c).filter(([k, v]) => !['date', 'weight', 'sleepH', 'kcal', 'notes'].includes(k) && v != null && v !== '' && typeof v !== 'object').map(([k, v]) => `${k} ${v}`),
+        c.notes ? `“${c.notes}”` : ''].filter(Boolean);
+      out.push(`- ${d(c.date)}: ${bits.join(' · ') || '—'}`);
+    });
+    out.push('');
+  }
+  const goals = S.goals || [];
+  if (goals.length) {
+    out.push('## Goals');
+    goals.forEach(g => { const cur = goalCurrent(g); out.push(`- ${g.name}: ${cur != null ? (g.type === 'sessions' ? cur : wt(cur)) : '—'} of ${g.type === 'sessions' ? g.target : wt(g.target)}${g.deadline ? ` by ${d(g.deadline)}` : ''}`); });
+    out.push('');
+  }
+  const ahead = S.workouts.filter(w => w.status === 'planned' && w.date >= to && w.date <= addDaysISO(to, 7)).sort((a, b) => a.date < b.date ? -1 : 1);
+  if (ahead.length) {
+    out.push('## Next 7 days (planned)');
+    ahead.forEach(w => out.push(`- ${d(w.date)} · ${w.name}${w.prog ? ` (${programName(w.prog)})` : ''}: ${w.exercises.map(e => `${exName(e)} ${e.sets.length}×${e.sets[0] && e.sets[0].r ? e.sets[0].r : '?'}`).join(', ')}`));
+    out.push('');
+  }
+  out.push(reportText(R));
+  return out.join('\n');
+}
+async function driveWriteNamed(token, id, name, mime, text) {
+  if (id) {
+    const r = await gdrive(token, `https://www.googleapis.com/upload/drive/v3/files/${id}?uploadType=media`,
+      { method: 'PATCH', headers: { 'Content-Type': mime }, body: text });
+    if (r.status !== 404) return id;
+  }
+  const b = 'ironlog' + uid();
+  const form = `--${b}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify({ name, mimeType: mime })}\r\n`
+    + `--${b}\r\nContent-Type: ${mime}; charset=UTF-8\r\n\r\n${text}\r\n--${b}--`;
+  const r = await gdrive(token, 'https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id',
+    { method: 'POST', headers: { 'Content-Type': `multipart/related; boundary=${b}` }, body: form });
+  return (await r.json()).id;
+}
 async function driveWrite(token, id, body) {
   const json = JSON.stringify(body);
   if (id) {
@@ -1799,6 +1848,10 @@ async function driveSync(interactive) {
     const data = { ...syncLocalData(), settings, ...(meta.includeKey && aiKey() ? { aiKey: aiKey() } : {}) };
     fileId = await driveWrite(token, fileId, { format: SYNC_FORMAT, v: SYNC_V, app: APP_VERSION, savedAt: now, data, tomb: m.tomb });
     setSyncMeta({ ...syncMeta(), connected: true, fileId, lastSyncAt: now, known: syncKnown(data) });
+    try {   // the readable summary never fails a sync
+      const sid = await driveWriteNamed(token, syncMeta().summaryId, SYNC_SUMMARY, 'text/markdown', driveSummaryText());
+      setSyncMeta({ ...syncMeta(), summaryId: sid });
+    } catch (e) { /* next sync tries again */ }
     save(); bust();
     return { in: S.workouts.length - before.w + m.localDeletes.filter(d => d[0] === 'workouts').length, sessions: S.workouts.length, checkinsIn: S.checkins.length - before.c };
   } finally { syncBusy = false; }
@@ -2140,7 +2193,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.77.2';
+const APP_VERSION = '0.78.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4881,7 +4934,12 @@ function reportData(from, to, opt) {
     const top = now.reduce((a, b) => b.e1 > a.e1 ? b : a);
     return { name: fullName(keyLeaf(k)), best: top.e1, top, prev: was.length ? Math.max(...was.map(s => s.e1)) : null };
   }).filter(Boolean);
-  const setLine = (e, s) => setText(e, s) + (opt.notes && s.feel && s.feel.note ? ` (“${s.feel.note}”)` : '');
+  const vbtNote = s => {
+    const v = s.vbt; if (!v) return '';
+    const miss = vbtMissed(s);
+    return ` [${v.best.toFixed(2)} m/s${v.loss >= 5 ? `, loss ${v.loss.toFixed(0)}%` : ''}${v.est ? `, bar-speed RIR ${nice(rpeToRir(v.est.rpe))}` : ''}${miss ? `, sensor found ${v.reps.length} of ${s.r} reps` : ''}${v.reps && v.reps.length ? `; reps ${v.reps.map(r => r.v.toFixed(2)).join('/')}` : ''}]`;
+  };
+  const setLine = (e, s) => setText(e, s) + (opt.vbt ? vbtNote(s) : '') + (opt.notes && s.feel && s.feel.note ? ` (“${s.feel.note}”)` : '');
   const sessions = wos.map(wo => {
     const cs = wo.cardio && wo.cardio.summary;
     return {
