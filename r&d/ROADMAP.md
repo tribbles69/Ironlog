@@ -53,9 +53,13 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
 3. If an item links a spec in `r&d/specs/`, the spec wins over the summary here.
    Items marked "write a spec first" need the spec written and agreed before
    building.
-4. One feature per commit. Every shipped change bumps `version.json` **and**
-   the `VERSION` / cache name in `sw.js`, or installed PWAs keep serving the old
-   shell — **and adds an entry to the changelog** (see CLAUDE.md).
+4. One feature per commit. Every shipped change bumps `version.json`, the
+   `VERSION` / cache name in `sw.js`, or installed PWAs keep serving the old
+   shell, **and `APP_VERSION` in `index.html`**, or the app reports the old
+   version and the update sheet never goes away (0.75.1–0.77.1 shipped
+   without it) — **and adds an entry to the changelog** (see CLAUDE.md).
+   Use `node "r&d/tools/bump.cjs" X.Y.Z` (does all three); then
+   `node "r&d/tools/check-version.cjs"` checks they and the changelog agree.
 5. Before committing, syntax-check every `<script>` block — a template-literal
    typo white-screens the single-file app:
    ```bash

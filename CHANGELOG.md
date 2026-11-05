@@ -13,6 +13,9 @@ rather than guessed.
 
 ---
 
+## 0.77.2 — 5 Nov 2026
+- **Fixed:** the "Update available" sheet no longer keeps coming back after you update. Since 0.75.1 the app had been reporting its own version wrongly, so it never believed it was up to date.
+
 ## 0.77.1 — 5 Nov 2026
 - **Missed reps are now flagged.** If the bar-speed sensor finds fewer reps than you logged, the set shows it (for example "1/5") and warns you that its speed and RIR aren't reliable. Ironlog also no longer fills in RIR or calibrates from a set like that.
 - The "rpe-out-of-range" label that appeared on every rep is gone. It only meant your bar-speed profile isn't calibrated yet, so that's now said once at the bottom.
