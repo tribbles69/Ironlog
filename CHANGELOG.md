@@ -13,6 +13,9 @@ rather than guessed.
 
 ---
 
+## 0.78.1 — 5 Nov 2026
+- **Fixed:** the coach report and the Drive summary showed **0kg** total volume whenever a carry or timed hold was in range. It now adds up properly, and per-side lifts count both sides, as the rest of the app does.
+
 ## 0.78.0 — 5 Nov 2026
 - **New: a readable summary in your Google Drive.** Each time Ironlog syncs, it also writes **Ironlog summary.md** next to your backup. It covers the last four weeks in plain text: every session and set with RIR and bar speed, your check-ins (weight, sleep, energy, soreness, notes), your goals and the week ahead. Open it on your phone, or let Claude read it.
 - Your full backup stays the same. The summary is just an easier way to read it.
