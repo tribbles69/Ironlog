@@ -6398,7 +6398,16 @@ document.addEventListener('toggle', ev => {
   if (d.open) VBT_OPEN.add(d.dataset.vbtrep); else VBT_OPEN.delete(d.dataset.vbtrep);
 }, true);
 const repRir = r => r.rpe == null ? null : rpeToRir(r.rpe);
-const repCls = r => `rp-bar${repRir(r) != null && repRir(r) <= 1 ? ' near' : ''}${(r.flags || []).length ? ' flag' : ''}`;
+/* Slew tags every rep "rpe-out-of-range" when the lift has no personal
+   calibration yet. It says nothing about the rep, so it's shown once in the
+   footer as "not calibrated" rather than on every row. */
+const repFlags = r => (r.flags || []).filter(f => f !== 'rpe-out-of-range');
+const repCls = r => `rp-bar${repRir(r) != null && repRir(r) <= 1 ? ' near' : ''}${repFlags(r).length ? ' flag' : ''}`;
+/* Reps logged on the set beyond what the sensor found. */
+function vbtMissed(s) {
+  const n = s && s.vbt && s.vbt.reps ? s.vbt.reps.length : 0;
+  return s && s.vbt && s.r > n ? s.r - n : 0;
+}
 function repSpark(v) {
   const reps = (v && v.reps) || [];
   if (!reps.length) return '';
@@ -6409,9 +6418,10 @@ function repSpark(v) {
     return `<rect x="${i * (bw + gap)}" y="${(H - bh).toFixed(1)}" width="${bw}" height="${bh.toFixed(1)}" rx="1" class="${repCls(r)}"/>`;
   }).join('')}</svg>`;
 }
-function repDetail(v) {
+function repDetail(v, logged) {
   const reps = (v && v.reps) || [];
   if (!reps.length) return '';
+  const uncal = reps.some(r => (r.flags || []).includes('rpe-out-of-range'));
   const mvt = v.lift ? mvtFor(v.lift) : 0;
   const top = Math.max(...reps.map(r => Math.max(r.v, r.peak || 0)), mvt, 0.3) * 1.12;
   const W = 300, H = 120, L = 30, B = 16, T = 12, R = 6;
@@ -6432,14 +6442,41 @@ function repDetail(v) {
   </svg>`;
   const rows = reps.map((r, i) => {
     const short = romBest > 0 && r.rom < romBest * 0.88;
-    const fl = [...(r.flags || []), ...(short ? ['short ROM'] : [])];
+    const fl = [...repFlags(r), ...(short ? ['short ROM'] : [])];
     return `<tr><td>${i + 1}</td><td>${r.v.toFixed(2)}</td><td>${r.peak ? r.peak.toFixed(2) : '—'}</td><td>${r.rom ? (r.rom * 100).toFixed(0) : '—'}</td><td>${r.con ? r.con.toFixed(1) : '—'}</td><td style="color:var(--purple)">${repRir(r) != null ? nice(repRir(r)) : '—'}</td><td class="fl">${esc(fl.join(', '))}</td></tr>`;
   }).join('');
-  return `<div class="repdetail">${chart}
+  return `<div class="repdetail">${logged > reps.length ? `<div class="chip gold" style="margin:2px 0 6px;white-space:normal">The sensor found ${reps.length} of your ${logged} reps, so this set's speed and RIR aren't reliable</div>` : ''}${chart}
     <table class="reptable"><thead><tr><th>Rep</th><th>m/s</th><th>Peak</th><th>cm</th><th>↑ s</th><th>RIR</th><th></th></tr></thead><tbody>${rows}</tbody></table>
-    <div class="sub" style="font-size:11px;margin-top:4px">Velocity loss ${v.loss.toFixed(0)}%${v.est ? ` · set RIR ${nice(rpeToRir(v.est.rpe))}${v.est.method ? ` (${esc(v.est.method)})` : ''}` : ''} · ${v.rate} Hz · confidence ${(v.conf * 100).toFixed(0)}%${v.place === 'pocket' ? ' · pocket' : ''}</div>
+    <div class="sub" style="font-size:11px;margin-top:4px">Velocity loss ${v.loss.toFixed(0)}%${v.est ? ` · set RIR ${nice(rpeToRir(v.est.rpe))}${v.est.method ? ` (${esc(v.est.method)})` : ''}` : ''} · ${v.rate} Hz · confidence ${(v.conf * 100).toFixed(0)}%${v.place === 'pocket' ? ' · pocket' : ''}${uncal ? ' · profile not calibrated yet' : ''}</div>
   </div>`;
 }
+/* Raw sensor traces, for tuning rep detection (Settings → Bar-speed debug).
+   Off by default. Kept on this phone only — never in the synced backup —
+   capped at the last 30 sets (roughly 10 KB each). Export joins each trace to
+   the set it was attached to, so the logged reps sit beside what Slew found. */
+const VBT_RAW_KEY = 'ironlog.vbtRaw', VBT_RAW_MAX = 30;
+function vbtRawList() { try { return JSON.parse(localStorage.getItem(VBT_RAW_KEY) || '[]'); } catch (e) { return []; } }
+function vbtRawKeep(rec) {
+  if (!S.settings.vbtKeepRaw) return;
+  const l = vbtRawList();
+  l.push(rec);
+  while (l.length > VBT_RAW_MAX) l.shift();
+  try { localStorage.setItem(VBT_RAW_KEY, JSON.stringify(l)); } catch (e) { toast('Raw trace not kept — phone storage is full'); }
+}
+function exportVbtRaw() {
+  const l = vbtRawList();
+  if (!l.length) return toast('No raw traces kept yet — turn it on, then measure a set');
+  const all = [...(S.active ? [S.active] : []), ...S.workouts];
+  const traces = l.map(t => {
+    for (const w of all) for (const e of w.exercises || []) {
+      const si = (e.sets || []).findIndex(s => s.vbt && s.vbt.at === t.at);
+      if (si >= 0) { const s = e.sets[si]; return { ...t, logged: { date: w.date, workout: w.name, exercise: exName(e), set: setRefText(e.sets, si), w: s.w, r: s.r, rir: s.rpe != null ? rpeToRir(s.rpe) : null } }; }
+    }
+    return { ...t, logged: null };
+  });
+  saveBlob(JSON.stringify({ format: 'ironlog-vbt-raw', v: 1, exportedAt: new Date().toISOString(), traces }), 'application/json', `ironlog-vbt-raw-${today()}.json`);
+}
+
 /* A finished workout shows bar speed the way the live card did: every
    measured set with its RIR and reps, and the warm-up profile if one was
    taken. Open/closed keys are prefixed so they don't clash with the live card. */
@@ -6458,9 +6495,9 @@ function vbtStrip(e, pre = '') {
     return `<details class="vbtrep" data-vbtrep="${key}"${VBT_OPEN.has(key) ? ' open' : ''}>
       <summary class="row between" aria-label="${esc(setRefText(e.sets, i))}: ${v.best.toFixed(2)} metres per second. Show each rep">
       <span class="sub"><span class="chev" aria-hidden="true">▸</span>${setRefText(e.sets, i)}</span>
-      <span class="mono grow">${v.best.toFixed(2)} m/s${v.loss >= 5 ? ` <span class="dimmer">▾${v.loss.toFixed(0)}%</span>` : ''}${e.tempo ? vbtTimes(v) : ''}${repSpark(v)}</span>
+      <span class="mono grow">${v.best.toFixed(2)} m/s${v.loss >= 5 ? ` <span class="dimmer">▾${v.loss.toFixed(0)}%</span>` : ''}${e.tempo ? vbtTimes(v) : ''}${repSpark(v)}${vbtMissed(s) ? ` <span style="color:var(--gold)">${v.reps.length}/${s.r}</span>` : ''}</span>
       ${v.est ? `<span class="mono sub" style="color:var(--purple)">RIR ${nice(rpeToRir(v.est.rpe))}</span>` : ''}${why('vbt', v)}
-      </summary>${repDetail(v)}
+      </summary>${repDetail(v, s.r)}
     </details>`;
   }).join('')}</div>`;
 }
@@ -10707,6 +10744,9 @@ function openVbtRecord(ei, opts = {}) {
         vbtCapture = null;
         closeModal();
         const packed = packVbt(rec, est, liftId, place);
+        vbtRawKeep({ at: packed.at, lift: liftId, kg: loadKg || null, place, mode, hz: packed.rate, detected: out.reps.length,
+          profile: { scale: profile.scale || 1, minRom: profile.minRom },
+          t: motion.map(m => Math.round(m.t)), a: motion.map(m => +m.a.toFixed(3)), still: motion.map(m => m.still ? 1 : 0).join('') });
         if (opts.onRecorded) return opts.onRecorded(packed, est, failure);
         if (mode === 'profile') return lvRecorded(ei, packed);
         vbtReviewDlg(ei, packed, est, failure);
@@ -10781,12 +10821,15 @@ function attachVbt(ei, v, est) {
   const s = ex.sets[target];
   s.vbt = v;
   if (!s.r) s.r = v.reps.length;
-  if (s.rpe == null && v.est) s.rpe = Math.round(v.est.rpe * 2) / 2;
+  const missed = vbtMissed(s);   // the sensor found fewer reps than the set has: its RIR and failure speed can't be trusted
+  if (s.rpe == null && v.est && !missed) s.rpe = Math.round(v.est.rpe * 2) / 2;
 
   /* Calibration by observation: a set taken to failure measures this lifter's
      own 0-RIR velocity, and every later estimate stops leaning on a population
      constant. This is the reason the profile is stored at all. */
-  if (est && est.measuredV0 && v.lift && v.place !== 'pocket') {   // pocket sets never calibrate (D1)
+  if (missed) {
+    toast(`${setRefText(ex.sets, target)}: the sensor found ${v.reps.length} of ${s.r} reps — RIR not filled in`, 'gold');
+  } else if (est && est.measuredV0 && v.lift && v.place !== 'pocket') {   // pocket sets never calibrate (D1)
     addMvtObservation(v.lift, est.measuredV0);
     toast(`Calibrated ${v.lift} — failure speed ${est.measuredV0.toFixed(2)} m/s, limit now ${mvtFor(v.lift).toFixed(2)} m/s`, 'gold');
   } else {
@@ -10910,7 +10953,7 @@ function lvRecorded(ei, v) {
   ex.lvp.points.push({ kg: s.w, v: v.best, place: v.place, si, at: v.at });
   s.vbt = v;
   if (!s.r) s.r = v.reps.length;
-  if (!isWarm(s) && s.rpe == null && v.est) s.rpe = Math.round(v.est.rpe * 2) / 2;   // a working set measured in profile mode logs its RIR, as attaching does
+  if (!isWarm(s) && s.rpe == null && v.est && !vbtMissed(s)) s.rpe = Math.round(v.est.rpe * 2) / 2;   // a working set measured in profile mode logs its RIR, as attaching does
   if (isWarm(s)) s.done = true;                        // a measured warm-up is a done warm-up
   save(); bust(); render();
   const d = lvDay(ex);
@@ -11336,6 +11379,8 @@ function openSettings() {
         <button class="btn sm grow" id="stImport">Import JSON</button>
       </div>
       <button class="btn sm wide" id="stExportCsv" style="margin-top:9px">Export sets as CSV</button>
+      <label class="row" style="gap:8px;margin-top:12px;font-size:13px"><input type="checkbox" id="stVbtRaw"${S.settings.vbtKeepRaw ? ' checked' : ''}> Bar-speed debug: keep raw sensor traces (last ${VBT_RAW_MAX} sets, this phone only)</label>
+      <button class="btn sm wide ghost" id="stVbtRawExp" style="margin-top:6px">Export raw traces (${vbtRawList().length})</button>
       <div class="sub" style="margin-top:4px">One row per set, for spreadsheets. JSON is the full backup; either comes back in exactly.</div>
       ${hasFoodData() ? `<button class="btn sm wide" id="stFoodExport" style="margin-top:9px">Save old food log (${S.foods.length})…</button>` : ''}
       <button class="btn sm wide" id="stLiftoff" style="margin-top:9px">Import CSV (Ironlog, Strong, Hevy, FitNotes, Liftoff…)</button>
@@ -11457,6 +11502,8 @@ function openSettings() {
         }, 'Mark done');
       };
       $('#stExport', bg).onclick = () => { exportJSON(); refreshStorageLine(bg); };
+      $('#stVbtRaw', bg).onchange = ev => { S.settings.vbtKeepRaw = ev.target.checked; save(); toast(ev.target.checked ? 'Keeping raw traces from your next measured set' : 'Raw traces off — kept ones stay until exported or replaced'); };
+      $('#stVbtRawExp', bg).onclick = () => exportVbtRaw();
       $('#stExportCsv', bg).onclick = () => { exportCSV(); refreshStorageLine(bg); };
       refreshSyncLine(bg);
       refreshStorageLine(bg);                                         // binds "Ask again"
