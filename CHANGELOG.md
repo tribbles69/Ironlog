@@ -13,6 +13,13 @@ rather than guessed.
 
 ---
 
+## 0.82.0 — 6 Nov 2026
+- **New: Missed button on planned sessions.** On Home, Train and the calendar, tap **Missed**, pick why (sore, niggle, ill, work, family, gym busy, low energy or other), add a note if you like, then either **skip** it or **move** it to another day.
+- The calendar marks missed days with a red dot and shows the reason. Tap **Undo** to put the session back on your plan.
+- **New: Not logged.** Train lists planned sessions from the past week that have nothing logged, so you can do them today or say why they didn't happen.
+- The coach counts skipped sessions as missed and tells you this week's reasons. A moved session doesn't count as missed.
+- The Drive summary has a **Missed sessions** section with each reason and a tally.
+
 ## 0.81.0 — 5 Nov 2026
 - **New exercise demos:** face pull, upright row, rear-delt row, Y-raise, straight-arm pulldown, pullover, concentration curl, spider curl, drag curl, sissy squat and hack squat — each with an animated figure, setup, cues, common mistakes and variant notes.
 - The barbell hack squat (bar behind the legs) is a different lift from the machine one, so it shows no figure rather than a wrong one.
