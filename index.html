@@ -339,6 +339,7 @@ h3{font-size:13.5px;margin:0 0 8px}
 .mobclock{font-size:64px;font-weight:800;text-align:center;font-variant-numeric:tabular-nums;margin:14px 0 4px}
 .chip.on{border-color:var(--accent);color:var(--txt)}
 .dot.mob{background:var(--purple)}
+.dot.miss{background:var(--red)}
 .balpad{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;width:100%;min-height:220px;border-radius:18px;
   border:2px dashed var(--line2);background:var(--bg2);color:var(--txt);cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}
 .balpad .mono{font-size:56px;font-weight:800}
@@ -1437,6 +1438,9 @@ const DEFAULT_STATE = {
   checkins: [],   // {date,'YYYY-MM-DD', weight(kg), sleepH, sleepQ, energy, soreness, stress, kcal, notes}
   workouts: [],   // {id,date,name,status,source,exercises:[{name,notes,sets:[{w,r,rpe,done,warm}]}],start,end,summary,edited?}
                   // source: 'logged' | 'backfill' | 'imported' — only 'backfill' is the plan's prescription
+  misses: [],     // {id,wid,date,name,prog,reason,note,movedTo,at,mt,wo?} — a planned session that didn't happen, and why.
+                  // date = the day it was planned for; movedTo = the day it went to (null = skipped);
+                  // wo = a copy of a skipped session, so Undo can put it back
   goals: [],      // {id,name,type,exercise,startVal,target,deadline,current(for custom)}
   meets: [],      // {id,name,date,fed,loc,wclass,bwTarget,lifts:{squat,bench,deadlift},pct:{o,s}}
   customEx: [],   // extra exercise names
@@ -1649,7 +1653,7 @@ const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.file';
 const SYNC_FILE = 'Ironlog backup.json', SYNC_FORMAT = 'ironlog-sync', SYNC_V = 1;
 // collection -> how a record is keyed
 const SYNC_SETS = {
-  workouts: x => x.id, goals: x => x.id, meets: x => x.id, imports: x => x.id,
+  workouts: x => x.id, misses: x => x.id, goals: x => x.id, meets: x => x.id, imports: x => x.id,
   checkins: x => x.date, measures: x => x.id, calipers: x => x.id, mobTests: x => x.id, bp: x => x.id, glucose: x => x.id, fitTests: x => x.id,
   customEx: x => (typeof x === 'string' ? x : JSON.stringify(x)), programs: x => String(x),
 };
@@ -1790,6 +1794,19 @@ function driveSummaryText() {
   if (goals.length) {
     out.push('## Goals');
     goals.forEach(g => { const cur = goalCurrent(g); out.push(`- ${g.name}: ${cur != null ? (g.type === 'sessions' ? cur : wt(cur)) : '—'} of ${g.type === 'sessions' ? g.target : wt(g.target)}${g.deadline ? ` by ${d(g.deadline)}` : ''}`); });
+    out.push('');
+  }
+  const miss = (S.misses || []).filter(m => m.date >= from && m.date <= to).sort((a, b) => a.date < b.date ? 1 : -1);
+  const unlogged = S.workouts.filter(w => w.status === 'planned' && w.date >= from && w.date < to).sort((a, b) => a.date < b.date ? 1 : -1);
+  if (miss.length || unlogged.length) {
+    out.push('## Missed sessions (newest first)');
+    miss.forEach(m => out.push(`- ${d(m.date)} · ${m.name}${m.prog ? ` (${programName(m.prog)})` : ''}: ${m.movedTo ? 'moved' : 'skipped'} — ${missText(m)}`));
+    unlogged.forEach(w => out.push(`- ${d(w.date)} · ${w.name}${w.prog ? ` (${programName(w.prog)})` : ''}: planned, nothing logged, no reason given`));
+    if (miss.length) {
+      const by = {};
+      miss.forEach(m => { by[m.reason] = (by[m.reason] || 0) + 1; });
+      out.push(`- By reason: ${Object.entries(by).sort((a, b) => b[1] - a[1]).map(([k, n]) => `${missLabel(k)} ${n}`).join(', ')}`);
+    }
     out.push('');
   }
   const ahead = S.workouts.filter(w => w.status === 'planned' && w.date >= to && w.date <= addDaysISO(to, 7)).sort((a, b) => a.date < b.date ? -1 : 1);
@@ -2237,7 +2254,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.81.0';
+const APP_VERSION = '0.82.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4784,7 +4801,8 @@ function viewHome() {
       <div class="row between" style="margin-bottom:8px">
         <div class="grow"><div style="font-weight:700">${esc(p.name)}${autoBlock(p) ? ' <span class="chip" title="Loads are set from your RIR when you start">⟳ AUTO</span>' : ''}</div>
         <div class="sub">${p.exercises.length} exercise${p.exercises.length === 1 ? '' : 's'} planned</div></div>
-        <button class="btn primary sm" data-start-planned="${p.id}">Start</button>
+        <div class="row" style="gap:6px"><button class="btn ghost sm" data-miss="${p.id}">Missed</button>
+        <button class="btn primary sm" data-start-planned="${p.id}">Start</button></div>
       </div>
       <div>${p.exercises.map(e => `<div class="exline"><span>${exNameHtml(e)}</span>
           <span class="muted mono" style="white-space:nowrap">${setSummary(e)}</span></div>`).join('')}</div>`)
@@ -5974,9 +5992,10 @@ function viewCalendar() {
     const hasPlan = wos.some(w => w.status === 'planned');
     const hasMob = wos.some(w => w.kind === 'mobility');
     const hasEvent = (S.meets || []).some(x => x.date === ds);
+    const hasMiss = (S.misses || []).some(x => x.date === ds);
     return `<button class="cal-day${c.out ? ' out' : ''}${ds === today() ? ' today' : ''}${ds === calSelected ? ' sel' : ''}" data-day="${ds}">
       ${c.d.getDate()}
-      <span class="dots">${hasDone ? '<i class="dot done"></i>' : ''}${hasPlan ? '<i class="dot plan"></i>' : ''}${hasMob ? '<i class="dot mob"></i>' : ''}${hasEvent ? '<i class="dot event"></i>' : ''}</span>
+      <span class="dots">${hasDone ? '<i class="dot done"></i>' : ''}${hasPlan ? '<i class="dot plan"></i>' : ''}${hasMob ? '<i class="dot mob"></i>' : ''}${hasEvent ? '<i class="dot event"></i>' : ''}${hasMiss ? '<i class="dot miss"></i>' : ''}</span>
     </button>`;
   }).join('');
 
@@ -5996,7 +6015,7 @@ function viewCalendar() {
     </div>
     <div class="cal-dow">${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => `<span>${d}</span>`).join('')}</div>
     <div class="cal-grid">${grid}</div>
-    <div class="cal-legend"><span><i class="dot done"></i> Completed</span><span><i class="dot plan"></i> Planned</span><span><i class="dot mob"></i> Mobility</span><span><i class="dot event"></i> Event</span></div>
+    <div class="cal-legend"><span><i class="dot done"></i> Completed</span><span><i class="dot plan"></i> Planned</span><span><i class="dot mob"></i> Mobility</span><span><i class="dot event"></i> Event</span><span><i class="dot miss"></i> Missed</span></div>
   </div>
   ${dayPanel(calSelected)}
   `;
@@ -6025,8 +6044,9 @@ function dayPanel(ds) {
       ${ci.stress ? `<span class="chip">stress ${ci.stress}/5</span>` : ''}
     </div>${ci.notes ? `<div class="sub" style="margin-top:8px">“${esc(ci.notes)}”</div>` : ''}</div>` : ''}
 
+  ${missesOn(ds).map(missCard).join('')}
   ${wos.length ? wos.map(wo => wo.status === 'completed' ? completedCard(wo) : plannedCard(wo)).join('') :
-      `<div class="card"><div class="empty"><span class="big">▢</span>Nothing logged for this day.</div></div>`}
+      missesOn(ds).length ? '' : `<div class="card"><div class="empty"><span class="big">▢</span>Nothing logged for this day.</div></div>`}
 
   <div class="row" style="gap:9px;margin-top:4px">
     <button class="btn wide" id="planDay">+ Plan workout</button>
@@ -6075,7 +6095,7 @@ function plannedCard(wo) {
   return `<div class="card">
     <div class="row between" style="margin-bottom:9px">
       <div class="grow"><div style="font-weight:700">${esc(wo.name)} <span class="chip blue">PLANNED</span>${autoBlock(wo) ? ' <span class="chip" title="Loads are set from your RIR when you start">⟳ AUTO</span>' : ''}</div>
-        <div class="sub">${wo.exercises.length} exercises${autoBlock(wo) ? ' · loads set from your RIR at start' : ''}</div></div>
+        <div class="sub">${wo.exercises.length} exercises${autoBlock(wo) ? ' · loads set from your RIR at start' : ''}${(() => { const m = (S.misses || []).find(x => x.wid === wo.id && x.movedTo === wo.date); return m ? ` · moved from ${esc(fmtDate(m.date, { weekday: 'short', day: 'numeric', month: 'short' }))} (${esc(missLabel(m.reason))})` : ''; })()}</div></div>
       <div class="row" style="gap:6px">
         <button class="btn xs" data-edit-plan="${wo.id}">Edit</button>
         <button class="btn xs primary" data-start-planned="${wo.id}">Start</button>
@@ -6089,6 +6109,7 @@ function plannedCard(wo) {
       ${e.notes ? `<div class="note">${esc(e.notes)}</div>` : ''}
     </div>`).join('')}
     <div class="row" style="gap:8px;margin-top:11px">
+      <button class="btn sm" data-miss="${wo.id}">Missed</button>
       <button class="btn sm danger" data-del-workout="${wo.id}">Delete</button>
     </div>
   </div>`;
@@ -6289,13 +6310,23 @@ function workoutLanding() {
     <button class="btn big grow" id="startMobility">🧘 Mobility</button>
   </div>
 
+  ${(() => { const od = overduePlanned(); return od.length ? `<div class="sechead"><h2>Not logged</h2></div>
+  <div class="sub" style="margin:-4px 0 9px">Planned this past week with nothing logged. Do it today, or say why it didn't happen.</div>
+  ${od.map(p => `<div class="card tight"><div class="row between">
+        <div class="grow"><div style="font-weight:650">${esc(p.name)}</div>
+          <div class="sub">${fmtDate(p.date)} · ${relDay(p.date)}</div></div>
+        <div class="row" style="gap:6px"><button class="btn sm" data-miss="${p.id}">Missed</button>
+        <button class="btn sm primary" data-start-planned="${p.id}">Start</button></div>
+      </div></div>`).join('')}` : ''; })()}
+
   <div class="sechead"><h2>Planned</h2></div>
   ${upcoming.length ? upcoming.map(p => `
     <div class="card tight">
       <div class="row between">
         <div class="grow"><div style="font-weight:650">${esc(p.name)}${autoBlock(p) ? ' <span class="chip" title="Loads are set from your RIR when you start">⟳ AUTO</span>' : ''}</div>
           <div class="sub">${fmtDate(p.date)} · ${relDay(p.date)} · ${p.exercises.length} exercises</div></div>
-        <button class="btn sm primary" data-start-planned="${p.id}">Start</button>
+        <div class="row" style="gap:6px"><button class="btn sm ghost" data-miss="${p.id}">Missed</button>
+        <button class="btn sm primary" data-start-planned="${p.id}">Start</button></div>
       </div>
     </div>`).join('') : `<div class="card"><div class="empty"><span class="big">▤</span>No planned workouts.<br>Plan one from the calendar.</div></div>`}
 
@@ -6332,6 +6363,89 @@ function startPlanned(id) {
   copy.exercises.forEach(e => e.sets.forEach(s => { s.done = false; s.rpe = s.rpe ?? null; }));
   if (!S.active) applyAuto(copy);   // normal-block program sessions: RIR sets the load
   startWorkout(copy);
+}
+/* ---------------- missed sessions ----------------
+   A planned session that doesn't happen gets a reason, so a gap in the log
+   says why. Skip takes it off the plan, keeping a copy on the record so Undo
+   can put it back; Move shifts it to another day. Either way one record lands
+   in S.misses, which the calendar, the coach and the Drive summary read. */
+const MISS_REASONS = [['sore', 'Sore / DOMS'], ['injury', 'Niggle / injury'], ['ill', 'Ill'], ['work', 'Work'],
+  ['family', 'Family / childcare'], ['gym', 'Gym busy / no kit'], ['energy', 'Low energy / sleep'], ['other', 'Other']];
+function missLabel(k) { const r = MISS_REASONS.find(x => x[0] === k); return r ? r[1] : 'Other'; }
+function missesOn(date) { return (S.misses || []).filter(m => m.date === date); }
+function missText(m) {
+  return `${missLabel(m.reason)}${m.note ? ` — “${m.note}”` : ''}${m.movedTo ? ` · moved to ${fmtDate(m.movedTo, { weekday: 'short', day: 'numeric', month: 'short' })}` : ''}`;
+}
+/* Planned days in the last week with nothing logged and no reason given. */
+function overduePlanned() {
+  const t = today();
+  return S.workouts.filter(w => w.status === 'planned' && w.date < t && daysBetween(w.date, t) <= 7)
+    .sort((a, b) => a.date < b.date ? -1 : 1);
+}
+function openMissed(id) {
+  const w = S.workouts.find(x => x.id === id && x.status === 'planned');
+  if (!w) return;
+  let reason = null, move = false;
+  const t = today(), base = w.date > t ? w.date : t;
+  modal({
+    title: 'Missed session',
+    body: `<div class="sub" style="margin-top:0"><b>${esc(w.name)}</b> · ${esc(fmtDate(w.date))}</div>
+      <div class="eyebrow" style="margin:14px 0 8px">Why?</div>
+      <div class="row wrap" id="msWhy" style="gap:7px">${MISS_REASONS.map(([k, l]) => `<button class="chip" data-r="${k}" aria-pressed="false" style="cursor:pointer">${esc(l)}</button>`).join('')}</div>
+      <div class="field" style="margin-top:12px"><label for="msNote">Note — optional</label><input id="msNote" maxlength="120" placeholder="e.g. glutes still sore from Wednesday"></div>
+      <div class="eyebrow" style="margin:14px 0 8px">What happens to it</div>
+      <div class="seg" id="msMode"><button data-m="skip" class="on">Skip it</button><button data-m="move">Move it</button></div>
+      <div class="field" id="msMoveF" style="margin-top:10px;display:none"><label for="msDate">Move to</label><input type="date" id="msDate" value="${addDaysISO(base, 1)}" min="${t}"></div>
+      <div class="sub" id="msHint" style="margin-top:8px">It comes off your plan. Undo from the calendar if you change your mind.</div>`,
+    foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="msSave" disabled>Save</button>`,
+    onOpen: bg => {
+      const btn = $('#msSave', bg);
+      bg.querySelectorAll('#msWhy [data-r]').forEach(b => b.onclick = () => {
+        reason = b.dataset.r;
+        bg.querySelectorAll('#msWhy [data-r]').forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); });
+        btn.disabled = false;
+      });
+      bg.querySelectorAll('#msMode [data-m]').forEach(b => b.onclick = () => {
+        move = b.dataset.m === 'move';
+        bg.querySelectorAll('#msMode [data-m]').forEach(x => x.classList.toggle('on', x === b));
+        $('#msMoveF', bg).style.display = move ? '' : 'none';
+        $('#msHint', bg).textContent = move ? 'Same session, new day. The original day keeps a note of why.' : 'It comes off your plan. Undo from the calendar if you change your mind.';
+      });
+      btn.onclick = () => {
+        if (!reason) return;
+        const to = $('#msDate', bg).value;
+        if (move && (!to || to === w.date)) { toast('Pick a different day'); return; }
+        const now = Date.now();
+        const m = { id: uid(), wid: w.id, date: w.date, name: w.name, prog: w.prog || null, reason,
+          note: $('#msNote', bg).value.trim(), movedTo: move ? to : null, at: now, mt: now };
+        if (move) { w.date = to; w.mt = now; }
+        else { m.wo = structuredClone(w); S.workouts = S.workouts.filter(x => x.id !== w.id); }
+        (S.misses = S.misses || []).push(m);
+        save(); closeModal(); render();
+        toast(move ? `Moved to ${fmtDate(to, { weekday: 'short', day: 'numeric', month: 'short' })}` : 'Logged as missed', 'green');
+      };
+    },
+  });
+}
+function undoMiss(id) {
+  const m = (S.misses || []).find(x => x.id === id);
+  if (!m) return;
+  const now = Date.now();
+  if (m.movedTo) {
+    const w = S.workouts.find(x => x.id === m.wid && x.status === 'planned');
+    if (w) { w.date = m.date; w.mt = now; }
+  } else if (m.wo && !S.workouts.some(x => x.id === m.wid)) {
+    S.workouts.push({ ...m.wo, mt: now });
+  }
+  S.misses = S.misses.filter(x => x.id !== id);
+  save(); render(); toast('Put back on your plan', 'green');
+}
+function missCard(m) {
+  return `<div class="card tight" style="border-color:rgba(255,77,77,.35)"><div class="row between">
+      <div class="grow"><div style="font-weight:650">${esc(m.name)} <span class="chip red">${m.movedTo ? 'MOVED' : 'MISSED'}</span></div>
+        <div class="sub">${esc(missText(m))}</div></div>
+      <button class="btn xs ghost" data-unmiss="${m.id}">Undo</button>
+    </div></div>`;
 }
 function repeatWorkout(id) {
   const p = S.workouts.find(w => w.id === id);
@@ -12477,6 +12591,8 @@ function wire() {
   // generic nav
   v.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
   v.querySelectorAll('[data-start-planned]').forEach(b => b.onclick = () => startPlanned(b.dataset.startPlanned));
+  v.querySelectorAll('[data-miss]').forEach(b => b.onclick = () => openMissed(b.dataset.miss));
+  v.querySelectorAll('[data-unmiss]').forEach(b => b.onclick = () => undoMiss(b.dataset.unmiss));
   v.querySelectorAll('[data-view-workout]').forEach(b => b.onclick = () => viewCompleted(b.dataset.viewWorkout));
   v.querySelectorAll('[data-edit-workout]').forEach(b => b.onclick = () => openEditWorkout(b.dataset.editWorkout));
   v.querySelectorAll('[data-edit-plan]').forEach(b => b.onclick = () => openPlanner(calSelected, b.dataset.editPlan));
@@ -15542,8 +15658,13 @@ function coachDigest() {
      when there is one. */
   const prog = S.coach && S.coach.planProg && S.programs.includes(S.coach.planProg) ? S.coach.planProg : null;
   const doneDays = new Set(coLifted(7).map(w => w.date));
-  const missed = [...new Set(S.workouts.filter(w => w.status === 'planned' && w.date < t && daysBetween(w.date, t) < 7
-    && (!prog || w.prog === prog) && !doneDays.has(w.date)).map(w => w.date))];
+  /* Skipped sessions are off the plan, so their records count too. A moved
+     session isn't a missed one: it's still coming. */
+  const skips = (S.misses || []).filter(m => !m.movedTo && m.date < t && daysBetween(m.date, t) < 7 && (!prog || m.prog === prog));
+  const missed = [...new Set([...S.workouts.filter(w => w.status === 'planned' && w.date < t && daysBetween(w.date, t) < 7
+    && (!prog || w.prog === prog)).map(w => w.date), ...skips.map(m => m.date)].filter(d => !doneDays.has(d)))];
+  const whyMissed = {};
+  (S.misses || []).filter(m => m.date <= t && daysBetween(m.date, t) < 7).forEach(m => { whyMissed[m.reason] = (whyMissed[m.reason] || 0) + 1; });
   const lifts = mainLiftKeys().map(k => ({ key: k, name: leafName(k), now: historyE1(k), then: historyE1(k, addDaysISO(t, -14)), stall: stallFor(k), last: lastSession(k) }));
   const mus = {};
   wk.forEach(wo => sessionMuscles(wo).list.forEach(m => { mus[m.key] = (mus[m.key] || 0) + m.sets; }));
@@ -15559,7 +15680,7 @@ function coachDigest() {
   const test = fitTestsSorted().pop() || null;
   const next = S.workouts.filter(w => w.status === 'planned' && w.date >= t).sort((a, b) => a.date < b.date ? -1 : 1)[0] || null;
   const prs = wk.flatMap(wo => prsFor(wo).map(p => ({ ...p, date: wo.date })));
-  return { t, week: { done: wk.length, missed: missed.length, prev: prevWk.length }, prs, lifts, muscles: mus,
+  return { t, week: { done: wk.length, missed: missed.length, prev: prevWk.length, why: whyMissed }, prs, lifts, muscles: mus,
     rirGap: gaps.length >= 4 ? coAvg(gaps) : null, rirN: gaps.length, vbtGap: vgaps.length >= 3 ? coAvg(vgaps) : null,
     ci: coCheckins(7, 0), ciPrev: coCheckins(14, 7), bwThen: coCheckins(35, 28).weight, streak,
     event: ev, block: activeBlock(t), test, testR: test ? fitResults(test) : null, next, lastDone: coLifted(400).sort((a, b) => a.date < b.date ? 1 : -1)[0] || null };
@@ -15942,6 +16063,7 @@ function coAnsMissed(D) {
     'No harm done. Don\'t double up — just pick up with the next planned session at your usual weights.',
     'One missed session changes nothing. Carry on from the next one; don\'t try to cram it in.',
     'Happens. If it was a day or two, carry on as planned. If it\'s been a week or more, start back a little lighter — your weights fill in from your RIR anyway.'])
+    + (Object.keys(D.week.why || {}).length ? `<br>This week's reasons: ${Object.entries(D.week.why).map(([k, n]) => `${esc(missLabel(k))}${n > 1 ? ` ×${n}` : ''}`).join(', ')}.` : '')
     + (D.week.missed >= 2 ? `<br>That's ${D.week.missed} this week, though — if the plan doesn't fit your week, I can build one with fewer days.` : ''),
     act: D.week.missed >= 2 ? [['answers', 'Change my days']] : [] };
 }
