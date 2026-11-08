@@ -1,7 +1,7 @@
 /* Ironlog service worker.
    Bump VERSION whenever the app files change — that's what triggers the
    "Update ready" prompt on the next launch. */
-const VERSION = 'ironlog-v125';
+const VERSION = 'ironlog-v126';
 
 const ASSETS = [
   './',
@@ -24,7 +24,8 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil((async () => {
     const keys = await caches.keys();
-    await Promise.all(keys.filter(k => k !== VERSION).map(k => caches.delete(k)));
+    // the optional pose download (04b) lives in its own cache and survives app updates
+    await Promise.all(keys.filter(k => k !== VERSION && !k.startsWith('ironlog-pose-')).map(k => caches.delete(k)));
     await self.clients.claim();
   })());
 });
@@ -52,6 +53,22 @@ self.addEventListener('fetch', e => {
      cache would mean the app could never learn it was stale — the one file that
      must always come from the network. */
   if (url.pathname.endsWith('/version.json')) return;
+
+  /* pose/ — the optional squat-depth download (roadmap 04b). Never precached.
+     The app puts the files in an 'ironlog-pose-<version>' cache when the
+     lifter turns depth judging on; serve them from there, network otherwise.
+     Not stored here on a miss: only the app's own download decides what's kept. */
+  if (url.pathname.includes('/pose/')) {
+    e.respondWith((async () => {
+      for (const k of await caches.keys()) {
+        if (!k.startsWith('ironlog-pose-')) continue;
+        const hit = await (await caches.open(k)).match(req, { ignoreSearch: true });
+        if (hit) return hit;
+      }
+      return fetch(req);
+    })());
+    return;
+  }
 
   e.respondWith((async () => {
     const cache = await caches.open(VERSION);

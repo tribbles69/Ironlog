@@ -13,6 +13,11 @@ rather than guessed.
 
 ---
 
+## 0.87.0 — 8 Nov 2026
+- **New: Squat depth from video.** Turn it on in **Settings → Squat depth from video**, a one-time 16.6 MB download from Ironlog itself (no other site). After that, a squat clip in **Bar path from video** marks each rep **✓ deep**, **✗ high** or **≈ too close to call**, with how many cm it was off.
+- The bottom of the squat is shown with your hip, knee and ankle drawn on it. Depth calls are saved on the set. It's a guide, not a white light. Film side-on with your whole body in frame.
+- **Fixed:** Bar path from video could read the frame before the one it meant to, and on a plain plate it could read range and speed several % high. It now measures the plate's outer edge properly and follows it, which on test clips puts range within 1 cm.
+
 ## 0.86.0 — 8 Nov 2026
 - **New: Bar path from video.** On a lift in your workout, tap **▶ Video** and pick a side-on clip of the set from your gallery. It draws the bar's path and gives speed per rep, alongside the phone-on-bar **Measure**.
 - Trim off the walk-out and re-rack, check the green circle is the plate (or tap it yourself), and it follows the plate through the set. You get each rep's speed, top speed, range of motion, how far the bar moved sideways and an estimated RIR. **Attach to set** saves it with the path.

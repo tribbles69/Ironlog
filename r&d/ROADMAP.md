@@ -165,7 +165,7 @@ timelapse of the bulk and cut that can be played and saved. Same pose
 reminder as the photos so clips line up. Check what the browser can do for
 joining clips on the phone (MediaRecorder / canvas) before writing the spec.
 
-### [ ] 04. Video bar-path tracing and depth judging — **04a shipped 0.86.0** (spec `r&d/specs/bar-path-spec.md`, agreed 2026-11-08: Slew's plate tracker bundled as `slew-video.js`, no MediaPipe; ▶ Video on a lift and Tools → Bar path; rim measured on still frames for the scale; **Aaron: A4 item 19, then the video section of `r&d/notes/vbt-validation.md`**). Still to do: **04b** squat depth (optional pose download), **04c** record in the app
+### [ ] 04. Video bar-path tracing and depth judging — **04a shipped 0.86.0** (spec `r&d/specs/bar-path-spec.md`, agreed 2026-11-08: Slew's plate tracker bundled as `slew-video.js`, no MediaPipe; ▶ Video on a lift and Tools → Bar path; rim measured on still frames for the scale; **Aaron: A4 item 19, then the video section of `r&d/notes/vbt-validation.md`**). **04b shipped 0.87.0** (squat depth: MediaPipe lite pose hosted in `pose/`, 16.6 MB optional download, deep / high / too close to call; plus three bar-path fixes, spec §9 and §12; **Aaron: A4 item 20**). Still to do: **04c** record in the app
 (VBTgo, Metric, PDC Performance.) **Write a spec first.** Record or pick a
 side-on video of a set; track the bar end through it to draw the bar path,
 and give velocity per rep from the video as a second source next to D1's
@@ -299,6 +299,12 @@ these come back; report anything that fails):
     on the rim? Does the path look like the bar? Compare the speeds with
     ◉ Measure on the same set if you can, and try one clip filmed ~30° off
     square to see how much it reads short. Try Save with bar path → Share.
+20. **Squat depth (0.87.0):** Settings → Squat depth from video → Download
+    (16.6 MB, on Wi-Fi). Film a few squats side-on, whole body in frame, some
+    deep and one deliberately high. Do the calls match what a judge would say?
+    Is the hip–knee–ankle drawing on the right leg? Note any "too close to
+    call" you'd have given a clear light either way — the 3 cm offset and the
+    ±2.5 cm band are first guesses (`POSE.offsetCm`, `POSE.bandCm`).
 
 ### [x] A5. Checks against Blast's bugs — checked 0.27.1 (superset item waits for B3)
 Blast shipped these; make sure Ironlog doesn't have them. Tick each.

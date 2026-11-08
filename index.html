@@ -2286,7 +2286,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.86.0';
+const APP_VERSION = '0.87.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -6874,13 +6874,13 @@ function repDetail(v, logged) {
   </svg>`;
   const rows = reps.map((r, i) => {
     const short = romBest > 0 && r.rom < romBest * 0.88;
-    const fl = [...repFlags(r), ...(short ? ['short ROM'] : [])];
+    const fl = [...repFlags(r), ...(short ? ['short ROM'] : []), ...(r.depth ? [`${DEPTH_WORD[r.depth.call]} (${r.depth.cm > 0 ? '+' : ''}${r.depth.cm} cm)`] : [])];
     return `<tr><td>${i + 1}</td><td>${r.v.toFixed(2)}</td><td>${r.peak ? r.peak.toFixed(2) : '—'}</td><td>${r.rom ? (r.rom * 100).toFixed(0) : '—'}</td><td>${r.con ? r.con.toFixed(1) : '—'}</td><td style="color:var(--purple)">${repRir(r) != null ? nice(repRir(r)) : '—'}</td><td class="fl">${esc(fl.join(', '))}</td></tr>`;
   }).join('');
   const vid = v.mode === 'video';
   const drift = vid && reps.some(r => r.drift != null) ? `<div class="sub" style="font-size:11px">Sideways drift per rep: ${reps.map((r, i) => `<span style="color:${SERIES_COLORS[i % SERIES_COLORS.length]}">${r.drift != null ? r.drift.toFixed(1) : '—'}</span>`).join(' · ')} cm</div>` : '';
   return `<div class="repdetail">${logged > reps.length ? `<div class="chip gold" style="margin:2px 0 6px;white-space:normal">The ${vid ? 'video' : 'sensor'} found ${reps.length} of your ${logged} reps, so this set's speed and RIR aren't reliable</div>` : ''}${chart}
-    ${vid && v.path ? `<div class="bp-hist">${bpPathSvg(v.path, 130)}<div>${drift}</div></div>` : ''}
+    ${vid && v.path ? `<div class="bp-hist">${bpPathSvg(v.path, 130)}<div>${drift}${depthSummary(reps) ? `<div class="sub" style="font-size:11px;margin-top:4px">Depth: ${esc(depthSummary(reps))} — a guide</div>` : ''}</div></div>` : ''}
     <table class="reptable"><thead><tr><th>Rep</th><th>m/s</th><th>Peak</th><th>cm</th><th>↑ s</th><th>RIR</th><th></th></tr></thead><tbody>${rows}</tbody></table>
     <div class="sub" style="font-size:11px;margin-top:4px">Velocity loss ${v.loss.toFixed(0)}%${v.est ? ` · set RIR ${nice(rpeToRir(v.est.rpe))}${v.est.method ? ` (${esc(v.est.method)})` : ''}` : ''} · ${v.rate} Hz · confidence ${(v.conf * 100).toFixed(0)}%${v.place === 'pocket' ? ' · pocket' : ''}${vid ? ' · from video, an estimate' : ''}${uncal ? ' · profile not calibrated yet' : ''}</div>
   </div>`;
@@ -11869,12 +11869,21 @@ function bpFillGaps(series) {
   }
   return out;
 }
+/* Seek and wait until the NEW frame is actually there. 'seeked' alone isn't
+   enough: on a real 1080p phone clip Chrome fired it with the previous frame
+   still decoded about one seek in three (found 0.87.0 — pose read the same body
+   twice). requestVideoFrameCallback fires when the sought frame is presented;
+   a seek inside the same frame presents nothing, so 'seeked' + 150 ms is the
+   fallback, and 2.5 s the last resort. */
 function bpSeek(video, t) {
   return new Promise(res => {
     if (Math.abs(video.currentTime - t) < 0.001) return res();
-    const done = () => { clearTimeout(to); res(); };
-    const to = setTimeout(() => { video.removeEventListener('seeked', done); res(); }, 2000);
-    video.addEventListener('seeked', done, { once: true });
+    let done = false;
+    const fin = () => { if (done) return; done = true; clearTimeout(to); res(); };
+    const to = setTimeout(fin, 2500);
+    const rvfc = typeof video.requestVideoFrameCallback === 'function';
+    if (rvfc) video.requestVideoFrameCallback(() => fin());
+    video.addEventListener('seeked', () => { if (!rvfc) fin(); else setTimeout(fin, 150); }, { once: true });
     video.currentTime = t;
   });
 }
@@ -11892,7 +11901,7 @@ async function bpRefineRadius(video, c) {
   const d = x.getImageData(0, 0, W, H).data;
   const L = (px, py) => { const i = (Math.round(py) * W + Math.round(px)) * 4; return 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; };
   const cx = c.cx * W, cy = c.cy * H, r0 = c.r * H, lo = r0 * 0.8, hi = r0 * 1.3;
-  const radii = [];
+  const pts = [];
   for (let a = 0; a < 360; a += 5) {
     const deg = a % 180; if (deg < 25 || deg > 155) continue;      // the sleeve runs through the plate horizontally
     const th = a * Math.PI / 180, dx = Math.cos(th), dy = Math.sin(th);
@@ -11906,14 +11915,38 @@ async function bpRefineRadius(video, c) {
     if (best < 18) continue;
     let pick = null;
     // 35 %, not 50: side-on, the rim is often against the lifter's body, a softer edge than an inner ring
-    for (let i = 1; i < edges.length - 1; i++) if (edges[i][1] >= Math.max(12, best * 0.35) && edges[i][1] >= edges[i - 1][1] && edges[i][1] >= edges[i + 1][1]) pick = edges[i][0];
-    if (pick) radii.push(pick);
+    for (let i = 1; i < edges.length - 1; i++) if (edges[i][1] >= Math.max(12, best * 0.35) && edges[i][1] >= edges[i - 1][1] && edges[i][1] >= edges[i + 1][1]) {
+      // a sharp edge gives a flat-topped run of equal strengths: take its middle, not its outer end
+      let j = i; while (j + 1 < edges.length && edges[j + 1][1] === edges[i][1]) j++;
+      pick = (edges[i][0] + edges[j][0]) / 2; i = j;
+    }
+    if (pick) pts.push([cx + dx * pick, cy + dy * pick]);
   }
-  if (radii.length < 10) return null;
-  radii.sort((a, b) => a - b);
-  const med = radii[Math.floor(radii.length / 2)];
-  const agree = radii.filter(r => Math.abs(r - med) <= med * 0.04).length / radii.length;
-  return agree >= 0.5 ? { r: med / H, agree } : null;
+  /* A circle through the rim points (least squares, Kåsa), not distances from the
+     detector's centre: that centre is a pixel or two out at 288 px, which alone
+     spread the per-ray radii past any sane agreement test on a clean plate.
+     Fit, drop points more than 6 % off, fit again. */
+  const fit = P => {
+    let sx = 0, sy = 0, sxx = 0, syy = 0, sxy = 0, sxz = 0, syz = 0, sz = 0; const n = P.length;
+    P.forEach(([x0, y0]) => { const z = x0 * x0 + y0 * y0; sx += x0; sy += y0; sxx += x0 * x0; syy += y0 * y0; sxy += x0 * y0; sxz += x0 * z; syz += y0 * z; sz += z; });
+    // solve [sxx sxy sx; sxy syy sy; sx sy n] [D E F]' = -[sxz syz sz]'
+    const A = [[sxx, sxy, sx, -sxz], [sxy, syy, sy, -syz], [sx, sy, n, -sz]];
+    for (let i = 0; i < 3; i++) { let p = i; for (let j = i + 1; j < 3; j++) if (Math.abs(A[j][i]) > Math.abs(A[p][i])) p = j; [A[i], A[p]] = [A[p], A[i]];
+      if (Math.abs(A[i][i]) < 1e-9) return null; for (let j = 0; j < 3; j++) if (j !== i) { const f = A[j][i] / A[i][i]; for (let k2 = i; k2 < 4; k2++) A[j][k2] -= f * A[i][k2]; } }
+    const D = A[0][3] / A[0][0], E = A[1][3] / A[1][1], F = A[2][3] / A[2][2];
+    const a = -D / 2, b = -E / 2, r = Math.sqrt(a * a + b * b - F);
+    return Number.isFinite(r) ? { a, b, r } : null;
+  };
+  if (pts.length < 10) return null;
+  let f1 = fit(pts); if (!f1) return null;
+  const keep = pts.filter(([x0, y0]) => Math.abs(Math.hypot(x0 - f1.a, y0 - f1.b) - f1.r) <= f1.r * 0.06);
+  if (keep.length < 8) return null;
+  const f2 = fit(keep); if (!f2) return null;
+  const rms = Math.sqrt(keep.reduce((s, [x0, y0]) => s + (Math.hypot(x0 - f2.a, y0 - f2.b) - f2.r) ** 2, 0) / keep.length);
+  const agree = keep.length / pts.length;
+  // the fitted centre must be the plate the detector saw, and the rim points must sit on a circle
+  if (agree < 0.5 || rms > f2.r * 0.03 || Math.hypot(f2.a - cx, f2.b - cy) > r0 * 0.25) return null;
+  return { r: f2.r / H, agree: +agree.toFixed(2), rms: +(rms / f2.r).toFixed(3) };
 }
 /* Track the confirmed plate over [from, to], BP.hz steps a second. The tracker
    is seeded where the plate was confirmed, so it runs forwards from that frame
@@ -11984,8 +12017,8 @@ function bpAnalyse(tk, o) {
     return pick.map(i => cm(i, ix[0]));
   });
   v.reps.forEach((r, k) => { const ix = repIdx[k]; r.drift = ix.length ? +(((Math.max(...ix.map(i => X[i])) - Math.min(...ix.map(i => X[i]))) * aspect) * mPerH * 100).toFixed(1) : null; });
-  v.cal = { plateMm, r: +rScale.toFixed(4), how: seed.tapped || seed.manual ? 'by hand' : seed.rimFrames ? `rim measured on ${seed.rimFrames} still frames` : 'detector circle', coverage: +coverage.toFixed(2), gaps: gaps.filter(g => g.sec > BP.gapMax).map(g => ({ at: +g.at.toFixed(1), sec: +g.sec.toFixed(1) })), frames: N };
-  return { v, est, failure, X, Y, repIdx, reps: out.reps.length };
+  v.cal = { plateMm, r: +rScale.toFixed(4), how: seed.tapped || seed.manual ? 'by hand' : seed.rimFrames ? `rim measured on ${seed.rimFrames} still frames` : seed.rs ? 'rim measured on the frame you confirmed' : 'detector circle', coverage: +coverage.toFixed(2), gaps: gaps.filter(g => g.sec > BP.gapMax).map(g => ({ at: +g.at.toFixed(1), sec: +g.sec.toFixed(1) })), frames: N };
+  return { v, est, failure, X, Y, repIdx, mPerH, tk, reps: out.reps.length };
 }
 /* The path in cm, equal scale both ways, one colour per rep. */
 function bpPathSvg(path, h = 150) {
@@ -12167,8 +12200,33 @@ function openBarPath(ei = null) {
       }
       if (got.length >= 2) { got.sort((a, b) => a - b); seed.rs = got[Math.floor(got.length / 2)]; seed.rimFrames = got.length; }
     }
+    /* A tracker following a circle smaller than the plate can slide inside it on
+       a plain plate (no inner ring to hold it): on a test clip ROM read 52.6 cm
+       for 50, peak 1.20 m/s for 0.98. When the rim differs from the tracked
+       circle by more than 3 %, track again locked to the rim. */
+    if (seed.rs && Math.abs(seed.rs - seed.r) / seed.rs > 0.03 && !stopFlag) {
+      const msg = $('.modal-body .sub', bgRef); if (msg) msg.textContent = 'Tightening the track to the plate\'s edge…';
+      try {
+        const tk2 = await bpTrack(video, from, to, { ...seed, r: seed.rs }, f => { const b = $('#bpBar', bgRef); if (b) b.style.width = `${(f * 100).toFixed(0)}%`; }, () => stopFlag || !document.body.contains(bgRef));
+        if (!tk2) return;
+        // keep the second pass unless it lost the plate much more often
+        const hits = t => t.ys.filter(y => y != null).length;
+        if (hits(tk2) >= hits(tk) * 0.9) tk = tk2;
+      } catch (e) { /* keep the first pass */ }
+    }
     const profile = liftId ? slewProfile(liftId) : { ...Slew.defaultProfile('Machine (stack)'), v0: 0 };
     result = bpAnalyse(tk, { seed, plateMm, aspect: video.videoWidth / video.videoHeight, liftId, profile, loadKg: lastW });
+    if (depthFor(liftId) && result.v.reps.length) {
+      const msg = $('.modal-body .sub', bgRef); if (msg) msg.textContent = 'Judging depth at the bottom of each rep…';
+      try {
+        for (let k = 0; k < result.repIdx.length; k++) {
+          if (stopFlag) break;
+          const b = $('#bpBar', bgRef); if (b) b.style.width = `${((k + 1) / result.repIdx.length * 100).toFixed(0)}%`;
+          const d = await judgeDepth(video, from, tk, result.repIdx[k], result.Y, result.mPerH);
+          if (d && result.v.reps[k]) { result.v.reps[k].depth = { cm: d.cm, call: d.call, vis: d.vis }; result.bottoms = result.bottoms || []; result.bottoms[k] = d; }
+        }
+      } catch (e) { toast(`Depth wasn't judged — ${e.message || e}`); }
+    }
     stepResult();
   };
 
@@ -12177,21 +12235,37 @@ function openBarPath(ei = null) {
     const firstBottom = repIdx[0] && repIdx[0].length ? repIdx[0].reduce((b, i) => (Y[i] > Y[b] ? i : b), repIdx[0][0]) : 0;
     const gapTxt = bpGapText(v.cal);
     const low = v.cal.coverage < 0.6;
+    const hasDepth = v.reps.some(r => r.depth);
+    const squat = POSE.squats.includes(liftId);
+    const b0 = result.bottoms && result.bottoms.find(Boolean);
     show(`${stage()}
+      ${hasDepth ? `<div class="card tight" style="margin:10px 0 0"><b>Depth:</b> ${esc(depthSummary(v.reps))}<div class="sub">A guide from the pose model, never a white light. The still shows ${b0 ? `rep ${result.bottoms.indexOf(b0) + 1}'s` : 'the'} bottom: hip, knee and ankle.</div></div>`
+        : squat && v.reps.length ? `<div class="sub" style="margin-top:8px">${S.settings.depthOn
+          ? 'No depth call: the pose model couldn\'t find the lifter\'s hip and knee at the bottom. Side-on, whole body in frame.'
+          : `Want a depth call on each rep? Settings → Squat depth from video (one-time ${POSE.mb} MB download).`}</div>` : ''}
       ${v.reps.length ? `<div class="stats grid3" style="margin:10px 0">
         <div class="stat"><div class="k">Best</div><div class="v">${v.best.toFixed(2)}<small>m/s</small></div></div>
         <div class="stat"><div class="k">Velocity loss</div><div class="v">${v.loss.toFixed(0)}<small>%</small></div></div>
         <div class="stat"><div class="k">Effort</div><div class="v" style="color:var(--purple)">${v.est ? 'RIR ' + nice(rpeToRir(v.est.rpe)) : '—'}</div></div>
       </div>
-      <table class="reptable"><thead><tr><th>Rep</th><th>m/s</th><th>Peak</th><th>cm</th><th>↔ cm</th><th>↑ s</th></tr></thead><tbody>
-        ${v.reps.map((r, i) => `<tr><td style="color:${SERIES_COLORS[i % SERIES_COLORS.length]}">${i + 1}</td><td>${r.v.toFixed(2)}</td><td>${r.peak ? r.peak.toFixed(2) : '—'}</td><td>${(r.rom * 100).toFixed(0)}</td><td>${r.drift != null ? r.drift.toFixed(1) : '—'}</td><td>${r.con ? r.con.toFixed(1) : '—'}</td></tr>`).join('')}
+      <table class="reptable"><thead><tr><th>Rep</th><th>m/s</th><th>Peak</th><th>cm</th><th>↔ cm</th><th>↑ s</th>${hasDepth ? '<th>Depth</th>' : ''}</tr></thead><tbody>
+        ${v.reps.map((r, i) => `<tr><td style="color:${SERIES_COLORS[i % SERIES_COLORS.length]}">${i + 1}</td><td>${r.v.toFixed(2)}</td><td>${r.peak ? r.peak.toFixed(2) : '—'}</td><td>${(r.rom * 100).toFixed(0)}</td><td>${r.drift != null ? r.drift.toFixed(1) : '—'}</td><td>${r.con ? r.con.toFixed(1) : '—'}</td>${hasDepth ? `<td style="color:${r.depth ? DEPTH_COL[r.depth.call] : ''}" title="${r.depth ? esc(DEPTH_WORD[r.depth.call]) : ''}">${r.depth ? `${r.depth.call === 'deep' ? '✓' : r.depth.call === 'high' ? '✗' : r.depth.call === 'close' ? '≈' : '?'} ${r.depth.cm > 0 ? '+' : ''}${r.depth.cm.toFixed(1)}` : '—'}</td>` : ''}</tr>`).join('')}
       </tbody></table>` : `<div class="empty" style="margin-top:10px">No reps found. Check the trim covers the whole set and the plate stayed in view.</div>`}
       <div class="sub" style="margin-top:8px">Estimate · from video. Plate found on ${Math.round(v.cal.coverage * 100)}% of frames${gapTxt ? ` · ${esc(gapTxt)}` : ''}. ↔ is how far the bar moved sideways in the rep.${low ? ' <b style="color:var(--gold)">The plate was lost a lot — treat these numbers loosely.</b>' : ''} ${why('bpath', v)}</div>`,
       `<button class="btn ghost" id="bpAgain">Back</button><button class="btn ghost" id="bpRender">Save with bar path</button>${ex && v.reps.length ? '<button class="btn primary" id="bpAttach">Attach to set</button>' : '<button class="btn primary" id="bpDone">Done</button>'}`,
       async bg => {
-        await bpSeek(video, from + firstBottom / BP.hz);
+        await bpSeek(video, from + (b0 ? result.tk.times[b0.i] / 1000 : firstBottom / BP.hz));
         const paint = upto => drawOv((x, w, h) => {
           x.lineWidth = 3 * window.devicePixelRatio; x.lineJoin = 'round';
+          if (b0) {      // hip – knee – ankle at the bottom, coloured by the call, and the knee-top line it was judged against
+            const col = { deep: '#3ddc84', high: '#ff4d4d', close: '#ffc542', unsure: '#9aa3b2' }[b0.call];
+            x.strokeStyle = col; x.fillStyle = col;
+            x.beginPath(); b0.pts.forEach((p, j) => j ? x.lineTo(p[0] * w, p[1] * h) : x.moveTo(p[0] * w, p[1] * h)); x.stroke();
+            b0.pts.forEach(p => { x.beginPath(); x.arc(p[0] * w, p[1] * h, 5 * window.devicePixelRatio, 0, 7); x.fill(); });
+            x.setLineDash([6 * window.devicePixelRatio, 5 * window.devicePixelRatio]);
+            const ky = b0.pts[1][1] * h; x.beginPath(); x.moveTo(b0.pts[1][0] * w - 0.15 * w, ky); x.lineTo(b0.pts[1][0] * w + 0.15 * w, ky); x.stroke();
+            x.setLineDash([]);
+          }
           repIdx.forEach((ix, k) => {
             const pts = ix.filter(i => upto == null || i <= upto);
             if (pts.length < 2) return;
@@ -12216,6 +12290,144 @@ function openBarPath(ei = null) {
     onOpen: bg => { bgRef = bg; bg.appendChild(fileIn); stepPick(); loadSlewVideo().catch(() => {}); },
   });
 }
+/* ---- squat depth (04b): MediaPipe's lite pose model, an optional download ----
+   Hosted in pose/ (Aaron, 2026-11-08: no CDN), fetched only when depth
+   judging is turned on, kept in its own cache that app updates don't clear.
+   r&d/specs/bar-path-spec.md §9. */
+const POSE = {
+  ver: '0.10.35',
+  files: [['vision.js', 'text/javascript'], ['vision_wasm_internal.js', 'text/javascript'], ['vision_wasm_internal.wasm', 'application/wasm'], ['pose_landmarker_lite.task', 'application/octet-stream']],
+  mb: 16.6,
+  // Judging: pose gives joint centres, not the hip crease and the top of the knee. With the
+  // thigh about level, the crease sits below the knee's top once the hip CENTRE is ~3 cm below
+  // the knee CENTRE (thigh thicker at the hip than the knee). Within ±2.5 cm of that: too close.
+  offsetCm: 3, bandCm: 2.5, minVis: 0.5,
+  squats: ['Squat (free bar)', 'Squat (Smith)', 'Goblet squat'],
+};
+const poseCacheName = () => `ironlog-pose-${POSE.ver}`;
+const poseUrl = f => new URL(`pose/${f}`, document.baseURI).href;
+async function poseReady() {
+  if (!('caches' in window)) return false;
+  try {
+    if (!(await caches.has(poseCacheName()))) return false;   // caches.open would create an empty one
+    const c = await caches.open(poseCacheName()); for (const [f] of POSE.files) if (!(await c.match(poseUrl(f)))) return false; return true; }
+  catch (e) { return false; }
+}
+async function poseDownload(onProgress) {
+  if (!(await simdOk())) throw new Error('this phone\'s browser lacks WebAssembly SIMD, which the pose model needs');
+  const c = await caches.open(poseCacheName());
+  const parts = [];
+  let got = 0, total = 0;
+  for (const [f, type] of POSE.files) {
+    const res = await fetch(poseUrl(f), { cache: 'no-store' });
+    if (!res.ok) throw new Error(`pose/${f}: HTTP ${res.status}`);
+    total += +res.headers.get('content-length') || 0;
+    parts.push({ f, type, res });
+  }
+  for (const p of parts) {
+    const rd = p.res.body.getReader(), chunks = [];
+    for (;;) { const { done, value } = await rd.read(); if (done) break; chunks.push(value); got += value.length; if (onProgress) onProgress(got, total); }
+    const blob = new Blob(chunks, { type: p.type });
+    if (/\.task$/.test(p.f) && blob.size < 1e6) throw new Error('the pose model came back too small — try again');
+    await c.put(poseUrl(p.f), new Response(blob, { headers: { 'Content-Type': p.type, 'Content-Length': String(blob.size) } }));
+  }
+  S.settings.depthOn = true; save();
+}
+async function poseRemove() {
+  try { for (const k of await caches.keys()) if (k.startsWith('ironlog-pose-')) await caches.delete(k); } catch (e) { /* nothing cached */ }
+  _poseLm = null; S.settings.depthOn = false; save();
+}
+async function simdOk() {
+  // the SIMD probe MediaPipe itself uses (its `qo` bytes): a tiny module with a v128 op
+  try { return WebAssembly.validate(new Uint8Array([0, 97, 115, 109, 1, 0, 0, 0, 1, 5, 1, 96, 0, 1, 123, 3, 2, 1, 0, 10, 10, 1, 8, 0, 65, 0, 253, 15, 253, 98, 11])); } catch (e) { return false; }
+}
+let _poseLm = null, _poseLoad = null;
+function poseScript() {
+  if (window.MPVision) return Promise.resolve(window.MPVision);
+  return new Promise((res, rej) => {
+    const s = document.createElement('script'); s.src = 'pose/vision.js';
+    s.onload = () => window.MPVision ? res(window.MPVision) : rej(new Error('pose runtime did not load'));
+    s.onerror = () => { s.remove(); rej(new Error('couldn\'t load the pose runtime')); };
+    document.head.appendChild(s);
+  });
+}
+async function poseLandmarker() {
+  if (_poseLm) return _poseLm;
+  return _poseLoad = _poseLoad || (async () => {
+    try {
+      const V = await poseScript();
+      const fileset = { wasmLoaderPath: poseUrl('vision_wasm_internal.js'), wasmBinaryPath: poseUrl('vision_wasm_internal.wasm') };
+      const opts = d => ({ baseOptions: { modelAssetPath: poseUrl('pose_landmarker_lite.task'), delegate: d },
+        runningMode: 'IMAGE', numPoses: 1, minPoseDetectionConfidence: 0.5, minPosePresenceConfidence: 0.5, minTrackingConfidence: 0.5, outputSegmentationMasks: false });
+      try { _poseLm = await V.PoseLandmarker.createFromOptions(fileset, opts('GPU')); }
+      catch (e) { _poseLm = await V.PoseLandmarker.createFromOptions(fileset, opts('CPU')); }   // no WebGL2: slower, still works
+      return _poseLm;
+    } finally { _poseLoad = null; }
+  })();
+}
+const depthFor = liftId => !!S.settings.depthOn && POSE.squats.includes(liftId);
+/* One rep's bottom: pose on the frames around the bar's lowest point, the side
+   facing the camera (better-seen hip + knee), the frame where the hip is lowest
+   relative to the knee. Returns { cm, call, vis, pts } or null. */
+async function judgeDepth(video, from, tk, ix, Y, mPerH) {
+  if (!ix.length) return null;
+  const lm = await poseLandmarker();
+  const bottom = ix.reduce((b, i) => (Y[i] > Y[b] ? i : b), ix[0]);
+  let best = null;
+  for (let d = -6; d <= 6; d += 2) {
+    const i = bottom + d;
+    if (i < ix[0] || i > ix[ix.length - 1]) continue;
+    await bpSeek(video, from + tk.times[i] / 1000);
+    let res = null; try { res = lm.detect(video); } catch (e) { continue; }
+    const L = res && res.landmarks && res.landmarks[0];
+    if (!L) continue;
+    const side = [[23, 25, 27], [24, 26, 28]].map(([h, k, a]) => ({ h: L[h], k: L[k], a: L[a], vis: Math.min(L[h].visibility || 0, L[k].visibility || 0) }))
+      .sort((p, q) => q.vis - p.vis)[0];
+    const gap = side.h.y - side.k.y;                    // image y is down: positive = hip lower than knee
+    if (!best || gap > best.gap) best = { gap, vis: side.vis, i, pts: [side.h, side.k, side.a].map(p => [+p.x.toFixed(4), +p.y.toFixed(4)]) };
+  }
+  if (!best) return null;
+  const cm = +(best.gap * mPerH * 100 - POSE.offsetCm).toFixed(1);
+  const call = best.vis < POSE.minVis ? 'unsure' : cm > POSE.bandCm ? 'deep' : cm < -POSE.bandCm ? 'high' : 'close';
+  return { cm, call, vis: +best.vis.toFixed(2), i: best.i, pts: best.pts };
+}
+const DEPTH_WORD = { deep: '✓ deep', high: '✗ high', close: '≈ too close to call', unsure: '? can\'t see hip and knee' };
+const DEPTH_COL = { deep: 'var(--green)', high: 'var(--red)', close: 'var(--gold)', unsure: 'var(--dim)' };
+function depthSummary(reps) {
+  const d = (reps || []).map(r => r.depth).filter(Boolean);
+  if (!d.length) return '';
+  const n = k => d.filter(x => x.call === k).length;
+  return [n('deep') && `${n('deep')} deep`, n('high') && `${n('high')} high`, n('close') && `${n('close')} too close to call`, n('unsure') && `${n('unsure')} unclear`].filter(Boolean).join(' · ');
+}
+function poseSettingsHtml() {
+  return `<div class="eyebrow" style="margin:4px 0 6px">Squat depth from video</div>
+    <div class="sub" id="stPoseState" style="margin-bottom:6px">Checking…</div>
+    <div class="row" style="gap:8px"><button class="btn sm grow" id="stPoseGo">Download (${POSE.mb} MB)</button><button class="btn sm ghost" id="stPoseRm" style="display:none">Remove</button></div>
+    <div class="bar" id="stPoseBarW" style="margin-top:6px;display:none"><i id="stPoseBar" style="width:0%"></i></div>
+    <div class="sub" style="margin-top:4px">Judges each squat rep deep, high or too close to call in Bar path from video. Needs a one-time ${POSE.mb} MB download (MediaPipe's pose model), from Ironlog itself — no other site. Kept on this phone; a guide, never a white light.</div>`;
+}
+function wirePoseSettings(bg) {
+  const st = $('#stPoseState', bg), go = $('#stPoseGo', bg), rm = $('#stPoseRm', bg), bw = $('#stPoseBarW', bg), bar = $('#stPoseBar', bg);
+  if (!st) return;
+  const paint = async () => {
+    const ok = await poseReady();
+    if (ok && !S.settings.depthOn) { S.settings.depthOn = true; save(); }
+    st.innerHTML = ok ? '<b style="color:var(--green)">✓ Downloaded</b> — squat clips get a depth call.' : 'Not downloaded. Bar path works without it.';
+    go.style.display = ok ? 'none' : ''; rm.style.display = ok ? '' : 'none';
+  };
+  paint();
+  go.onclick = async () => {
+    go.disabled = true; bw.style.display = '';
+    try {
+      await poseDownload((g, t) => { bar.style.width = t ? `${(g / t * 100).toFixed(0)}%` : '50%'; go.textContent = `${(g / 1048576).toFixed(1)} of ${t ? (t / 1048576).toFixed(1) : POSE.mb} MB…`; });
+      toast('Squat depth ready', 'green');
+    } catch (e) { toast(`Download failed — ${e.message || e}`); }
+    go.disabled = false; go.textContent = `Download (${POSE.mb} MB)`; bw.style.display = 'none';
+    paint();
+  };
+  rm.onclick = () => confirmDlg(`Remove the pose model (${POSE.mb} MB)? Squat clips will stop getting a depth call until you download it again.`, async () => { await poseRemove(); paint(); toast('Pose model removed'); }, 'Remove');
+}
+
 /* The trimmed clip with the path drawn as it goes, recorded in real time for sharing. */
 async function bpRender(bg, video, from, to, X, Y, repIdx) {
   const mime = clipMime();
@@ -12788,6 +13000,8 @@ function openSettings() {
       </div>
       <div class="sub" id="stBfCount" style="margin-top:6px">${countPlanned(14)} planned session${countPlanned(14) === 1 ? '' : 's'} up to yesterday</div>
       <div class="hr"></div>
+      ${poseSettingsHtml()}
+      <div class="hr"></div>
       <div class="eyebrow" style="margin-bottom:8px">Data</div>
       <div class="sub" style="margin-bottom:10px">${S.workouts.length} workouts · ${S.checkins.length} check-ins · ${S.meets.length} meets · ${S.goals.length} goals</div>
       ${storageLine()}
@@ -12921,6 +13135,7 @@ function openSettings() {
         }, 'Mark done');
       };
       $('#stExport', bg).onclick = () => { exportJSON(); refreshStorageLine(bg); };
+      wirePoseSettings(bg);
       $('#stVbtRaw', bg).onchange = ev => { S.settings.vbtKeepRaw = ev.target.checked; save(); toast(ev.target.checked ? 'Keeping raw traces from your next measured set' : 'Raw traces off — kept ones stay until exported or replaced'); };
       $('#stVbtRawExp', bg).onclick = () => exportVbtRaw();
       $('#stExportCsv', bg).onclick = () => { exportCSV(); refreshStorageLine(bg); };
