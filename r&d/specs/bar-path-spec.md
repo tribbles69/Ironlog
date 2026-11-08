@@ -1,6 +1,7 @@
 # Video bar-path tracing and depth judging (roadmap 04)
 
-**Status: draft, 2026-11-08 — needs Aaron's answers in §11 before building.**
+**Status: agreed 2026-11-08 — Aaron took the recommended answer to all five
+decisions in §11 ("Yes, build 04a").** 04a is being built; 04b and 04c wait.
 
 Record or pick a side-on video of a set, track the bar end through it, draw
 the bar path and give velocity per rep as a second source next to D1's
@@ -152,6 +153,11 @@ gallery as well. Browsers on Android often cap or vary the frame rate, which
 is why gallery-first.
 
 ## 11. Decisions for Aaron (before building)
+
+**Answered 2026-11-08: yes to all five as recommended** — plate-only first;
+depth later as an optional download; video stays out of calibration, profile
+and readiness; the video isn't kept (path and numbers only, optional share
+render); entry points are the exercise card and Tools → Bar path.
 
 1. **Plate-only first build.** No plate in view → no result (it says so and
    points at the filming guide). OK, or do you want the pose download from
