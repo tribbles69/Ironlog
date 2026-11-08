@@ -68,8 +68,8 @@ trace to `Slew.analyse`.
 Where it starts:
 - On the live workout, an exercise's ⋯ → **Bar path from video** (next to
   Measure). Results attach to that exercise's next set, like Measure.
-- **Tools → Bar path** for any clip, outside a session; results can be saved
-  to a past set from there, or just viewed.
+- **Tools → Bar path** for any clip, outside a session — **view only** in the
+  first build (0.86.0); saving to a past set from there is left for later.
 
 Steps:
 1. **Pick** a video (`<input type=file accept=video/*>`).
@@ -78,6 +78,15 @@ Steps:
 3. **Find the plate**: `searchPlateInClip` over the trimmed range (10 frames);
    the best candidate is circled. **That's it** / **Show another** /
    **Tap the plate** (tap seeds a search near the tap).
+   A **circle size** slider is always there: match it to the plate's outer
+   edge. *Found in testing (0.86.0):* the detector works on a 288 px copy
+   (one pixel ≈ 4 % of a typical radius) and can lock onto an inner ring or
+   lip; on a test clip it read 93 px for a 100 px plate, so ROM and speed
+   came out 7 % high. So after tracking, unless the size was set by hand, the
+   **rim is measured at full resolution** on the six stillest tracked frames
+   (rays from the centre, skipping the sleeve directions; the outermost edge
+   at least 35 % as strong as the ray's strongest), median of the frames whose
+   rays agree. The detector's own circle is still what the tracker follows.
 4. **Plate size**: 450 mm by default (every 20 / 25 kg steel and competition
    bumper, and most 10 kg+ bumpers). A picker for 400 / 350 / other mm for
    smaller plates, remembered per place (D6).
@@ -178,6 +187,12 @@ also measured by a linear transducer (or the phone-on-bar sensor and, ideally,
 a transducer). Record the mean-velocity bias and limits of agreement in
 `r&d/notes/vbt-validation.md` under a "Video" heading, and test the cosine
 error claim by filming one set from 0°, 15° and 30°.
+
+**Synthetic check (0.86.0, before any real footage):** a rendered 720 × 1280
+clip of a plate (inner ring, hub, lettering) doing 3 reps of 50 cm, up in
+0.8 s, 3 cm sideways sway, beside a static decoy circle. Plate ranked above
+the decoy. Measured: ROM 49–50 cm, drift 3.0–3.4 cm, peak 0.95–0.97 m/s
+(true 0.98), time up 0.7–0.8 s. Real footage still to do (A4 item 19).
 
 ## 13. Effort
 

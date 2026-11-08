@@ -327,6 +327,12 @@ h3{font-size:13.5px;margin:0 0 8px}
 .dot.done{background:var(--green)}
 .dot.plan{background:var(--blue)}
 .dot.event{background:var(--gold)}
+.bp-stage{position:relative;width:100%;max-height:52vh;margin:0 auto;background:#000;border-radius:10px;overflow:hidden}
+.bp-stage video,.bp-stage canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;display:block}
+.bp-guide ul{margin:6px 0 0;padding-left:18px}.bp-guide li{margin:3px 0}
+.bpsvg .bp-ref{stroke:var(--dim);stroke-dasharray:3 3;stroke-width:1}
+.bpsvg .bp-ln{stroke-width:2.2;stroke-linejoin:round;stroke-linecap:round}
+.bp-hist{display:flex;gap:12px;align-items:center;margin:6px 0}
 .clipstage{position:relative;width:100%;max-width:360px;margin:0 auto;aspect-ratio:3/4;border-radius:12px;overflow:hidden;background:#000}
 .clipstage canvas,.clipstage img,.clipstage video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
 .clipstage .mirror{transform:scaleX(-1)}
@@ -2280,7 +2286,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.85.0';
+const APP_VERSION = '0.86.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -5135,6 +5141,7 @@ const TOOLS = [
     ['pct', '%1RM ↔ RIR chart', 'What a weight is worth at each rep count'],
     ['points', 'DOTS / IPF GL points', 'For a total at a bodyweight'],
     ['rpe', 'RPE ↔ RIR table', 'For coaches who think in RPE'],
+    ['barpath', 'Bar path from video', 'Side-on clip → bar path and speed per rep'],
   ]],
   ['Energy', [['tdee', 'TDEE', 'Maintenance calories, Mifflin-St Jeor and Katch-McArdle']]],
   ['Physique', [
@@ -5412,6 +5419,21 @@ function targetRirSource(e, blockRir) {
 let cardioWhyLast = null;
 
 const WHY = {
+  bpath: { label: 'bar path from video', fn: v => {
+    const c = v && v.cal;
+    if (!c) return null;
+    const t = trace('bar speed from video');
+    t.step('Plate diameter', `${c.plateMm} mm`, 'what the scale comes from');
+    t.step('Plate radius in the frame', `${(c.r * 100).toFixed(1)}% of frame height`, c.how ? `outer edge — ${c.how}` : 'from the circle you confirmed');
+    const mPerH = (c.plateMm / 1000) / (2 * c.r);
+    t.step('Scale', `${c.plateMm} mm ÷ (2 × ${c.r}) = ${mPerH.toFixed(3)} m per frame height`, 'so 1% of the frame height is ' + (mPerH * 1000 / 100).toFixed(1) + ' mm');
+    t.step('Frames', `${c.frames} at ${BP.hz} a second`, 'stepped through by seeking, not playing');
+    t.step('Plate found on', `${Math.round(c.coverage * 100)}%`, c.gaps && c.gaps.length ? bpGapText(c) : 'short gaps filled by a straight line');
+    (v.reps || []).slice(0, 3).forEach((r, i) => t.step(`Rep ${i + 1}`, `${(r.rom * 100).toFixed(0)} cm up in ${r.con != null ? r.con.toFixed(1) + ' s' : '—'} → ${r.v.toFixed(2)} m/s`, 'mean speed of the way up, from Slew\'s engine (the same one Measure uses)'));
+    t.note('An estimate: the camera must be square to the plate. Every 15° off reads a few % short.');
+    t.result('Best rep', `${v.best.toFixed(2)} m/s`);
+    return t;
+  } },
   vol: { label: 'weekly sets', fn: k => {
     const { weeks, by } = weeklySets();
     const wk = weeks[weeks.length - 1], rows = hardSetRows(wk, '9999').filter(r => r.k === k), t = volTarget(k);
@@ -5864,6 +5886,7 @@ const calcNeed = what => `<div class="sub">Enter ${what}.</div>`;
 function openTool(id) {
   closeModal();
   if (id === 'report') return openReport();
+  if (id === 'barpath') return openBarPath(null);
   const bw = bodyweightKg(), sex = S.settings.sex === 'female' ? 'female' : 'male';
   const age = ageFrom(S.settings.dob), hCm = +S.settings.heightCm || null, bf = latestBF();
   const dW = kg => kg ? nice(dw(kg)) : '', dL = cm => cm ? nice(dlen(cm)) : '';
@@ -6854,9 +6877,12 @@ function repDetail(v, logged) {
     const fl = [...repFlags(r), ...(short ? ['short ROM'] : [])];
     return `<tr><td>${i + 1}</td><td>${r.v.toFixed(2)}</td><td>${r.peak ? r.peak.toFixed(2) : '—'}</td><td>${r.rom ? (r.rom * 100).toFixed(0) : '—'}</td><td>${r.con ? r.con.toFixed(1) : '—'}</td><td style="color:var(--purple)">${repRir(r) != null ? nice(repRir(r)) : '—'}</td><td class="fl">${esc(fl.join(', '))}</td></tr>`;
   }).join('');
-  return `<div class="repdetail">${logged > reps.length ? `<div class="chip gold" style="margin:2px 0 6px;white-space:normal">The sensor found ${reps.length} of your ${logged} reps, so this set's speed and RIR aren't reliable</div>` : ''}${chart}
+  const vid = v.mode === 'video';
+  const drift = vid && reps.some(r => r.drift != null) ? `<div class="sub" style="font-size:11px">Sideways drift per rep: ${reps.map((r, i) => `<span style="color:${SERIES_COLORS[i % SERIES_COLORS.length]}">${r.drift != null ? r.drift.toFixed(1) : '—'}</span>`).join(' · ')} cm</div>` : '';
+  return `<div class="repdetail">${logged > reps.length ? `<div class="chip gold" style="margin:2px 0 6px;white-space:normal">The ${vid ? 'video' : 'sensor'} found ${reps.length} of your ${logged} reps, so this set's speed and RIR aren't reliable</div>` : ''}${chart}
+    ${vid && v.path ? `<div class="bp-hist">${bpPathSvg(v.path, 130)}<div>${drift}</div></div>` : ''}
     <table class="reptable"><thead><tr><th>Rep</th><th>m/s</th><th>Peak</th><th>cm</th><th>↑ s</th><th>RIR</th><th></th></tr></thead><tbody>${rows}</tbody></table>
-    <div class="sub" style="font-size:11px;margin-top:4px">Velocity loss ${v.loss.toFixed(0)}%${v.est ? ` · set RIR ${nice(rpeToRir(v.est.rpe))}${v.est.method ? ` (${esc(v.est.method)})` : ''}` : ''} · ${v.rate} Hz · confidence ${(v.conf * 100).toFixed(0)}%${v.place === 'pocket' ? ' · pocket' : ''}${uncal ? ' · profile not calibrated yet' : ''}</div>
+    <div class="sub" style="font-size:11px;margin-top:4px">Velocity loss ${v.loss.toFixed(0)}%${v.est ? ` · set RIR ${nice(rpeToRir(v.est.rpe))}${v.est.method ? ` (${esc(v.est.method)})` : ''}` : ''} · ${v.rate} Hz · confidence ${(v.conf * 100).toFixed(0)}%${v.place === 'pocket' ? ' · pocket' : ''}${vid ? ' · from video, an estimate' : ''}${uncal ? ' · profile not calibrated yet' : ''}</div>
   </div>`;
 }
 /* Raw sensor traces, for tuning rep detection (Settings → Bar-speed debug).
@@ -7127,6 +7153,7 @@ function exerciseCard(e, ei) {
       <button class="btn sm ghost grow" data-addset="${ei}">+ ${e.series ? 'Stone' : 'Set'}</button>
       <button class="btn sm ghost" data-rmset="${ei}">− ${e.series ? 'Stone' : 'Set'}</button>
       ${vbtAvailable() && kind === 'reps' ? `<button class="btn sm ghost" data-vbt="${ei}" title="Measure bar speed">◉ Measure</button>` : ''}
+      ${bpCan() && kind === 'reps' ? `<button class="btn sm ghost" data-bpv="${ei}" title="Bar path and speed from a side-on video" aria-label="Bar path from video">▶ Video</button>` : ''}
     </div>
   </div>`;
 }
@@ -11799,13 +11826,435 @@ function attachVbt(ei, v, est) {
      constant. This is the reason the profile is stored at all. */
   if (missed) {
     toast(`${setRefText(ex.sets, target)}: the sensor found ${v.reps.length} of ${s.r} reps — RIR not filled in`, 'gold');
-  } else if (est && est.measuredV0 && v.lift && v.place !== 'pocket') {   // pocket sets never calibrate (D1)
+  } else if (est && est.measuredV0 && v.lift && v.place !== 'pocket' && v.mode !== 'video') {   // pocket and video sets never calibrate (D1, 04a §8)
     addMvtObservation(v.lift, est.measuredV0);
     toast(`Calibrated ${v.lift} — failure speed ${est.measuredV0.toFixed(2)} m/s, limit now ${mvtFor(v.lift).toFixed(2)} m/s`, 'gold');
   } else {
     toast(`${setRefText(ex.sets, target)} measured — ${v.best.toFixed(2)} m/s`, 'green');
   }
   save(); bust(); render();
+}
+
+/* ============================================================
+   BAR PATH FROM VIDEO — roadmap 04a, r&d/specs/bar-path-spec.md
+   A side-on clip from the gallery: trim it, confirm the plate, track the
+   plate by SEEKING through the clip (Slew's lesson — playback drops frames),
+   scale from the plate's diameter, and hand the trace to the same Slew engine
+   Measure uses. The tracker is Slew's own (slew-video.js, no MediaPipe),
+   loaded on first use. Results are estimates and never calibrate anything.
+   ============================================================ */
+const BP = { hz: 30, gapMax: 0.2, pathPts: 40, plates: [450, 400, 350] };
+let _svLoad = null;
+function loadSlewVideo() {
+  if (window.SlewVideo) return Promise.resolve(window.SlewVideo);
+  return _svLoad = _svLoad || new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'slew-video.js';
+    s.onload = () => window.SlewVideo ? res(window.SlewVideo) : rej(new Error('the plate tracker did not load'));
+    s.onerror = () => { _svLoad = null; s.remove(); rej(new Error('couldn\'t load the plate tracker')); };
+    document.head.appendChild(s);
+  });
+}
+const bpCan = () => !!window.Slew && typeof OffscreenCanvas !== 'undefined';
+/* Slew's fillGaps (videoAnalysis.ts), here because that file imports the pose engine. */
+function bpFillGaps(series) {
+  const out = series.map(v => v == null ? NaN : v), known = [];
+  out.forEach((v, i) => { if (!Number.isNaN(v)) known.push(i); });
+  if (!known.length) return out.map(() => 0);
+  for (let i = 0; i < known[0]; i++) out[i] = out[known[0]];
+  for (let i = known[known.length - 1] + 1; i < out.length; i++) out[i] = out[known[known.length - 1]];
+  for (let k = 0; k < known.length - 1; k++) {
+    const a = known[k], b = known[k + 1];
+    for (let i = a + 1; i < b; i++) out[i] = out[a] + (out[b] - out[a]) * (i - a) / (b - a);
+  }
+  return out;
+}
+function bpSeek(video, t) {
+  return new Promise(res => {
+    if (Math.abs(video.currentTime - t) < 0.001) return res();
+    const done = () => { clearTimeout(to); res(); };
+    const to = setTimeout(() => { video.removeEventListener('seeked', done); res(); }, 2000);
+    video.addEventListener('seeked', done, { once: true });
+    video.currentTime = t;
+  });
+}
+/* The plate's OUTER edge, at full resolution. The scale is the whole game —
+   ROM and speed are only as right as the plate's size in the frame — and the
+   detector works on a 288 px copy (one pixel ≈ 4 % of a typical radius) and
+   may lock onto an inner ring or lip. Along rays from the centre, each ray's
+   outermost edge at least half as strong as its strongest is the rim; rays
+   near horizontal are skipped (the bar sleeve). Returns a normalised radius,
+   or null if the rays don't agree. */
+async function bpRefineRadius(video, c) {
+  const k = Math.min(1, 720 / video.videoHeight), W = Math.round(video.videoWidth * k), H = Math.round(video.videoHeight * k);
+  const cv = new OffscreenCanvas(W, H), x = cv.getContext('2d', { willReadFrequently: true });
+  x.drawImage(video, 0, 0, W, H);
+  const d = x.getImageData(0, 0, W, H).data;
+  const L = (px, py) => { const i = (Math.round(py) * W + Math.round(px)) * 4; return 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; };
+  const cx = c.cx * W, cy = c.cy * H, r0 = c.r * H, lo = r0 * 0.8, hi = r0 * 1.3;
+  const radii = [];
+  for (let a = 0; a < 360; a += 5) {
+    const deg = a % 180; if (deg < 25 || deg > 155) continue;      // the sleeve runs through the plate horizontally
+    const th = a * Math.PI / 180, dx = Math.cos(th), dy = Math.sin(th);
+    const edges = []; let best = 0;
+    for (let r = lo; r <= hi; r += 1) {
+      const p = [cx + dx * (r + 1.5), cy + dy * (r + 1.5)], q = [cx + dx * (r - 1.5), cy + dy * (r - 1.5)];
+      if (p[0] < 0 || p[1] < 0 || p[0] >= W || p[1] >= H || q[0] < 0 || q[1] < 0) break;
+      const g = Math.abs(L(...p) - L(...q));
+      edges.push([r, g]); best = Math.max(best, g);
+    }
+    if (best < 18) continue;
+    let pick = null;
+    // 35 %, not 50: side-on, the rim is often against the lifter's body, a softer edge than an inner ring
+    for (let i = 1; i < edges.length - 1; i++) if (edges[i][1] >= Math.max(12, best * 0.35) && edges[i][1] >= edges[i - 1][1] && edges[i][1] >= edges[i + 1][1]) pick = edges[i][0];
+    if (pick) radii.push(pick);
+  }
+  if (radii.length < 10) return null;
+  radii.sort((a, b) => a - b);
+  const med = radii[Math.floor(radii.length / 2)];
+  const agree = radii.filter(r => Math.abs(r - med) <= med * 0.04).length / radii.length;
+  return agree >= 0.5 ? { r: med / H, agree } : null;
+}
+/* Track the confirmed plate over [from, to], BP.hz steps a second. The tracker
+   is seeded where the plate was confirmed, so it runs forwards from that frame
+   and a second one runs backwards from it — the plate is never searched for
+   cold at a frame where it's somewhere else. */
+async function bpTrack(video, from, to, seed, onProgress, stopped) {
+  const SV = await loadSlewVideo();
+  const n = Math.max(1, Math.floor((to - from) * BP.hz));
+  const ts = []; for (let i = 0; i <= n; i++) ts.push(from + i / BP.hz);
+  const xs = ts.map(() => null), ys = ts.map(() => null);
+  const k0 = clamp(Math.round(((seed.t != null ? seed.t : from) - from) * BP.hz), 0, n);
+  video.pause();
+  let done = 0;
+  for (const dir of [1, -1]) {
+    const tr = new SV.PlateTracker();
+    await bpSeek(video, ts[k0]);
+    tr.seed(seed.cx, seed.cy, seed.r, video);
+    for (let k = dir > 0 ? k0 : k0 - 1; k >= 0 && k <= n; k += dir) {
+      if (stopped && stopped()) return null;
+      await bpSeek(video, ts[k]);
+      const p = tr.process(video, null);
+      if (p) { xs[k] = p.cx; ys[k] = p.cy; }
+      if (onProgress && ++done % 3 === 0) onProgress(done / (n + 1));
+    }
+  }
+  return { times: ts.map(t => Math.round((t - from) * 1000)), xs, ys };
+}
+/* The trace → Slew → what Measure stores, plus the path. Pure apart from Slew. */
+function bpAnalyse(tk, o) {
+  const { seed, plateMm, aspect, liftId, profile, loadKg } = o;
+  const N = tk.times.length, hits = tk.ys.filter(y => y != null).length;
+  const coverage = N ? hits / N : 0;
+  // gaps: runs of frames with no plate
+  const gaps = [];
+  for (let i = 0; i < N;) {
+    if (tk.ys[i] != null) { i++; continue; }
+    let j = i; while (j < N && tk.ys[j] == null) j++;
+    gaps.push({ at: tk.times[i] / 1000, sec: (j - i) / BP.hz }); i = j;
+  }
+  /* The tracker works on a 288 px copy, so one step of jitter is ~1 cm. A
+     5-frame moving average on x keeps drift from reading the jitter; y goes to
+     Slew raw — its engine filters and resamples on its own. */
+  const sm = (a, k = 2) => a.map((_, i) => {
+    let sum = 0, cnt = 0;
+    for (let j = Math.max(0, i - k); j <= Math.min(a.length - 1, i + k); j++) { sum += a[j]; cnt++; }
+    return sum / cnt;
+  });
+  const X = sm(bpFillGaps(tk.xs)), Y = bpFillGaps(tk.ys);
+  const rScale = seed.rs || seed.r;                        // the rim, for scale; seed.r is what the tracker follows
+  const mPerH = (plateMm / 1000) / (2 * rScale);           // metres per unit of frame height
+  const samples = tk.times.map((t, i) => ({ t, x: -Y[i] * mPerH, conf: tk.ys[i] == null ? 0.5 : 1 }));
+  const out = Slew.analyse(samples, { targetHz: 60, minRom: profile.minRom, ...(loadKg > 0 ? { loadKg } : {}) });
+  const reps = liftId ? Slew.withRpe(out.reps, profile) : out.reps;
+  const failure = trustFailure(out.failure, out.reps, liftId, profile);
+  const est = liftId && reps.length ? Slew.estimateSet(reps, profile, failure) : null;
+  const rec = { timestamp: Date.now(), reps, summary: out.summary, provenance: { mode: 'video', sampleRate: 60, sourceRate: BP.hz } };
+  const v = packVbt(rec, est, liftId, 'video');
+  v.conf = +Math.min(v.conf, coverage).toFixed(2);
+  // the path, per rep, in cm from where the rep started; image y is down, so up is −y
+  const cm = (i, i0) => [+(((X[i] - X[i0]) * aspect) * mPerH * 100).toFixed(1), +((Y[i0] - Y[i]) * mPerH * 100).toFixed(1)];
+  const idxIn = (a, b) => tk.times.map((t, i) => (t >= a && t <= b ? i : -1)).filter(i => i >= 0);
+  const repIdx = reps.map(r => idxIn(r.tStart, r.tEnd));
+  v.path = repIdx.map(ix => {
+    if (!ix.length) return [];
+    const step = Math.max(1, Math.ceil(ix.length / BP.pathPts));
+    const pick = ix.filter((_, k) => k % step === 0);
+    if (pick[pick.length - 1] !== ix[ix.length - 1]) pick.push(ix[ix.length - 1]);
+    return pick.map(i => cm(i, ix[0]));
+  });
+  v.reps.forEach((r, k) => { const ix = repIdx[k]; r.drift = ix.length ? +(((Math.max(...ix.map(i => X[i])) - Math.min(...ix.map(i => X[i]))) * aspect) * mPerH * 100).toFixed(1) : null; });
+  v.cal = { plateMm, r: +rScale.toFixed(4), how: seed.tapped || seed.manual ? 'by hand' : seed.rimFrames ? `rim measured on ${seed.rimFrames} still frames` : 'detector circle', coverage: +coverage.toFixed(2), gaps: gaps.filter(g => g.sec > BP.gapMax).map(g => ({ at: +g.at.toFixed(1), sec: +g.sec.toFixed(1) })), frames: N };
+  return { v, est, failure, X, Y, repIdx, reps: out.reps.length };
+}
+/* The path in cm, equal scale both ways, one colour per rep. */
+function bpPathSvg(path, h = 150) {
+  const pts = (path || []).flat();
+  if (pts.length < 2) return '';
+  let x0 = Math.min(...pts.map(p => p[0])), x1 = Math.max(...pts.map(p => p[0]));
+  const y0 = Math.min(...pts.map(p => p[1])), y1 = Math.max(...pts.map(p => p[1]));
+  const span = Math.max(y1 - y0, 10), pad = span * 0.08;
+  const wide = Math.max(x1 - x0, span * 0.35); const mx = (x0 + x1) / 2; x0 = mx - wide / 2; x1 = mx + wide / 2;
+  const W = (x1 - x0 + 2 * pad) / (span + 2 * pad) * h;
+  const X = x => ((x - x0 + pad) / (span + 2 * pad) * h).toFixed(1), Y = y => ((y1 + pad - y) / (span + 2 * pad) * h).toFixed(1);
+  return `<svg class="bpsvg" width="${Math.max(W, 40).toFixed(0)}" height="${h}" viewBox="0 0 ${Math.max(W, 40).toFixed(1)} ${h}" style="flex:none;max-width:100%" role="img" aria-label="Bar path, ${path.length} rep${path.length === 1 ? '' : 's'}">
+    <line x1="${X(0)}" x2="${X(0)}" y1="0" y2="${h}" class="bp-ref"/>
+    ${path.map((rp, i) => rp.length > 1 ? `<polyline points="${rp.map(p => `${X(p[0])},${Y(p[1])}`).join(' ')}" fill="none" style="stroke:${SERIES_COLORS[i % SERIES_COLORS.length]}" class="bp-ln"/>` : '').join('')}
+  </svg>`;
+}
+const bpGapText = cal => (cal && cal.gaps && cal.gaps.length) ? cal.gaps.slice(0, 3).map(g => `plate hidden ${g.sec} s at ${g.at} s`).join(' · ') : '';
+
+/* ei: an exercise on the live workout, or null from Tools (view only). */
+function openBarPath(ei = null) {
+  if (!bpCan()) return toast('This browser can\'t do bar path from video');
+  const ex = ei != null && S.active ? S.active.exercises[ei] : null;
+  let liftId = ex ? slewLiftFor(ex.leaf) : (S.settings.bpLift || 'Squat (free bar)');
+  const lastW = ex ? (ex.sets.filter(s => s.w > 0).slice(-1)[0] || {}).w || 0 : 0;
+  let plateMm = (S.settings.bpPlateBy || {})[S.settings.place || '_'] || 450;
+  let url = null, from = 0, to = 0, seed = null, cands = [], ci = 0, tapMode = false, stopFlag = false, result = null;
+  const video = clipVideoEl();
+  video.preload = 'auto';
+  const host = document.createElement('div');
+  const ov = document.createElement('canvas');
+  const fileIn = document.createElement('input'); fileIn.type = 'file'; fileIn.accept = 'video/*'; fileIn.style.display = 'none';
+  const cleanup = () => { stopFlag = true; video.pause(); if (url) URL.revokeObjectURL(url); };
+
+  const guide = `<div class="bp-guide"><b>Film it like this</b>
+    <ul><li><b>Side-on, square to the bar</b> — looking straight at the plate. Every 15° off makes the path and speed read a few % short.</li>
+    <li>Phone <b>at plate height</b>, 2–3 m away, propped up — not hand-held. The whole rep in frame.</li>
+    <li>The near plate in view (not behind an upright), good light, 30 fps or more. One set per clip.</li></ul></div>`;
+  const stage = () => `<div class="bp-stage" id="bpStage" style="aspect-ratio:${video.videoWidth || 9} / ${video.videoHeight || 16}"></div>`;
+  const drawOv = (fn) => {
+    const r = ov.getBoundingClientRect(); ov.width = Math.round(r.width * window.devicePixelRatio) || 300; ov.height = Math.round(r.height * window.devicePixelRatio) || 400;
+    const x = ov.getContext('2d'); x.clearRect(0, 0, ov.width, ov.height); if (fn) fn(x, ov.width, ov.height);
+  };
+  const circle = (x, w, h, c, col = '#3ddc84') => { x.strokeStyle = col; x.lineWidth = 3 * window.devicePixelRatio; x.beginPath(); x.arc(c.cx * w, c.cy * h, c.r * h, 0, Math.PI * 2); x.stroke(); x.beginPath(); x.arc(c.cx * w, c.cy * h, 3 * window.devicePixelRatio, 0, 7); x.fillStyle = col; x.fill(); };
+  const mount = bg => { const st = $('#bpStage', bg); if (st && !st.contains(video)) { st.append(video, ov); } };
+
+  let bgRef = null;
+  const show = (body, foot, wire) => {
+    const bg = bgRef;
+    $('.modal-body', bg).innerHTML = body;
+    $('.modal-foot', bg).innerHTML = foot;
+    mount(bg);
+    a11yPass(bg);
+    if (wire) wire(bg);
+  };
+
+  const stepPick = () => show(`${guide}${ex ? `<div class="sub" style="margin-top:8px">For <b>${esc(exName(ex))}</b>${lastW ? ` at ${wt(lastW)}` : ''} — the result attaches to its next set.</div>` : ''}`,
+    `<button class="btn ghost" id="bpCancel">Cancel</button><button class="btn primary" id="bpChoose">Choose video</button>`,
+    bg => {
+      $('#bpCancel', bg).onclick = () => { cleanup(); closeModal(); };
+      $('#bpChoose', bg).onclick = () => fileIn.click();
+    });
+
+  fileIn.onchange = () => {
+    const f = fileIn.files[0]; fileIn.value = '';
+    if (!f) return;
+    if (url) URL.revokeObjectURL(url);
+    url = URL.createObjectURL(f);
+    video.src = url;
+    video.onloadedmetadata = () => { from = 0; to = Math.max(0.5, video.duration || 0); stepTrim(); };
+    video.onerror = () => toast('Couldn\'t read that video');
+  };
+
+  const stepTrim = () => {
+    const d = video.duration || 0;
+    const liftSel = ex ? '' : `<div class="field"><label for="bpLift">Lift</label><select id="bpLift">${Object.keys(Slew.DEFAULT_PROFILES).map(k => `<option ${k === liftId ? 'selected' : ''}>${esc(k)}</option>`).join('')}</select></div>`;
+    show(`${stage()}
+      <div class="grid2" style="margin-top:10px">
+        <div class="field"><label for="bpFrom">Start <span id="bpFromV">${from.toFixed(1)}</span> s</label><input type="range" id="bpFrom" min="0" max="${d.toFixed(1)}" step="0.1" value="${from}"></div>
+        <div class="field"><label for="bpTo">End <span id="bpToV">${to.toFixed(1)}</span> s</label><input type="range" id="bpTo" min="0" max="${d.toFixed(1)}" step="0.1" value="${to}"></div>
+      </div>
+      <div class="sub" style="margin:-4px 0 10px">Trim to the set itself — cut the walk-out and the re-rack, or they count as reps.</div>
+      <div class="grid2">${liftSel}
+        <div class="field"><label for="bpPlate">Plate diameter</label><select id="bpPlate">${BP.plates.map(mm => `<option value="${mm}" ${mm === plateMm ? 'selected' : ''}>${mm} mm${mm === 450 ? ' (20/25 kg, bumpers)' : ''}</option>`).join('')}<option value="other" ${BP.plates.includes(plateMm) ? '' : 'selected'}>Other…</option></select></div>
+        <div class="field" id="bpPlateOtherF" style="display:${BP.plates.includes(plateMm) ? 'none' : ''}"><label for="bpPlateOther">Other (mm)</label><input type="number" inputmode="numeric" id="bpPlateOther" value="${plateMm}" min="150" max="500"></div>
+      </div>`,
+      `<button class="btn ghost" id="bpBack">Back</button><button class="btn primary" id="bpFind">Find the plate</button>`,
+      bg => {
+        const seekShow = t => { bpSeek(video, t).then(() => drawOv()); };
+        const fr = $('#bpFrom', bg), tt = $('#bpTo', bg);
+        fr.oninput = () => { from = Math.min(+fr.value, to - 0.5); fr.value = from; $('#bpFromV', bg).textContent = from.toFixed(1); seekShow(from); };
+        tt.oninput = () => { to = Math.max(+tt.value, from + 0.5); tt.value = to; $('#bpToV', bg).textContent = to.toFixed(1); seekShow(to); };
+        seekShow(from);
+        const pl = $('#bpPlate', bg);
+        pl.onchange = () => { $('#bpPlateOtherF', bg).style.display = pl.value === 'other' ? '' : 'none'; };
+        $('#bpBack', bg).onclick = stepPick;
+        $('#bpFind', bg).onclick = async () => {
+          const ls = $('#bpLift', bg); if (ls) { liftId = ls.value; S.settings.bpLift = liftId; }
+          plateMm = pl.value === 'other' ? clamp(+$('#bpPlateOther', bg).value || 450, 150, 500) : +pl.value;
+          S.settings.bpPlateBy = { ...(S.settings.bpPlateBy || {}), [S.settings.place || '_']: plateMm };
+          save();
+          stepFind();
+        };
+      });
+  };
+
+  const stepFind = async () => {
+    show(`${stage()}<div class="sub" id="bpMsg" style="margin-top:8px">Looking for the plate across the clip…</div><div class="bar" style="margin-top:6px"><i id="bpBar" style="width:0%"></i></div>`,
+      `<button class="btn ghost" id="bpBack">Back</button>`, bg => { $('#bpBack', bg).onclick = stepTrim; });
+    try {
+      const SV = await loadSlewVideo();
+      cands = await SV.searchPlateInClip(video, from, to, 10, f => { const b = $('#bpBar', bgRef); if (b) b.style.width = `${(f * 100).toFixed(0)}%`; });
+    } catch (e) { toast(`Couldn't search the clip — ${e.message || e}`); cands = []; }
+    ci = 0;
+    stepConfirm();
+  };
+
+  const stepConfirm = async () => {
+    const c = cands[ci];
+    show(`${stage()}<div class="sub" id="bpMsg" style="margin-top:8px">${tapMode ? 'Tap the middle of the near plate, then size the circle to its edge.'
+        : c ? `Is the green circle the plate? <span class="dimmer">(${ci + 1} of ${cands.length})</span>` : 'No plate found automatically. Tap the middle of the near plate, then size the circle.'}</div>
+      <div class="field" style="margin-top:8px"><label for="bpR">Circle size — match the plate's <b>outer edge</b>; the scale comes from it</label><input type="range" id="bpR" min="0.03" max="0.3" step="0.001" value="${(seed && seed.r) || (c && c.r) || 0.1}"></div>
+      ${tapMode || !c ? `<div class="field"><label for="bpScrub">Frame</label><input type="range" id="bpScrub" min="${from}" max="${to}" step="0.05" value="${seed && seed.t != null ? seed.t : from}"></div>` : ''}`,
+      `<button class="btn ghost" id="bpBack">Back</button>${c && !tapMode ? `${cands.length > 1 ? '<button class="btn ghost" id="bpNext">Show another</button>' : ''}<button class="btn ghost" id="bpTap">Tap it myself</button>` : ''}<button class="btn primary" id="bpOk" ${(tapMode || !c) && !(seed && seed.tapped) ? 'disabled' : ''}>${c && !tapMode ? 'That\'s it' : 'Use this circle'}</button>`,
+      async bg => {
+        $('#bpBack', bg).onclick = () => { tapMode = false; seed = null; stepTrim(); };
+        const nx = $('#bpNext', bg); if (nx) nx.onclick = () => { ci = (ci + 1) % cands.length; stepConfirm(); };
+        const tp = $('#bpTap', bg); if (tp) tp.onclick = () => { tapMode = true; seed = null; stepConfirm(); };
+        const rIn = $('#bpR', bg);
+        if (c && !tapMode) {
+          await bpSeek(video, c.atTime);
+          // the detector's circle tracks well, but its size may be an inner ring: measure the rim
+          let rs = c.r;
+          try { const ref = await bpRefineRadius(video, c); if (ref) rs = ref.r; } catch (e) { /* keep the detector's */ }
+          rIn.value = rs;
+          const paint = () => drawOv((x, w, h) => circle(x, w, h, { ...c, r: rs }));
+          paint();
+          let manual = false;
+          rIn.oninput = () => { rs = +rIn.value; manual = true; paint(); };
+          $('#bpOk', bg).onclick = () => { seed = { cx: c.cx, cy: c.cy, r: c.r, rs, manual, t: c.atTime }; stepTrack(); };
+          return;
+        }
+        // tap mode
+        const sc = $('#bpScrub', bg);
+        const paint = () => drawOv((x, w, h) => { if (seed && seed.tapped) circle(x, w, h, seed, '#ffc542'); });
+        await bpSeek(video, +sc.value); paint();
+        sc.oninput = () => { bpSeek(video, +sc.value).then(paint); if (seed) seed.t = +sc.value; };
+        rIn.oninput = () => { if (seed) { seed.r = +rIn.value; paint(); } };
+        ov.onclick = ev => {
+          const r = ov.getBoundingClientRect();
+          seed = { cx: (ev.clientX - r.left) / r.width, cy: (ev.clientY - r.top) / r.height, r: +rIn.value, t: +sc.value, tapped: true };
+          $('#bpOk', bg).disabled = false; paint();
+        };
+        $('#bpOk', bg).onclick = () => { if (seed) { ov.onclick = null; stepTrack(); } };
+      });
+  };
+
+  const stepTrack = async () => {
+    tapMode = false; stopFlag = false;
+    show(`${stage()}<div class="sub" style="margin-top:8px">Following the plate through the set…</div><div class="bar" style="margin-top:6px"><i id="bpBar" style="width:0%"></i></div>`,
+      `<button class="btn ghost" id="bpStop">Stop</button>`, bg => { $('#bpStop', bg).onclick = () => { stopFlag = true; stepConfirm(); }; });
+    // the tracker seeds on the frame the plate was confirmed in, so start the seek there
+    let tk = null;
+    try {
+      tk = await bpTrack(video, from, to, seed, f => { const b = $('#bpBar', bgRef); if (b) b.style.width = `${(f * 100).toFixed(0)}%`; drawOv(); }, () => stopFlag || !document.body.contains(bgRef));
+    } catch (e) { toast(`Tracking failed — ${e.message || e}`); return stepConfirm(); }
+    if (!tk) return;
+    /* The rim, measured where the bar is still (motion blur smears the edge):
+       the stillest tracked frames, at least 0.3 s apart, median of the ones
+       whose rays agree. A size set by hand wins. */
+    if (!seed.manual && !seed.tapped) {
+      const mv = tk.ys.map((y, i) => (y == null || tk.ys[i - 1] == null || tk.ys[i + 1] == null) ? Infinity : Math.abs(tk.ys[i + 1] - tk.ys[i - 1]));
+      const order = mv.map((m, i) => [m, i]).filter(p => p[0] < Infinity).sort((a, b) => a[0] - b[0]);
+      const picks = [];
+      for (const [, i] of order) { if (picks.every(j => Math.abs(j - i) >= BP.hz * 0.3)) picks.push(i); if (picks.length >= 6) break; }
+      const got = [];
+      for (const i of picks) {
+        await bpSeek(video, from + tk.times[i] / 1000);
+        try { const ref = await bpRefineRadius(video, { cx: tk.xs[i], cy: tk.ys[i], r: seed.r }); if (ref) got.push(ref.r); } catch (e) { /* skip */ }
+      }
+      if (got.length >= 2) { got.sort((a, b) => a - b); seed.rs = got[Math.floor(got.length / 2)]; seed.rimFrames = got.length; }
+    }
+    const profile = liftId ? slewProfile(liftId) : { ...Slew.defaultProfile('Machine (stack)'), v0: 0 };
+    result = bpAnalyse(tk, { seed, plateMm, aspect: video.videoWidth / video.videoHeight, liftId, profile, loadKg: lastW });
+    stepResult();
+  };
+
+  const stepResult = async () => {
+    const { v, X, Y, repIdx } = result;
+    const firstBottom = repIdx[0] && repIdx[0].length ? repIdx[0].reduce((b, i) => (Y[i] > Y[b] ? i : b), repIdx[0][0]) : 0;
+    const gapTxt = bpGapText(v.cal);
+    const low = v.cal.coverage < 0.6;
+    show(`${stage()}
+      ${v.reps.length ? `<div class="stats grid3" style="margin:10px 0">
+        <div class="stat"><div class="k">Best</div><div class="v">${v.best.toFixed(2)}<small>m/s</small></div></div>
+        <div class="stat"><div class="k">Velocity loss</div><div class="v">${v.loss.toFixed(0)}<small>%</small></div></div>
+        <div class="stat"><div class="k">Effort</div><div class="v" style="color:var(--purple)">${v.est ? 'RIR ' + nice(rpeToRir(v.est.rpe)) : '—'}</div></div>
+      </div>
+      <table class="reptable"><thead><tr><th>Rep</th><th>m/s</th><th>Peak</th><th>cm</th><th>↔ cm</th><th>↑ s</th></tr></thead><tbody>
+        ${v.reps.map((r, i) => `<tr><td style="color:${SERIES_COLORS[i % SERIES_COLORS.length]}">${i + 1}</td><td>${r.v.toFixed(2)}</td><td>${r.peak ? r.peak.toFixed(2) : '—'}</td><td>${(r.rom * 100).toFixed(0)}</td><td>${r.drift != null ? r.drift.toFixed(1) : '—'}</td><td>${r.con ? r.con.toFixed(1) : '—'}</td></tr>`).join('')}
+      </tbody></table>` : `<div class="empty" style="margin-top:10px">No reps found. Check the trim covers the whole set and the plate stayed in view.</div>`}
+      <div class="sub" style="margin-top:8px">Estimate · from video. Plate found on ${Math.round(v.cal.coverage * 100)}% of frames${gapTxt ? ` · ${esc(gapTxt)}` : ''}. ↔ is how far the bar moved sideways in the rep.${low ? ' <b style="color:var(--gold)">The plate was lost a lot — treat these numbers loosely.</b>' : ''} ${why('bpath', v)}</div>`,
+      `<button class="btn ghost" id="bpAgain">Back</button><button class="btn ghost" id="bpRender">Save with bar path</button>${ex && v.reps.length ? '<button class="btn primary" id="bpAttach">Attach to set</button>' : '<button class="btn primary" id="bpDone">Done</button>'}`,
+      async bg => {
+        await bpSeek(video, from + firstBottom / BP.hz);
+        const paint = upto => drawOv((x, w, h) => {
+          x.lineWidth = 3 * window.devicePixelRatio; x.lineJoin = 'round';
+          repIdx.forEach((ix, k) => {
+            const pts = ix.filter(i => upto == null || i <= upto);
+            if (pts.length < 2) return;
+            x.strokeStyle = window.getComputedStyle(document.documentElement).getPropertyValue(SERIES_COLORS[k % SERIES_COLORS.length].slice(4, -1)).trim() || '#ff6b35';
+            x.beginPath(); pts.forEach((i, j) => j ? x.lineTo(X[i] * w, Y[i] * h) : x.moveTo(X[i] * w, Y[i] * h)); x.stroke();
+          });
+        });
+        paint();
+        $('#bpAgain', bg).onclick = stepConfirm;
+        const dn = $('#bpDone', bg); if (dn) dn.onclick = () => { cleanup(); closeModal(); };
+        const at = $('#bpAttach', bg); if (at) at.onclick = () => { cleanup(); closeModal(); attachVbt(ei, result.v, result.est); };
+        $('#bpRender', bg).onclick = () => bpRender(bg, video, from, to, X, Y, repIdx);
+      });
+  };
+
+  modal({
+    title: 'Bar path from video',
+    sticky: true,
+    body: '',
+    foot: '<span></span>',
+    onClose: cleanup,
+    onOpen: bg => { bgRef = bg; bg.appendChild(fileIn); stepPick(); loadSlewVideo().catch(() => {}); },
+  });
+}
+/* The trimmed clip with the path drawn as it goes, recorded in real time for sharing. */
+async function bpRender(bg, video, from, to, X, Y, repIdx) {
+  const mime = clipMime();
+  if (!mime) return toast('This browser can\'t make a video file');
+  const k = Math.min(1, 720 / video.videoHeight);
+  const c = document.createElement('canvas'); c.width = Math.round(video.videoWidth * k / 2) * 2; c.height = Math.round(video.videoHeight * k / 2) * 2;
+  const x = c.getContext('2d');
+  const cols = SERIES_COLORS.map(s => window.getComputedStyle(document.documentElement).getPropertyValue(s.slice(4, -1)).trim() || '#ff6b35');
+  const btn = $('#bpRender', bg); if (btn) { btn.disabled = true; btn.textContent = 'Making it…'; }
+  Awake.hold('bprender');
+  const rec = clipRecorder(c, { bps: 4e6 });
+  let raf = 0;
+  const frame = () => {
+    x.drawImage(video, 0, 0, c.width, c.height);
+    const upto = Math.floor((video.currentTime - from) * BP.hz);
+    x.lineWidth = 4; x.lineJoin = 'round';
+    repIdx.forEach((ix, r) => {
+      const pts = ix.filter(i => i <= upto);
+      if (pts.length < 2) return;
+      x.strokeStyle = cols[r % cols.length];
+      x.beginPath(); pts.forEach((i, j) => j ? x.lineTo(X[i] * c.width, Y[i] * c.height) : x.moveTo(X[i] * c.width, Y[i] * c.height)); x.stroke();
+    });
+    raf = requestAnimationFrame(frame);
+  };
+  try {
+    await bpSeek(video, from);
+    frame(); rec.start();
+    await video.play();
+    await new Promise(res => { const iv = setInterval(() => { if (video.currentTime >= to || video.ended || video.paused) { clearInterval(iv); res(); } }, 50); });
+    video.pause();
+    const blob = await rec.stop();
+    cancelAnimationFrame(raf);
+    const name = `ironlog-barpath-${today()}.${mime.includes('mp4') ? 'mp4' : 'webm'}`;
+    const file = new File([blob], name, { type: blob.type });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) navigator.share({ files: [file], title: 'Bar path' }).catch(() => {});
+    else { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove(); }
+    toast('Bar path video made', 'green');
+  } catch (e) { toast(`Couldn't make the video — ${e.message || e}`); }
+  finally { cancelAnimationFrame(raf); Awake.release('bprender'); if (btn) { btn.disabled = false; btn.textContent = 'Save with bar path'; } }
 }
 
 /* ============================================================
@@ -18585,6 +19034,7 @@ function wireActive(v) {
   });
 
   v.querySelectorAll('[data-vbt]').forEach(b => b.onclick = () => openVbtRecord(+b.dataset.vbt));
+  v.querySelectorAll('[data-bpv]').forEach(b => b.onclick = () => openBarPath(+b.dataset.bpv));
   v.querySelectorAll('[data-lvuse]').forEach(b => b.onclick = () => lvUse(+b.dataset.lvuse));
   v.querySelectorAll('[data-lvclear]').forEach(b => b.onclick = () => confirmDlg('Clear today\'s warm-up profile points?', () => {
     const ex = a.exercises[+b.dataset.lvclear]; delete ex.lvp; save(); render();
