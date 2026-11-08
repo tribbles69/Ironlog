@@ -36,8 +36,8 @@ extras.
 Paths here are from the repo root. The folder is `r&d` — **quote it in the
 shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
 
-1. Take the **first unchecked item, top to bottom** — section A, then B, C, D,
-   E — unless Aaron says otherwise.
+1. Take the **first unchecked item, top to bottom** — section 0, then A, B,
+   C, D, E — unless Aaron says otherwise.
    Within a section, the **order on the page** is the order of work; item
    numbers are labels and don't always run in sequence (D12 was moved up
    2026-10-31, D8–D9 moved to the end of D; E5 and the new D16 moved ahead of
@@ -46,7 +46,11 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    **Where things stand (2026-11-01, 0.66.0):** everything in A–D is built
    except D9. A4 and A6 are waiting on Aaron. Aaron asked for E11 and
    E12 next (E11 shipped 0.64.0, E12's first build 0.65.0); D8 shipped 0.66.0.
-   D9 finished in 0.73.0; the next build item is **E3** onwards.
+   D9 finished in 0.73.0.
+
+   **Next up (2026-11-08, Aaron):** section **0** below comes before
+   everything else — four extras from the app audit, in page order. After
+   those, carry on from **E3**.
 2. **Check the code before trusting a status here.** Some items were marked from
    memory of planning chats, not from the code. If something is already built,
    tick it, note the version, and move on.
@@ -131,6 +135,43 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
       equipment for any movement 0.53.0 (B9). Leaf keys, `allExercises()`,
       `variantLabel()` and the axis picker are what everything since builds on.
 - ~~PR detection against history~~ — not a bug (Aaron's logging error, 2026-09-24).
+
+---
+
+## 0. Next up — extras from the app audit (added 2026-11-08)
+
+From the Hub's `roadmaps/ironlog-from-audit.md`: the audit items Ironlog
+doesn't have yet. Once these are in, the matching third-party apps can come off
+Aaron's phone. Check the code first in case any part already exists.
+
+### [ ] 01. Weekly sets per muscle against a target range
+(Tonnage's MEV / MRV landmarks.) Count hard sets per muscle per week, using the
+muscle shares Ironlog already has (`EX_DB`, D7), against a target range the
+lifter can edit (MEV → MAV → MRV), with sensible defaults per muscle. Show it
+on Stats → Muscles: under / in range / over for the current week, and a trend.
+Warm-ups stay out (B3). Decide how fractional shares count (e.g. a set counts
+fully for primary muscles, half for secondary) and write it down.
+
+### [ ] 02. Interval timer
+(INTVL.) Build run / rest intervals — work, rest, rounds, optional warm-up and
+cool-down — with audio and vibration cues from `Cue` and the screen kept on
+with `Awake`. Starts from **Train → Cardio** next to the HR-zone session;
+saved presets; logs as a cardio session in the calendar and history.
+
+### [ ] 03. Daily one-second progress clip
+(1 Second Everyday.) Extends E4's progress photos: record or pick a one-second
+clip a day, kept on the device only like the photos, and join them into a
+timelapse of the bulk and cut that can be played and saved. Same pose
+reminder as the photos so clips line up. Check what the browser can do for
+joining clips on the phone (MediaRecorder / canvas) before writing the spec.
+
+### [ ] 04. Video bar-path tracing and depth judging
+(VBTgo, Metric, PDC Performance.) **Write a spec first.** Record or pick a
+side-on video of a set; track the bar end through it to draw the bar path,
+and give velocity per rep from the video as a second source next to D1's
+motion-sensor Measure. Depth judging for squats (hip crease below the top of
+the knee) as a later part. All processing on the device; no uploads.
+Label results as estimates, like D1.
 
 ---
 
