@@ -2286,7 +2286,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.87.0';
+const APP_VERSION = '0.88.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -7159,26 +7159,31 @@ function exerciseCard(e, ei) {
 }
 
 /* ---------------- warm-up ramp ----------------
-   Builds a ladder to a target load. Fewer, bigger jumps for a heavy single;
-   more reps and shallower steps for volume work. The point is to arrive at the
-   top set primed but not spent — on a test day a bad warm-up costs you the
-   number outright, in either direction. */
+   Builds a ladder to a target load: three warm-up sets at most, the empty bar
+   counting as one. A session warm-up primes the working sets, it doesn't eat
+   into them. Meet day (full: true) keeps the long ladder to an opener, where a
+   bad warm-up costs you the number outright. */
 const RAMP = {
-  single: { pcts: [0.40, 0.55, 0.70, 0.80, 0.88, 0.94], reps: [5, 3, 2, 1, 1, 1], rest: [60, 90, 120, 180, 210, 240] },
-  low:    { pcts: [0.45, 0.60, 0.75, 0.86],             reps: [5, 4, 3, 2],       rest: [60, 90, 120, 180] },
-  high:   { pcts: [0.50, 0.70, 0.85],                   reps: [8, 5, 3],          rest: [60, 75, 90] },
+  // two steps after the empty bar, three when the bar is skipped
+  bar:    { pcts: [0.60, 0.80],       single: [3, 1],    low: [5, 3],    high: [6, 3],    rest: [75, 120] },
+  nobar:  { pcts: [0.50, 0.70, 0.85], single: [5, 3, 1], low: [5, 3, 2], high: [8, 5, 3], rest: [60, 90, 120] },
+  meet:   { pcts: [0.40, 0.55, 0.70, 0.80, 0.88, 0.94], single: [5, 3, 2, 1, 1, 1], rest: [60, 90, 120, 180, 210, 240] },
 };
+const RAMP_MAX = 3;
 
-function warmupRamp(targetKg, reps = 1, barKg = 20, round = roundBar, roundWork = round) {
+function warmupRamp(targetKg, reps = 1, barKg = 20, round = roundBar, roundWork = round, { full = false } = {}) {
   if (!targetKg || targetKg <= 0) return [];
-  const spec = reps <= 2 ? RAMP.single : reps <= 6 ? RAMP.low : RAMP.high;
+  const band = reps <= 2 ? 'single' : reps <= 6 ? 'low' : 'high';
   const out = [];
 
   if (barKg > 0 && targetKg > barKg * 1.5) {
     out.push({ kg: barKg, reps: reps <= 2 ? 8 : 10, rest: 45, bar: true });
   }
+  const base = full ? RAMP.meet : out.length ? RAMP.bar : RAMP.nobar;
+  const spec = { pcts: base.pcts, reps: base[band] || base.single, rest: base.rest };
 
   spec.pcts.forEach((p, i) => {
+    if (!full && out.length >= RAMP_MAX) return;
     const kg = round(targetKg * p);
     if (kg <= barKg) return;                       // below the empty bar: skip
     if (out.some(x => Math.abs(x.kg - kg) < 0.01)) return;   // duplicate after rounding
@@ -7198,7 +7203,10 @@ function fmtRest(s) {
 /* Bar weight is asked for rather than assumed — a hex bar, a Smith carriage and
    a comp bar are three different starting points, and getting it wrong throws
    every percentage below about 60%. */
-function openRamp(name, presetKg) {
+/* onAdd(warmups): from a live workout, "Add to workout" hands back the
+   warm-up steps (not the work set) to go in ahead of the working sets. */
+function openRamp(name, presetKg, presetReps, onAdd) {
+  let last = [];
   const st = statsFor(name);
   const suggestion = presetKg || (st ? roundBar(st.best.e1) : 0);
   const leaf = String(name).includes('/') ? keyLeaf(name) : null;
@@ -7213,6 +7221,7 @@ function openRamp(name, presetKg) {
     const round = barred ? (kg => loadableNear(kg, eff, plain.length ? plain : inv)) : (kg => roundLoadFor(kg, leaf));
     const roundWork = barred ? (kg => loadableNear(kg, eff, inv)) : round;
     const ramp = warmupRamp(toKg(targetDisp), reps, barKg, round, roundWork);
+    last = ramp;
     if (!ramp.length) return `<div class="sub">Enter a target weight.</div>`;
     return `<table class="settable"><thead><tr>
         <th class="c-set">#</th><th>${U()}</th><th>Reps</th><th>Rest</th></tr></thead><tbody>
@@ -7234,16 +7243,23 @@ function openRamp(name, presetKg) {
         <div class="field grow"><label>Target (${U()})</label>
           <input type="number" step="0.5" inputmode="decimal" id="rTarget" value="${suggestion ? dw(suggestion) : ''}"></div>
         <div class="field" style="width:80px"><label>Reps</label>
-          <input type="number" inputmode="numeric" id="rReps" value="1"></div>
+          <input type="number" inputmode="numeric" id="rReps" value="${presetReps > 0 ? presetReps : 1}"></div>
         <div class="field" style="width:88px"><label>Bar (${U()})</label>
           <input type="number" step="0.5" inputmode="decimal" id="rBar" value="${barDisp0}"></div>
       </div>
       ${bar0 ? `<div class="sub" style="margin:-4px 0 8px">${esc(bar0.name)}${collarPair() ? ` · collars ${wt(collarPair() / 2, 2)} each` : ''}${barred ? ' · steps rounded to plates you have' : ''}</div>` : ''}
-      <div id="rOut">${draw(suggestion ? dw(suggestion) : 0, 1, barDisp0)}</div>
+      <div id="rOut">${draw(suggestion ? dw(suggestion) : 0, presetReps > 0 ? presetReps : 1, barDisp0)}</div>
       <div class="sub" style="margin-top:9px">Rest is a floor, not a target — on the last two steps take longer if you need it.</div>
     `,
-    foot: `<button class="btn primary" data-close>Done</button>`,
+    foot: onAdd ? `<button class="btn ghost" data-close>Close</button><button class="btn primary" id="rAdd">Add to workout</button>`
+      : `<button class="btn primary" data-close>Done</button>`,
     onOpen: bg => {
+      const add = $('#rAdd', bg);
+      if (add) add.onclick = () => {
+        const w = last.filter(r => !r.work);
+        if (!w.length) return toast(last.length ? 'Too light to need a warm-up' : 'Enter a target weight first');
+        closeModal(); onAdd(w);
+      };
       const upd = () => {
         const bar = +$('#rBar', bg).value || 20;
         if (!bar0 || bar0.isDefault) { S.settings.barKg = toKg(bar); save(); }   // a plain barbell remembers; a tagged bar lives in Settings
@@ -9913,7 +9929,7 @@ function openMeetDay(id) {
     const opener = mdWeights(m, lift)[0];
     const key = liftKey(lift), leaf = key ? keyLeaf(key) : null, bar = barFor(leaf);
     const inv = inventory(), eff = bar.kg + collarPair(), plain = inv.filter(p => p.kg >= 2.5 - 1e-9);
-    const steps = opener ? warmupRamp(opener, 1, bar.kg, kg => loadableNear(kg, eff, plain.length ? plain : inv), kg => loadableNear(kg, eff, inv)) : [];
+    const steps = opener ? warmupRamp(opener, 1, bar.kg, kg => loadableNear(kg, eff, plain.length ? plain : inv), kg => loadableNear(kg, eff, inv), { full: true }) : [];
     const st = d.start[lift.slot] || '', flight = d.flight || 12, order = d.order || 6, per = d.perMin || 1;
     let times = null;
     if (st && /^\d{1,2}:\d{2}/.test(st) && steps.length) {
@@ -16965,7 +16981,7 @@ function coAnsWeightFor(D, key, text) {
 function coAnsWarmup(D, key) {
   if (!key) return coLiftPick('warmup', D);
   const p = coPlannedFor(key), r = coWeightFor(key, p.reps, p.rir);
-  return { html: `Warm-up for <b>${esc(leafName(key))}</b>${r ? ` up to ${wt(r.kg)}` : ''}: the bar for 8–10, then about 50% × 5, 65% × 3, 80% × 2 and 90% × 1 if it's heavy — rest a minute between. The ramp builds it to your plates.`,
+  return { html: `Warm-up for <b>${esc(leafName(key))}</b>${r ? ` up to ${wt(r.kg)}` : ''}: three sets at most: the bar for 8–10, then about 60% × 5 and 80% × 3 (fewer reps for a heavy single) — rest a minute or two between. The ramp builds it to your plates.`,
     act: [[`ramp:${key}:${r ? r.kg : 0}`, 'Show my warm-up ramp']] };
 }
 function coAnsPlates(text) {
@@ -19290,8 +19306,17 @@ function wireActive(v) {
   v.querySelectorAll('[data-ramp]').forEach(b => b.onclick = () => {
     const ex = a.exercises[+b.dataset.ramp];
     // seed from the heaviest set planned today — usually the top set you're ramping to
-    const top = ex.sets.filter(s => isWorking(s) && s.w > 0).reduce((m, s) => s.w > m ? s.w : m, 0);
-    openRamp(exKey(ex), top || null);
+    const heavy = ex.sets.filter(s => isWorking(s) && s.w > 0).reduce((m, s) => !m || s.w > m.w ? s : m, null);
+    openRamp(exKey(ex), heavy ? heavy.w : null, heavy ? heavy.r : 0, steps => {
+      /* Undone warm-ups from an earlier press are replaced, not stacked; done ones stay. */
+      const kept = ex.sets.filter(s => !(isWarm(s) && !s.done));
+      const first = kept.findIndex(s => isWorking(s));
+      const pos = first < 0 ? kept.length : first;
+      kept.splice(pos, 0, ...steps.map(r => ({ w: r.kg, r: r.reps, sec: null, rpe: null, done: false, setType: 'warmup' })));
+      ex.sets = kept;
+      save(); bust(); render();
+      toast(`${steps.length} warm-up set${steps.length === 1 ? '' : 's'} added`);
+    });
   });
 
   v.querySelectorAll('[data-delset]').forEach(b => b.onclick = () => {
