@@ -761,6 +761,18 @@ svg.chart{display:block;width:100%;height:auto;overflow:visible}
 .toast.green{border-color:rgba(61,220,132,.5);color:var(--green)}
 
 .rank-row{display:flex;align-items:center;gap:11px;padding:9px 13px;border-bottom:1px solid var(--line)}
+.iv-card{border-left:5px solid var(--dim)}
+.iv-card[data-phase="work"]{border-left-color:var(--accent)}
+.iv-card[data-phase="rest"]{border-left-color:var(--blue)}
+.iv-card[data-phase="warm"],.iv-card[data-phase="cool"]{border-left-color:var(--gold)}
+.iv-card[data-phase="done"]{border-left-color:var(--green)}
+.iv-phase{font-size:22px;font-weight:800;margin-top:4px}
+.iv-card[data-phase="work"] .iv-phase{color:var(--accent)}
+.iv-card[data-phase="rest"] .iv-phase{color:var(--blue)}
+.iv-left{font-size:64px;font-weight:800;line-height:1.05;margin:2px 0 8px;font-variant-numeric:tabular-nums}
+.iv-card .bar i{background:currentColor}
+.iv-card[data-phase="work"] .bar{color:var(--accent)}
+.iv-card[data-phase="rest"] .bar{color:var(--blue)}
 .volbar{position:relative;height:8px;margin-top:5px;border-radius:6px;background:var(--bg2);border:1px solid var(--line);overflow:hidden}
 .volbar b{position:absolute;top:0;bottom:0;background:var(--green);opacity:.18}
 .volbar u{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--green);opacity:.7}
@@ -2259,7 +2271,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.83.0';
+const APP_VERSION = '0.84.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -6478,6 +6490,7 @@ function workoutLanding() {
   <button class="btn primary big wide" id="startBlank" style="margin-bottom:10px">Lift · start empty workout</button>
   <div class="row" style="gap:10px;margin-bottom:16px">
     <button class="btn big grow" id="startCardio">♥ Cardio</button>
+    <button class="btn big grow" id="startIntervals">⏱ Intervals</button>
     <button class="btn big grow" id="startMobility">🧘 Mobility</button>
   </div>
 
@@ -12834,6 +12847,7 @@ function wire() {
     if (!S.active) {
       $('#startBlank').onclick = newBlank;
       $('#startCardio').onclick = openCardioSetup;
+      $('#startIntervals').onclick = openIntervalSetup;
       $('#startMobility').onclick = openMobilityPicker;
     } else if (S.active.kind === 'cardio') {
       wireCardio(v);
@@ -17654,6 +17668,7 @@ function cardioTick() {
   const a = S.active, c = a && a.kind === 'cardio' && a.cardio;
   if (!c) { clearInterval(cardioIv); cardioIv = null; return; }
   const el = cardioAccount(c);
+  if (c.iv && !c.pausedAt) ivTick(c, el);
   const hr5 = HR.avg(5), hr20 = HR.avg(20);
   if (!c.pausedAt) {
     if (hr5 != null) {
@@ -17961,7 +17976,8 @@ function finishCardio() {
     summary: { mins: Math.max(1, Math.round(sec / 60)), prs: [], volume: 0 },
     cardio: { cfg: c.cfg, machine: c.machine || 'treadmill', start: c.start || { speed: c.startSpeed, incline: c.startIncline },
       ...(c.startSpeed != null ? { startSpeed: c.startSpeed, startIncline: c.startIncline } : {}),
-      hr: c.hr, changes: c.changes, summary },
+      hr: c.hr, changes: c.changes, summary,
+      ...(c.iv ? { iv: { plan: c.iv.plan, roundsDone: ivAt(c.iv.phases, el) >= c.iv.phases.length ? c.iv.plan.rounds : (c.iv.roundsDone || 0) } } : {}) },
   };
   cardioEnd();
   S.workouts = S.workouts.filter(w => w.id !== done.id);
@@ -18039,7 +18055,8 @@ function cardioBlock(wo, full) {
   const hasDist = s.distKm > 0;
   const bits = [hasDist ? `${s.distKm.toFixed(2)} km` : '', s.avgHr ? `avg ${s.avgHr} bpm` : '', pct != null && cd.cfg && cd.cfg.lo ? `${pct}% in zone` : '',
     ro.kcal ? `${Math.round(ro.kcal)} kcal` : ''].filter(Boolean);
-  if (!full) return `<div class="sub" style="margin:-2px 0 8px">♥ ${bits.join(' · ') || esc(M.label)}</div>${cd.hr && cd.hr.length > 1 ? hrChart(cd, 80) : ''}`;
+  const ivLine = cd.iv ? `⏱ ${[cd.iv.plan.name, ivShape(cd.iv.plan)].filter((x, i, a) => x && a.indexOf(x) === i).map(esc).join(' · ')} · ${cd.iv.roundsDone} of ${cd.iv.plan.rounds} rounds` : '';
+  if (!full) return `${ivLine ? `<div class="sub" style="margin:-2px 0 4px">${ivLine}</div>` : ''}<div class="sub" style="margin:-2px 0 8px">♥ ${bits.join(' · ') || esc(M.label)}</div>${cd.hr && cd.hr.length > 1 ? hrChart(cd, 80) : ''}`;
   const avgKmh = hasDist && s.sec > 0 ? (s.distKm / (s.sec / 3600)) : 0;
   // the middle tiles say what this machine has: distance and speed, or what was read off its screen
   const t2 = hasDist ? ['Distance', `${s.distKm.toFixed(2)}<small>km</small>`] : ['Calories', ro.kcal ? `${Math.round(ro.kcal)}<small>kcal</small>` : '—'];
@@ -18056,12 +18073,210 @@ function cardioBlock(wo, full) {
       <div class="stat"><div class="k">In zone</div><div class="v">${pct != null && cd.cfg && cd.cfg.lo ? pct + '<small>%</small>' : '—'}</div></div>
     </div>
     ${extra.length ? `<div class="sub" style="margin:-4px 0 10px">From the machine: ${extra.join(' · ')}</div>` : ''}
-    <div class="eyebrow" style="margin-bottom:6px">Heart rate · ${esc(cardioZoneText(cd.cfg || {}))}</div>
+    ${ivLine ? `<div class="card tight" style="margin-bottom:10px"><b>${ivLine}</b>${cd.iv.plan.warm || cd.iv.plan.cool ? `<div class="sub">${[cd.iv.plan.warm ? `warm-up ${mmss(cd.iv.plan.warm)}` : '', cd.iv.plan.cool ? `cool-down ${mmss(cd.iv.plan.cool)}` : ''].filter(Boolean).join(' · ')}</div>` : ''}</div>` : ''}
+    <div class="eyebrow" style="margin-bottom:6px">Heart rate ·${esc(cardioZoneText(cd.cfg || {}))}</div>
     ${hrChart(cd, 160)}
     <div class="eyebrow" style="margin:12px 0 6px">${esc(M.label)} · ${esc(Object.values(M.knobs).map(K => K.label.toLowerCase()).join(' and '))}</div>
     <div class="exline"><span class="dimmer">0:00</span><span class="mono">${knobLine(M, start)}</span></div>
     ${(cd.changes || []).map(ch => `<div class="exline"><span class="dimmer">${fmtSec(ch.t)}</span>
       <span class="mono">${knobLine(M, ch)}${ch.cued ? ' <span class="dimmer">cued</span>' : ''}</span></div>`).join('')}`;
+}
+
+/* ---------------- INTERVAL TIMER (roadmap 02) ----------------
+   Work / rest rounds with an optional warm-up and cool-down, run as a cardio
+   session with a schedule on top: the cardio session already has the clock
+   (pause-aware, timestamp-based), screen-awake, heart rate, resume after a
+   reload, discard and logging. r&d/specs/interval-timer-spec.md. */
+const IV_PRESETS = [
+  { id: 'tabata', name: 'Tabata', warm: 0, work: 20, rest: 10, rounds: 8, cool: 0 },
+  { id: '30-30', name: '30 / 30', warm: 300, work: 30, rest: 30, rounds: 10, cool: 180 },
+  { id: '1-1', name: '1 min on / 1 off', warm: 300, work: 60, rest: 60, rounds: 10, cool: 180 },
+  { id: 'hiit-run', name: 'Run intervals', warm: 300, work: 60, rest: 90, rounds: 6, cool: 300 },
+  { id: 'sprints', name: 'Sprints', warm: 300, work: 15, rest: 45, rounds: 10, cool: 180 },
+  { id: '4x4', name: '4 × 4 min', warm: 600, work: 240, rest: 180, rounds: 4, cool: 300 },
+];
+const IV_LIMITS = { work: [5, 1800], rest: [0, 1800], rounds: [1, 50], warm: [0, 1800], cool: [0, 1800] };
+const ivPresets = () => [...IV_PRESETS, ...((S.settings.ivPresets || []).map(p => ({ ...p, mine: true })))];
+/* The schedule: warm-up, rounds of work then rest (no rest after the last), cool-down. */
+function ivPhases(p) {
+  const out = [];
+  let t = 0;
+  const add = (kind, sec, round) => { if (sec > 0) { out.push({ kind, sec, round, at: t, end: t + sec }); t += sec; } };
+  add('warm', p.warm, 0);
+  for (let r = 1; r <= p.rounds; r++) { add('work', p.work, r); if (r < p.rounds) add('rest', p.rest, r); }
+  add('cool', p.cool, 0);
+  return out;
+}
+const ivTotal = p => ivPhases(p).reduce((a, x) => a + x.sec, 0);
+const ivShape = p => `${p.rounds} × ${mmss(p.work)}${p.rest > 0 ? ` / ${mmss(p.rest)}` : ''}`;
+/* 45 → "45 seconds", 90 → "1 minute 30", 120 → "2 minutes" — for the voice. */
+function ivSpoken(sec) {
+  const m = Math.floor(sec / 60), s = sec % 60;
+  if (!m) return `${s} second${s === 1 ? '' : 's'}`;
+  return `${m} minute${m === 1 ? '' : 's'}${s ? ` ${s}` : ''}`;
+}
+const IV_WORD = { warm:'Warm-up', work: 'Work', rest: 'Rest', cool: 'Cool-down', done: 'Done' };
+/* Where the clock is in the schedule: the phase index (phases.length once it's all done). */
+function ivAt(phases, el) { const i = phases.findIndex(x => el < x.end); return i < 0 ? phases.length : i; }
+function ivAnnounce(c, i) {
+  const P = c.iv.phases, x = P[i], rounds = c.iv.plan.rounds;
+  if (!x) { Cue.done(); setTimeout(() => say('Intervals done. Finish when you\'re ready'), 450); return; }
+  if (x.kind === 'work') { Cue.beep(1200, 450); Cue.buzz(300); }
+  else { Cue.beep(600, 450); Cue.buzz([120, 80, 120]); }
+  const text = x.kind === 'work' ? (x.round === rounds && rounds > 1 ? 'Last round. Go' : `Go. Round ${x.round} of ${rounds}`)
+    : x.kind === 'rest' ? `Rest. ${ivSpoken(x.sec)}` : IV_WORD[x.kind];
+  setTimeout(() => say(text), 500);
+}
+/* Called every cardio tick. Catching up after the screen slept announces only where the clock is now. */
+function ivTick(c, el) {
+  const iv = c.iv, P = iv.phases, i = ivAt(P, el);
+  if (i !== iv.idx) {
+    iv.idx = i;
+    if (i < P.length && P[i].kind === 'work') iv.roundsDone = Math.max(iv.roundsDone || 0, P[i].round - 1);
+    if (i >= P.length) iv.roundsDone = iv.plan.rounds;
+    ivAnnounce(c, i);
+    save();
+  }
+  if (i < P.length) {
+    const left = Math.ceil(P[i].end - el), key = `${i}:${left}`;
+    if (left >= 1 && left <= 3 && P[i].sec > 5 && iv.beeped !== key) { iv.beeped = key; Cue.beep(800, 90); Cue.buzz(40); }
+  }
+}
+function ivPanel(c) {
+  return `<div class="card iv-card" id="ivCard" aria-live="off">
+    <div class="row between" style="align-items:baseline">
+      <div class="eyebrow" id="ivRound"></div>
+      <div class="sub" id="ivTotal"></div>
+    </div>
+    <div class="iv-phase" id="ivPhase" aria-live="polite"></div>
+    <div class="iv-left mono" id="ivLeft">0:00</div>
+    <div class="bar"><i id="ivBar" style="width:0%"></i></div>
+    <div class="sub" id="ivNext" style="margin-top:8px"></div>
+  </div>`;
+}
+function paintIv(c) {
+  const iv = c.iv, P = iv.phases, el = c.el || 0, i = ivAt(P, el), x = P[i], card = $('#ivCard');
+  if (!card) return;
+  const kind = x ? x.kind : 'done';
+  card.dataset.phase = kind;
+  $('#ivPhase').textContent = c.pausedAt ? `${IV_WORD[kind]} · paused` : IV_WORD[kind];
+  $('#ivLeft').textContent = x ? mmss(Math.ceil(x.end - el)) : '✓';
+  $('#ivBar').style.width = x ? `${clamp((el - x.at) / x.sec * 100, 0, 100).toFixed(1)}%` : '100%';
+  $('#ivRound').textContent = `${iv.plan.name || 'Intervals'} · ${x && x.round ? `round ${x.round} of ${iv.plan.rounds}` : x ? IV_WORD[kind].toLowerCase() : `${iv.plan.rounds} of ${iv.plan.rounds} rounds`}`;
+  const end = P.length ? P[P.length - 1].end : 0;
+  $('#ivTotal').textContent = x ? `${mmss(Math.max(0, Math.ceil(end - el)))} left` : '';
+  const nx = P[i + 1];
+  $('#ivNext').textContent = !x ? 'All done — tap Finish to log it, or keep going and it keeps the time.'
+    : nx ? `Next: ${IV_WORD[nx.kind].toLowerCase()} ${mmss(nx.sec)}${nx.kind === 'work' ? ` · round ${nx.round}` : ''}` : 'Last one';
+}
+function openIntervalSetup() {
+  if (S.active) { toast('Finish the active workout first'); return go('workout'); }
+  const last = S.settings.ivLast || {};
+  let p = { ...(ivPresets().find(x => x.id === last.preset) || IV_PRESETS[0]), ...(last.plan || {}) };
+  let presetId = last.preset || IV_PRESETS[0].id;
+  let machine = CARDIO_MACHINES[last.machine] ? last.machine : 'other', voice = last.voice !== false;
+  const tIn = (id, label, v, hint) => `<div class="field"><label for="${id}">${label}</label><input type="text" inputmode="numeric" id="${id}" value="${v > 0 ? mmss(v) : '0:00'}" placeholder="m:ss" aria-describedby="ivHint">${hint || ''}</div>`;
+  const presetList = () => ivPresets().map(x => `<button data-ivp="${esc(x.id)}" class="${x.id === presetId ? 'on' : ''}">${esc(x.name)}</button>`).join('');
+  modal({
+    title: 'Interval timer',
+    body: `
+      <div class="eyebrow" style="margin-bottom:6px">Presets</div>
+      <div class="seg wrap" id="ivPresets" style="margin-bottom:12px;flex-wrap:wrap">${presetList()}</div>
+      <div class="grid3">
+        ${tIn('ivWork', 'Work', p.work)}${tIn('ivRest', 'Rest', p.rest)}
+        <div class="field"><label for="ivRounds">Rounds</label><input type="number" inputmode="numeric" id="ivRounds" min="1" max="50" value="${p.rounds}"></div>
+      </div>
+      <div class="grid2">${tIn('ivWarm', 'Warm-up', p.warm)}${tIn('ivCool', 'Cool-down', p.cool)}</div>
+      <div class="sub" id="ivHint" style="margin:-2px 0 10px">Times as m:ss, or plain seconds. 0:00 skips a warm-up, rest or cool-down. No rest after the last round.</div>
+      <div class="card tight" style="margin-bottom:12px"><b id="ivSum"></b></div>
+      <div class="grid2">
+        <div class="field"><label for="ivMachine">Doing it on</label>
+          <select id="ivMachine">${Object.entries(CARDIO_MACHINES).map(([id, M]) => `<option value="${id}" ${id === machine ? 'selected' : ''}>${esc(M.label)}</option>`).join('')}</select></div>
+        <div class="field"><label>Voice</label>
+          <div class="seg" id="ivVoice"><button data-v="1" class="${voice ? 'on' : ''}">On</button><button data-v="0" class="${!voice ? 'on' : ''}">Off</button></div></div>
+      </div>
+      <div class="sub">Beeps and a buzz at every change, a 3-2-1 before it, and the screen stays on. It logs as a cardio session; a heart-rate strap connected from the session is recorded too.</div>`,
+    foot: `<button class="btn ghost" id="ivSave">Save as preset</button><button class="btn ghost" id="ivDel" style="display:none">Delete preset</button><button class="btn primary" id="ivGo">Start</button>`,
+    onOpen: bg => {
+      const secOf = (id, k) => {
+        const s = String($(id, bg).value || '').trim();
+        const m = s.match(/^(\d+):(\d{1,2})$/);
+        const v = m ? +m[1] * 60 + +m[2] : s === '' ? 0 : parseFloat(s);
+        return Number.isFinite(v) ? Math.round(clamp(v, ...IV_LIMITS[k])) : null;
+      };
+      const read = () => {
+        const r = { work: secOf('#ivWork', 'work'), rest: secOf('#ivRest', 'rest'), warm: secOf('#ivWarm', 'warm'), cool: secOf('#ivCool', 'cool'),
+          rounds: Math.round(clamp(+$('#ivRounds', bg).value || 0, ...IV_LIMITS.rounds)) };
+        return Object.values(r).some(v => v == null) ? null : r;
+      };
+      const sum = () => {
+        const r = read();
+        $('#ivSum', bg).textContent = r ? `${ivShape(r)}${r.warm ? ` · warm-up ${mmss(r.warm)}` : ''}${r.cool ? ` · cool-down ${mmss(r.cool)}` : ''} — ${fmtSec(ivTotal(r))} in all` : 'Check the times';
+        const cur = ivPresets().find(x => x.id === presetId);
+        const same = cur && r && ['work', 'rest', 'warm', 'cool', 'rounds'].every(k => cur[k] === r[k]);
+        if (!same) { presetId = null; bg.querySelectorAll('[data-ivp]').forEach(b => b.classList.remove('on')); }
+        $('#ivDel', bg).style.display = same && cur.mine ? '' : 'none';
+      };
+      const fill = x => {
+        ['work', 'rest', 'warm', 'cool'].forEach(k => { $('#iv' + k[0].toUpperCase() + k.slice(1), bg).value = mmss(x[k] || 0); });
+        $('#ivRounds', bg).value = x.rounds;
+      };
+      const wirePresets = () => bg.querySelectorAll('[data-ivp]').forEach(b => b.onclick = () => {
+        const x = ivPresets().find(y => y.id === b.dataset.ivp);
+        if (!x) return;
+        presetId = x.id; fill(x);
+        bg.querySelectorAll('[data-ivp]').forEach(y => y.classList.toggle('on', y === b));
+        sum();
+      });
+      wirePresets();
+      bg.querySelectorAll('input').forEach(inp => { selectOnFocus(inp); inp.oninput = sum; });
+      bg.querySelectorAll('#ivVoice button').forEach(b => b.onclick = () => {
+        voice = b.dataset.v === '1';
+        bg.querySelectorAll('#ivVoice button').forEach(y => y.classList.toggle('on', y === b));
+      });
+      sum();
+      $('#ivSave', bg).onclick = () => {
+        const r = read();
+        if (!r) return toast('Check the times first');
+        const name = (prompt('Name this preset', ivShape(r)) || '').trim().slice(0, 40);
+        if (!name) return;
+        const id = 'my-' + uid();
+        S.settings.ivPresets = [...(S.settings.ivPresets || []), { id, name, ...r }].slice(-20);
+        presetId = id; save();
+        $('#ivPresets', bg).innerHTML = presetList(); wirePresets(); sum();
+        toast('Preset saved', 'green');
+      };
+      $('#ivDel', bg).onclick = () => {
+        S.settings.ivPresets = (S.settings.ivPresets || []).filter(x => x.id !== presetId);
+        presetId = null; save();
+        $('#ivPresets', bg).innerHTML = presetList(); wirePresets(); sum();
+        toast('Preset deleted');
+      };
+      $('#ivGo', bg).onclick = () => {
+        const r = read();
+        if (!r) return toast('Check the times');
+        machine = $('#ivMachine', bg).value;
+        const preset = ivPresets().find(x => x.id === presetId);
+        const plan = { ...r, name: preset ? preset.name : ivShape(r) };
+        S.settings.ivLast = { preset: presetId, plan: r, machine, voice };
+        closeModal();
+        startIntervals(plan, machine, voice);
+      };
+    },
+  });
+}
+/* A cardio session with no zone (so no HR coaching to fight the schedule),
+   the safety ceiling kept, and the schedule on top. */
+function startIntervals(plan, machine, voice) {
+  const cc = cardioCfg(), st = machineSetup(cc, machine);
+  startCardio({ machine, preset: 'custom', voice, trend: false, maxHr: cc.maxHr, restHr: cc.restHr,
+    lo: null, hi: null, ceiling: cc.ceiling || null, interval: 30, ...st, warmMin: 0, warm: st.work });
+  const a = S.active;
+  if (!a || a.kind !== 'cardio') return;
+  a.name = `Intervals · ${cardioMachine(machine).label}`;
+  a.cardio.iv = { plan, phases: ivPhases(plan), idx: -1, roundsDone: 0 };
+  Awake.hold('cardio');
+  save(); render();
 }
 
 function cardioView() {
@@ -18083,6 +18298,7 @@ function cardioView() {
       <button class="btn sm danger" id="cdDiscard">Discard</button>
     </div>
   </div>
+  ${c.iv ? ivPanel(c) : ''}
 
   <div class="card">
     <div class="row between" style="align-items:flex-end">
@@ -18110,6 +18326,7 @@ function paintCardio(force) {
   if (!c || !$('#cdClock')) return;
   const cfg = cardioNorm(c.cfg), M = cardioMachine(c.machine), zone = cardioHasZone(cfg), mid = zone ? (cfg.lo + cfg.hi) / 2 : 0;
   $('#cdClock').textContent = fmtSec(c.el);
+  if (c.iv) paintIv(c);
   if (M.dist) $('#cdDist').textContent = `${c.distKm.toFixed(2)} km`;
   const hr = HR.avg(5);
   const hrEl = $('#cdHr');

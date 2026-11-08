@@ -13,6 +13,12 @@ rather than guessed.
 
 ---
 
+## 0.84.0 — 8 Nov 2026
+- **New: Interval timer.** Train → **⏱ Intervals**. Set work, rest and rounds, with an optional warm-up and cool-down, or pick a preset: Tabata, 30/30, 1 on / 1 off, run intervals, sprints or 4 × 4 min.
+- A big countdown shows each phase in its own colour, the round you're on and what's next. It beeps and buzzes at every change and ticks 3-2-1 before each one. The voice says "Go, round 3 of 8" and "Rest" (you can turn it off), and the screen stays on.
+- **Save as preset** keeps your own sets of intervals, and the last one you used is remembered.
+- It logs as a cardio session on the machine you pick, so it shows in the calendar and history with the rounds you finished. It records heart rate if you connect a strap.
+
 ## 0.83.0 — 8 Nov 2026
 - **New: Weekly sets per muscle.** Stats → Muscles now counts your hard sets for each muscle this week (Monday to Sunday) and shows whether you're under, in range or over.
 - Warm-ups and easy sets (5+ reps in reserve) don't count. A lift's main muscle gets a whole set, its helpers get half, and a drop set counts as half.
