@@ -106,3 +106,48 @@ const missing = expect.filter(k => typeof ctx.Slew?.[k] === 'undefined');
 if (missing.length) throw new Error('bundle is missing exports: ' + missing.join(', '));
 
 console.log(`slew-core.js  ${(fs.statSync(OUT).size / 1024).toFixed(1)} kB  ·  ${expect.length} exports verified  ·  from ${slew}`);
+
+/* ---- slew-video.js: the plate tracker, for bar path from video (roadmap 04a,
+   r&d/specs/bar-path-spec.md). Plate detection and tracking are pure canvas
+   maths; only Slew's pose route needs MediaPipe, and that is not reached from
+   here. videoAnalysis.ts imports the pose engine, so its two small pure helpers
+   (fillGaps, horizontalDrift) live in Ironlog instead of being imported. Loaded
+   by the app on first use, never in the shell's critical path. */
+const VOUT = path.join(ROOT, 'slew-video.js');
+const VENTRY = `export { PlateTracker, searchPlateInClip } from './src/capture/video/plateTracker';
+export { detectPlate, detectPlateCandidates, toGrayscale, trackCircle, STANDARD_PLATE_DIAMETER_M } from './src/capture/video/plateDetect';
+export { calibrateFromPlate } from './src/capture/video/calibration';
+`;
+const ventryPath = path.join(slew, '.ironlog-video-entry.ts');
+fs.writeFileSync(ventryPath, VENTRY);
+let vjs;
+try {
+  const r = cp.spawnSync(esbuild, [ventryPath, '--bundle', '--format=iife', '--global-name=SlewVideo',
+    '--target=es2020', '--platform=browser', '--legal-comments=none'],
+    { encoding: 'utf8', cwd: slew, shell: process.platform === 'win32' });
+  if (r.error) throw r.error;
+  if (r.status !== 0) throw new Error(r.stderr || `esbuild exited ${r.status}`);
+  vjs = r.stdout;
+} finally {
+  fs.unlinkSync(ventryPath);
+}
+if (/mediapipe|pose_landmarker|\.task\b|PoseLandmarker/i.test(vjs)) {
+  throw new Error('slew-video.js reached MediaPipe — check the video entry point');
+}
+fs.writeFileSync(VOUT, `/* GENERATED — do not edit. Regenerate with: node "r&d/tools/build-slew.cjs"
+ *
+ * Slew's barbell-plate detector and tracker (no MediaPipe), bundled from
+ * ${path.basename(slew)}/src/capture/video. Exposes one global: SlewVideo.
+ * Loaded on first use of Bar path from video.
+ *
+ * Built ${new Date().toISOString().slice(0, 10)}.
+ */
+${vjs}
+if (typeof globalThis !== "undefined") globalThis.SlewVideo = SlewVideo;
+`);
+const vexpect = ['PlateTracker', 'searchPlateInClip', 'detectPlate', 'detectPlateCandidates', 'toGrayscale', 'trackCircle', 'STANDARD_PLATE_DIAMETER_M', 'calibrateFromPlate'];
+const vctx = vm.createContext({});
+vm.runInContext(fs.readFileSync(VOUT, 'utf8'), vctx);
+const vmissing = vexpect.filter(k => typeof vctx.SlewVideo?.[k] === 'undefined');
+if (vmissing.length) throw new Error('slew-video.js is missing exports: ' + vmissing.join(', '));
+console.log(`slew-video.js ${(fs.statSync(VOUT).size / 1024).toFixed(1)} kB  ·  ${vexpect.length} exports verified`);

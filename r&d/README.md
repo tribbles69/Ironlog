@@ -34,7 +34,7 @@ All run from the repo root.
 | `node "r&d/tools/build-routines.cjs"` | Inlines `data/routines/*.json` (built-in mobility routines) into `index.html` |
 | `python3 "r&d/tools/build-program.py"` | Rebuilds `program.json` (RIR-only, no weights) from `data/hunchback-pplul-77wk.txt`; prints the `PROGRAM_MANIFEST` line to paste into `index.html` |
 | `NODE_PATH=$(npm root -g) node "r&d/tools/skin-sheet.mjs"` | Redraws the shipped template skin and the paint guide (needs Playwright) |
-| `node "r&d/tools/build-slew.cjs" ../slew-v2` | Regenerates `slew-core.js` from the Slew source |
+| `node "r&d/tools/build-slew.cjs" ../slew-v2` | Regenerates `slew-core.js` and `slew-video.js` (the plate tracker for bar path, 04a) from the Slew source |
 
 Runtime smoke test, in the browser console on the running app:
 `fetch('r&d/tools/smoke.js').then(r => r.text()).then(eval).then(smoke)`

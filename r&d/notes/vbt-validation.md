@@ -34,3 +34,18 @@ on real sets, and the error recorded here.
 | — | — | — | — | — | — | — | — |
 
 Until this table has real rows, velocity-estimated RIR stays a guide.
+
+## Video (bar path, roadmap 04a, 0.86.0)
+
+Same protocol, with a side-on clip of each set analysed by Bar path from video
+(r&d/specs/bar-path-spec.md). Record the camera distance, height and angle.
+Also film one set from 0°, 15° and 30° off square to measure the cosine error.
+Video numbers stay out of calibration, the profile and readiness until this is
+filled in.
+
+Synthetic check only so far (spec §12): ROM 49–50 cm for a true 50 cm, peak
+0.95–0.97 m/s for a true 0.98.
+
+### Results (video)
+
+_None yet._

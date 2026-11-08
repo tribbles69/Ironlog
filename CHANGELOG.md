@@ -13,6 +13,13 @@ rather than guessed.
 
 ---
 
+## 0.86.0 — 8 Nov 2026
+- **New: Bar path from video.** On a lift in your workout, tap **▶ Video** and pick a side-on clip of the set from your gallery. It draws the bar's path and gives speed per rep, alongside the phone-on-bar **Measure**.
+- Trim off the walk-out and re-rack, check the green circle is the plate (or tap it yourself), and it follows the plate through the set. You get each rep's speed, top speed, range of motion, how far the bar moved sideways and an estimated RIR. **Attach to set** saves it with the path.
+- The plate is the ruler: a standard 20/25 kg plate or bumper is 450 mm across, and you can pick a smaller plate size. A filming guide shows how to set up: side-on, at plate height, phone propped up.
+- **Save with bar path** makes a video of the set with the path drawn on, to share. The original video isn't kept.
+- Numbers from video are marked as estimates and don't change your velocity calibration. Also in **Tools → Bar path from video** for any clip.
+
 ## 0.85.0 — 8 Nov 2026
 - **New: Daily clip.** Health → **Daily clip** records one second of video a day. Tap **Record today**: it counts 3-2-1, records one second, and plays it back so you can keep it or try again.
 - A faint **ghost** of your last clip sits over the camera so you can stand in the same spot and pose each day. You can turn it off, and flip between the front and back camera.

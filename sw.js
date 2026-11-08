@@ -1,7 +1,7 @@
 /* Ironlog service worker.
    Bump VERSION whenever the app files change — that's what triggers the
    "Update ready" prompt on the next launch. */
-const VERSION = 'ironlog-v124';
+const VERSION = 'ironlog-v125';
 
 const ASSETS = [
   './',
@@ -10,6 +10,7 @@ const ASSETS = [
   './manifest.webmanifest',
   './program.json',
   './slew-core.js',
+  './slew-video.js',   // bar path from video (04a) — loaded on first use, cached so it works offline in the gym
   './icon-192.png',
   './icon-512.png',
   './icon-maskable-512.png',

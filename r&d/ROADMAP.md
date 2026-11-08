@@ -165,7 +165,7 @@ timelapse of the bulk and cut that can be played and saved. Same pose
 reminder as the photos so clips line up. Check what the browser can do for
 joining clips on the phone (MediaRecorder / canvas) before writing the spec.
 
-### [ ] 04. Video bar-path tracing and depth judging — **spec drafted 2026-11-08: `r&d/specs/bar-path-spec.md`, waiting on Aaron's five answers in its §11** (first build reuses Slew's plate tracker, no MediaPipe download)
+### [ ] 04. Video bar-path tracing and depth judging — **04a shipped 0.86.0** (spec `r&d/specs/bar-path-spec.md`, agreed 2026-11-08: Slew's plate tracker bundled as `slew-video.js`, no MediaPipe; ▶ Video on a lift and Tools → Bar path; rim measured on still frames for the scale; **Aaron: A4 item 19, then the video section of `r&d/notes/vbt-validation.md`**). Still to do: **04b** squat depth (optional pose download), **04c** record in the app
 (VBTgo, Metric, PDC Performance.) **Write a spec first.** Record or pick a
 side-on video of a set; track the bar end through it to draw the bar path,
 and give velocity per rep from the video as a second source next to D1's
@@ -293,6 +293,12 @@ these come back; report anything that fails):
     help line up on day two? Try Flip camera and From gallery. After a few
     days: Timelapse → Save video → Share — does it open in your gallery /
     Instagram? (MP4 if the phone's Chrome supports it, else WebM.)
+19. **Bar path from video (0.86.0):** film a squat, bench and deadlift set
+    side-on (phone propped at plate height, 2–3 m). In the workout, ▶ Video →
+    pick the clip → trim → is the green circle on the plate, and does it sit
+    on the rim? Does the path look like the bar? Compare the speeds with
+    ◉ Measure on the same set if you can, and try one clip filmed ~30° off
+    square to see how much it reads short. Try Save with bar path → Share.
 
 ### [x] A5. Checks against Blast's bugs — checked 0.27.1 (superset item waits for B3)
 Blast shipped these; make sure Ironlog doesn't have them. Tick each.
