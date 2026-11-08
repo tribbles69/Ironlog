@@ -137,7 +137,32 @@ video shows "from video"; the sensor's shows "from sensor".
   there).
 - They do show in the VBT panel, history, and the per-rep chart.
 
-## 9. Squat depth (04b, later)
+## 9. Squat depth (04b) — built 0.87.0
+
+**As built:**
+- **Hosting (Aaron, 2026-11-08): in the repo**, `pose/`, not a CDN.
+  `r&d/tools/build-pose.cjs` copies it from slew-v2's installed
+  `@mediapipe/tasks-vision` 0.10.35: `vision.js` (the tasks JS as one IIFE,
+  0.13 MB), the SIMD engine `vision_wasm_internal.{js,wasm}` (10.9 MB) and
+  `pose_landmarker_lite.task` (5.5 MB) — **16.6 MB**. The non-SIMD engine
+  is left out; a browser without WebAssembly SIMD is told so.
+- **Download:** Settings → Squat depth from video → Download, with progress.
+  Files go into an `ironlog-pose-<version>` cache that `sw.js` serves from and
+  never deletes on an app update; nothing in `pose/` is precached. Remove
+  deletes it. `settings.depthOn` follows it.
+- **When:** the clip's lift is a squat bucket (Squat free bar / Smith /
+  Goblet) and the model is downloaded. Pose runs in IMAGE mode on 7 frames
+  around each rep's lowest bar point (±0.2 s), on the side facing the camera
+  (better-seen hip + knee); the frame with the hip lowest relative to the knee
+  is judged. GPU delegate, CPU if that fails.
+- **Call:** `cm = (hip centre − knee centre, down positive) × scale − 3 cm`.
+  Deep above +2.5, high below −2.5, "too close to call" between; "can't see"
+  under 0.5 visibility. Shown per rep (✓ / ✗ / ≈ with the cm), a summary card,
+  hip–knee–ankle drawn on the bottom frame with the knee line dashed, and on
+  the set in history. Stored as `rep.depth = { cm, call, vis }`.
+- **Not done:** body-height calibration for clips without a plate (below).
+
+The original plan:
 
 Rule judged: the hip crease lower than the top of the knee at the bottom
 (IPF / most federations, side view).
@@ -187,6 +212,23 @@ also measured by a linear transducer (or the phone-on-bar sensor and, ideally,
 a transducer). Record the mean-velocity bias and limits of agreement in
 `r&d/notes/vbt-validation.md` under a "Video" heading, and test the cosine
 error claim by filming one set from 0°, 15° and 30°.
+
+**Fixed in 0.87.0, found while building 04b:**
+- **Stale frames after a seek.** On a real 1080p phone clip Chrome fired
+  `seeked` with the previous frame still decoded about one seek in three, so
+  the tracker and pose sometimes read the frame before. `bpSeek` now waits
+  for `requestVideoFrameCallback` (fallback `seeked` + 150 ms). Slew's own
+  `videoAnalysis.ts` seek loop has the same pattern and likely the same bug.
+- **Rim measured by a circle fit**, not distances from the detector's centre
+  (a pixel or two off at 288 px, enough to fail agreement on a clean plate):
+  least-squares circle through each ray's rim point, refit without outliers.
+  Synthetic frames: 100.3–101.1 px for 100, 60.0–60.1 for 60, 150.1–150.3 for
+  150, with and without an inner ring and the body behind.
+- **Second tracking pass on the rim.** On a plain plate the tracker's smaller
+  circle slid inside the rim: ROM 52.6 cm for 50, peak 1.20 m/s for 0.98.
+  When the rim differs from the tracked circle by over 3 %, the set is tracked
+  again locked to the rim (kept unless it loses the plate more): 50.2 cm,
+  0.97 m/s.
 
 **Synthetic check (0.86.0, before any real footage):** a rendered 720 × 1280
 clip of a plate (inner ring, hub, lettering) doing 3 reps of 50 cm, up in
