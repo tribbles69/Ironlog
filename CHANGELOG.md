@@ -13,6 +13,11 @@ rather than guessed.
 
 ---
 
+## 0.88.0 — 8 Nov 2026
+- **Changed: Warm-ups are shorter.** The **▲ Warm-up** ramp is now three sets at most, counting the empty bar as one, e.g. 20 × 10, 50 × 6, 65 × 3 before 80 × 8. It used to give up to seven for a heavy single.
+- **New: Add to workout.** In a workout, the warm-up sheet starts from your planned weight and reps and has an **Add to workout** button. It puts the warm-up sets in ahead of your working sets, marked W so they stay out of volume and PRs. Pressing it again replaces warm-ups you haven't done yet rather than adding more.
+- Meet day still gives the full warm-up ladder to your opener.
+
 ## 0.87.0 — 8 Nov 2026
 - **New: Squat depth from video.** Turn it on in **Settings → Squat depth from video**, a one-time 16.6 MB download from Ironlog itself (no other site). After that, a squat clip in **Bar path from video** marks each rep **✓ deep**, **✗ high** or **≈ too close to call**, with how many cm it was off.
 - The bottom of the squat is shown with your hip, knee and ankle drawn on it. Depth calls are saved on the set. It's a guide, not a white light. Film side-on with your whole body in frame.
