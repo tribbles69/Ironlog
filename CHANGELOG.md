@@ -13,6 +13,12 @@ rather than guessed.
 
 ---
 
+## 0.83.0 — 8 Nov 2026
+- **New: Weekly sets per muscle.** Stats → Muscles now counts your hard sets for each muscle this week (Monday to Sunday) and shows whether you're under, in range or over.
+- Warm-ups and easy sets (5+ reps in reserve) don't count. A lift's main muscle gets a whole set, its helpers get half, and a drop set counts as half.
+- Tap a muscle to see the last 8 weeks as a chart, which lifts made this week's number, and to set your own range (least / aim / most). The starting ranges are rough general figures.
+- With debug mode on, **how?** lists every set that counted.
+
 ## 0.82.0 — 6 Nov 2026
 - **New: Missed button on planned sessions.** On Home, Train and the calendar, tap **Missed**, pick why (sore, niggle, ill, work, family, gym busy, low energy or other), add a note if you like, then either **skip** it or **move** it to another day.
 - The calendar marks missed days with a red dot and shows the reason. Tap **Undo** to put the session back on your plan.
