@@ -158,7 +158,7 @@ cool-down — with audio and vibration cues from `Cue` and the screen kept on
 with `Awake`. Starts from **Train → Cardio** next to the HR-zone session;
 saved presets; logs as a cardio session in the calendar and history.
 
-### [ ] 03. Daily one-second progress clip
+### [x] 03. Daily one-second progress clip — shipped 0.85.0 (spec `r&d/specs/progress-clip-spec.md`, browser check in §1: canvas + MediaRecorder, MP4 where supported, joins in real time ~1 s per clip; Health → Daily clip; ghost of the last clip as the pose reminder; on the device only; **Aaron: A4 item 18** — the camera couldn't be tested from here)
 (1 Second Everyday.) Extends E4's progress photos: record or pick a one-second
 clip a day, kept on the device only like the photos, and join them into a
 timelapse of the bulk and cut that can be played and saved. Same pose
@@ -288,6 +288,11 @@ these come back; report anything that fails):
     and buzzes loud and clear over gym noise, does the 3-2-1 land right, and
     does the voice talk over music sensibly? Lock the screen for one round —
     what still fires? Check the logged session reads right in history.
+18. **Daily clip (0.85.0):** Health → Daily clip → Record today. Does the
+    camera open (allow it), is the crop what you expect, and does the ghost
+    help line up on day two? Try Flip camera and From gallery. After a few
+    days: Timelapse → Save video → Share — does it open in your gallery /
+    Instagram? (MP4 if the phone's Chrome supports it, else WebM.)
 
 ### [x] A5. Checks against Blast's bugs — checked 0.27.1 (superset item waits for B3)
 Blast shipped these; make sure Ironlog doesn't have them. Tick each.

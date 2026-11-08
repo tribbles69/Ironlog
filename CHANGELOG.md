@@ -13,6 +13,13 @@ rather than guessed.
 
 ---
 
+## 0.85.0 — 8 Nov 2026
+- **New: Daily clip.** Health → **Daily clip** records one second of video a day. Tap **Record today**: it counts 3-2-1, records one second, and plays it back so you can keep it or try again.
+- A faint **ghost** of your last clip sits over the camera so you can stand in the same spot and pose each day. You can turn it off, and flip between the front and back camera.
+- **From gallery** takes any second out of a video you already have, and you can fill in a missed day.
+- **Timelapse** plays them back to back with the date on each one, for all time, the last 30 or 90 days, or this year. **Save video** makes a video file you can share or save to your phone.
+- The card shows the last 14 days, your streak and how much space the clips take. Like progress photos, clips stay on this phone and aren't in exports or Drive sync.
+
 ## 0.84.0 — 8 Nov 2026
 - **New: Interval timer.** Train → **⏱ Intervals**. Set work, rest and rounds, with an optional warm-up and cool-down, or pick a preset: Tabata, 30/30, 1 on / 1 off, run intervals, sprints or 4 × 4 min.
 - A big countdown shows each phase in its own colour, the round you're on and what's next. It beeps and buzzes at every change and ticks 3-2-1 before each one. The voice says "Go, round 3 of 8" and "Rest" (you can turn it off), and the screen stays on.

@@ -327,7 +327,16 @@ h3{font-size:13.5px;margin:0 0 8px}
 .dot.done{background:var(--green)}
 .dot.plan{background:var(--blue)}
 .dot.event{background:var(--gold)}
-#hlBw,#hlBf,#hlMeas,#hlPhoto,#hlBp,#hlGlu,#hlMob{scroll-margin-top:72px}
+.clipstage{position:relative;width:100%;max-width:360px;margin:0 auto;aspect-ratio:3/4;border-radius:12px;overflow:hidden;background:#000}
+.clipstage canvas,.clipstage img,.clipstage video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block}
+.clipstage .mirror{transform:scaleX(-1)}
+.clipstage .ghost{opacity:.35;pointer-events:none}
+.clipstage .count{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:96px;font-weight:800;color:#fff;text-shadow:0 2px 12px #000;pointer-events:none}
+.clipdays{display:flex;gap:4px;flex-wrap:wrap}
+.clipdays button{width:34px;height:42px;border-radius:7px;border:1px solid var(--line);background:var(--bg2);color:var(--dim);font-size:10px;line-height:1.1;padding:0}
+.clipdays button.has{background:var(--accent);color:#fff;border-color:var(--accent)}
+.clipdays button.today{outline:2px solid var(--accent);outline-offset:1px}
+#hlBw,#hlBf,#hlMeas,#hlPhoto,#hlClip,#hlBp,#hlGlu,#hlMob{scroll-margin-top:72px}
 .seg.wrap{flex-wrap:wrap;height:auto}   /* clear the sticky top bar (Health tiles) */
 .mobrow{display:flex;gap:10px;align-items:flex-start;padding:9px 0;border-top:1px solid var(--line)}
 .mobrow.skip{opacity:.6}
@@ -2271,7 +2280,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.84.0';
+const APP_VERSION = '0.85.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -19399,7 +19408,19 @@ function viewBody() {
     <div class="sub" style="margin-top:8px">Photos stay on this phone — never in exports, CSV or Drive sync.</div>
     <input type="file" id="bdPhotoFile" accept="image/*" style="display:none">
   </div>`;
-  return bwCard + bfCard + measCard + photoCard;
+  // 5. daily one-second clip (roadmap 03; filled in by wireBody from IndexedDB)
+  const clipCard = `<div class="card" id="hlClip" style="margin-bottom:13px">
+    <div class="row between" style="margin-bottom:8px"><div class="eyebrow">Daily clip · one second a day</div>
+      <button class="btn xs ghost" id="clTl">▶ Timelapse</button></div>
+    <div id="clStrip" class="sub">Loading…</div>
+    <div class="row" style="gap:8px;margin-top:10px">
+      <button class="btn sm primary grow" id="clRec">● Record today</button>
+      <button class="btn sm grow" id="clPick">From gallery</button>
+    </div>
+    <div class="sub" style="margin-top:8px">Same spot, same light, same pose — the camera shows a ghost of your last clip to line up with. Clips stay on this phone — never in exports or Drive sync.</div>
+    <input type="file" id="clFile" accept="video/*" style="display:none">
+  </div>`;
+  return bwCard + bfCard + measCard + photoCard + clipCard;
 }
 function addDaysISO(s, n) { const d = parseISO(s); d.setDate(d.getDate() + n); return iso(d); }   // local date, not UTC
 
@@ -19415,6 +19436,10 @@ function wireBody(v) {
   on('#bdPhoto', () => openPhotoAdd(file));
   on('#bdCompare', () => openPhotoCompare());
   paintPhotos($('#bdPhotos', v));
+  on('#clRec', () => openClipRecord());
+  on('#clPick', () => openClipPick($('#clFile', v)));
+  on('#clTl', () => openClipTimelapse());
+  paintClipStrip($('#clStrip', v));
 }
 
 /* ---- caliper test form ---- */
@@ -19626,6 +19651,333 @@ async function openPhotoView(p) {
     },
   });
 }
+/* ---- daily one-second clip (roadmap 03): this device only ----
+   r&d/specs/progress-clip-spec.md. Every clip is re-recorded through one
+   canvas at one size, so a timelapse is just the clips played back to back
+   into that canvas while MediaRecorder captures it — real time, about a
+   second per clip, on the phone, no upload, no library. */
+const CLIP = { w: 480, h: 640, fps: 30, bps: 1.5e6, ms: 1000, index: 'ironlog.clips' };
+function clipMime() {
+  if (typeof MediaRecorder === 'undefined') return null;
+  return ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
+    .find(t => { try { return MediaRecorder.isTypeSupported(t); } catch (e) { return false; } }) || null;
+}
+const clipCan = () => !!(clipMime() && 'captureStream' in HTMLCanvasElement.prototype);
+async function clipIndex() {
+  const raw = await storeGet(CLIP.index);
+  try { const a = typeof raw === 'string' ? JSON.parse(raw) : raw; return Array.isArray(a) ? a : []; } catch (e) { return []; }
+}
+async function clipBlob(id) {
+  try { const b = await idb('readonly', st => st.get('ironlog.clip.' + id)); return b instanceof Blob ? b : null; } catch (e) { return null; }
+}
+/* One clip per day: a new one for a day replaces the old. */
+async function saveClip(blob, date, src) {
+  const id = uid();
+  await idb('readwrite', st => st.put(blob, 'ironlog.clip.' + id));
+  const idx = await clipIndex(), old = idx.filter(c => c.date === date);
+  for (const o of old) await idb('readwrite', st => st.delete('ironlog.clip.' + o.id));
+  const next = idx.filter(c => c.date !== date);
+  next.push({ id, date, type: blob.type, kb: Math.round(blob.size / 1024), src });
+  await idb('readwrite', st => st.put(JSON.stringify(next), CLIP.index));
+  return id;
+}
+async function deleteClip(id) {
+  await idb('readwrite', st => st.delete('ironlog.clip.' + id));
+  const idx = (await clipIndex()).filter(c => c.id !== id);
+  await idb('readwrite', st => st.put(JSON.stringify(idx), CLIP.index));
+}
+/* Draw a source into the canvas, cropped to fill it (3:4), centred. */
+function drawCover(x, src, sw, sh) {
+  if (!(sw > 0 && sh > 0)) return;
+  const k = Math.max(CLIP.w / sw, CLIP.h / sh), dw0 = sw * k, dh0 = sh * k;
+  x.drawImage(src, (CLIP.w - dw0) / 2, (CLIP.h - dh0) / 2, dw0, dh0);
+}
+/* Record `ms` of whatever the canvas shows. `draw` paints each frame. */
+function clipRecorder(canvas, opts = {}) {
+  const mime = clipMime();
+  const rec = new MediaRecorder(canvas.captureStream(CLIP.fps), { mimeType: mime, videoBitsPerSecond: opts.bps || CLIP.bps });
+  const chunks = [];
+  rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  const done = new Promise(res => { rec.onstop = () => res(new Blob(chunks, { type: mime.split(';')[0] })); });
+  return { start: () => rec.start(), stop: () => { if (rec.state !== 'inactive') rec.stop(); return done; } };
+}
+function clipVideoEl(src) {
+  const v = document.createElement('video');
+  v.muted = true; v.playsInline = true; v.preload = 'auto';
+  if (src) v.src = src;
+  return v;
+}
+/* A still from the latest clip, for the ghost overlay. */
+async function lastClipFrame(beforeDate) {
+  const idx = (await clipIndex()).filter(c => !beforeDate || c.date < beforeDate).sort((a, b) => a.date < b.date ? 1 : -1);
+  const b = idx[0] && await clipBlob(idx[0].id);
+  if (!b) return null;
+  const u = URL.createObjectURL(b), v = clipVideoEl(u);
+  try {
+    await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = rej; setTimeout(rej, 4000); });
+    v.currentTime = Math.min(0.5, (v.duration || 1) / 2);
+    await new Promise(res => { v.onseeked = res; setTimeout(res, 1500); });
+    const c = document.createElement('canvas'); c.width = CLIP.w; c.height = CLIP.h;
+    c.getContext('2d').drawImage(v, 0, 0, CLIP.w, CLIP.h);
+    return c.toDataURL('image/jpeg', 0.7);
+  } catch (e) { return null; } finally { URL.revokeObjectURL(u); }
+}
+async function paintClipStrip(host) {
+  if (!host) return;
+  if (!clipCan()) { host.innerHTML = 'This browser can\'t record video clips. Chrome on Android can.'; return; }
+  const idx = await clipIndex();
+  if (!document.body.contains(host)) return;
+  const have = new Map(idx.map(c => [c.date, c]));
+  const days = [];
+  for (let i = 13; i >= 0; i--) days.push(addDaysISO(today(), -i));
+  let streak = 0;
+  for (let d = have.has(today()) ? today() : addDaysISO(today(), -1); have.has(d); d = addDaysISO(d, -1)) streak++;
+  const mb = idx.reduce((a, c) => a + (c.kb || 0), 0) / 1024;
+  host.innerHTML = `<div style="margin-bottom:8px">${have.has(today()) ? '<b style="color:var(--green)">✓ Today\'s second is in.</b>' : '<b>Today: not recorded yet.</b>'}
+      <span class="sub"> ${idx.length} clip${idx.length === 1 ? '' : 's'}${streak > 1 ? ` · ${streak}-day streak` : ''}${idx.length ? ` · ${mb < 10 ? mb.toFixed(1) : Math.round(mb)} MB` : ''}</span></div>
+    <div class="clipdays" role="list" aria-label="Last 14 days">${days.map(d => { const c = have.get(d), p = parseISO(d);
+      return `<button role="listitem" class="${c ? 'has' : ''} ${d === today() ? 'today' : ''}" ${c ? `data-clip="${esc(c.id)}"` : 'disabled'} aria-label="${fmtDate(d)}: ${c ? 'clip, tap to play' : 'no clip'}">${['S', 'M', 'T', 'W', 'T', 'F', 'S'][p.getDay()]}<br>${p.getDate()}</button>`; }).join('')}</div>`;
+  host.querySelectorAll('[data-clip]').forEach(b => b.onclick = () => openClipView(idx.find(c => c.id === b.dataset.clip)));
+  const rec = $('#clRec');
+  if (rec) rec.textContent = have.has(today()) ? '● Redo today' : '● Record today';
+}
+async function openClipView(c) {
+  if (!c) return;
+  const b = await clipBlob(c.id);
+  const u = b ? URL.createObjectURL(b) : null;
+  modal({
+    title: `Clip · ${fmtDate(c.date)}`,
+    body: u ? `<div class="clipstage"><video src="${u}" autoplay loop muted playsinline aria-label="One-second clip from ${fmtDate(c.date)}"></video></div>` : '<div class="empty">This clip is missing from storage.</div>',
+    foot: `<button class="btn danger" id="clDel">Delete</button><button class="btn primary" data-close>Close</button>`,
+    onClose: () => { if (u) URL.revokeObjectURL(u); },
+    onOpen: bg => {
+      $('#clDel', bg).onclick = () => confirmDlg('Delete this clip? It only exists on this phone.', async () => { await deleteClip(c.id); if (u) URL.revokeObjectURL(u); closeAllModals(); render(); }, 'Delete');
+    },
+  });
+}
+/* After a clip is made: play it back on a loop, keep it or try again. */
+function clipKeepOrRetake(bg, blob, date, src, retake) {
+  const u = URL.createObjectURL(blob);
+  const stage = $('.clipstage', bg);
+  stage.innerHTML = `<video src="${u}" autoplay loop muted playsinline aria-label="The clip you just made"></video>`;
+  $('.modal-foot', bg).innerHTML = `<button class="btn ghost" id="clAgain">Try again</button><button class="btn primary" id="clKeep">Keep it</button>`;
+  $('#clAgain', bg).onclick = () => { URL.revokeObjectURL(u); retake(); };
+  $('#clKeep', bg).onclick = async () => {
+    try {
+      const had = (await clipIndex()).some(c => c.date === date);
+      await saveClip(blob, date, src);
+      URL.revokeObjectURL(u); closeAllModals(); render();
+      toast(had ? `Clip for ${fmtDate(date)} replaced` : 'Clip saved on this phone', 'green');
+    } catch (e) { toast(`Couldn't save the clip — ${(e && e.message) || 'storage unavailable'}`); }
+  };
+}
+async function openClipRecord(date = today()) {
+  if (!clipCan()) return toast('This browser can\'t record clips');
+  if (!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia)) return toast('No camera access here — use From gallery');
+  let facing = S.settings.clipFacing || 'user', ghostOn = S.settings.clipGhost !== false, stream = null, raf = 0, busy = false;
+  const ghost = await lastClipFrame(date);
+  const cv = document.createElement('canvas'); cv.width = CLIP.w; cv.height = CLIP.h;
+  const x = cv.getContext('2d');
+  const cam = clipVideoEl();
+  const stop = () => { cancelAnimationFrame(raf); if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; Awake.release('clip'); };
+  const loop = () => { if (cam.readyState >= 2) drawCover(x, cam, cam.videoWidth, cam.videoHeight); raf = requestAnimationFrame(loop); };
+  const open = async bg => {
+    if (stream) stream.getTracks().forEach(t => t.stop());
+    try {
+      stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 960 } }, audio: false });
+    } catch (e) { toast('Camera not available — allow it in the browser, or use From gallery'); closeModal(); stop(); return; }
+    cam.srcObject = stream; await cam.play().catch(() => {});
+    cv.classList.toggle('mirror', facing === 'user');
+    const g = $('.ghost', bg); if (g) g.classList.toggle('mirror', facing === 'user');
+  };
+  const body = () => `<div class="field"><label for="clDate">Date</label><input type="date" id="clDate" value="${date}" max="${today()}"></div>
+    <div class="clipstage" id="clStage">${ghost ? `<img class="ghost" alt="" src="${ghost}" style="display:${ghostOn ? 'block' : 'none'}">` : ''}<div class="count" id="clCount" aria-live="assertive"></div></div>
+    <div class="row" style="gap:8px;margin-top:10px;justify-content:center">
+      <button class="btn sm ghost" id="clFlip">⟲ Flip camera</button>
+      ${ghost ? `<button class="btn sm ghost" id="clGhost" aria-pressed="${ghostOn}">Ghost ${ghostOn ? 'on' : 'off'}</button>` : ''}
+    </div>
+    <div class="sub" style="margin-top:8px">${ghost ? 'Line yourself up with the ghost of your last clip. ' : ''}Tap Record: 3-2-1, then one second.</div>`;
+  modal({
+    title: 'Daily clip',
+    sticky: true,
+    body: body(),
+    foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="clGo">● Record</button>`,
+    onClose: stop,
+    onOpen: bg => {
+      const stage = $('#clStage', bg);
+      stage.prepend(cv);
+      Awake.hold('clip');
+      loop();
+      open(bg);
+      $('#clFlip', bg).onclick = () => { facing = facing === 'user' ? 'environment' : 'user'; S.settings.clipFacing = facing; save(); open(bg); };
+      const gb = $('#clGhost', bg);
+      if (gb) gb.onclick = () => { ghostOn = !ghostOn; S.settings.clipGhost = ghostOn; save(); $('.ghost', bg).style.display = ghostOn ? 'block' : 'none'; gb.textContent = `Ghost ${ghostOn ? 'on' : 'off'}`; gb.setAttribute('aria-pressed', ghostOn); };
+      const go = async () => {
+        if (busy || !stream) return;
+        busy = true;
+        const d = $('#clDate', bg).value || today();
+        Cue.unlock(); Cue.countIn();
+        const ct = $('#clCount', bg), gh = $('.ghost', bg);
+        for (const n of ['3', '2', '1']) { ct.textContent = n; await new Promise(r => setTimeout(r, 667)); }
+        ct.textContent = '';
+        if (gh) gh.style.display = 'none';
+        const r = clipRecorder(cv);
+        r.start();
+        await new Promise(res => setTimeout(res, CLIP.ms));
+        const blob = await r.stop();
+        Cue.done();
+        stop();
+        busy = false;
+        clipKeepOrRetake(bg, blob, d, 'cam', () => { closeModal(); openClipRecord(d); });
+      };
+      $('#clGo', bg).onclick = go;
+    },
+  });
+}
+/* A second out of a video from the gallery, re-recorded at the clip size. */
+function openClipPick(fileInput) {
+  if (!clipCan()) return toast('This browser can\'t make clips');
+  fileInput.onchange = () => {
+    const f = fileInput.files[0]; fileInput.value = '';
+    if (!f) return;
+    const u = URL.createObjectURL(f), v = clipVideoEl(u);
+    const cv = document.createElement('canvas'); cv.width = CLIP.w; cv.height = CLIP.h;
+    const x = cv.getContext('2d');
+    const paint = () => { if (v.readyState >= 2) drawCover(x, v, v.videoWidth, v.videoHeight); };
+    v.onseeked = paint;
+    const d0 = f.lastModified ? iso(new Date(f.lastModified)) : today();
+    modal({
+      title: 'Clip from gallery',
+      body: `<div class="field"><label for="clDate">Date</label><input type="date" id="clDate" value="${d0 > today() ? today() : d0}" max="${today()}"></div>
+        <div class="clipstage" id="clStage"></div>
+        <div class="field" style="margin-top:10px"><label for="clAt">Start at <span id="clAtV">0.0</span> s</label>
+          <input type="range" id="clAt" min="0" max="0" step="0.1" value="0"></div>
+        <div class="sub">Pick the second to keep. It's cropped to the same frame as every other clip.</div>`,
+      foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn primary" id="clUse">Use this second</button>`,
+      onClose: () => URL.revokeObjectURL(u),
+      onOpen: bg => {
+        $('#clStage', bg).appendChild(cv);
+        const at = $('#clAt', bg);
+        v.onloadedmetadata = () => { at.max = Math.max(0, (v.duration || 1) - 1).toFixed(1); v.currentTime = 0; };
+        v.onerror = () => { toast('Couldn\'t read that video'); closeModal(); };
+        at.oninput = () => { $('#clAtV', bg).textContent = (+at.value).toFixed(1); v.currentTime = +at.value; };
+        $('#clUse', bg).onclick = async () => {
+          const btn = $('#clUse', bg); btn.disabled = true; btn.textContent = 'Making it…';
+          v.currentTime = +at.value;
+          await new Promise(res => { v.onseeked = () => { paint(); res(); }; setTimeout(res, 1500); });
+          let raf = 0; const loop = () => { paint(); raf = requestAnimationFrame(loop); };
+          const r = clipRecorder(cv);
+          loop(); r.start(); await v.play().catch(() => {});
+          await new Promise(res => setTimeout(res, CLIP.ms));
+          v.pause();
+          const blob = await r.stop();
+          cancelAnimationFrame(raf);
+          clipKeepOrRetake(bg, blob, $('#clDate', bg).value || today(), 'pick', () => { closeModal(); openClipPick(fileInput); });
+        };
+      },
+    });
+  };
+  fileInput.click();
+}
+/* Play clips back to back into a canvas, date stamped; with `record`, capture it. */
+async function clipRun(cv, list, { stamp = true, record = false, onClip, stopped } = {}) {
+  const x = cv.getContext('2d'), v = clipVideoEl();
+  let cur = null, raf = 0;
+  const frame = () => {
+    if (v.readyState >= 2) drawCover(x, v, v.videoWidth, v.videoHeight);
+    if (stamp && cur) {
+      x.fillStyle = 'rgba(0,0,0,.55)'; x.fillRect(0, CLIP.h - 44, CLIP.w, 44);
+      x.fillStyle = '#fff'; x.font = '600 22px system-ui, sans-serif'; x.textBaseline = 'middle';
+      x.fillText(fmtDate(cur.date, { day: 'numeric', month: 'short', year: 'numeric' }), 14, CLIP.h - 22);
+    }
+    raf = requestAnimationFrame(frame);
+  };
+  const r = record ? clipRecorder(cv, { bps: 2.5e6 }) : null;
+  frame();
+  if (r) r.start();
+  for (let i = 0; i < list.length; i++) {
+    if (stopped && stopped()) break;
+    cur = list[i];
+    const b = await clipBlob(cur.id);
+    if (!b) continue;
+    const u = URL.createObjectURL(b);
+    v.src = u;
+    try {
+      await v.play();
+      await new Promise(res => { v.onended = res; setTimeout(res, 3000); });
+    } catch (e) { /* a clip that won't play is skipped */ }
+    URL.revokeObjectURL(u);
+    if (onClip) onClip(i + 1, list.length);
+  }
+  const out = r ? await r.stop() : null;
+  cancelAnimationFrame(raf);
+  return out;
+}
+async function openClipTimelapse() {
+  if (!clipCan()) return toast('This browser can\'t play clips back to back');
+  const all = (await clipIndex()).sort((a, b) => a.date < b.date ? -1 : 1);
+  if (all.length < 2) return toast(all.length ? 'Record a second clip first — a timelapse needs two' : 'No clips yet — record today\'s first');
+  let range = 'all', stamp = true, running = false, stopFlag = false;
+  const ranges = [['all', 'All'], ['30', 'Last 30 days'], ['90', 'Last 90 days'], ['year', 'This year']];
+  const pick = () => range === 'all' ? all : range === 'year' ? all.filter(c => c.date.slice(0, 4) === today().slice(0, 4))
+    : all.filter(c => c.date >= addDaysISO(today(), -(+range - 1)));
+  const cv = document.createElement('canvas'); cv.width = CLIP.w; cv.height = CLIP.h;
+  const ext = (clipMime() || '').includes('mp4') ? 'mp4' : 'webm';
+  modal({
+    title: 'Timelapse',
+    sticky: true,
+    body: `<div class="seg" id="tlRange" style="margin-bottom:10px;flex-wrap:wrap">${ranges.map(([k, l]) => `<button data-r="${k}" class="${k === range ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <div class="clipstage" id="tlStage"></div>
+      <div class="row between" style="margin-top:8px;align-items:center">
+        <span class="sub" id="tlInfo"></span>
+        <label class="sub row" style="gap:6px;align-items:center"><input type="checkbox" id="tlStamp" checked> Date on it</label>
+      </div>
+      <div class="bar" style="margin-top:6px"><i id="tlBar" style="width:0%"></i></div>
+      <div class="sub" id="tlOut" style="margin-top:8px">Saving makes a video file as it plays — about a second per clip. Keep the screen on and Ironlog open while it does.</div>`,
+    foot: `<button class="btn ghost" id="tlClose">Close</button><button class="btn" id="tlPlay">▶ Play</button><button class="btn primary" id="tlSave">Save video</button>`,
+    onOpen: bg => {
+      $('#tlStage', bg).appendChild(cv);
+      const info = () => { const n = pick().length; $('#tlInfo', bg).textContent = `${n} clip${n === 1 ? '' : 's'} · ${fmtSec(n * CLIP.ms / 1000)}`; };
+      info();
+      // first frame as a poster
+      clipBlob(all[all.length - 1].id).then(b => { if (!b || running) return; const u = URL.createObjectURL(b), v = clipVideoEl(u); v.onloadeddata = () => { cv.getContext('2d').drawImage(v, 0, 0, CLIP.w, CLIP.h); URL.revokeObjectURL(u); }; });
+      bg.querySelectorAll('#tlRange button').forEach(b => b.onclick = () => {
+        if (running) return;
+        range = b.dataset.r; bg.querySelectorAll('#tlRange button').forEach(y => y.classList.toggle('on', y === b)); info();
+      });
+      $('#tlStamp', bg).onchange = e => { stamp = e.target.checked; };
+      const btns = on => ['#tlPlay', '#tlSave'].forEach(s => { $(s, bg).disabled = on; });
+      const run = async record => {
+        const list = pick();
+        if (list.length < 1) return toast('No clips in that range');
+        running = true; stopFlag = false; btns(true); Awake.hold('clip');
+        $('#tlClose', bg).textContent = 'Stop';
+        const bar = $('#tlBar', bg);
+        try {
+          const out = await clipRun(cv, list, { stamp, record, stopped: () => stopFlag || !document.body.contains(bg),
+            onClip: (i, n) => { bar.style.width = `${(i / n * 100).toFixed(1)}%`; } });
+          if (out && !stopFlag) {
+            const u = URL.createObjectURL(out), name = `ironlog-clips-${list[0].date}-to-${list[list.length - 1].date}.${ext}`;
+            const file = new File([out], name, { type: out.type });
+            const canShare = navigator.canShare && navigator.canShare({ files: [file] });
+            $('#tlOut', bg).innerHTML = `<b>Ready</b> · ${(out.size / 1048576).toFixed(1)} MB
+              <div class="row" style="gap:8px;margin-top:6px">${canShare ? '<button class="btn sm primary grow" id="tlShare">↗ Share</button>' : ''}
+              <a class="btn sm grow" id="tlDl" href="${u}" download="${esc(name)}">⤓ Save to phone</a></div>`;
+            const sh = $('#tlShare', bg);
+            if (sh) sh.onclick = () => navigator.share({ files: [file], title: 'Ironlog timelapse' }).catch(() => {});
+          }
+        } finally {
+          running = false; btns(false); Awake.release('clip');
+          const c = $('#tlClose', bg); if (c) c.textContent = 'Close';
+        }
+      };
+      $('#tlPlay', bg).onclick = () => run(false);
+      $('#tlSave', bg).onclick = () => run(true);
+      $('#tlClose', bg).onclick = () => { if (running) { stopFlag = true; return; } closeModal(); };
+    },
+  });
+}
+
 async function openPhotoCompare() {
   const idx = (await photoIndex()).sort((a, b) => a.date < b.date ? -1 : 1);
   if (idx.length < 2) return toast('Add at least two photos to compare');
