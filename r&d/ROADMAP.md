@@ -165,7 +165,7 @@ timelapse of the bulk and cut that can be played and saved. Same pose
 reminder as the photos so clips line up. Check what the browser can do for
 joining clips on the phone (MediaRecorder / canvas) before writing the spec.
 
-### [ ] 04. Video bar-path tracing and depth judging
+### [ ] 04. Video bar-path tracing and depth judging — **spec drafted 2026-11-08: `r&d/specs/bar-path-spec.md`, waiting on Aaron's five answers in its §11** (first build reuses Slew's plate tracker, no MediaPipe download)
 (VBTgo, Metric, PDC Performance.) **Write a spec first.** Record or pick a
 side-on video of a set; track the bar end through it to draw the bar path,
 and give velocity per rep from the video as a second source next to D1's
