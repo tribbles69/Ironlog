@@ -761,6 +761,11 @@ svg.chart{display:block;width:100%;height:auto;overflow:visible}
 .toast.green{border-color:rgba(61,220,132,.5);color:var(--green)}
 
 .rank-row{display:flex;align-items:center;gap:11px;padding:9px 13px;border-bottom:1px solid var(--line)}
+.volbar{position:relative;height:8px;margin-top:5px;border-radius:6px;background:var(--bg2);border:1px solid var(--line);overflow:hidden}
+.volbar b{position:absolute;top:0;bottom:0;background:var(--green);opacity:.18}
+.volbar u{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:var(--green);opacity:.7}
+.volbar i{position:absolute;left:0;top:2px;bottom:2px;border-radius:99px}
+[data-volm]{cursor:pointer}
 .rank-row:last-child{border-bottom:0}
 .rank-row .grow{min-width:0}
 .rank-row .n{font-weight:650;font-size:13.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -2254,7 +2259,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.82.0';
+const APP_VERSION = '0.83.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -3717,6 +3722,160 @@ function fatigueMap(now = Date.now()) {
   });
   return out;
 }
+/* ---------------- WEEKLY SETS PER MUSCLE (roadmap 01) ----------------
+   Hard sets per muscle per Monday-week against MEV / MAV / MRV.
+   r&d/specs/weekly-sets-spec.md. Derived at read time; only the lifter's
+   target overrides are stored (settings.volTargets). */
+const WEEKLY_SETS = { primaryOf: 0.8, secondary: 0.2, easyRir: 5, dropCredit: 0.5, weeks: 8 };
+const VOL_TARGETS = {
+  quads: [8, 14, 20], hams: [6, 12, 20], glutes: [4, 10, 16], erectors: [2, 6, 12],
+  lats: [8, 14, 22], upperback: [8, 14, 22], traps: [4, 10, 20], chest: [8, 14, 22],
+  fdelts: [0, 6, 12], sdelts: [8, 16, 26], triceps: [6, 12, 18], biceps: [8, 14, 22],
+  forearms: [2, 8, 16], abs: [4, 10, 20], calves: [8, 12, 20],
+};
+function volTarget(k) {
+  const d = VOL_TARGETS[k] || [0, 10, 20], o = (S.settings.volTargets || {})[k];
+  return o ? { mev: o.mev, mav: o.mav, mrv: o.mrv, custom: true } : { mev: d[0], mav: d[1], mrv: d[2], custom: false };
+}
+/* Whole-set credit per muscle from a lift's shares (spec §2). */
+function setCredit(m) {
+  const top = Math.max(...Object.values(m));
+  const out = {};
+  Object.entries(m).forEach(([k, s]) => {
+    if (!MUSCLES[k]) return;
+    const c = s >= top * WEEKLY_SETS.primaryOf ? 1 : s >= WEEKLY_SETS.secondary ? 0.5 : 0;
+    if (c) out[k] = c;
+  });
+  return out;
+}
+/* A set's worth as a hard set: 1, ½ for a drop after the chain's first set, 0 if it doesn't count (spec §1). */
+function hardSetWorth(s, i, live) {
+  if (live ? !s.done : s.done === false) return 0;
+  if (!(s.r > 0 || s.sec > 0 || s.m > 0) || isWarm(s)) return 0;
+  if (s.rpe != null && rpeToRir(s.rpe) >= WEEKLY_SETS.easyRir) return 0;
+  return isDrop(s) && i > 0 ? WEEKLY_SETS.dropCredit : 1;
+}
+function mondayOf(d) { const x = new Date(d.getFullYear(), d.getMonth(), d.getDate()); x.setDate(x.getDate() - (x.getDay() + 6) % 7); return x; }
+/* Every counted set in [from, to) dates (ISO strings), one row each per muscle. */
+function hardSetRows(fromIso, toIso) {
+  const list = S.workouts.filter(w => w.status === 'completed' && w.kind !== 'cardio' && w.kind !== 'mobility' && w.date >= fromIso && w.date < toIso)
+    .map(w => ({ wo: w, live: false }));
+  if (S.active && S.active.kind !== 'cardio' && S.active.kind !== 'mobility' && S.active.exercises) {
+    const d = S.active.date || iso();
+    if (d >= fromIso && d < toIso) list.push({ wo: S.active, live: true });
+  }
+  const rows = [];
+  list.forEach(({ wo, live }) => (wo.exercises || []).forEach(e => {
+    const lm = e.leaf ? leafMuscles(e.leaf) : (exInfo(exName(e)) ? { m: exMuscles(exName(e)) } : null);
+    if (!lm || !lm.m) return;
+    const cr = setCredit(lm.m);
+    e.sets.forEach((s, i) => {
+      const w = hardSetWorth(s, i, live);
+      if (!w) return;
+      Object.entries(cr).forEach(([k, c]) => rows.push({ k, n: w * c, credit: c, worth: w, name: exFull(e), date: live ? (wo.date || iso()) : wo.date, set: s, live }));
+    });
+  }));
+  return rows;
+}
+/* { weeks: [mondayIso…] oldest first, by: { muscle: [count per week] } } */
+function weeklySets(nWeeks = WEEKLY_SETS.weeks) {
+  const mon = mondayOf(new Date());
+  const weeks = [];
+  for (let i = nWeeks - 1; i >= 0; i--) { const d = new Date(mon); d.setDate(d.getDate() - 7 * i); weeks.push(iso(d)); }
+  const end = new Date(mon); end.setDate(end.getDate() + 7);
+  const by = {};
+  hardSetRows(weeks[0], iso(end)).forEach(r => {
+    let wi = weeks.length - 1; while (wi > 0 && r.date < weeks[wi]) wi--;
+    (by[r.k] = by[r.k] || weeks.map(() => 0))[wi] += r.n;
+  });
+  return { weeks, by };
+}
+function volStatus(n, t, partial) {
+  if (n < t.mev) return { key: 'under', word: partial ? 'under so far' : 'under', color: 'var(--gold)' };
+  if (n > t.mrv) return { key: 'over', word: 'over', color: 'var(--red)' };
+  return { key: 'in', word: 'in range', color: 'var(--green)' };
+}
+const setsTxt = n => nice(Math.round(n * 2) / 2);
+function viewWeeklySets() {
+  const { weeks, by } = weeklySets();
+  const keys = Object.keys(MUSCLES).filter(k => (by[k] && by[k].some(v => v > 0)));
+  if (!keys.length) return '';
+  const cur = weeks.length - 1;
+  const partial = new Date().getDay() !== 0;   // Sunday is the week's last day
+  const rows = keys.map(k => {
+    const t = volTarget(k), arr = by[k] || weeks.map(() => 0), n = arr[cur], st = volStatus(n, t, partial);
+    const top = Math.max(t.mrv * 1.25, n, 1), pc = v => (clamp(v / top, 0, 1) * 100).toFixed(1);
+    return `<div class="rank-row" data-volm="${k}" role="button" tabindex="0" aria-label="${esc(MUSCLES[k])}: ${setsTxt(n)} hard sets this week, ${st.word}. Range ${t.mev} to ${t.mrv}. Open the trend and targets">
+      <div class="grow">
+        <div class="n">${esc(MUSCLES[k])} <span class="sub" style="font-weight:400;font-size:11px">· ${st.word}</span></div>
+        <div class="m">last week ${setsTxt(arr[cur - 1] || 0)} · range ${t.mev}–${t.mrv}${t.custom ? ' (yours)' : ''} ${why('vol', k)}</div>
+        <div class="volbar" aria-hidden="true"><b style="left:${pc(t.mev)}%;width:${(pc(t.mrv) - pc(t.mev)).toFixed(1)}%"></b><u style="left:${pc(t.mav)}%"></u><i style="width:${pc(n)}%;background:${st.color}"></i></div>
+      </div>
+      <div class="rank-sc" style="color:${st.color}">${setsTxt(n)}</div>
+    </div>`;
+  }).join('');
+  return `
+  <div class="card flush" style="margin-bottom:13px">
+    <div class="row between" style="padding:11px 13px 8px">
+      <div class="eyebrow">Weekly sets · per muscle</div>
+      <div class="sub" style="font-size:11px">week of ${fmtDate(weeks[cur], { day: 'numeric', month: 'short' })}</div>
+    </div>
+    ${rows}
+    <div class="sub" style="padding:9px 13px 11px;border-top:1px solid var(--line)">
+      Hard sets this week (Mon–Sun): warm-ups and sets at RIR 5+ left out, a lift's main muscle gets a whole set and its helpers half. Shaded band is MEV–MRV, the tick is MAV. Tap a muscle for its trend and to set your own range.
+    </div>
+  </div>`;
+}
+function volChart(weeks, arr, t) {
+  const W = 320, H = 150, padL = 26, padR = 6, padT = 10, padB = 20;
+  const top = Math.max(t.mrv * 1.15, ...arr, 1);
+  const y = v => padT + (1 - v / top) * (H - padT - padB);
+  const bw = (W - padL - padR) / weeks.length;
+  const ticks = [0, t.mev, t.mav, t.mrv].filter((v, i, a) => a.indexOf(v) === i);
+  return `<div class="chartbox"><svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${H}px" role="img" aria-label="Hard sets per week for the last ${weeks.length} weeks: ${arr.map(setsTxt).join(', ')}">
+    <rect x="${padL}" width="${W - padL - padR}" y="${y(t.mrv).toFixed(1)}" height="${(y(t.mev) - y(t.mrv)).toFixed(1)}" fill="var(--green)" opacity=".13"/>
+    <line class="grid" x1="${padL}" x2="${W - padR}" y1="${y(t.mav).toFixed(1)}" y2="${y(t.mav).toFixed(1)}" style="stroke:var(--green)" stroke-dasharray="3 3"/>
+    ${ticks.map(v => `<text class="axis" x="${padL - 4}" y="${(y(v) + 3).toFixed(1)}" text-anchor="end">${v}</text>`).join('')}
+    ${arr.map((v, i) => { const st = volStatus(v, t, false), x0 = padL + i * bw + bw * 0.18;
+      return `<rect x="${x0.toFixed(1)}" width="${(bw * 0.64).toFixed(1)}" y="${y(v).toFixed(1)}" height="${(y(0) - y(v)).toFixed(1)}" rx="2" style="fill:${i === arr.length - 1 ? 'var(--accent)' : st.color}" opacity="${i === arr.length - 1 ? 1 : 0.75}"/>`; }).join('')}
+    ${[0, weeks.length - 1].map(i => `<text class="axis" x="${(padL + (i + 0.5) * bw).toFixed(1)}" y="${H - 5}" text-anchor="middle">${i === weeks.length - 1 ? 'this wk' : fmtDate(weeks[i], { day: 'numeric', month: 'short' })}</text>`).join('')}
+  </svg></div>`;
+}
+function openVolMuscle(k) {
+  const { weeks, by } = weeklySets();
+  const arr = by[k] || weeks.map(() => 0), t = volTarget(k), d = VOL_TARGETS[k] || [0, 10, 20];
+  const rows = hardSetRows(weeks[weeks.length - 1], '9999').filter(r => r.k === k);
+  const byLift = {};
+  rows.forEach(r => { byLift[r.name] = (byLift[r.name] || 0) + r.n; });
+  const lifts = Object.entries(byLift).sort((a, b) => b[1] - a[1]);
+  const inp = (id, label, v) => `<div class="field"><label for="${id}">${label}</label><input id="${id}" type="number" inputmode="decimal" step="1" min="0" value="${v}"></div>`;
+  modal({
+    title: `${MUSCLES[k]} · weekly sets`,
+    body: `${volChart(weeks, arr, t)}
+      <div class="sub" style="margin:6px 0 12px">Last ${weeks.length} weeks, Monday to Sunday. Band = your range, dashed line = MAV.</div>
+      <div class="eyebrow" style="margin-bottom:6px">This week</div>
+      ${lifts.length ? lifts.map(([n, v]) => `<div class="row between" style="padding:3px 0"><span>${esc(n)}</span><span class="mono">${setsTxt(v)}</span></div>`).join('')
+        : '<div class="sub">Nothing for this muscle yet this week.</div>'}
+      <div class="eyebrow" style="margin:14px 0 6px">Your range (hard sets a week)</div>
+      <div class="grid3">${inp('vtMev', 'MEV · least', t.mev)}${inp('vtMav', 'MAV · aim', t.mav)}${inp('vtMrv', 'MRV · most', t.mrv)}</div>
+      <div class="sub" style="margin-top:6px">Default ${d[0]} / ${d[1]} / ${d[2]} — rough general figures, a starting point. Your own recovery, age and training history move them.</div>`,
+    foot: `${t.custom ? '<button class="btn ghost" id="vtReset">Reset</button>' : ''}<button class="btn ghost" data-close>Close</button><button class="btn primary" id="vtSave">Save range</button>`,
+    onOpen: bg => {
+      $('#vtSave', bg).onclick = () => {
+        const v = ['#vtMev', '#vtMav', '#vtMrv'].map(s => Math.round(parseFloat($(s, bg).value)));
+        if (v.some(x => !(x >= 0) || x > 60)) return toast('Each number should be 0–60');
+        if (!(v[0] <= v[1] && v[1] <= v[2])) return toast('Keep MEV ≤ MAV ≤ MRV');
+        S.settings.volTargets = { ...(S.settings.volTargets || {}) };
+        if (v[0] === d[0] && v[1] === d[1] && v[2] === d[2]) delete S.settings.volTargets[k];
+        else S.settings.volTargets[k] = { mev: v[0], mav: v[1], mrv: v[2] };
+        save(); closeModal(); render(); toast(`${MUSCLES[k]} range saved`, 'green');
+      };
+      const rs = $('#vtReset', bg);
+      if (rs) rs.onclick = () => { S.settings.volTargets = { ...(S.settings.volTargets || {}) }; delete S.settings.volTargets[k]; save(); closeModal(); render(); toast(`${MUSCLES[k]} back to the default range`); };
+    },
+  });
+}
+
 function trainedRecently() {
   const since = Date.now() - RECOVERY.days * 864e5;
   return S.workouts.some(w => w.status === 'completed' && w.kind !== 'cardio' && woTime(w) >= since) || !!(S.active && S.active.kind !== 'cardio');
@@ -5232,6 +5391,18 @@ function targetRirSource(e, blockRir) {
 let cardioWhyLast = null;
 
 const WHY = {
+  vol: { label: 'weekly sets', fn: k => {
+    const { weeks, by } = weeklySets();
+    const wk = weeks[weeks.length - 1], rows = hardSetRows(wk, '9999').filter(r => r.k === k), t = volTarget(k);
+    const tr = trace(`${MUSCLES[k]} · hard sets this week`);
+    tr.step('Week', `from Monday ${fmtDate(wk, { day: 'numeric', month: 'short' })}`);
+    tr.note('Counted: done working sets with reps, time or distance; warm-ups and RIR 5+ left out; a drop after the first set of its chain is ½. The muscle gets 1 if it is the lift\'s main muscle (within 80% of the biggest share), ½ if its share is 0.20 or more.');
+    let sum = 0;
+    rows.forEach(r => { sum += r.n; tr.step(`${r.name}${r.live ? ' (live)' : ''} · ${setLine(r.set)}`, setsTxt(r.n), `set ${nice(r.worth)} × muscle ${nice(r.credit)}`); });
+    if (!rows.length) tr.note('No sets count for this muscle this week.');
+    tr.result('Hard sets', setsTxt(sum), `range ${t.mev}–${t.mrv}, ${volStatus(sum, t, new Date().getDay() !== 0).word}`);
+    return tr.check('Hard sets', sum, (by[k] || [0])[weeks.length - 1] || 0, setsTxt);
+  } },
   e1: { label: 'estimated 1RM', fn: (kg, r, rpe) => {
     const t = trace('estimated 1RM');
     t.step('Weight', wt(kg)).step('Reps', r);
@@ -8188,7 +8359,7 @@ function viewAnalytics() {
 
   ${analyticsTab === 'exercises' ? '' : (() => {
       const ranks = allRanks(), ms = muscleScores(), bw = bodyweightKg();
-      const recOnly = analyticsTab === 'muscles' ? viewMuscleMap() : '';   // recovery needs no ranks (D7)
+      const recOnly = analyticsTab === 'muscles' ? viewMuscleMap() + viewWeeklySets() : '';   // recovery and weekly sets need no ranks (D7, 01)
       if (!bw) return `${recOnly}<div class="card"><div class="eyebrow" style="margin-bottom:6px">Rankings</div>
       <div class="sub">Log a check-in with your bodyweight — every standard is a multiple of it.</div></div>`;
       if (!ranks.length) return `${recOnly}<div class="card"><div class="empty">Nothing ranked yet — rankings cover the lifts with a strength standard.</div></div>`;
@@ -8215,6 +8386,7 @@ function viewAnalytics() {
   </div>`;
       return `
   ${viewMuscleMap()}
+  ${viewWeeklySets()}
   ${ms.length ? `
   <div class="card flush" style="margin-bottom:13px">
     <div class="eyebrow" style="padding:11px 13px 8px">Rankings · muscle groups</div>
@@ -12682,6 +12854,10 @@ function wire() {
     }
     v.querySelectorAll('[data-sort]').forEach(b => b.onclick = () => { analyticsSort = b.dataset.sort; render(); });
     v.querySelectorAll('[data-antab]').forEach(b => b.onclick = () => { analyticsTab = b.dataset.antab; render(); window.scrollTo(0, 0); });
+  v.querySelectorAll('[data-volm]').forEach(r => {
+    r.onclick = () => openVolMuscle(r.dataset.volm);
+    r.onkeydown = ev => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openVolMuscle(r.dataset.volm); } };
+  });
     wireMuscleMap(v);
   }
 

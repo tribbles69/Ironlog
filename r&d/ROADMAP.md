@@ -144,7 +144,7 @@ From the Hub's `roadmaps/ironlog-from-audit.md`: the audit items Ironlog
 doesn't have yet. Once these are in, the matching third-party apps can come off
 Aaron's phone. Check the code first in case any part already exists.
 
-### [ ] 01. Weekly sets per muscle against a target range
+### [x] 01. Weekly sets per muscle against a target range — shipped 0.83.0 (spec `r&d/specs/weekly-sets-spec.md`; main muscle 1 set, helpers ½ (share ≥ 0.20), drops ½, RIR 5+ and warm-ups left out; card + 8-week chart + editable range on Stats → Muscles; **Aaron: check the default ranges suit you**)
 (Tonnage's MEV / MRV landmarks.) Count hard sets per muscle per week, using the
 muscle shares Ironlog already has (`EX_DB`, D7), against a target range the
 lifter can edit (MEV → MAV → MRV), with sensible defaults per muscle. Show it
