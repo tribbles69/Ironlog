@@ -152,7 +152,7 @@ on Stats → Muscles: under / in range / over for the current week, and a trend.
 Warm-ups stay out (B3). Decide how fractional shares count (e.g. a set counts
 fully for primary muscles, half for secondary) and write it down.
 
-### [ ] 02. Interval timer
+### [x] 02. Interval timer — shipped 0.84.0 (spec `r&d/specs/interval-timer-spec.md`; Train → ⏱ Intervals; runs as a cardio session with `cardio.iv` on top, no HR zone so nothing talks over it; six built-in presets plus your own in `settings.ivPresets`; **Aaron: run one at the gym — A4 item 17**)
 (INTVL.) Build run / rest intervals — work, rest, rounds, optional warm-up and
 cool-down — with audio and vibration cues from `Cue` and the screen kept on
 with `Awake`. Starts from **Train → Cardio** next to the HR-zone session;
@@ -284,6 +284,10 @@ these come back; report anything that fails):
     yourself, then as Chelsea would (under 6 months). Does the plan look like
     a sane relative of your PPLUL? Swap a lift, Accept, and check the
     calendar. Then Coach settings → Forget everything and try a home setup.
+17. **Interval timer (0.84.0):** Train → ⏱ Intervals → Tabata. Are the beeps
+    and buzzes loud and clear over gym noise, does the 3-2-1 land right, and
+    does the voice talk over music sensibly? Lock the screen for one round —
+    what still fires? Check the logged session reads right in history.
 
 ### [x] A5. Checks against Blast's bugs — checked 0.27.1 (superset item waits for B3)
 Blast shipped these; make sure Ironlog doesn't have them. Tick each.
