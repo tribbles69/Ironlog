@@ -13,6 +13,14 @@ rather than guessed.
 
 ---
 
+## 0.89.0 — 9 Nov 2026
+- **Fixed: Measure missed most reps.** Heavy sets, dead-stop presses and long AMRAPs often came back as "found 1 of 9 reps", or none at all. The phone's reading drifts during a set, and it was only being corrected when the bar sat still, which on a press it hardly ever does. It now strips that drift out continuously. On one push day's recordings it found 77 of 81 reps, up from 36.
+- **Fixed: speeds that climbed through a set.** The same drift made warm-up speeds rise rep after rep (0.37 → 0.94 m/s). They now hold steady or fade as they should.
+- **Fixed: lifting the bar off the hooks no longer counts as a rep.**
+- **Fixed: no more "RIR NaN".** A set whose speed never dropped now shows no bar-speed RIR instead of NaN.
+- **Changed: no bar-speed RIR when the sensor missed reps.** If it found fewer reps than you logged, its RIR isn't shown in the summary, the set strip or the weekly coach notes.
+- Bar-speed RIR itself is still a rough guide. Rep counts and speeds are what this fixes.
+
 ## 0.88.0 — 8 Nov 2026
 - **Changed: Warm-ups are shorter.** The **▲ Warm-up** ramp is now three sets at most, counting the empty bar as one, e.g. 20 × 10, 50 × 6, 65 × 3 before 80 × 8. It used to give up to seven for a heavy single.
 - **New: Add to workout.** In a workout, the warm-up sheet starts from your planned weight and reps and has an **Add to workout** button. It puts the warm-up sets in ahead of your working sets, marked W so they stay out of volume and PRs. Pressing it again replaces warm-ups you haven't done yet rather than adding more.

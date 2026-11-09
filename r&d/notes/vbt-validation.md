@@ -49,3 +49,37 @@ Synthetic check only so far (spec §12): ROM 49–50 cm for a true 50 cm, peak
 ### Results (video)
 
 _None yet._
+
+## Rep detection on real traces (0.89.0)
+
+9 raw sensor traces, Mon 9 Nov 2026, Wk 4 Push, phone on the bar, 59 Hz
+(Settings → Bar-speed debug export). Reps counted against the logged reps;
+the 35 × 16 OHP AMRAP wasn't attached to a set, so its 16 came from Aaron.
+
+| set | did | Slew.integrateMotion | vbtIntegrate (0.89.0) |
+|---|---|---|---|
+| OHP 20 × 8 (warm-up) | 8 | 1 | 8 |
+| OHP 35 × 16 (60 s AMRAP) | 16 | 0 | 13 |
+| OHP 35 × 9 | 9 | 1 | 8 |
+| Smith incline 20 × 10 (warm-up) | 10 | 9 | 10 |
+| Smith incline 30 × 8 (warm-up) | 8 | 1 | 8 |
+| Smith incline 40 × 3 (warm-up) | 3 | 3 | 3 |
+| Smith incline 60 × 5 | 5 | 2 | 5 |
+| Smith incline 55 × 5 | 5 | 2 | 5 |
+| Smith incline 35 × 17 | 17 | 17 | 17 |
+| **total** | **81** | **36** | **77**, no extra reps |
+
+What was wrong: vertical acceleration averaged −0.1 to −0.24 m/s² over sets
+that start and end at rest, and MotionCapture marked the bar still only 2–8 %
+of the time on the OHP sets, so drift ran uncorrected for 20–50 s. Fix:
+high-pass the integrated speed (0.15 Hz) and position (0.05 Hz), zero-phase.
+Lifting off the hooks read as a 11–16 cm rep against ~30 cm working reps;
+reps under 0.6 × the set's median range are dropped.
+
+Range of motion now reads consistently (OHP warm-up 42–47 cm, incline
+34–38 cm). Not yet checked against a reference device, so speeds and RIR stay
+a guide. Bar-speed RIR (Slew's estimator on population profiles) is still
+unreliable on these sets: 35 × 17 read RIR 12 although it ended near failure
+(44 % velocity loss). Tuning that is separate work.
+
+Re-run: `node "r&d/tools/vbt-sim.cjs" --traces <export.json> -v`
