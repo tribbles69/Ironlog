@@ -2286,7 +2286,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.89.0';
+const APP_VERSION = '0.90.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -6899,16 +6899,22 @@ function repDetail(v, logged) {
 }
 /* Raw sensor traces, for tuning rep detection (Settings → Bar-speed debug).
    Off by default. Kept on this phone only — never in the synced backup —
-   capped at the last 30 sets (roughly 10 KB each). Export joins each trace to
+   capped at the last 20 sets (roughly 10 KB each, ~60 KB with 3-axis data). Export joins each trace to
    the set it was attached to, so the logged reps sit beside what Slew found. */
-const VBT_RAW_KEY = 'ironlog.vbtRaw', VBT_RAW_MAX = 30;
+const VBT_RAW_KEY = 'ironlog.vbtRaw', VBT_RAW_MAX = 20;   // 3-axis traces (0.90.0) are several times bigger; phone storage is ~5 MB
 function vbtRawList() { try { return JSON.parse(localStorage.getItem(VBT_RAW_KEY) || '[]'); } catch (e) { return []; } }
 function vbtRawKeep(rec) {
   if (!S.settings.vbtKeepRaw) return;
   const l = vbtRawList();
   l.push(rec);
   while (l.length > VBT_RAW_MAX) l.shift();
-  try { localStorage.setItem(VBT_RAW_KEY, JSON.stringify(l)); } catch (e) { toast('Raw trace not kept — phone storage is full'); }
+  /* Full: drop the oldest and try again, so the newest set is the one kept. */
+  for (;;) {
+    try { localStorage.setItem(VBT_RAW_KEY, JSON.stringify(l)); return; } catch (e) {
+      if (l.length <= 1) return toast('Raw trace not kept — phone storage is full');
+      l.shift();
+    }
+  }
 }
 function exportVbtRaw() {
   const l = vbtRawList();
@@ -6921,7 +6927,7 @@ function exportVbtRaw() {
     }
     return { ...t, logged: null };
   });
-  saveBlob(JSON.stringify({ format: 'ironlog-vbt-raw', v: 1, exportedAt: new Date().toISOString(), traces }), 'application/json', `ironlog-vbt-raw-${today()}.json`);
+  saveBlob(JSON.stringify({ format: 'ironlog-vbt-raw', v: 2, exportedAt: new Date().toISOString(), traces }), 'application/json', `ironlog-vbt-raw-${today()}.json`);
 }
 
 /* A finished workout shows bar speed the way the live card did: every
@@ -11666,6 +11672,28 @@ function packVbt(rec, est, liftId, place) {
    — the sample counter and the still/moving light make that visible in the
    first second rather than at the end. */
 let vbtCapture = null;
+/* MotionCapture keeps only the vertical reading, after its own gravity and
+   bias handling. To work on tilt (the bar rolling tips the phone and leaks
+   gravity into "vertical" — the likely source of the −0.1 to −0.24 m/s² mean
+   on 9 Nov), the debug trace also keeps the phone's raw 3-axis linear and
+   with-gravity readings, one row per sample Slew kept. Only while Bar-speed
+   debug is on; never stored on the set or synced. */
+let _vbtCap = null;
+function vbtCaptureClass() {
+  if (_vbtCap) return _vbtCap;
+  _vbtCap = class extends Slew.MotionCapture {
+    start() { this.xyz = S.settings.vbtKeepRaw ? { lx: [], ly: [], lz: [], gx: [], gy: [], gz: [] } : null; super.start(); }
+    onMotion(e) {
+      const n = this.samples.length;
+      super.onMotion(e);
+      if (!this.xyz || this.samples.length === n) return;
+      const l = e.acceleration || {}, g = e.accelerationIncludingGravity || {}, r = v => v == null ? null : Math.round(v * 1000) / 1000;
+      this.xyz.lx.push(r(l.x)); this.xyz.ly.push(r(l.y)); this.xyz.lz.push(r(l.z));
+      this.xyz.gx.push(r(g.x)); this.xyz.gy.push(r(g.y)); this.xyz.gz.push(r(g.z));
+    }
+  };
+  return _vbtCap;
+}
 
 function openVbtRecord(ei, opts = {}) {
   const a = S.active;
@@ -11723,7 +11751,7 @@ function openVbtRecord(ei, opts = {}) {
         if (!running) {
           const perm = await Slew.MotionCapture.requestPermission();
           if (!perm.granted) { setMsg(perm.reason || 'Motion access denied.'); return; }
-          vbtCapture = new Slew.MotionCapture(
+          vbtCapture = new (vbtCaptureClass())(
             { ...Slew.DEFAULT_MOTION_CONFIG },
             st => {
               const n = $('#vbN', bg), h = $('#vbHz', bg), s = $('#vbStill', bg);
@@ -11747,6 +11775,7 @@ function openVbtRecord(ei, opts = {}) {
         btn.textContent = 'Start';
         btn.classList.remove('danger');
         const motion = vbtCapture ? vbtCapture.samples.slice() : [];
+        const xyz = vbtCapture && vbtCapture.xyz;   // debug only: full 3-axis readings, for tilt work
         if (motion.length < 40) { setMsg(`Only ${motion.length} samples — the sensor reported almost nothing.`); return; }
 
         /* Follows sensorPipeline exactly, but keeps the failure evidence so the
@@ -11754,10 +11783,10 @@ function openVbtRecord(ei, opts = {}) {
         const samples = vbtIntegrate(motion);
         const scaled = samples.map(s => ({ ...s, x: s.x * (profile.scale || 1) }));
         const out = Slew.analyse(scaled, {
-          targetHz: 60, minRom: profile.minRom,
+          targetHz: 60, minRom: Math.min(profile.minRom, VBT_MIN_ROM),
           ...(loadKg > 0 ? { loadKg } : {}),
         });
-        const found = vbtDropBlips(out.reps);
+        const found = vbtDropBlips(out.reps, profile.minRom);
         const reps = liftId ? Slew.withRpe(found, profile) : found;
         const failure = trustFailure(out.failure, found, liftId, profile);
         const est = liftId ? Slew.estimateSet(reps, profile, failure) : null;
@@ -11772,7 +11801,8 @@ function openVbtRecord(ei, opts = {}) {
         const packed = packVbt(rec, est, liftId, place);
         vbtRawKeep({ at: packed.at, lift: liftId, kg: loadKg || null, place, mode, hz: packed.rate, detected: out.reps.length,
           profile: { scale: profile.scale || 1, minRom: profile.minRom },
-          t: motion.map(m => Math.round(m.t)), a: motion.map(m => +m.a.toFixed(3)), still: motion.map(m => m.still ? 1 : 0).join('') });
+          t: motion.map(m => Math.round(m.t)), a: motion.map(m => +m.a.toFixed(3)), still: motion.map(m => m.still ? 1 : 0).join(''),
+          ...(xyz ? { xyz } : {}) });
         if (opts.onRecorded) return opts.onRecorded(packed, est, failure);
         if (mode === 'profile') return lvRecorded(ei, packed);
         vbtReviewDlg(ei, packed, est, failure);
@@ -11832,12 +11862,17 @@ function vbtIntegrate(motion) {
   const xSlow = vbtLowPass(x, VBT_HP_X, VBT_FS);
   return x.map((y, i) => ({ t: ts[i], x: y - xSlow[i], conf: still[i] ? 1 : 0.85 }));   // confidence falls while unanchored — that is where drift hides
 }
-/* Lifting the bar off the hooks reads as a short rep (11–16 cm against ~30 cm
-   on the 9 Nov warm-ups). In a set of 4+, drop reps under 0.6 of the set's
-   median travel, and recount the summary the way Slew does. Genuine reps on
-   those traces never fell below 0.71 of the median; lift-offs were 0.44–0.52. */
-function vbtDropBlips(reps) {
-  if (reps.length < 4) return reps;
+/* Which of Slew's reps are real. Slew is asked for reps down to VBT_MIN_ROM
+   (4 cm) — the 9 Nov AMRAP's slow late reps read 14–17 cm through the drift
+   filter and the lift's 15 cm floor threw them away; calf raises travel 5–8 cm.
+   Then, in a set of 4+, a rep under 0.6 of the set's median travel is a
+   lift-off from the hooks or a fidget (11–16 cm against ~30 cm on the 9 Nov
+   warm-ups; genuine reps never fell below 0.71). A set of 1–3 has no median
+   worth trusting, so it keeps the lift's own floor. 9 Nov traces: 80 of 81
+   reps, none extra. */
+const VBT_MIN_ROM = 0.04;
+function vbtDropBlips(reps, liftMinRom) {
+  if (reps.length < 4) return reps.filter(r => r.rom >= (liftMinRom || 0)).map((r, i) => ({ ...r, index: i + 1 }));
   const s = reps.map(r => r.rom).sort((x, y) => x - y), med = s[Math.floor(s.length / 2)];
   return reps.filter(r => r.rom >= 0.6 * med).map((r, i) => ({ ...r, index: i + 1 }));
 }
