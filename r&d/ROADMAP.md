@@ -988,6 +988,13 @@ per setup) is the evidence. Then write a spec (`r&d/specs/calm-spec.md`).
   screen kept awake (`Awake`). Offer an import of Logn's JSON export so its
   history isn't lost. Logn stays a standalone app either way.
 
+### [x] E16. The Honest Ledger — record targets, projection, sensor trust (Aaron asked 2026-11-09) — shipped 0.91.0 (spec `r&d/specs/ledger-spec.md`)
+A lift goal can be marked as a record (figure typed in by hand, with source
+and date checked); every lift goal gets a projected date range once there's
+enough history; bar-speed numbers carry an unchecked / checked chip, set in
+Settings → Sensor trust. The typo guard it asked for was already in
+(`plausibility()`).
+
 ---
 
 ## Parked
