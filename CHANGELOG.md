@@ -13,6 +13,11 @@ rather than guessed.
 
 ---
 
+## 0.91.0 — 9 Nov 2026
+- **New: Record targets.** When you add or edit a lift goal, tick **The target is a record** and add where the figure is from and when you checked it. The goal shows a **Record** tag and how many kg you have to go. If you checked the figure more than six months ago, it reminds you to check it again. Ironlog never looks records up, so the figure is always the one you typed.
+- **New: Projected dates on lift goals.** Each lift goal shows a rough date range for when you'd hit it at your recent rate, based on your best set each session over the last six months. It needs 4 sessions over 6 weeks first. If you're not climbing, it says so and gives no date. It's a straight line, so plan on the later date.
+- **New: Sensor trust.** Bar-speed numbers from Measure and from video now carry an **unchecked** tag. Once you've checked a source against a transducer or another device you trust, tick it in **Settings → Sensor trust** and the tag turns to **checked**.
+
 ## 0.90.0 — 9 Nov 2026
 - **Fixed: Measure missed the slow last reps of a long set.** Reps that slowed right down near the end of an AMRAP read short and were thrown away as too small. On the 9 Nov push day it now finds all 16 reps of the OHP AMRAP (80 of 81 across the session).
 - **New: short-range lifts can be measured.** Measure now counts reps down to 4 cm of travel, so calf raises and other short movements register. In a set of 4 or more, a "rep" much shorter than the rest (lifting the bar off the hooks, a fidget) is still left out. Sets of 1–3 keep the usual minimum.

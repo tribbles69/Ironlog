@@ -2286,7 +2286,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.90.0';
+const APP_VERSION = '0.91.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -5446,6 +5446,25 @@ const WHY = {
     tr.result('Hard sets', setsTxt(sum), `range ${t.mev}–${t.mrv}, ${volStatus(sum, t, new Date().getDay() !== 0).word}`);
     return tr.check('Hard sets', sum, (by[k] || [0])[weeks.length - 1] || 0, setsTxt);
   } },
+  proj: { label: 'goal projection', fn: id => {
+    const g = S.goals.find(x => x.id === id);
+    const t = trace(`Projection · ${g ? g.name : 'goal'}`);
+    const p = g && projectGoal(g);
+    if (!p) { t.note('Only lift goals with a target get a projection.'); return t; }
+    t.step('Target', wt(g.target)).step('Current best', wt(p.cur), 'the goal\'s own number: a true single, else best e1RM').step('Gap', wt(Math.max(0, p.gap)));
+    if (p.state === 'done') return t.result('Projection', 'reached');
+    t.head(`Best e1RM per session, last ${PROJ.weeks} weeks`);
+    (p.pts || []).forEach(pt => t.step(fmtDate(pt.date, { day: 'numeric', month: 'short', year: 'numeric' }), wt(pt.e1)));
+    t.step('Sessions / span', `${p.n} / ${p.span} days`, `needs ${PROJ.minSessions} over ${PROJ.minSpanDays} days`);
+    if (p.state === 'thin') return t.result('Projection', 'not enough history');
+    t.step('Rate (least squares)', `${nice(p.rate * 30.44)} kg a month`, `${p.rate.toFixed(3)} kg/day`);
+    t.step('Standard error', `±${nice(p.se * 30.44)} kg a month`);
+    if (p.state === 'flat') return t.result('Projection', 'not climbing — no date');
+    t.step('Earliest', `${Math.round(p.early)} days`, 'gap ÷ (rate + error)');
+    t.step('Latest', Number.isFinite(p.late) ? `${Math.round(p.late)} days` : 'open-ended', 'gap ÷ (rate − error)');
+    t.note('A straight line. Strength gains slow as you near your limit, so the later date is the safer one.');
+    return t.result('Projection', p.state === 'far' ? `more than ${PROJ.maxYears} years` : `${monthYear(p.earlyDate)} – ${p.lateDate ? monthYear(p.lateDate) : 'open-ended'}`);
+  } },
   e1: { label: 'estimated 1RM', fn: (kg, r, rpe) => {
     const t = trace('estimated 1RM');
     t.step('Weight', wt(kg)).step('Reps', r);
@@ -6028,6 +6047,73 @@ function goalCurrent(g) {
   if (g.type === 'sessions') return S.workouts.filter(w => w.status === 'completed' && (!g.since || w.date >= g.since)).length;
   return g.current || 0;
 }
+
+/* ---------------- the Honest Ledger (E16, spec r&d/specs/ledger-spec.md) ----------------
+   A projected date range for a lift goal, from the best e1RM of each session
+   over the last 26 weeks. A straight line with its standard error either side:
+   honest about being rough, and silent when the history is too thin to say. */
+const PROJ = { weeks: 26, minSessions: 4, minSpanDays: 42, maxYears: 5, recordStaleDays: 180 };
+function projectGoal(g) {
+  if (!g || g.type !== 'lift' || !g.exercise || !(g.target > 0)) return null;
+  const cur = goalCurrent(g);
+  const gap = g.target - cur;
+  if (gap <= 0) return { state: 'done', cur, gap };
+  const st = statsFor(g.exercise);
+  const from = iso(new Date(Date.now() - PROJ.weeks * 7 * 86400000));
+  const pts = st ? st.series.filter(p => p.date >= from && p.e1 > 0) : [];
+  const span = pts.length ? daysBetween(pts[0].date, pts[pts.length - 1].date) : 0;
+  const base = { cur, gap, n: pts.length, span, pts };
+  if (pts.length < PROJ.minSessions || span < PROJ.minSpanDays) return { ...base, state: 'thin' };
+  // least squares of e1RM on days since the first point
+  const xs = pts.map(p => daysBetween(pts[0].date, p.date)), ys = pts.map(p => p.e1);
+  const n = xs.length, mx = xs.reduce((a, b) => a + b, 0) / n, my = ys.reduce((a, b) => a + b, 0) / n;
+  const sxx = xs.reduce((a, x) => a + (x - mx) ** 2, 0);
+  const rate = xs.reduce((a, x, i) => a + (x - mx) * (ys[i] - my), 0) / sxx;   // kg per day
+  const resid = ys.reduce((a, y, i) => a + (y - (my + rate * (xs[i] - mx))) ** 2, 0);
+  const se = n > 2 ? Math.sqrt(resid / (n - 2) / sxx) : 0;
+  const out = { ...base, rate, se };
+  if (rate <= 0) return { ...out, state: 'flat' };
+  const maxDays = PROJ.maxYears * 365;
+  const early = gap / (rate + se);
+  const late = rate - se > 0 ? gap / (rate - se) : Infinity;
+  if (early > maxDays) return { ...out, state: 'far', early, late };
+  const day = d => iso(new Date(Date.now() + d * 86400000));
+  return { ...out, state: 'range', early, late, earlyDate: day(early), lateDate: Number.isFinite(late) && late <= maxDays ? day(late) : null };
+}
+function monthYear(isoDay) { return fmtDate(isoDay, { month: 'short', year: 'numeric' }); }
+function projLine(g) {
+  const p = projectGoal(g);
+  if (!p || p.state === 'done') return '';
+  const perMonth = r => `${r >= 0 ? '+' : ''}${wt(r * 30.44)} a month`;
+  let txt;
+  if (p.state === 'thin') txt = `Projection: not enough history yet (needs ${PROJ.minSessions} sessions over ${PROJ.minSpanDays / 7} weeks; ${p.n} in the last ${PROJ.weeks} weeks)`;
+  else if (p.state === 'flat') txt = `Projection: not climbing over the last ${Math.round(p.span / 7)} weeks (${perMonth(p.rate)}), so no date`;
+  else if (p.state === 'far') txt = `Projection: more than ${PROJ.maxYears} years at your recent rate (${perMonth(p.rate)})`;
+  else txt = `Projection: around ${monthYear(p.earlyDate)} – ${p.lateDate ? monthYear(p.lateDate) : 'open-ended'} at ${perMonth(p.rate)} · a straight line, so plan on the later date`;
+  return `<div class="sub proj">${esc(txt)}${why('proj', g.id)}</div>`;
+}
+function recordLine(g) {
+  const r = g.type === 'lift' && g.record;
+  if (!r) return '';
+  const gap = g.target - goalCurrent(g);
+  const age = r.checked ? daysBetween(r.checked, today()) : null;
+  const stale = age == null || age > PROJ.recordStaleDays;
+  return `<div class="sub" style="margin-top:2px"><span class="chip gold" style="padding:1px 7px;font-size:10px">Record</span>
+    ${gap > 0 ? `${esc(wt(gap))} to go` : 'at or past it'}${r.source ? ` · ${esc(r.source)}` : ''}
+    ${stale ? ` · <span style="color:var(--gold)">${r.checked ? `figure checked ${Math.round(age / 30)} months ago — check it's still current` : 'add the date you checked this figure'}</span>` : ` · checked ${esc(fmtDate(r.checked, { day: 'numeric', month: 'short', year: 'numeric' }))}`}</div>`;
+}
+
+/* Sensor trust (E16 §4): bar speed is an estimate until its source has been
+   checked against a transducer or another device you trust. */
+function sensorChecked(mode) { const c = S.settings.sensorChecked || {}; return c[mode === 'video' ? 'video' : 'motion'] || null; }
+function trustChip(v) {
+  if (!v) return '';
+  const vid = v.mode === 'video', when = sensorChecked(v.mode);
+  const what = vid ? 'Video bar speed' : 'Phone-sensor bar speed';
+  const title = when ? `${what}: checked against a trusted device on ${fmtDate(when, { day: 'numeric', month: 'short', year: 'numeric' })}. Still an estimate.`
+    : `${what}: not checked against a transducer yet. Treat the numbers as rough. Settings → Sensor trust.`;
+  return ` <span class="chip ${when ? 'green' : ''} trust" style="padding:1px 6px;font-size:10px" title="${esc(title)}" aria-label="${esc(title)}">${when ? 'checked' : 'unchecked'}</span>`;
+}
 /* What a lift goal is a goal FOR: the movement with its equipment always
    spelled out (a goal row has no picker beside it to show the default), plus
    any grip or one-arm detail, and the equipment's glyph. */
@@ -6059,7 +6145,8 @@ function goalRow(g) {
     <div class="row between" style="margin-bottom:6px">
       <div class="grow"><div style="font-weight:650;font-size:14px">${esc(g.name)}</div>
         ${g.type === 'lift' && g.exercise ? goalLiftLine(g.exercise) : ''}
-        <div class="sub">${f(cur)} of ${f(g.target)}${gain}${left !== null ? ` · ${left >= 0 ? left + ' days left' : 'past deadline'}` : ''}</div></div>
+        <div class="sub">${f(cur)} of ${f(g.target)}${gain}${left !== null ? ` · ${left >= 0 ? left + ' days left' : 'past deadline'}` : ''}</div>
+        ${recordLine(g)}${projLine(g)}</div>
       <div class="right">
         <div style="font-weight:750;font-size:15px;${pct >= 100 ? 'color:var(--green)' : ''}">${Math.round(clamp(pct, 0, 999))}%</div>
       </div>
@@ -6145,6 +6232,18 @@ function openGoal(id) {
         <div class="field"><label>Target</label>
           <input type="number" step="0.5" inputmode="decimal" id="gTarget" value="${g.target ? (g.type === 'sessions' ? g.target : dw(g.target)) : ''}"></div>
       </div>
+      <div id="gRecWrap">
+        <label class="row" style="gap:8px;font-size:13px;margin-bottom:8px;justify-content:flex-start"><input type="checkbox" id="gRec" style="width:auto;flex:none;margin:0"${g.record ? ' checked' : ''}> <span>The target is a record</span></label>
+        <div id="gRecFields"${g.record ? '' : ' style="display:none"'}>
+          <div class="sub" style="margin:-2px 0 8px">Type the record figure in as the target. Ironlog never looks records up, so note where it's from and when you checked it.</div>
+          <div class="grid2">
+            <div class="field"><label for="gRecSrc">Record source</label>
+              <input id="gRecSrc" value="${esc((g.record && g.record.source) || '')}" placeholder="e.g. WDC 90kg 16&quot; trap bar"></div>
+            <div class="field"><label for="gRecChk">Checked on</label>
+              <input type="date" id="gRecChk" value="${(g.record && g.record.checked) || today()}"></div>
+          </div>
+        </div>
+      </div>
       <div class="field" id="gCurWrap"><label>Current value</label>
         <input type="number" step="0.5" inputmode="decimal" id="gCur" value="${g.current ? dw(g.current) : ''}" placeholder="update as you go"></div>
       <div class="field"><label>Deadline (optional)</label>
@@ -6156,8 +6255,10 @@ function openGoal(id) {
         const t = $('#gType', bg).value;
         $('#gExWrap', bg).style.display = t === 'lift' ? '' : 'none';
         $('#gCurWrap', bg).style.display = t === 'custom' ? '' : 'none';
+        $('#gRecWrap', bg).style.display = t === 'lift' ? '' : 'none';
       };
       $('#gType', bg).onchange = sync; sync();
+      $('#gRec', bg).onchange = ev => { $('#gRecFields', bg).style.display = ev.target.checked ? '' : 'none'; };
       const del = $('#gDel', bg);
       if (del) del.onclick = () => { S.goals = S.goals.filter(x => x.id !== id); save(); closeModal(); render(); };
       $('#gSave', bg).onclick = () => {
@@ -6174,6 +6275,9 @@ function openGoal(id) {
           deadline: $('#gDead', bg).value || '',
           since: g.since || today(),
         };
+        if (type === 'lift' && $('#gRec', bg).checked) {
+          rec.record = { source: $('#gRecSrc', bg).value.trim(), checked: $('#gRecChk', bg).value || '' };
+        }
         if (type === 'custom') {
           const curRaw = $('#gCur', bg).value;
           rec.current = curRaw !== '' ? toKg(+curRaw) : (g.current || 0);
@@ -6894,7 +6998,7 @@ function repDetail(v, logged) {
   return `<div class="repdetail">${logged > reps.length ? `<div class="chip gold" style="margin:2px 0 6px;white-space:normal">The ${vid ? 'video' : 'sensor'} found ${reps.length} of your ${logged} reps, so this set's speed and RIR aren't reliable</div>` : ''}${chart}
     ${vid && v.path ? `<div class="bp-hist">${bpPathSvg(v.path, 130)}<div>${drift}${depthSummary(reps) ? `<div class="sub" style="font-size:11px;margin-top:4px">Depth: ${esc(depthSummary(reps))} — a guide</div>` : ''}</div></div>` : ''}
     <table class="reptable"><thead><tr><th>Rep</th><th>m/s</th><th>Peak</th><th>cm</th><th>↑ s</th><th>RIR</th><th></th></tr></thead><tbody>${rows}</tbody></table>
-    <div class="sub" style="font-size:11px;margin-top:4px">Velocity loss ${v.loss.toFixed(0)}%${vbtEst(v) && !(logged > reps.length) ? ` · set RIR ${nice(rpeToRir(v.est.rpe))}${v.est.method ? ` (${esc(v.est.method)})` : ''}` : ''} · ${v.rate} Hz · confidence ${(v.conf * 100).toFixed(0)}%${v.place === 'pocket' ? ' · pocket' : ''}${vid ? ' · from video, an estimate' : ''}${uncal ? ' · profile not calibrated yet' : ''}</div>
+    <div class="sub" style="font-size:11px;margin-top:4px">Velocity loss ${v.loss.toFixed(0)}%${vbtEst(v) && !(logged > reps.length) ? ` · set RIR ${nice(rpeToRir(v.est.rpe))}${v.est.method ? ` (${esc(v.est.method)})` : ''}` : ''} · ${v.rate} Hz · confidence ${(v.conf * 100).toFixed(0)}%${v.place === 'pocket' ? ' · pocket' : ''}${vid ? ' · from video, an estimate' : ''}${uncal ? ' · profile not calibrated yet' : ''}${trustChip(v)}</div>
   </div>`;
 }
 /* Raw sensor traces, for tuning rep detection (Settings → Bar-speed debug).
@@ -6949,7 +7053,7 @@ function vbtStrip(e, pre = '') {
       <summary class="row between" aria-label="${esc(setRefText(e.sets, i))}: ${v.best.toFixed(2)} metres per second. Show each rep">
       <span class="sub"><span class="chev" aria-hidden="true">▸</span>${setRefText(e.sets, i)}</span>
       <span class="mono grow">${v.best.toFixed(2)} m/s${v.loss >= 5 ? ` <span class="dimmer">▾${v.loss.toFixed(0)}%</span>` : ''}${e.tempo ? vbtTimes(v) : ''}${repSpark(v)}${vbtMissed(s) ? ` <span style="color:var(--gold)">${v.reps.length}/${s.r}</span>` : ''}</span>
-      ${vbtEst(v, s) ? `<span class="mono sub" style="color:var(--purple)">RIR ${nice(rpeToRir(v.est.rpe))}</span>` : ''}${why('vbt', v)}
+      ${vbtEst(v, s) ? `<span class="mono sub" style="color:var(--purple)">RIR ${nice(rpeToRir(v.est.rpe))}</span>` : ''}${trustChip(v)}${why('vbt', v)}
       </summary>${repDetail(v, s.r)}
     </details>`;
   }).join('')}</div>`;
@@ -11921,7 +12025,7 @@ function vbtReviewDlg(ei, v, est, failure) {
       ${v.est ? `<div class="sub" style="margin-top:9px">${esc(v.est.because)}${v.est.spread ? ` <span class="dimmer">±${v.est.spread} RIR</span>` : ''}</div>` : `<div class="sub" style="margin-top:9px">Speed and reps only — this movement has no velocity profile, so effort is not estimated.</div>`}
       ${failure && failure.failedAttempt ? `<div class="chip gold" style="margin-top:9px">A missed rep was detected and left out of the count</div>` : ''}
       ${failure && failure.ignored ? `<div class="sub" style="margin-top:9px">Something after the set looked like a missed rep, but your last rep moved at ${failure.ignoredV.toFixed(2)} m/s — too fast to be a failure — so it was ignored.</div>` : ''}
-      <div class="sub" style="margin-top:9px">${v.rate} Hz · confidence ${(v.conf * 100).toFixed(0)}%${v.reps.some(r => r.flags.length) ? ' · ' + [...new Set(v.reps.flatMap(r => r.flags))].join(', ') : ''}</div>`
+      <div class="sub" style="margin-top:9px">${v.rate} Hz · confidence ${(v.conf * 100).toFixed(0)}%${v.reps.some(r => r.flags.length) ? ' · ' + [...new Set(v.reps.flatMap(r => r.flags))].join(', ') : ''}${trustChip(v)}</div>`
       : `<div class="empty">No reps came out of that recording. The bar has to travel at least ${Math.round((Slew.defaultProfile('Machine (stack)').minRom) * 100)} cm and come to rest between reps.</div>`,
     foot: `<button class="btn ghost" data-close>Discard</button>${v.reps.length ? `<button class="btn primary" id="vbAttach">Attach to this exercise</button>` : ''}`,
     onOpen(bg) {
@@ -12382,7 +12486,7 @@ function openBarPath(ei = null) {
       <table class="reptable"><thead><tr><th>Rep</th><th>m/s</th><th>Peak</th><th>cm</th><th>↔ cm</th><th>↑ s</th>${hasDepth ? '<th>Depth</th>' : ''}</tr></thead><tbody>
         ${v.reps.map((r, i) => `<tr><td style="color:${SERIES_COLORS[i % SERIES_COLORS.length]}">${i + 1}</td><td>${r.v.toFixed(2)}</td><td>${r.peak ? r.peak.toFixed(2) : '—'}</td><td>${(r.rom * 100).toFixed(0)}</td><td>${r.drift != null ? r.drift.toFixed(1) : '—'}</td><td>${r.con ? r.con.toFixed(1) : '—'}</td>${hasDepth ? `<td style="color:${r.depth ? DEPTH_COL[r.depth.call] : ''}" title="${r.depth ? esc(DEPTH_WORD[r.depth.call]) : ''}">${r.depth ? `${r.depth.call === 'deep' ? '✓' : r.depth.call === 'high' ? '✗' : r.depth.call === 'close' ? '≈' : '?'} ${r.depth.cm > 0 ? '+' : ''}${r.depth.cm.toFixed(1)}` : '—'}</td>` : ''}</tr>`).join('')}
       </tbody></table>` : `<div class="empty" style="margin-top:10px">No reps found. Check the trim covers the whole set and the plate stayed in view.</div>`}
-      <div class="sub" style="margin-top:8px">Estimate · from video. Plate found on ${Math.round(v.cal.coverage * 100)}% of frames${gapTxt ? ` · ${esc(gapTxt)}` : ''}. ↔ is how far the bar moved sideways in the rep.${low ? ' <b style="color:var(--gold)">The plate was lost a lot — treat these numbers loosely.</b>' : ''} ${why('bpath', v)}</div>`,
+      <div class="sub" style="margin-top:8px">Estimate · from video. Plate found on ${Math.round(v.cal.coverage * 100)}% of frames${gapTxt ? ` · ${esc(gapTxt)}` : ''}. ↔ is how far the bar moved sideways in the rep.${low ? ' <b style="color:var(--gold)">The plate was lost a lot — treat these numbers loosely.</b>' : ''}${trustChip({ mode: 'video' })} ${why('bpath', v)}</div>`,
       `<button class="btn ghost" id="bpAgain">Back</button><button class="btn ghost" id="bpRender">Save with bar path</button>${ex && v.reps.length ? '<button class="btn primary" id="bpAttach">Attach to set</button>' : '<button class="btn primary" id="bpDone">Done</button>'}`,
       async bg => {
         await bpSeek(video, from + (b0 ? result.tk.times[b0.i] / 1000 : firstBottom / BP.hz));
@@ -12529,6 +12633,16 @@ function depthSummary(reps) {
   if (!d.length) return '';
   const n = k => d.filter(x => x.call === k).length;
   return [n('deep') && `${n('deep')} deep`, n('high') && `${n('high')} high`, n('close') && `${n('close')} too close to call`, n('unsure') && `${n('unsure')} unclear`].filter(Boolean).join(' · ');
+}
+function sensorTrustHtml() {
+  const row = (k, label) => {
+    const when = sensorChecked(k);
+    return `<label class="row" style="gap:8px;margin-top:8px;font-size:13px"><input type="checkbox" data-trust="${k}" style="width:auto;flex:none;margin:0"${when ? ' checked' : ''}> <span>${label}</span>${when ? ` <span class="sub">· checked ${esc(fmtDate(when, { day: 'numeric', month: 'short', year: 'numeric' }))}</span>` : ''}</label>`;
+  };
+  return `<div class="eyebrow" style="margin-bottom:4px">Sensor trust</div>
+    <div class="sub">Bar speed shows <b>unchecked</b> until you've compared that source against a transducer or another device you trust. Tick it once you have.</div>
+    ${row('motion', 'Phone-on-bar Measure checked')}
+    ${row('video', 'Bar path from video checked')}`;
 }
 function poseSettingsHtml() {
   return `<div class="eyebrow" style="margin:4px 0 6px">Squat depth from video</div>
@@ -13133,6 +13247,8 @@ function openSettings() {
       <div class="hr"></div>
       ${poseSettingsHtml()}
       <div class="hr"></div>
+      ${sensorTrustHtml()}
+      <div class="hr"></div>
       <div class="eyebrow" style="margin-bottom:8px">Data</div>
       <div class="sub" style="margin-bottom:10px">${S.workouts.length} workouts · ${S.checkins.length} check-ins · ${S.meets.length} meets · ${S.goals.length} goals</div>
       ${storageLine()}
@@ -13267,6 +13383,12 @@ function openSettings() {
       };
       $('#stExport', bg).onclick = () => { exportJSON(); refreshStorageLine(bg); };
       wirePoseSettings(bg);
+      bg.querySelectorAll('[data-trust]').forEach(cb => cb.onchange = () => {
+        const k = cb.dataset.trust;
+        S.settings.sensorChecked = { ...(S.settings.sensorChecked || {}), [k]: cb.checked ? today() : null };
+        save(); bust(); render();
+        toast(cb.checked ? 'Marked as checked today — the numbers still show as estimates' : 'Back to unchecked');
+      });
       $('#stVbtRaw', bg).onchange = ev => { S.settings.vbtKeepRaw = ev.target.checked; save(); toast(ev.target.checked ? 'Keeping raw traces from your next measured set' : 'Raw traces off — kept ones stay until exported or replaced'); };
       $('#stVbtRawExp', bg).onclick = () => exportVbtRaw();
       $('#stExportCsv', bg).onclick = () => { exportCSV(); refreshStorageLine(bg); };
