@@ -13,6 +13,11 @@ rather than guessed.
 
 ---
 
+## 0.90.0 — 9 Nov 2026
+- **Fixed: Measure missed the slow last reps of a long set.** Reps that slowed right down near the end of an AMRAP read short and were thrown away as too small. On the 9 Nov push day it now finds all 16 reps of the OHP AMRAP (80 of 81 across the session).
+- **New: short-range lifts can be measured.** Measure now counts reps down to 4 cm of travel, so calf raises and other short movements register. In a set of 4 or more, a "rep" much shorter than the rest (lifting the bar off the hooks, a fidget) is still left out. Sets of 1–3 keep the usual minimum.
+- **Changed: Bar-speed debug keeps more detail.** It now records the phone's full 3-axis readings, so the phone tilting as the bar rolls can be corrected in a later update. It keeps the last 20 sets instead of 30, and drops the oldest when phone storage is full.
+
 ## 0.89.0 — 9 Nov 2026
 - **Fixed: Measure missed most reps.** Heavy sets, dead-stop presses and long AMRAPs often came back as "found 1 of 9 reps", or none at all. The phone's reading drifts during a set, and it was only being corrected when the bar sat still, which on a press it hardly ever does. It now strips that drift out continuously. On one push day's recordings it found 77 of 81 reps, up from 36.
 - **Fixed: speeds that climbed through a set.** The same drift made warm-up speeds rise rep after rep (0.37 → 0.94 m/s). They now hold steady or fade as they should.
