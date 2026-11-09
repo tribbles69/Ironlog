@@ -2286,7 +2286,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.88.0';
+const APP_VERSION = '0.89.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -5186,7 +5186,7 @@ function reportData(from, to, opt) {
   const vbtNote = s => {
     const v = s.vbt; if (!v) return '';
     const miss = vbtMissed(s);
-    return ` [${v.best.toFixed(2)} m/s${v.loss >= 5 ? `, loss ${v.loss.toFixed(0)}%` : ''}${v.est ? `, bar-speed RIR ${nice(rpeToRir(v.est.rpe))}` : ''}${miss ? `, sensor found ${v.reps.length} of ${s.r} reps` : ''}${v.reps && v.reps.length ? `; reps ${v.reps.map(r => r.v.toFixed(2)).join('/')}` : ''}]`;
+    return ` [${v.best.toFixed(2)} m/s${v.loss >= 5 ? `, loss ${v.loss.toFixed(0)}%` : ''}${vbtEst(v, s) ? `, bar-speed RIR ${nice(rpeToRir(v.est.rpe))}` : ''}${miss ? `, sensor found ${v.reps.length} of ${s.r} reps` : ''}${v.reps && v.reps.length ? `; reps ${v.reps.map(r => r.v.toFixed(2)).join('/')}` : ''}]`;
   };
   const setLine = (e, s) => setText(e, s) + (opt.vbt ? vbtNote(s) : '') + (opt.notes && s.feel && s.feel.note ? ` (“${s.feel.note}”)` : '');
   const sessions = wos.map(wo => {
@@ -5587,7 +5587,9 @@ const WHY = {
     t.step('Velocity loss', `(${best.toFixed(3)} − ${last.toFixed(3)}) ÷ ${best.toFixed(3)} = ${loss.toFixed(1)}%`, '(best − last) ÷ best');
     if (v.est) {
       t.head('Reps left (Slew)');
-      t.step('Method', v.est.method).step('Estimate', `RIR ${nice(v.est.rir)} ± ${nice(v.est.spread)}`, `stored as RPE ${nice(v.est.rpe)}`);
+      t.step('Method', v.est.method);
+      if (vbtEst(v)) t.step('Estimate', `RIR ${nice(v.est.rir)} ± ${nice(v.est.spread)}`, `stored as RPE ${nice(v.est.rpe)}`);
+      else t.note('No reps-left estimate from this set.');
       if (v.est.because) t.note(v.est.because);
       if (v.est.romCut) t.note('Range of motion shrank on the last reps, so the estimate was trimmed.');
     }
@@ -6840,6 +6842,16 @@ function vbtMissed(s) {
   const n = s && s.vbt && s.vbt.reps ? s.vbt.reps.length : 0;
   return s && s.vbt && s.r > n ? s.r - n : 0;
 }
+/* The bar-speed RIR, only when it means something: a real number (a set whose
+   speed never dropped has none — Slew says "not enough evidence", which used
+   to print as NaN), and, given the set, no reps the sensor missed — a trend
+   read off 1 of 9 reps was being shown as RIR 7.9. */
+function vbtEst(v, s) {
+  const e = v && v.est;
+  if (!e || e.rpe == null || !Number.isFinite(e.rpe)) return null;
+  if (s && vbtMissed(s)) return null;
+  return e;
+}
 function repSpark(v) {
   const reps = (v && v.reps) || [];
   if (!reps.length) return '';
@@ -6882,7 +6894,7 @@ function repDetail(v, logged) {
   return `<div class="repdetail">${logged > reps.length ? `<div class="chip gold" style="margin:2px 0 6px;white-space:normal">The ${vid ? 'video' : 'sensor'} found ${reps.length} of your ${logged} reps, so this set's speed and RIR aren't reliable</div>` : ''}${chart}
     ${vid && v.path ? `<div class="bp-hist">${bpPathSvg(v.path, 130)}<div>${drift}${depthSummary(reps) ? `<div class="sub" style="font-size:11px;margin-top:4px">Depth: ${esc(depthSummary(reps))} — a guide</div>` : ''}</div></div>` : ''}
     <table class="reptable"><thead><tr><th>Rep</th><th>m/s</th><th>Peak</th><th>cm</th><th>↑ s</th><th>RIR</th><th></th></tr></thead><tbody>${rows}</tbody></table>
-    <div class="sub" style="font-size:11px;margin-top:4px">Velocity loss ${v.loss.toFixed(0)}%${v.est ? ` · set RIR ${nice(rpeToRir(v.est.rpe))}${v.est.method ? ` (${esc(v.est.method)})` : ''}` : ''} · ${v.rate} Hz · confidence ${(v.conf * 100).toFixed(0)}%${v.place === 'pocket' ? ' · pocket' : ''}${vid ? ' · from video, an estimate' : ''}${uncal ? ' · profile not calibrated yet' : ''}</div>
+    <div class="sub" style="font-size:11px;margin-top:4px">Velocity loss ${v.loss.toFixed(0)}%${vbtEst(v) && !(logged > reps.length) ? ` · set RIR ${nice(rpeToRir(v.est.rpe))}${v.est.method ? ` (${esc(v.est.method)})` : ''}` : ''} · ${v.rate} Hz · confidence ${(v.conf * 100).toFixed(0)}%${v.place === 'pocket' ? ' · pocket' : ''}${vid ? ' · from video, an estimate' : ''}${uncal ? ' · profile not calibrated yet' : ''}</div>
   </div>`;
 }
 /* Raw sensor traces, for tuning rep detection (Settings → Bar-speed debug).
@@ -6931,7 +6943,7 @@ function vbtStrip(e, pre = '') {
       <summary class="row between" aria-label="${esc(setRefText(e.sets, i))}: ${v.best.toFixed(2)} metres per second. Show each rep">
       <span class="sub"><span class="chev" aria-hidden="true">▸</span>${setRefText(e.sets, i)}</span>
       <span class="mono grow">${v.best.toFixed(2)} m/s${v.loss >= 5 ? ` <span class="dimmer">▾${v.loss.toFixed(0)}%</span>` : ''}${e.tempo ? vbtTimes(v) : ''}${repSpark(v)}${vbtMissed(s) ? ` <span style="color:var(--gold)">${v.reps.length}/${s.r}</span>` : ''}</span>
-      ${v.est ? `<span class="mono sub" style="color:var(--purple)">RIR ${nice(rpeToRir(v.est.rpe))}</span>` : ''}${why('vbt', v)}
+      ${vbtEst(v, s) ? `<span class="mono sub" style="color:var(--purple)">RIR ${nice(rpeToRir(v.est.rpe))}</span>` : ''}${why('vbt', v)}
       </summary>${repDetail(v, s.r)}
     </details>`;
   }).join('')}</div>`;
@@ -11643,8 +11655,8 @@ function packVbt(rec, est, liftId, place) {
       flags: r.quality.flags || [],
     })),
     est: est ? {
-      rpe: +est.rpe.toFixed(1), rir: +est.rir.toFixed(1), method: est.method,
-      spread: +est.spread.toFixed(1), because: est.because, romCut: !!est.romCut,
+      rpe: Number.isFinite(est.rpe) ? +est.rpe.toFixed(1) : null, rir: Number.isFinite(est.rir) ? +est.rir.toFixed(1) : null, method: est.method,
+      spread: Number.isFinite(est.spread) ? +est.spread.toFixed(1) : null, because: est.because, romCut: !!est.romCut,
     } : null,
   };
 }
@@ -11739,7 +11751,7 @@ function openVbtRecord(ei, opts = {}) {
 
         /* Follows sensorPipeline exactly, but keeps the failure evidence so the
            set estimate can use an observed failure rather than extrapolating. */
-        const samples = Slew.integrateMotion(motion);
+        const samples = vbtIntegrate(motion);
         const scaled = samples.map(s => ({ ...s, x: s.x * (profile.scale || 1) }));
         const out = Slew.analyse(scaled, {
           targetHz: 60, minRom: profile.minRom,
@@ -11766,6 +11778,66 @@ function openVbtRecord(ei, opts = {}) {
       };
     },
   });
+}
+
+/* Acceleration → displacement for Measure. Replaces Slew.integrateMotion,
+   which zeroes the bar's speed on every sample MotionCapture marks still.
+   "Still" is decided from acceleration alone (under 0.6 m/s² for ~0.4 s), and
+   a bar moving at a steady speed has almost no acceleration either — the slow
+   middle of a grind, a controlled lowering, a long AMRAP with no real stop.
+   Those stretches were zeroed, so the rep's travel vanished and Slew found
+   1 of 9 reps, or read light reps at half their speed.
+   Here a quiet stretch only counts as rest from the point where the speed
+   integrated into it actually reaches ~0 (VBT_VZERO). If it never does, the
+   slowest point of a long quiet stretch (VBT_HOLD_MS), or the end of the
+   recording, is taken as rest instead, so drift can't run forever. Between
+   rests, the leftover speed is removed linearly, as Slew does.
+   Checked against simulated sets (r&d/tools/vbt-sim.cjs): 249 of 272 reps
+   found against 146, no set worse, no extra reps. Slow grinds that start from a
+   dead stop are still missed — MotionCapture's bias tracking eats them before
+   they reach here; needs real raw traces to tune (Settings → Bar-speed debug). */
+const VBT_VZERO = 0.05, VBT_HOLD_MS = 1000;
+function vbtIntegrate(motion) {
+  const n = motion.length;
+  if (n < 2) return [];
+  const dtOf = i => Math.max(2e-3, Math.min(0.08, (motion[i].t - motion[i - 1].t) / 1e3));
+  const v = new Array(n).fill(0), rest = new Array(n).fill(false);
+  const step = i => v[i - 1] + (motion[i].a + motion[i - 1].a) / 2 * dtOf(i);
+  let i = 0;
+  if (motion[0].still) { while (i + 1 < n && motion[i + 1].still) i++; for (let j = 0; j <= i; j++) rest[j] = true; }
+  for (i = i + 1; i < n; i++) {
+    if (!motion[i].still) { v[i] = step(i); continue; }
+    let e = i;
+    while (e + 1 < n && motion[e + 1].still) e++;
+    let k = i, best = i, bestV = Infinity, at = -1;
+    for (; k <= e; k++) {
+      v[k] = step(k);
+      const m = Math.abs(v[k]);
+      if (m < bestV) { bestV = m; best = k; }
+      if (m <= VBT_VZERO) { at = k; break; }
+    }
+    if (at < 0 && (motion[e].t - motion[i].t >= VBT_HOLD_MS || e === n - 1)) at = best;
+    if (at >= 0) for (let j = at; j <= e; j++) { v[j] = 0; rest[j] = true; }
+    else for (let j = k; j <= e; j++) v[j] = step(j);
+    i = e;
+  }
+  let rs = -1;
+  for (let k = 0; k < n; k++) {
+    if (!rest[k] && rs < 0) rs = k;
+    else if (rest[k] && rs >= 0) {
+      const res = v[k - 1], span = k - rs;
+      if (span > 1) for (let j = rs; j < k; j++) v[j] -= res * (j - rs) / span;
+      rs = -1;
+    }
+  }
+  const out = new Array(n);
+  let x = 0;
+  out[0] = { t: motion[0].t, x: 0, conf: 1 };
+  for (let k = 1; k < n; k++) {
+    x += (v[k] + v[k - 1]) / 2 * dtOf(k);
+    out[k] = { t: motion[k].t, x, conf: rest[k] ? 1 : 0.85 };   // confidence falls while unanchored — that is where drift hides
+  }
+  return out;
 }
 
 /* A missed rep or a near-stall means the last finished rep was at the limit —
@@ -11800,7 +11872,7 @@ function vbtReviewDlg(ei, v, est, failure) {
       <div class="stats grid3" style="margin-bottom:10px">
         <div class="stat"><div class="k">Best</div><div class="v">${v.best.toFixed(2)}<small>m/s</small></div></div>
         <div class="stat"><div class="k">Velocity loss</div><div class="v" style="color:${v.loss >= 25 ? 'var(--gold)' : 'var(--text)'}">${v.loss.toFixed(0)}<small>%</small></div></div>
-        <div class="stat"><div class="k">Effort</div><div class="v" style="color:var(--purple)">${v.est ? 'RIR ' + nice(rpeToRir(v.est.rpe)) : '—'}</div></div>
+        <div class="stat"><div class="k">Effort</div><div class="v" style="color:var(--purple)">${vbtEst(v) ? 'RIR ' + nice(rpeToRir(v.est.rpe)) : '—'}</div></div>
       </div>
       ${rows}
       ${v.est ? `<div class="sub" style="margin-top:9px">${esc(v.est.because)}${v.est.spread ? ` <span class="dimmer">±${v.est.spread} RIR</span>` : ''}</div>` : `<div class="sub" style="margin-top:9px">Speed and reps only — this movement has no velocity profile, so effort is not estimated.</div>`}
@@ -11835,7 +11907,7 @@ function attachVbt(ei, v, est) {
   s.vbt = v;
   if (!s.r) s.r = v.reps.length;
   const missed = vbtMissed(s);   // the sensor found fewer reps than the set has: its RIR and failure speed can't be trusted
-  if (s.rpe == null && v.est && !missed) s.rpe = Math.round(v.est.rpe * 2) / 2;
+  if (s.rpe == null && vbtEst(v, s)) s.rpe = Math.round(v.est.rpe * 2) / 2;
 
   /* Calibration by observation: a set taken to failure measures this lifter's
      own 0-RIR velocity, and every later estimate stops leaning on a population
@@ -12262,7 +12334,7 @@ function openBarPath(ei = null) {
       ${v.reps.length ? `<div class="stats grid3" style="margin:10px 0">
         <div class="stat"><div class="k">Best</div><div class="v">${v.best.toFixed(2)}<small>m/s</small></div></div>
         <div class="stat"><div class="k">Velocity loss</div><div class="v">${v.loss.toFixed(0)}<small>%</small></div></div>
-        <div class="stat"><div class="k">Effort</div><div class="v" style="color:var(--purple)">${v.est ? 'RIR ' + nice(rpeToRir(v.est.rpe)) : '—'}</div></div>
+        <div class="stat"><div class="k">Effort</div><div class="v" style="color:var(--purple)">${vbtEst(v) ? 'RIR ' + nice(rpeToRir(v.est.rpe)) : '—'}</div></div>
       </div>
       <table class="reptable"><thead><tr><th>Rep</th><th>m/s</th><th>Peak</th><th>cm</th><th>↔ cm</th><th>↑ s</th>${hasDepth ? '<th>Depth</th>' : ''}</tr></thead><tbody>
         ${v.reps.map((r, i) => `<tr><td style="color:${SERIES_COLORS[i % SERIES_COLORS.length]}">${i + 1}</td><td>${r.v.toFixed(2)}</td><td>${r.peak ? r.peak.toFixed(2) : '—'}</td><td>${(r.rom * 100).toFixed(0)}</td><td>${r.drift != null ? r.drift.toFixed(1) : '—'}</td><td>${r.con ? r.con.toFixed(1) : '—'}</td>${hasDepth ? `<td style="color:${r.depth ? DEPTH_COL[r.depth.call] : ''}" title="${r.depth ? esc(DEPTH_WORD[r.depth.call]) : ''}">${r.depth ? `${r.depth.call === 'deep' ? '✓' : r.depth.call === 'high' ? '✗' : r.depth.call === 'close' ? '≈' : '?'} ${r.depth.cm > 0 ? '+' : ''}${r.depth.cm.toFixed(1)}` : '—'}</td>` : ''}</tr>`).join('')}
@@ -12600,7 +12672,7 @@ function lvRecorded(ei, v) {
   ex.lvp.points.push({ kg: s.w, v: v.best, place: v.place, si, at: v.at });
   s.vbt = v;
   if (!s.r) s.r = v.reps.length;
-  if (!isWarm(s) && s.rpe == null && v.est && !vbtMissed(s)) s.rpe = Math.round(v.est.rpe * 2) / 2;   // a working set measured in profile mode logs its RIR, as attaching does
+  if (!isWarm(s) && s.rpe == null && vbtEst(v, s)) s.rpe = Math.round(v.est.rpe * 2) / 2;   // a working set measured in profile mode logs its RIR, as attaching does
   if (isWarm(s)) s.done = true;                        // a measured warm-up is a done warm-up
   save(); bust(); render();
   const d = lvDay(ex);
@@ -16551,7 +16623,7 @@ function coachDigest() {
   coLifted(14).forEach(wo => wo.exercises.forEach(e => e.sets.forEach(s => {
     if (!s.done || !isWorking(s) || s.rpe == null) return;
     if (s.t != null) gaps.push(rpeToRir(s.rpe) - s.t);
-    if (s.vbt && s.vbt.est) vgaps.push(rpeToRir(s.rpe) - rpeToRir(s.vbt.est.rpe));
+    if (vbtEst(s.vbt, s)) vgaps.push(rpeToRir(s.rpe) - rpeToRir(s.vbt.est.rpe));
   })));
   let streak = 0;
   for (let i = 0; i < 26; i++) { if (coLifted(7, addDaysISO(t, -7 * i)).length) streak++; else break; }
@@ -16723,7 +16795,7 @@ function coDebrief(wo) {
   const stalled = work.filter(x => x.e.leaf && stallFor(exKey(x.e))).map(x => exName(x.e));
   if (stalled.length) { lines.push(`Stalled: ${stalled.join(', ')}.`); next.push([2, `${stalled[0]} has stalled — ask me why before the next session.`]); }
   const vg = [];
-  work.forEach(x => x.sets.forEach(s => { if (s.done && s.vbt && s.vbt.est && s.rpe != null) vg.push(rpeToRir(s.rpe) - rpeToRir(s.vbt.est.rpe)); }));
+  work.forEach(x => x.sets.forEach(s => { if (s.done && vbtEst(s.vbt, s) && s.rpe != null) vg.push(rpeToRir(s.rpe) - rpeToRir(s.vbt.est.rpe)); }));
   if (vg.length >= 2) { const g = coAvg(vg); if (Math.abs(g) >= 1) lines.push(`Bar speed says you had ${g > 0 ? 'fewer' : 'more'} reps left than you logged (about ${nice(Math.abs(g))}).`); }
   const pain = [...wo.exercises.filter(e => e.sets.some(s => s.feel && s.feel.pain)).map(exName), ...(wo.feel && wo.feel.pain ? ['the session'] : [])];
   if (pain.length) { lines.push(`You flagged pain on ${pain.join(', ')}.`); next.push([6, 'You flagged pain — if it\'s still there, stop and get it checked by a professional. I can\'t advise on injuries.']); }

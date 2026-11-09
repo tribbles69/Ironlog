@@ -13,6 +13,13 @@ rather than guessed.
 
 ---
 
+## 0.89.0 — 9 Nov 2026
+- **Fixed: Measure missed most reps on slow or paused sets.** Heavy grinds, dead-stop presses and long AMRAPs often came back as "found 1 of 9 reps". The bar moving at a steady speed was being mistaken for the bar standing still, and that stretch of the rep was thrown away. It now only treats the bar as still once its speed has really dropped to zero.
+- **Fixed: bar speeds on light sets read low.** The same fault cut some reps' speed roughly in half; they now read at their real speed.
+- **Fixed: no more "RIR NaN".** A set whose speed never dropped now shows no bar-speed RIR instead of NaN.
+- **Changed: no bar-speed RIR when the sensor missed reps.** If it found fewer reps than you logged, its RIR isn't shown in the summary, the set strip or the weekly coach notes, because a trend from 1 of 9 reps isn't one.
+- Very slow grinds that start from a dead stop can still be missed. Turning on **Settings → Bar-speed debug** keeps the raw readings so that can be tuned on real sets.
+
 ## 0.88.0 — 8 Nov 2026
 - **Changed: Warm-ups are shorter.** The **▲ Warm-up** ramp is now three sets at most, counting the empty bar as one, e.g. 20 × 10, 50 × 6, 65 × 3 before 80 × 8. It used to give up to seven for a heavy single.
 - **New: Add to workout.** In a workout, the warm-up sheet starts from your planned weight and reps and has an **Add to workout** button. It puts the warm-up sets in ahead of your working sets, marked W so they stay out of volume and PRs. Pressing it again replaces warm-ups you haven't done yet rather than adding more.
