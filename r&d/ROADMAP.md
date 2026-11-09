@@ -963,6 +963,31 @@ now cheap thanks to `heel`. Then one engine change per family: plank
 press, posterior-chain benches, dips. Cross-body moves (flyes, pec deck,
 rear-delt fly, hip ab/adduction) wait for the front-view toggle.
 
+### [ ] E15. Logn's cool-down and calm rests in Ironlog (Aaron asked 2026-11-09)
+Bring the parts of **Logn** (`tribbles69/logn`, Aaron's standalone calm/focus
+PWA) that earn their place into Ironlog. Logn's README already names the plan:
+Downshift becomes the rest-timer and cool-down screen, Lock-in the pre-set
+screen. **Check with Aaron first which modes have worked for him in Logn** —
+its home screen's Cool-down comparison (pulse drop and control-pause change
+per setup) is the evidence. Then write a spec (`r&d/specs/calm-spec.md`).
+- **Cool-down after a session:** an offer on the session-complete sheet —
+  box breathing (4·4·4·4, or the 3 s ease-in) over the Drift "Silk" visual,
+  or Downshift's breath pacer (4/6, 4/8, double sigh, box). Vibration and
+  sound carry the pattern so eyes can stay shut. Watch HR from Ironlog's
+  existing Web Bluetooth code (no second implementation), logged as a short
+  trace with its low point against the session.
+- **Calm rest (option):** a breath pacer on the rest timer, off by default,
+  that never hides the countdown or delays the rest-end alert.
+- **Lock-in before a heavy single (option):** fixation-then-tracking drill
+  from the active set.
+- **HRV check on Health:** Logn's camera (fingertip + torch, RMSSD) and RR
+  interval check, compared against the last 7; could feed D7 recovery and
+  the Coach's readiness later. Port Logn's fix for a saturated torch image
+  (logn #4).
+- Logn's design rules come with it: no flicker or strobing, dark and dim,
+  screen kept awake (`Awake`). Offer an import of Logn's JSON export so its
+  history isn't lost. Logn stays a standalone app either way.
+
 ---
 
 ## Parked
