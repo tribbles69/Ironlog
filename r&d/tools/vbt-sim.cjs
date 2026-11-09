@@ -1,14 +1,17 @@
 #!/usr/bin/env node
-/* Simulated sets through Measure's pipeline: Slew.MotionCapture → integration
-   → Slew.analyse. Compares Slew.integrateMotion with Ironlog's vbtIntegrate
-   (read out of index.html, so this tests what ships) and fails if any set
-   loses reps or gains phantom ones.
+/* Measure's rep detection, old against new. Compares Slew.integrateMotion with
+   Ironlog's vbtIntegrate + vbtDropBlips (read out of index.html, so this tests
+   what ships) and fails if any set loses reps or gains phantom ones.
 
-   Synthetic only: smooth velocity profiles, gaussian sensor noise, an optional
-   constant offset and slow wander. It shows the mechanism, not real-world
-   accuracy — tune on raw traces (Settings → Bar-speed debug → export) for that.
+   Synthetic sets: smooth velocity profiles through the real MotionCapture,
+   gaussian noise, constant offset, slow wander. Shows the mechanism only.
+
+   Real sets: pass an export from Settings → Bar-speed debug. Each trace's
+   logged reps are the answer (traces not attached to a set are skipped
+   unless --truth gives every count in order).
 
    Usage:  node "r&d/tools/vbt-sim.cjs" [-v]
+           node "r&d/tools/vbt-sim.cjs" --traces ironlog-vbt-raw.json [--truth 8,16,9] [-v]
 */
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const ROOT = path.resolve(__dirname, '..', '..');
@@ -21,10 +24,11 @@ ctx.globalThis = ctx;
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(ROOT, 'slew-core.js'), 'utf8'), ctx);
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
-const src = html.match(/const VBT_VZERO[\s\S]*?\nfunction vbtIntegrate\(motion\) \{[\s\S]*?\n\}\n/);
-if (!src) { console.error('vbtIntegrate not found in index.html'); process.exit(1); }
-vm.runInContext(src[0] + 'globalThis.vbtIntegrate = vbtIntegrate;', ctx);
-const { Slew, vbtIntegrate } = ctx;
+const src = html.match(/const VBT_HP_V[\s\S]*?\nfunction vbtSummary\(reps\) \{[\s\S]*?\n\}\n/);
+if (!src) { console.error('vbtIntegrate … vbtSummary not found in index.html'); process.exit(1); }
+vm.runInContext(src[0] + 'globalThis.vbtIntegrate = vbtIntegrate; globalThis.vbtDropBlips = vbtDropBlips;', ctx);
+const { Slew, vbtIntegrate, vbtDropBlips } = ctx;
+const arg = k => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : null; };
 
 let seed = 1;
 const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
@@ -61,9 +65,32 @@ function record(spec, { hz = 100, noise = 0.08, offset = 0, wander = 0 }) {
   }
   return cap.samples.slice();
 }
-function count(motion, spec, integrate) {
-  const prof = Slew.defaultProfile(spec.lift || 'Overhead press');
-  return Slew.analyse(integrate(motion), { targetHz: 60, minRom: prof.minRom }).reps;
+function count(motion, minRom, integrate, blips) {
+  const reps = Slew.analyse(integrate(motion), { targetHz: 60, minRom }).reps;
+  return blips ? vbtDropBlips(reps) : reps;
+}
+const oldWay = m => count(m.motion, m.minRom, x => Slew.integrateMotion(x), false);
+const newWay = m => count(m.motion, m.minRom, vbtIntegrate, true);
+
+/* Real traces */
+if (arg('--traces')) {
+  const d = JSON.parse(fs.readFileSync(arg('--traces'), 'utf8'));
+  const truth = arg('--truth') ? arg('--truth').split(',').map(Number) : null;
+  let was = 0, now = 0, total = 0, bad = 0;
+  d.traces.forEach((t, i) => {
+    const want = truth ? truth[i] : t.logged && t.logged.r;
+    if (!(want > 0)) { console.log(`skip   trace ${i + 1} (${t.lift}, not attached to a set)`); return; }
+    const m = { motion: t.t.map((x, j) => ({ t: x, a: t.a[j], still: t.still[j] === '1' })), minRom: t.profile.minRom };
+    const a = oldWay(m).length, reps = newWay(m), b = reps.length;
+    was += Math.min(a, want); now += Math.min(b, want); total += want;
+    const worse = b < a, extra = b > want;
+    if (worse || extra) bad++;
+    const label = t.logged ? `${t.logged.exercise} ${t.logged.set} ${t.logged.w}×${t.logged.r}` : `${t.lift} trace ${i + 1}`;
+    if (verbose || worse || extra) console.log(`${worse ? 'WORSE ' : extra ? 'EXTRA ' : '      '}${label.padEnd(36)} Slew ${a}/${want}  Ironlog ${b}/${want}  ${reps.map(r => r.concentric.meanVelocity.toFixed(2)).join('/')}`);
+  });
+  console.log(`Reps found: Slew.integrateMotion ${was}/${total}, vbtIntegrate ${now}/${total}`);
+  if (bad) console.error(`${bad} set(s) worse or over-counted`);
+  process.exit(bad ? 1 : 0);
 }
 
 const SETS = [
@@ -75,14 +102,16 @@ const SETS = [
   ['Incline warm-up 10', { reps: 10, rom: 0.4, con: 0.5, ecc: 0.6, top: 0.2, bottom: 0.05, lift: 'Bench press' }],
   ['Smith squat slow 3', { reps: 3, rom: 0.5, con: 1.6, ecc: 1.4, top: 1.5, bottom: 0.1, lift: 'Squat (Smith)' }],
   ['Long rest, then 3', { reps: 3, rom: 0.45, con: 1.0, ecc: 1.0, top: 0.6, bottom: 0.2, lead: 12, tail: 8 }],
+  ['Single, long setup', { reps: 1, rom: 0.4, con: 1.5, ecc: 1, top: 1, bottom: 0.2, lead: 8, tail: 6, lift: 'Bench press' }],
 ];
-const CONDS = [['clean', { noise: 0.08 }], ['noisy', { noise: 0.2 }], ['offset', { noise: 0.1, offset: 0.05 }], ['wander', { noise: 0.1, offset: 0.03, wander: 0.08 }]];
+const CONDS = [['clean', { noise: 0.08 }], ['noisy', { noise: 0.2 }], ['offset', { noise: 0.1, offset: 0.05 }],
+  ['wander', { noise: 0.1, offset: 0.03, wander: 0.08 }], ['bias', { noise: 0.15, offset: -0.2 }]];
 
 let was = 0, now = 0, total = 0, bad = 0;
 for (const [cn, c] of CONDS) for (const [name, spec] of SETS) {
-  const m = record(spec, c);
-  const a = count(m, spec, x => Slew.integrateMotion(x)).length;
-  const reps = count(m, spec, vbtIntegrate), b = reps.length;
+  const m = { motion: record(spec, c), minRom: Slew.defaultProfile(spec.lift || 'Overhead press').minRom };
+  const a = oldWay(m).length;
+  const reps = newWay(m), b = reps.length;
   was += Math.min(a, spec.reps); now += Math.min(b, spec.reps); total += spec.reps;
   const worse = b < a, extra = b > spec.reps;
   if (worse || extra) bad++;

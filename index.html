@@ -11757,13 +11757,14 @@ function openVbtRecord(ei, opts = {}) {
           targetHz: 60, minRom: profile.minRom,
           ...(loadKg > 0 ? { loadKg } : {}),
         });
-        const reps = liftId ? Slew.withRpe(out.reps, profile) : out.reps;
-        const failure = trustFailure(out.failure, out.reps, liftId, profile);
+        const found = vbtDropBlips(out.reps);
+        const reps = liftId ? Slew.withRpe(found, profile) : found;
+        const failure = trustFailure(out.failure, found, liftId, profile);
         const est = liftId ? Slew.estimateSet(reps, profile, failure) : null;
         const rate = motion.length > 1
           ? (motion.length - 1) / ((motion[motion.length - 1].t - motion[0].t) / 1000 || 1) : 0;
         const rec = {
-          timestamp: Date.now(), reps, summary: out.summary,
+          timestamp: Date.now(), reps, summary: vbtSummary(reps),
           provenance: { mode: 'sensor', sampleRate: 60, sourceRate: rate },
         };
         vbtCapture = null;
@@ -11780,64 +11781,71 @@ function openVbtRecord(ei, opts = {}) {
   });
 }
 
-/* Acceleration → displacement for Measure. Replaces Slew.integrateMotion,
-   which zeroes the bar's speed on every sample MotionCapture marks still.
-   "Still" is decided from acceleration alone (under 0.6 m/s² for ~0.4 s), and
-   a bar moving at a steady speed has almost no acceleration either — the slow
-   middle of a grind, a controlled lowering, a long AMRAP with no real stop.
-   Those stretches were zeroed, so the rep's travel vanished and Slew found
-   1 of 9 reps, or read light reps at half their speed.
-   Here a quiet stretch only counts as rest from the point where the speed
-   integrated into it actually reaches ~0 (VBT_VZERO). If it never does, the
-   slowest point of a long quiet stretch (VBT_HOLD_MS), or the end of the
-   recording, is taken as rest instead, so drift can't run forever. Between
-   rests, the leftover speed is removed linearly, as Slew does.
-   Checked against simulated sets (r&d/tools/vbt-sim.cjs): 249 of 272 reps
-   found against 146, no set worse, no extra reps. Slow grinds that start from a
-   dead stop are still missed — MotionCapture's bias tracking eats them before
-   they reach here; needs real raw traces to tune (Settings → Bar-speed debug). */
-const VBT_VZERO = 0.05, VBT_HOLD_MS = 1000;
+/* Acceleration → displacement for Measure. Replaces Slew.integrateMotion.
+   Slew only removes drift where MotionCapture marks the bar still, and then
+   zeroes the speed there. On real sets that fails two ways (9 raw traces,
+   9 Nov 2026, r&d/notes/vbt-validation.md):
+   - the phone's vertical acceleration averages −0.1 to −0.24 m/s² over a set
+     that starts and ends at rest, and an OHP set is "still" only 2–8% of the
+     time, so drift ran for 20–50 s uncorrected: 0 of 16 reps found;
+   - "still" is judged from acceleration alone, and steady motion has none,
+     so the middle of a slow rep could be zeroed away.
+   Reps go up and down; drift doesn't. So: integrate, strip the slow part of
+   the speed (high-pass VBT_HP_V Hz), zero it where the bar really rests,
+   integrate again and strip the slow part of the position (VBT_HP_X Hz).
+   Zero-phase Butterworth, as Slew filters. Real traces: 77 of 81 reps
+   (Slew 36). Synthetic (r&d/tools/vbt-sim.cjs): no set worse, no extra reps.
+   Very slow reps read short on range — a guide, as all of this is. */
+const VBT_HP_V = 0.15, VBT_HP_X = 0.05, VBT_FS = 60;
+function vbtLowPass(x, fc, fs) {
+  if (x.length < 4) return [...x];
+  const wc = Math.tan(Math.PI * fc / fs), k1 = Math.SQRT2 * wc, k2 = wc * wc;
+  const a0 = k2 / (1 + k1 + k2), a1 = 2 * a0, a2 = a0, b1 = 2 * (k2 - 1) / (1 + k1 + k2), b2 = (1 - k1 + k2) / (1 + k1 + k2);
+  const pass = inp => {
+    const o = new Array(inp.length);
+    let x1 = inp[0], x2 = x1, y1 = x1, y2 = x1;
+    for (let i = 0; i < inp.length; i++) {
+      const yi = a0 * inp[i] + a1 * x1 + a2 * x2 - b1 * y1 - b2 * y2;
+      o[i] = yi; x2 = x1; x1 = inp[i]; y2 = y1; y1 = yi;
+    }
+    return o;
+  };
+  return pass(pass(x).reverse()).reverse();
+}
 function vbtIntegrate(motion) {
   const n = motion.length;
   if (n < 2) return [];
-  const dtOf = i => Math.max(2e-3, Math.min(0.08, (motion[i].t - motion[i - 1].t) / 1e3));
-  const v = new Array(n).fill(0), rest = new Array(n).fill(false);
-  const step = i => v[i - 1] + (motion[i].a + motion[i - 1].a) / 2 * dtOf(i);
-  let i = 0;
-  if (motion[0].still) { while (i + 1 < n && motion[i + 1].still) i++; for (let j = 0; j <= i; j++) rest[j] = true; }
-  for (i = i + 1; i < n; i++) {
-    if (!motion[i].still) { v[i] = step(i); continue; }
-    let e = i;
-    while (e + 1 < n && motion[e + 1].still) e++;
-    let k = i, best = i, bestV = Infinity, at = -1;
-    for (; k <= e; k++) {
-      v[k] = step(k);
-      const m = Math.abs(v[k]);
-      if (m < bestV) { bestV = m; best = k; }
-      if (m <= VBT_VZERO) { at = k; break; }
-    }
-    if (at < 0 && (motion[e].t - motion[i].t >= VBT_HOLD_MS || e === n - 1)) at = best;
-    if (at >= 0) for (let j = at; j <= e; j++) { v[j] = 0; rest[j] = true; }
-    else for (let j = k; j <= e; j++) v[j] = step(j);
-    i = e;
+  const t0 = motion[0].t, span = motion[n - 1].t - t0, dtMs = 1000 / VBT_FS, dt = 1 / VBT_FS;
+  const a = [], still = [], ts = [];
+  for (let t = 0, j = 0; t <= span; t += dtMs) {   // uniform rate first — the filters need it
+    while (j < n - 2 && motion[j + 1].t - t0 < t) j++;
+    const p = motion[j], q = motion[j + 1] || p, gap = q.t - p.t, f = gap > 0 ? (t - (p.t - t0)) / gap : 0;
+    a.push(p.a + (q.a - p.a) * f); still.push(p.still && q.still); ts.push(t0 + t);
   }
-  let rs = -1;
-  for (let k = 0; k < n; k++) {
-    if (!rest[k] && rs < 0) rs = k;
-    else if (rest[k] && rs >= 0) {
-      const res = v[k - 1], span = k - rs;
-      if (span > 1) for (let j = rs; j < k; j++) v[j] -= res * (j - rs) / span;
-      rs = -1;
-    }
-  }
-  const out = new Array(n);
-  let x = 0;
-  out[0] = { t: motion[0].t, x: 0, conf: 1 };
-  for (let k = 1; k < n; k++) {
-    x += (v[k] + v[k - 1]) / 2 * dtOf(k);
-    out[k] = { t: motion[k].t, x, conf: rest[k] ? 1 : 0.85 };   // confidence falls while unanchored — that is where drift hides
-  }
-  return out;
+  const m = a.length;
+  let v = new Array(m).fill(0);
+  for (let i = 1; i < m; i++) v[i] = v[i - 1] + (a[i] + a[i - 1]) / 2 * dt;
+  const vSlow = vbtLowPass(v, VBT_HP_V, VBT_FS);
+  v = v.map((x, i) => still[i] ? 0 : x - vSlow[i]);
+  let x = new Array(m).fill(0);
+  for (let i = 1; i < m; i++) x[i] = x[i - 1] + (v[i] + v[i - 1]) / 2 * dt;
+  const xSlow = vbtLowPass(x, VBT_HP_X, VBT_FS);
+  return x.map((y, i) => ({ t: ts[i], x: y - xSlow[i], conf: still[i] ? 1 : 0.85 }));   // confidence falls while unanchored — that is where drift hides
+}
+/* Lifting the bar off the hooks reads as a short rep (11–16 cm against ~30 cm
+   on the 9 Nov warm-ups). In a set of 4+, drop reps under 0.6 of the set's
+   median travel, and recount the summary the way Slew does. Genuine reps on
+   those traces never fell below 0.71 of the median; lift-offs were 0.44–0.52. */
+function vbtDropBlips(reps) {
+  if (reps.length < 4) return reps;
+  const s = reps.map(r => r.rom).sort((x, y) => x - y), med = s[Math.floor(s.length / 2)];
+  return reps.filter(r => r.rom >= 0.6 * med).map((r, i) => ({ ...r, index: i + 1 }));
+}
+function vbtSummary(reps) {
+  if (!reps.length) return { repCount: 0, bestMeanVelocity: 0, velocityLoss: 0, confidence: 0 };
+  const best = Math.max(...reps.map(r => r.concentric.meanVelocity)), last = reps[reps.length - 1].concentric.meanVelocity;
+  return { repCount: reps.length, bestMeanVelocity: best, velocityLoss: best > 0 ? (best - last) / best * 100 : 0,
+    confidence: reps.reduce((x, r) => x + r.quality.confidence, 0) / reps.length };
 }
 
 /* A missed rep or a near-stall means the last finished rep was at the limit —
