@@ -36,7 +36,7 @@ extras.
 Paths here are from the repo root. The folder is `r&d` — **quote it in the
 shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
 
-1. Take the **first unchecked item, top to bottom** — section 0, then A, B,
+1. Take the **first unchecked item, top to bottom** — section 00, then 0, A, B,
    C, D, E — unless Aaron says otherwise.
    Within a section, the **order on the page** is the order of work; item
    numbers are labels and don't always run in sequence (D12 was moved up
@@ -48,9 +48,10 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    E12 next (E11 shipped 0.64.0, E12's first build 0.65.0); D8 shipped 0.66.0.
    D9 finished in 0.73.0.
 
-   **Next up (2026-11-08, Aaron):** section **0** below comes before
-   everything else — four extras from the app audit, in page order. After
-   those, carry on from **E3**.
+   **Next up (2026-11-10, Aaron):** section **00** (bug fixes, then VBT)
+   comes before everything else, in page order. Then what's left of section
+   **0** (01–03 shipped; 04c moved into 00). After those, carry on from
+   **E3**.
 2. **Check the code before trusting a status here.** Some items were marked from
    memory of planning chats, not from the code. If something is already built,
    tick it, note the version, and move on.
@@ -138,6 +139,64 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
 
 ---
 
+## 00. Top priority — bug fixes, then VBT (added 2026-11-10, Aaron)
+
+Aaron asked for these at the top, in this order: bugs first, then VBT. Planned
+as a **Fable 5.2 sweep** during the 9–16 Nov launch week, so the allowance is
+limited: do the audit (00-B1) first and write it down, so Opus can carry on
+from the list if the Fable allowance runs out. Same rules as everywhere — one
+fix per commit, version bump, changelog entry.
+
+### Bug fixes
+
+### [ ] 00-B1. Whole-app bug audit
+Read all of `index.html`, `slew-core.js`, `slew-video.js`, `sw.js` and the
+`r&d/tools` scripts. Write every bug found to
+`r&d/notes/bug-sweep-2026-11.md`, ranked by severity:
+1. **Data loss or corruption** — IndexedDB writes, migrations, JSON/CSV
+   export → import round trip (B7), Drive sync merge (B6), tombstones.
+2. **White screens and crashes** — run the `<script>` syntax check (rule 5
+   above), unguarded nulls on a fresh install with no data.
+3. **Wrong numbers** — PRs, e1RM, volume, weekly sets (01), RIR ↔ RPE,
+   unit conversion (kg stored, never lbs).
+4. **Broken or confusing UI** — both skins, TalkBack labels (C4).
+Note for each: where it is, how to reproduce, and a suggested fix. Don't fix
+anything in this step — the list is the deliverable.
+
+### [ ] 00-B2. Fix the audit's findings, top of the list down
+One fix per version. Severity 1 and 2 before anything else. Anything that
+would change existing PR numbers or stored data gets flagged to Aaron first
+(as D10 was). Known small one to include: the rep-range "add weight" step
+assumes 2.5 kg, which a fixed-rating gripper can't do (E13).
+
+### VBT
+
+### [ ] 00-V1. Tilt correction for Measure
+0.90.0 started recording the phone's full 3-axis readings so the phone
+tilting as the bar rolls could be corrected later. Use Aaron's saved
+bar-speed debug traces to correct for tilt, then re-check rep counts and
+speeds against the 9 Nov push day (80 of 81 reps found in 0.90.0 — must not
+get worse). Record before/after in `r&d/notes/vbt-validation.md`.
+
+### [ ] 00-V2. Bar-speed RIR accuracy
+Changelog 0.89.0 says bar-speed RIR is still a rough guide. Compare the
+estimated RIR against the RIR Aaron logged on the same sets (debug traces and
+history), find where it's off (lift, set length, pocket vs bar mode) and tune
+it. Keep showing it as an estimate; still hide it when reps were missed.
+
+### [ ] 00-V3. Record video in the app (04c, moved up from section 0)
+Finish part c of item 04: record the side-on clip inside Ironlog rather than
+picking it from the gallery, then run it through the existing bar path (04a)
+and squat depth (04b) flow. On the device only, no uploads. Check on phone —
+add an A4 checklist item.
+
+### [ ] 00-V4. Validation (Aaron + code)
+Whatever `r&d/notes/vbt-validation.md` still needs on the code side to compare
+Measure and video against a known device. The sets themselves are Aaron's to
+film and log.
+
+---
+
 ## 0. Next up — extras from the app audit (added 2026-11-08)
 
 From the Hub's `roadmaps/ironlog-from-audit.md`: the audit items Ironlog
@@ -165,7 +224,7 @@ timelapse of the bulk and cut that can be played and saved. Same pose
 reminder as the photos so clips line up. Check what the browser can do for
 joining clips on the phone (MediaRecorder / canvas) before writing the spec.
 
-### [ ] 04. Video bar-path tracing and depth judging — **04a shipped 0.86.0** (spec `r&d/specs/bar-path-spec.md`, agreed 2026-11-08: Slew's plate tracker bundled as `slew-video.js`, no MediaPipe; ▶ Video on a lift and Tools → Bar path; rim measured on still frames for the scale; **Aaron: A4 item 19, then the video section of `r&d/notes/vbt-validation.md`**). **04b shipped 0.87.0** (squat depth: MediaPipe lite pose hosted in `pose/`, 16.6 MB optional download, deep / high / too close to call; plus three bar-path fixes, spec §9 and §12; **Aaron: A4 item 20**). Still to do: **04c** record in the app
+### [ ] 04. Video bar-path tracing and depth judging — **04a shipped 0.86.0** (spec `r&d/specs/bar-path-spec.md`, agreed 2026-11-08: Slew's plate tracker bundled as `slew-video.js`, no MediaPipe; ▶ Video on a lift and Tools → Bar path; rim measured on still frames for the scale; **Aaron: A4 item 19, then the video section of `r&d/notes/vbt-validation.md`**). **04b shipped 0.87.0** (squat depth: MediaPipe lite pose hosted in `pose/`, 16.6 MB optional download, deep / high / too close to call; plus three bar-path fixes, spec §9 and §12; **Aaron: A4 item 20**). Still to do: **04c** record in the app — **moved to 00-V3** (2026-11-10)
 (VBTgo, Metric, PDC Performance.) **Write a spec first.** Record or pick a
 side-on video of a set; track the bar end through it to draw the bar path,
 and give velocity per rep from the video as a second source next to D1's
@@ -987,6 +1046,30 @@ per setup) is the evidence. Then write a spec (`r&d/specs/calm-spec.md`).
 - Logn's design rules come with it: no flicker or strobing, dark and dim,
   screen kept awake (`Awake`). Offer an import of Logn's JSON export so its
   history isn't lost. Logn stays a standalone app either way.
+
+### [ ] E16. Art and audio pass — Higgsfield and ElevenLabs (Aaron asked 2026-11-10)
+Near the end, once the features above are in: go through the app and replace
+placeholder or weak art and audio with generated assets. Aaron has connected
+**Higgsfield** (images, video) and **ElevenLabs** (voice, sound) and is happy
+for this pass to spend those credits.
+- **Make a list first** in `r&d/notes/assets-pass.md`: every placeholder or
+  weak asset (art, icons, sounds, spoken cues), what it should become, and
+  which tool makes it. Aaron picks from the list before anything is generated.
+- **Art (Higgsfield):** the muscle-map skins first — the shipped
+  `skins/template.png` is a placeholder; Aaron's idea is a goblin that turns
+  into an orc muscle by muscle. One cell per muscle per tier, matching the
+  sheet layout in `r&d/skins/`, so it drops in as a normal skin. Then PR share
+  card backgrounds (E2), the welcome screen (C1) and the in-app Home (D14).
+- **Audio (ElevenLabs):** recorded voice cues for the interval timer (02),
+  HR-zone cardio (D15) and mobility holds (E5), in place of the phone's speech
+  voice; cleaner beeps for `Cue` if they're worth it.
+- **Keep the app light and offline:** compress everything, cache it in
+  `sw.js`, and keep the phone's speech voice as the fallback so any cue whose
+  wording changes still works without new recordings. Large packs can be an
+  optional download, like squat depth (04b).
+- Generated art and voices must be safe to ship in a free app (check each
+  tool's licence terms) and must not imitate a real person's voice or an
+  existing brand or character.
 
 ---
 
