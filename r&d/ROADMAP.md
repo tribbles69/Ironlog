@@ -1047,6 +1047,30 @@ per setup) is the evidence. Then write a spec (`r&d/specs/calm-spec.md`).
   screen kept awake (`Awake`). Offer an import of Logn's JSON export so its
   history isn't lost. Logn stays a standalone app either way.
 
+### [ ] E16. Art and audio pass — Higgsfield and ElevenLabs (Aaron asked 2026-11-10)
+Near the end, once the features above are in: go through the app and replace
+placeholder or weak art and audio with generated assets. Aaron has connected
+**Higgsfield** (images, video) and **ElevenLabs** (voice, sound) and is happy
+for this pass to spend those credits.
+- **Make a list first** in `r&d/notes/assets-pass.md`: every placeholder or
+  weak asset (art, icons, sounds, spoken cues), what it should become, and
+  which tool makes it. Aaron picks from the list before anything is generated.
+- **Art (Higgsfield):** the muscle-map skins first — the shipped
+  `skins/template.png` is a placeholder; Aaron's idea is a goblin that turns
+  into an orc muscle by muscle. One cell per muscle per tier, matching the
+  sheet layout in `r&d/skins/`, so it drops in as a normal skin. Then PR share
+  card backgrounds (E2), the welcome screen (C1) and the in-app Home (D14).
+- **Audio (ElevenLabs):** recorded voice cues for the interval timer (02),
+  HR-zone cardio (D15) and mobility holds (E5), in place of the phone's speech
+  voice; cleaner beeps for `Cue` if they're worth it.
+- **Keep the app light and offline:** compress everything, cache it in
+  `sw.js`, and keep the phone's speech voice as the fallback so any cue whose
+  wording changes still works without new recordings. Large packs can be an
+  optional download, like squat depth (04b).
+- Generated art and voices must be safe to ship in a free app (check each
+  tool's licence terms) and must not imitate a real person's voice or an
+  existing brand or character.
+
 ---
 
 ## Parked
