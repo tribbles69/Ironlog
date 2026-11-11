@@ -2350,7 +2350,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.96.0';
+const APP_VERSION = '0.96.1';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -11007,9 +11007,20 @@ function backfillWindow(days) {
   };
 }
 
+/* A session whose loaded lifts carry no weight at all — the shipped program
+   since 0.51.0 gives RIR, not kg. "Done at the prescribed loads" would log
+   every one of those sets at 0 kg, and 0 kg sets count as bodyweight rep
+   records, hard sets in Weekly sets and sessions in each lift's stats (bug
+   sweep 3.4). So backfill leaves them out and says why. Bodyweight lifts,
+   holds and carries don't decide it; a session of nothing else isn't RIR-only. */
+function rirOnlySession(w) {
+  const sets = (w.exercises || []).filter(e => e.leaf && e.leaf.equipment !== 'bodyweight' && kindOf(e) === 'reps')
+    .flatMap(e => e.sets || []).filter(s => !(w.status === 'completed' && s.done === false));
+  return sets.length > 0 && sets.every(s => !(s.w > 0));
+}
 function backfillPlanned(days) {
   const { from, to } = backfillWindow(days);
-  const hits = S.workouts.filter(w => w.status === 'planned' && w.date >= from && w.date <= to);
+  const hits = S.workouts.filter(w => w.status === 'planned' && w.date >= from && w.date <= to && !rirOnlySession(w));
   if (!hits.length) return 0;
 
   hits.forEach(w => {
@@ -11030,9 +11041,18 @@ function backfillPlanned(days) {
   return hits.length;
 }
 
-function countPlanned(days) {
+function countPlanned(days) { return plannedInWindow(days).ok; }
+/* What backfill would do with a window: `ok` it marks done, `rir` it leaves alone. */
+function plannedInWindow(days) {
   const { from, to } = backfillWindow(days);
-  return S.workouts.filter(w => w.status === 'planned' && w.date >= from && w.date <= to).length;
+  const all = S.workouts.filter(w => w.status === 'planned' && w.date >= from && w.date <= to);
+  const rir = all.filter(rirOnlySession).length;
+  return { ok: all.length - rir, rir };
+}
+function backfillCountText(days) {
+  const c = plannedInWindow(days);
+  return `${c.ok} planned session${c.ok === 1 ? '' : 's'} up to yesterday`
+    + (c.rir ? ` · ${c.rir} more left out: ${c.rir === 1 ? 'its plan gives' : 'their plan gives'} RIR, not weights, so ${c.rir === 1 ? 'it' : 'they'} would log every set at 0 kg. Log ${c.rir === 1 ? 'it' : 'them'} from the session, or mark ${c.rir === 1 ? 'it' : 'them'} Missed.` : '');
 }
 
 /* ---------------- CSV import ----------------
@@ -13582,7 +13602,7 @@ function openSettings() {
         </select>
         <button class="btn sm" id="stBackfill">Mark done</button>
       </div>
-      <div class="sub" id="stBfCount" style="margin-top:6px">${countPlanned(14)} planned session${countPlanned(14) === 1 ? '' : 's'} up to yesterday</div>
+      <div class="sub" id="stBfCount" style="margin-top:6px">${esc(backfillCountText(14))}</div>
       <div class="hr" id="stSecVideo"></div>
       ${poseSettingsHtml()}
       <div class="hr"></div>
@@ -13704,15 +13724,12 @@ function openSettings() {
       bg.querySelectorAll('[data-brm],[data-prm]').forEach(b => b.onclick = () => b.closest('.row').remove());
 
       const bfDays = $('#stBfDays', bg), bfCount = $('#stBfCount', bg);
-      const refreshCount = () => {
-        const n = countPlanned(+bfDays.value);
-        bfCount.textContent = `${n} planned session${n === 1 ? '' : 's'} up to yesterday`;
-      };
+      const refreshCount = () => { bfCount.textContent = backfillCountText(+bfDays.value); };
       bfDays.onchange = refreshCount;
       $('#stBackfill', bg).onclick = () => {
         const d = +bfDays.value;
-        const n = countPlanned(d);
-        if (!n) return toast('No planned sessions in that window');
+        const c = plannedInWindow(d), n = c.ok;
+        if (!n) return toast(c.rir ? `Nothing to mark done: ${c.rir === 1 ? 'the session in that window comes' : `all ${c.rir} sessions in that window come`} from a plan with no weights (RIR only), and would log every set at 0 kg` : 'No planned sessions in that window');
         confirmDlg(`Mark ${n} planned session${n === 1 ? '' : 's'} from the ${d} days up to yesterday as done, at the prescribed loads?`, () => {
           const c = backfillPlanned(d);
           closeAllModals(); render();
@@ -20615,6 +20632,7 @@ function fixupState(st) {
    telling the lifter. */
 const DATA_MIGRATIONS = [
   { id: 'legacy-movements-0.96.0', run: st => repointLegacyMovements(st) },
+  { id: 'rir-backfill-skipped-0.96.1', run: st => skipRirBackfills(st) },
 ];
 async function runDataMigrations(st, recheck = []) {
   if (!st.migrations || typeof st.migrations !== 'object' || Array.isArray(st.migrations)) st.migrations = {};
@@ -20647,6 +20665,32 @@ async function runDataMigrations(st, recheck = []) {
    copies, and the leaf keys used as keys or values elsewhere (rest times,
    goals, notes, priority lifts, the coach) — then the custom record, now
    unused, goes. The catalogue keeps the old id as an alias. */
+/* 3.4: sessions already backfilled from a RIR-only plan logged every loaded
+   set at 0 kg, and those counted as real sets. Each becomes what it was: a
+   planned session that didn't happen. It goes into S.misses as skipped, with
+   the planned copy kept, so Undo on the calendar puts it back on the plan.
+   A backfilled session that has since been edited is left alone — someone
+   chose those numbers. */
+function skipRirBackfills(st) {
+  const r = { changed: 0, skipped: [] };
+  const now = Date.now();
+  const hit = w => w && w.status === 'completed' && w.source === 'backfill' && !w.edited && (w.loads === 'rir' || w.prog) && rirOnlySession(w);
+  const gone = new Set();
+  (st.workouts || []).filter(hit).forEach(w => {
+    const wo = structuredClone(w);
+    wo.status = 'planned';
+    ['source', 'backfilled', 'end', 'start', 'summary'].forEach(k => delete wo[k]);
+    (wo.exercises || []).forEach(e => (e.sets || []).forEach(s => { s.done = false; }));
+    st.misses = Array.isArray(st.misses) ? st.misses : [];
+    st.misses.push({ id: 'bf-' + w.id, wid: w.id, date: w.date, name: w.name, prog: w.prog || null, reason: 'other',
+      note: 'Backfilled at 0 kg from a plan with no weights — changed to skipped', movedTo: null, at: now, mt: now, wo });
+    gone.add(w.id); r.skipped.push(w.id);
+  });
+  if (gone.size) st.workouts = st.workouts.filter(w => !gone.has(w.id));
+  r.changed = gone.size;
+  if (r.changed) r.note = `${r.changed} backfilled session${r.changed === 1 ? '' : 's'} from a plan with no weights changed to skipped — ${r.changed === 1 ? 'it' : 'they'} had logged every set at 0 kg`;
+  return r;
+}
 function legacyMovementMap() {
   const out = {};
   (EXERCISE_CATALOGUE.movements || []).forEach(m => (m.legacyIds || []).forEach(id => { out[id] = m; }));

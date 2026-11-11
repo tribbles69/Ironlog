@@ -13,6 +13,10 @@ rather than guessed.
 
 ---
 
+## 0.96.1 — 11 Nov 2026
+- **Changed: backfill leaves out sessions from a plan with no weights.** The program gives RIR, not kg, so "mark done at the prescribed loads" logged every set at 0 kg — and those counted as real sets, bodyweight records and sessions in each lift's stats. Settings → Backfill now says how many it's leaving out and why. Log them from the session, or mark them Missed.
+- **Fixed: sessions already backfilled that way are now skipped**, not done. They show as missed on the calendar, and Undo there puts one back on your plan. Any you've edited since are left as they are. A copy of your log from before the change is kept on the phone.
+
 ## 0.96.0 — 11 Nov 2026
 - **New: Landmine Press and Tibialis Raise are built-in exercises.** They were in the program but not in the exercise list, so installing the program made them your own custom exercises with no muscles, no demo and nothing on the muscle map. Now they have muscles (Weekly sets and recovery count them), an animated demo on the Info tab, and setup notes.
 - **Changed: sets you'd already logged under the custom versions move across** to the built-in ones, so there's one history, not two. The landmine press is now logged per arm, as the program writes it. The empty custom exercises are removed. A copy of your log from before the move is kept on the phone.

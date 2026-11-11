@@ -207,7 +207,7 @@ In lb the suggestion for a 20.3 kg dumbbell is 44.1 lb. Should be the
 nearest 5 lb.
 **Fix:** round in display units: 2 kg, or 5 lb.
 
-### [ ] 3.4 Backfilling a plan that has no weights logs 0 kg sets as real ones — Confirmed
+### [x] 3.4 (0.96.1) Backfilling a plan that has no weights logs 0 kg sets as real ones — Confirmed
 **Where:** `backfillPlanned` (~10802).
 Since 0.51.0 the shipped program has no weights (RIR only). "Mark planned
 sessions done at the prescribed loads" then writes every set at 0 kg. Those
@@ -216,6 +216,13 @@ sessions in each lift's stats.
 **Fix:** leave RIR-only sessions out of backfill and say why, or mark them
 skipped (the Missed flow already exists). **Ask Aaron** before touching any
 that are already backfilled — that's stored data.
+**Shipped (0.96.1, Aaron's call):** RIR-only sessions (every loaded
+weight × reps set has no weight; bodyweight lifts, holds and carries don't
+count either way) are left out of backfill, and Settings says how many and
+why. A once-only migration turns sessions already backfilled that way
+(`source: 'backfill'`, from a plan, not edited since) into skipped ones: a
+record in `misses` with the planned copy, so the calendar's Undo restores it.
+Rescue copy: `ironlog.v1.before-rir-backfill-skipped-0.96.1`.
 
 ### [x] 3.5 (0.90.13) Measure records the last set's weight, not the set being measured — From the code
 **Where:** `openVbtRecord` (~11713): `ex.sets.filter(s => s.w > 0).slice(-1)`.
