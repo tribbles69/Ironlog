@@ -52,11 +52,10 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    `fix/bug-sweep-2026-11`):** 00-B1 is done — the ranked list is
    `r&d/notes/bug-sweep-2026-11.md`. 00-B2: every severity 1 and 2 finding
    is fixed, and every 3 and 4 that needs no decision (0.90.1–0.90.17).
-   **Waiting on Aaron:** 3.4, 3.6, 3.7, 3.10, the relink part of 1.8 and the
-   question in 4.5 — all in the note. 00-V1 to 00-V4 shipped 0.91.0–0.93.1 and
+   Aaron's calls on 3.4, 3.6, 3.7, 3.10, the relink part of 1.8 and 4.5
+   shipped 0.96.0–0.96.5 (branch `ccr-66354ca4-ybhg0b`). 00-V1 to 00-V4 shipped 0.91.0–0.93.1 and
    00-D1 0.94.0–0.94.4; 00-D2 part done 0.95.0–0.95.1 (branch
-   `design/assets-2026-11`, which holds all of it). **Next:** Aaron's calls
-   above, A4 items 21–26, then what's left of 00-D2, then section 0 and E3.
+   `design/assets-2026-11`, which holds all of it). **Next:** A4 items 21–26, then what's left of 00-D2, then section 0 and E3.
 
    **Next up (2026-11-11, Aaron):** section **00** (bug fixes, then VBT, then design)
    comes before everything else, in page order. Then what's left of section

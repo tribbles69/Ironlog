@@ -168,7 +168,7 @@ ok(M.length === 119, 'catalogue movements = 119 (104 + 12 strongman + 3 strength
 ok(M.filter(m => m.attachments).length === 29, 'movements with attachments = 29');
 // 10 in phase 1; farmers carry and sled push became metric:carry in B1
 ok(M.filter(m => m.metric === 'time').length === 8, 'movements with metric:time = 8 (10 less farmers + sled push, now carry)');
-ok(M.filter(m => m.singleImplement).length === 8, 'movements with singleImplement = 8');
+ok(M.filter(m => m.singleImplement).length === 9, 'movements with singleImplement = 9 (tibialis raise joined in 0.96.0)');
 ok(M.filter(m => m.verified === true).length === 32, 'verified:true = 32');
 ok(names.every(n => resolve(n).m.verified === true), 'all program names map to verified:true movements');
 // adaptation modifiers (C5) are a provisional list, not drawn from the program notes

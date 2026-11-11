@@ -13,6 +13,29 @@ rather than guessed.
 
 ---
 
+## 0.96.5 — 11 Nov 2026
+- **Changed: your places and your bar-speed calibration now sync through Google Drive.** Add or edit a gym — its kit, bars and plates — on one phone and it turns up on the other; delete it and it goes from both. The same goes for what Measure has learned about each lift. Where both phones changed the same one, the newer change wins.
+- Everything else in Settings — units, rest times, the plates at home and so on — still stays on the phone you set it on.
+
+## 0.96.4 — 11 Nov 2026
+- **Fixed: older finished sessions from a program count towards it again.** Before 0.90.9, finishing a planned session from a program without block names dropped its link to the program, so the program's Completed count never moved. Those sessions are now linked back, where it's clear which program they came from, and a message says how many. A copy of your log from before the change is kept on the phone.
+
+## 0.96.3 — 11 Nov 2026
+- **Fixed: an easy set could lower your estimated 1RM.** A set logged at RIR 6 or more used to count as if you had nothing left, so 100 kg × 5 at RIR 6 was worth less than the same set at RIR 5. Anything past RIR 5 now counts as RIR 5. Estimated maxes and PRs from those sets may go up a little.
+
+## 0.96.2 — 11 Nov 2026
+- **Fixed: two sessions on the same day could both claim the same PR.** A second session now compares against the first one too, by when each finished. If you trained twice in a day, the later session's PR badge may go — the record belongs to the session that set it.
+
+## 0.96.1 — 11 Nov 2026
+- **Changed: backfill leaves out sessions from a plan with no weights.** The program gives RIR, not kg, so "mark done at the prescribed loads" logged every set at 0 kg — and those counted as real sets, bodyweight records and sessions in each lift's stats. Settings → Backfill now says how many it's leaving out and why. Log them from the session, or mark them Missed.
+- **Fixed: sessions already backfilled that way are now skipped**, not done. They show as missed on the calendar, and Undo there puts one back on your plan. Any you've edited since are left as they are. A copy of your log from before the change is kept on the phone.
+
+## 0.96.0 — 11 Nov 2026
+- **New: Landmine Press and Tibialis Raise are built-in exercises.** They were in the program but not in the exercise list, so installing the program made them your own custom exercises with no muscles, no demo and nothing on the muscle map. Now they have muscles (Weekly sets and recovery count them), an animated demo on the Info tab, and setup notes.
+- **Changed: sets you'd already logged under the custom versions move across** to the built-in ones, so there's one history, not two. The landmine press is now logged per arm, as the program writes it. The empty custom exercises are removed. A copy of your log from before the move is kept on the phone.
+- Tibialis raises count towards the lower leg on the muscle map (it shows that as Calves — there's no shin muscle on the map).
+- Neither lift has a bar-speed profile: none of the Measure profiles fits an arc press or a toe raise, and a wrong profile gives a confident wrong RIR.
+
 ## 0.95.1 — 11 Nov 2026
 - **New: a second muscle-map skin, Goblin to orc.** Stats → Muscles → Skin. Each muscle starts as pale goblin and turns into orc as its score climbs, so a strong chest on untrained legs is an orc's chest on a goblin's legs. The orange template is still there and is still what you get by default.
 - **New: a picture on the welcome screen** — the six stages, goblin to orc.
