@@ -131,7 +131,7 @@ save before it reloads.
 **Fix:** don't auto-restart while a sheet is open (show the toast and wait,
 as for a live workout); `await flush()` before every reload.
 
-### [x] 1.8 (0.90.9, new sessions only — relinking old ones waits on Aaron) Finishing a plan session drops its link to the plan — Confirmed
+### [x] 1.8 (0.90.9 new sessions; 0.96.4 old ones relinked) Finishing a plan session drops its link to the plan — Confirmed
 **Where:** `finishWorkout` (~7566): `prog` is only kept when the session has
 a `block`.
 A planned session from a program with no block names is saved without
@@ -142,6 +142,14 @@ finish it → the saved session has no `prog`.
 **Fix:** keep `prog` whenever it's there. (Stored data: adds a field to new
 sessions only. Old ones could be relinked by id prefix — **ask Aaron
 first**.)
+**Relink shipped (0.96.4, Aaron's call):** a once-only migration gives a
+finished session with no `prog` its program back when its id starts with
+exactly one program id the log knows (installed, start dates, names, shipped
+names, any session's or miss's `prog`) followed by `#` and a plan-day id
+(`d<date>`, `w<n>d<n>`, or the pre-0.10 position, with an optional `.slot`).
+Anything else is left alone; ambiguous matches are counted. The count is
+recorded in `S.migrations` and shown in a toast. Rescue copy:
+`ironlog.v1.before-relink-plan-sessions-0.96.4`.
 
 ---
 

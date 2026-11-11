@@ -2358,7 +2358,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.96.3';
+const APP_VERSION = '0.96.4';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -20656,6 +20656,7 @@ function fixupState(st) {
 const DATA_MIGRATIONS = [
   { id: 'legacy-movements-0.96.0', run: st => repointLegacyMovements(st) },
   { id: 'rir-backfill-skipped-0.96.1', run: st => skipRirBackfills(st) },
+  { id: 'relink-plan-sessions-0.96.4', run: st => relinkPlanSessions(st) },
 ];
 async function runDataMigrations(st, recheck = []) {
   if (!st.migrations || typeof st.migrations !== 'object' || Array.isArray(st.migrations)) st.migrations = {};
@@ -20712,6 +20713,30 @@ function skipRirBackfills(st) {
   if (gone.size) st.workouts = st.workouts.filter(w => !gone.has(w.id));
   r.changed = gone.size;
   if (r.changed) r.note = `${r.changed} backfilled session${r.changed === 1 ? '' : 's'} from a plan with no weights changed to skipped — ${r.changed === 1 ? 'it' : 'they'} had logged every set at 0 kg`;
+  return r;
+}
+/* 1.8: until 0.90.9, finishing a planned session kept its program link only
+   when the session had a block name, so sessions from a program without
+   blocks were saved with no `prog` and never counted as Completed. A planned
+   session's id is "<program id>#<day>" (progWorkoutId, or the pre-0.10
+   positional "<program id>#<n>"), so a finished session with no link is
+   relinked when its id starts with exactly one program id this log knows of
+   and the rest has that shape. Two candidates, or none: left alone and
+   counted. Only `prog` is added; nothing else about the session changes. */
+function relinkPlanSessions(st) {
+  const r = { changed: 0, relinked: 0, ambiguous: 0 };
+  const ids = new Set([...(st.programs || []), ...Object.keys(st.programStarts || {}), ...Object.keys(st.programNames || {}),
+    ...Object.keys(PROGRAM_NAMES), ...(PROGRAM_MANIFEST && PROGRAM_MANIFEST.id ? [PROGRAM_MANIFEST.id] : []),
+    ...(st.workouts || []).map(w => w.prog), ...(st.misses || []).map(m => m.prog)].filter(x => typeof x === 'string' && x));
+  const shape = /^(d\d{4}-\d{2}-\d{2}|w\d+d\d+|\d+)(\.\d+)?$/;
+  (st.workouts || []).forEach(w => {
+    if (!w || w.status !== 'completed' || w.prog || typeof w.id !== 'string' || !w.id.includes('#')) return;
+    const hits = [...ids].filter(p => w.id.startsWith(p + '#') && shape.test(w.id.slice(p.length + 1)));
+    if (hits.length === 1) { w.prog = hits[0]; r.relinked++; }
+    else if (hits.length > 1) r.ambiguous++;
+  });
+  r.changed = r.relinked;
+  if (r.relinked) r.note = `${r.relinked} finished session${r.relinked === 1 ? '' : 's'} relinked to ${r.relinked === 1 ? 'its' : 'their'} program`;
   return r;
 }
 function legacyMovementMap() {

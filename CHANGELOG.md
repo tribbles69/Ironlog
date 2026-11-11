@@ -13,6 +13,9 @@ rather than guessed.
 
 ---
 
+## 0.96.4 — 11 Nov 2026
+- **Fixed: older finished sessions from a program count towards it again.** Before 0.90.9, finishing a planned session from a program without block names dropped its link to the program, so the program's Completed count never moved. Those sessions are now linked back, where it's clear which program they came from, and a message says how many. A copy of your log from before the change is kept on the phone.
+
 ## 0.96.3 — 11 Nov 2026
 - **Fixed: an easy set could lower your estimated 1RM.** A set logged at RIR 6 or more used to count as if you had nothing left, so 100 kg × 5 at RIR 6 was worth less than the same set at RIR 5. Anything past RIR 5 now counts as RIR 5. Estimated maxes and PRs from those sets may go up a little.
 
