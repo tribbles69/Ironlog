@@ -13,6 +13,32 @@ rather than guessed.
 
 ---
 
+## 0.95.1 — 11 Nov 2026
+- **New: a second muscle-map skin, Goblin to orc.** Stats → Muscles → Skin. Each muscle starts as pale goblin and turns into orc as its score climbs, so a strong chest on untrained legs is an orc's chest on a goblin's legs. The orange template is still there and is still what you get by default.
+- **New: a picture on the welcome screen** — the six stages, goblin to orc.
+
+## 0.95.0 — 11 Nov 2026
+- **New: a recorded voice for the interval timer.** Round calls, rests, warm-up, cool-down and the finish are now spoken by a recorded voice instead of the phone's robot one. It covers every built-in preset and your own timers up to 12 rounds with the usual rest lengths; anything else uses the phone's voice for that session, as before. It works offline and adds 171 KB.
+- The recorded voice says "Go. Round three" rather than "Round 3 of 8" — the total is on the screen.
+- Cardio and mobility still use the phone's voice: what they say is built from numbers and exercise names on the spot, which can't be pre-recorded.
+
+## 0.94.4 — 11 Nov 2026
+- **Changed: empty screens point somewhere.** With nothing planned, Train now offers **Open the calendar** and **Ask the coach**. With nothing logged, Stats offers **Go to Train**.
+- **Fixed:** the search box on Stats now has a name for screen readers.
+
+## 0.94.3 — 11 Nov 2026
+- **New: jump to a section in Settings.** Settings is long, so there's now a row of buttons at the top — Look & units, Timers, Places & kit, AI & extras, Program, Video, Data & backup — that takes you straight to that part. Nothing in Settings has moved.
+
+## 0.94.2 — 11 Nov 2026
+- **Changed: clearer labels.** The Stats page is now headed Stats (it said Analytics). On a session that hasn't happened yet, the Missed button now reads **Skip / move** — it only says Missed once the day has passed. It opens the same sheet.
+
+## 0.94.1 — 11 Nov 2026
+- **Changed: Home opens on today's session.** Today's training is now the first thing on Home, with Start right there, instead of below the check-in and the week's numbers. If you haven't logged anything yet, Home still starts with the introduction.
+- **Fixed:** two sessions done on the same day ran into each other on Home.
+
+## 0.94.0 — 11 Nov 2026
+- **Changed: small buttons are easier to hit.** Start, Missed, Edit, the “+ Add” buttons, the ✕ on every sheet and the other small buttons now respond to a tap anywhere within a finger-sized area around them. They look the same and nothing has moved.
+
 ## 0.93.1 — 11 Nov 2026
 - **Changed: the bar-speed export holds more.** Settings → Export raw traces now also lists every set you've measured in the last 60 days, by sensor or video, with each rep's speed and whether the RIR was yours or the sensor's. It's there so Measure can be checked against a proper bar-speed device. It works even with Bar-speed debug off.
 

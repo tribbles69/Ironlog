@@ -5,8 +5,10 @@ holding every muscle at every tier, already in position on the body. The app
 picks one cell per muscle from the lifter's scores and stacks them, so any art
 works: flat colours, a goblin that turns into an orc muscle by muscle, and so on.
 
-**Status:** only the placeholder ships — `skins/template.png`, one orange that
-gets darker each tier. Proper art comes later and replaces or joins it.
+**Status:** two skins ship. `skins/template.png` — one orange that gets darker
+each tier, and still the default. `skins/goblin.webp` (0.95.1) — a goblin that
+turns into an orc muscle by muscle, built by `r&d/tools/build-skin.cjs` from
+the twelve figures in `goblin-src/` (see `r&d/notes/assets-pass.md`).
 Anyone can also import their own sheet from the **Skin ▾** button on the map.
 
 ## Files
