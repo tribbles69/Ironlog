@@ -48,7 +48,7 @@ TalkBack itself, the Google sign-in. Those stay on A4.
 
 ## Severity 1 — data loss or corruption
 
-### [ ] 1.1 Drive sync deletes things you removed and then added back — Confirmed
+### [x] 1.1 (0.90.4) Drive sync deletes things you removed and then added back — Confirmed
 **Where:** `mergeSync` / `stampOf` (index.html ~1700–1753).
 A deleted record leaves a tombstone with the time of the delete. A record
 comes back only if its own timestamp is newer. Records with no timestamp

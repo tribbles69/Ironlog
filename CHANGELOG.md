@@ -13,6 +13,10 @@ rather than guessed.
 
 ---
 
+## 0.90.4 — 11 Nov 2026
+- **Fixed: Drive sync deleted things you had removed and then added back.** Remove a program, sync, install it again, and the next sync wiped every planned session. The same happened to a check-in deleted and re-entered, a custom exercise name, and a coach plan rebuilt after "Forget everything". Anything you add back on this phone now stays.
+- **Fixed: a changed check-in didn't reach your other phone.** Check-ins now record when they were last saved, so the newer one wins when two phones sync.
+
 ## 0.90.3 — 11 Nov 2026
 - **Changed: Import JSON asks before it replaces your log.** It used to overwrite everything the moment you picked a file. It now shows what's on the phone next to what's in the file, warns if the file is older, and waits for **Replace**.
 - **New: Undo import.** The log an import replaced is kept on the phone. Settings → Data shows an **Undo import** button until you use it or import again.

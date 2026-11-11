@@ -1708,7 +1708,9 @@ const SYNC_LOCAL_SETTINGS = ['lastSeenVersion', 'backupSnoozeUntil', 'lastExport
 function syncMeta() { try { return JSON.parse(localStorage.getItem('ironlog.sync') || '{}') || {}; } catch (e) { return {}; } }
 function setSyncMeta(m) { try { localStorage.setItem('ironlog.sync', JSON.stringify(m)); } catch (e) { /* storage blocked: sync still works, just forgets */ } }
 function driveClientId() { return syncMeta().clientId || GOOGLE_CLIENT_ID; }
-function stampOf(x) { return (x && typeof x === 'object' && (x.mt || x.edited || x.end || x.start)) || 0; }
+/* When a record last changed: the newest of its stamps. (It used to take the
+   first one present, so a session moved and later edited kept the move's time.) */
+function stampOf(x) { return x && typeof x === 'object' ? Math.max(+x.mt || 0, +x.edited || 0, +x.end || 0, +x.start || 0) : 0; }
 
 function syncLocalData() {
   const d = {};
@@ -1739,9 +1741,21 @@ function mergeSync(local, remote, remoteTomb, known, now, opts = {}) {
     ((known || {})[c] || []).forEach(id => { if (!have.has(id)) { mark(c, id, now); localDeletes.push([c, id]); } });
   });
   const out = {};
+  /* Here but not known at the last sync: it was made on this device since.
+     That beats a delete marker whatever its stamp — a program removed and put
+     back, a check-in deleted and re-entered, an alias, a coach plan after
+     Forget — because most of those carry no time at all, and "no time" used to
+     lose to every marker: the next sync deleted them again (bug sweep 1.1). */
+  const knownSets = {};
+  const madeHere = (c, id) => {
+    if (!known) return true;                                 // never synced: everything here is this device's own
+    const s = knownSets[c] || (knownSets[c] = new Set((known[c] || []).map(String)));
+    return !s.has(String(id));
+  };
   const pick = (c, id, l, r) => {
     const t = tomb[c] && tomb[c][id];
     const v = l !== undefined && r !== undefined ? (stampOf(r) > stampOf(l) ? r : l) : l !== undefined ? l : r;
+    if (t != null && l !== undefined && madeHere(c, id)) { delete tomb[c][id]; return v; }
     if (t != null && !(stampOf(v) > t)) return undefined;   // deleted, and not changed since
     if (t != null) delete tomb[c][id];                       // changed after the delete: it's back
     return v;
@@ -1827,7 +1841,7 @@ function driveSummaryText() {
     out.push('## Check-ins (newest first)');
     cis.forEach(c => {
       const bits = [c.weight > 0 ? `${wt(c.weight)}` : '', c.sleepH > 0 ? `sleep ${nice(c.sleepH)} h` : '',
-        ...Object.entries(c).filter(([k, v]) => !['date', 'weight', 'sleepH', 'kcal', 'notes'].includes(k) && v != null && v !== '' && typeof v !== 'object').map(([k, v]) => `${k} ${v}`),
+        ...Object.entries(c).filter(([k, v]) => !['date', 'weight', 'sleepH', 'kcal', 'notes', 'mt'].includes(k) && v != null && v !== '' && typeof v !== 'object').map(([k, v]) => `${k} ${v}`),
         c.notes ? `“${c.notes}”` : ''].filter(Boolean);
       out.push(`- ${d(c.date)}: ${bits.join(' · ') || '—'}`);
     });
@@ -2312,7 +2326,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.90.3';
+const APP_VERSION = '0.90.4';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -6136,6 +6150,7 @@ function openCheckin(date = today()) {
           kcal: c.kcal ?? null,   // no longer entered (food left in 0.25.0); an old value is kept, not wiped
           notes: $('#ciNotes', bg).value.trim(),
           ...picked,
+          mt: Date.now(),   // when it was last saved, so an edit on one phone reaches the others (Drive sync)
         };
         S.checkins = S.checkins.filter(x => x.date !== date);
         S.checkins.push(rec);
@@ -16199,7 +16214,7 @@ const COACH_STEPS = [
     show: A => coachBuilding(A) && !bodyweightKg(), apply: v => {
       if (!(v > 0)) return;
       const c = S.checkins.find(x => x.date === today());
-      if (c) c.weight = v; else S.checkins.push({ date: today(), weight: v, notes: '' });
+      if (c) { c.weight = v; c.mt = Date.now(); } else S.checkins.push({ date: today(), weight: v, notes: '', mt: Date.now() });
     } },
   /* Losing weight: a target becomes a bodyweight goal on Home → Goals. */
   { id: 'targetBw', ask: () => 'Got a target weight? I\'ll add it as a goal and track it.', kind: 'number', label: 'Target weight', unit: () => U(),
