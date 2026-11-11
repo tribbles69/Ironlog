@@ -1529,12 +1529,23 @@ function idb(mode, fn) {
   }));
 }
 
-async function storeGet(k) {
+/* A read that fails is not the same as nothing stored (bug sweep 1.4): the
+   app used to open as a fresh install either way, and the next save could
+   land on top of the real log once IndexedDB answered again. So a failed
+   read with no fallback copy throws when `strict` (the log itself, at boot),
+   and boot shows the rescue screen. Skins, photos and clips keep the old
+   answer of "nothing there". A browser with no IndexedDB at all still runs
+   on localStorage as before. */
+async function storeGet(k, strict) {
+  let failed = null;
   try {
     const v = await idb('readonly', st => st.get(k));
     if (v != null) return v;          // undefined = fresh install, not an error
-  } catch (e) { /* fall through */ }
-  try { return localStorage.getItem(k); } catch (e) { return null; }
+  } catch (e) { failed = e; }
+  let ls = null;
+  try { ls = localStorage.getItem(k); } catch (e) { /* blocked: same as empty */ }
+  if (strict && ls == null && failed && self.indexedDB) throw new Error(`This phone's storage didn't answer (${failed.message || failed.name || 'read failed'})`);
+  return ls;
 }
 
 async function storePut(k, v) {
@@ -1697,7 +1708,16 @@ const SYNC_LOCAL_SETTINGS = ['lastSeenVersion', 'backupSnoozeUntil', 'lastExport
 function syncMeta() { try { return JSON.parse(localStorage.getItem('ironlog.sync') || '{}') || {}; } catch (e) { return {}; } }
 function setSyncMeta(m) { try { localStorage.setItem('ironlog.sync', JSON.stringify(m)); } catch (e) { /* storage blocked: sync still works, just forgets */ } }
 function driveClientId() { return syncMeta().clientId || GOOGLE_CLIENT_ID; }
-function stampOf(x) { return (x && typeof x === 'object' && (x.mt || x.edited || x.end || x.start)) || 0; }
+/* After the whole log is swapped (a backup imported, or that import undone),
+   what this phone "knew" at its last sync no longer describes it. Left in
+   place, every record the backup doesn't have would read as deleted here, and
+   the next sync would remove up to five of them from Drive and from every
+   other phone without asking (bug sweep 1.5). Forgotten, the next sync is a
+   plain merge: nothing is treated as deleted. */
+function syncForgetKnown() { const m = syncMeta(); if (m.known) { delete m.known; setSyncMeta(m); } }
+/* When a record last changed: the newest of its stamps. (It used to take the
+   first one present, so a session moved and later edited kept the move's time.) */
+function stampOf(x) { return x && typeof x === 'object' ? Math.max(+x.mt || 0, +x.edited || 0, +x.end || 0, +x.start || 0) : 0; }
 
 function syncLocalData() {
   const d = {};
@@ -1728,9 +1748,21 @@ function mergeSync(local, remote, remoteTomb, known, now, opts = {}) {
     ((known || {})[c] || []).forEach(id => { if (!have.has(id)) { mark(c, id, now); localDeletes.push([c, id]); } });
   });
   const out = {};
+  /* Here but not known at the last sync: it was made on this device since.
+     That beats a delete marker whatever its stamp — a program removed and put
+     back, a check-in deleted and re-entered, an alias, a coach plan after
+     Forget — because most of those carry no time at all, and "no time" used to
+     lose to every marker: the next sync deleted them again (bug sweep 1.1). */
+  const knownSets = {};
+  const madeHere = (c, id) => {
+    if (!known) return true;                                 // never synced: everything here is this device's own
+    const s = knownSets[c] || (knownSets[c] = new Set((known[c] || []).map(String)));
+    return !s.has(String(id));
+  };
   const pick = (c, id, l, r) => {
     const t = tomb[c] && tomb[c][id];
     const v = l !== undefined && r !== undefined ? (stampOf(r) > stampOf(l) ? r : l) : l !== undefined ? l : r;
+    if (t != null && l !== undefined && madeHere(c, id)) { delete tomb[c][id]; return v; }
     if (t != null && !(stampOf(v) > t)) return undefined;   // deleted, and not changed since
     if (t != null) delete tomb[c][id];                       // changed after the delete: it's back
     return v;
@@ -1816,7 +1848,7 @@ function driveSummaryText() {
     out.push('## Check-ins (newest first)');
     cis.forEach(c => {
       const bits = [c.weight > 0 ? `${wt(c.weight)}` : '', c.sleepH > 0 ? `sleep ${nice(c.sleepH)} h` : '',
-        ...Object.entries(c).filter(([k, v]) => !['date', 'weight', 'sleepH', 'kcal', 'notes'].includes(k) && v != null && v !== '' && typeof v !== 'object').map(([k, v]) => `${k} ${v}`),
+        ...Object.entries(c).filter(([k, v]) => !['date', 'weight', 'sleepH', 'kcal', 'notes', 'mt'].includes(k) && v != null && v !== '' && typeof v !== 'object').map(([k, v]) => `${k} ${v}`),
         c.notes ? `“${c.notes}”` : ''].filter(Boolean);
       out.push(`- ${d(c.date)}: ${bits.join(' · ') || '—'}`);
     });
@@ -2006,9 +2038,31 @@ function fmtBytes(n) { return n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : 
 
 let S = structuredClone(DEFAULT_STATE);   // replaced by the real state in boot()
 
+/* Stored or imported state, laid over the defaults with every collection back
+   to the type the app expects. A list that came back as null (a hand-edited
+   or half-written file) used to throw in the first render and leave the app
+   on its loading screen for good (bug sweep 1.3). Only the top level is
+   touched: a record inside a list is never rewritten here. */
+function normaliseState(parsed) {
+  const plain = v => !!v && typeof v === 'object' && !Array.isArray(v);
+  const src = plain(parsed) ? parsed : {};
+  const st = Object.assign(structuredClone(DEFAULT_STATE), src);
+  Object.keys(DEFAULT_STATE).forEach(k => {
+    const d = DEFAULT_STATE[k];
+    if (Array.isArray(d)) st[k] = Array.isArray(st[k]) ? st[k].filter(x => x != null) : [];
+    else if (plain(d)) { if (!plain(st[k])) st[k] = structuredClone(d); }
+    else if (d === null && st[k] != null && !plain(st[k])) st[k] = null;   // active, fitDraft
+  });
+  // settings is merged a level deeper, so a key added to DEFAULT_STATE later still gets its default
+  st.settings = Object.assign(structuredClone(DEFAULT_STATE.settings), plain(src.settings) ? src.settings : {});
+  ['customMovements', 'foods'].forEach(k => { if (k in st && !Array.isArray(st[k])) delete st[k]; });   // optional lists, read with || []
+  ['workouts', 'checkins', 'goals', 'meets', 'misses'].forEach(k => { st[k] = st[k].filter(plain); });       // lists of records hold only records
+  return st;
+}
+
 let freshInstall = false;   // no stored state at boot: What's new has nothing to tell
 async function load() {
-  const raw = await storeGet(KEY);
+  const raw = await storeGet(KEY, true);
   if (!raw) {
     /* A fresh install has nothing to catch up on. Marked here, on the state
        itself, rather than at the end of boot: the first launch reloads when
@@ -2018,27 +2072,18 @@ async function load() {
     st.settings.lastSeenVersion = APP_VERSION;
     return st;
   }
-  try {
-    const parsed = JSON.parse(raw);
-    const st = Object.assign(structuredClone(DEFAULT_STATE), parsed);
-    // settings is merged a level deeper, so a key added to DEFAULT_STATE later still gets its default
-    st.settings = Object.assign(structuredClone(DEFAULT_STATE.settings), parsed.settings || {});
-    /* 0.3.0: the `backfilled` boolean became `source`. Only 'backfill' is the plan's
-       prescription — imported history is real lifting and always counts toward PRs.
-       `backfilled` is left in place so an older export re-imported through Settings
-       still migrates the same way. */
-    st.workouts.forEach(w => { if (!w.source) w.source = w.backfilled ? 'backfill' : 'logged'; });
-    /* 0.22's import review saved a picked exercise as the string
-       "[object Object]"; as an alias it would steer every re-import there. */
-    Object.keys(st.exAliases || {}).forEach(k => { if (st.exAliases[k] === '[object Object]') delete st.exAliases[k]; });
+  /* Stored data that won't read is never swapped for an empty log (bug sweep
+     1.4): the migration below would save that empty log straight over it. It
+     throws instead, and boot's rescue screen offers a copy of what's there. */
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch (e) { throw new Error(`The stored log isn't readable (${e.message})`); }
+  {
+    const st = fixupState(normaliseState(parsed));   // source and alias repairs, shared with import
     /* 0.25.0: food logging left the app. An empty food log and its targets
        are dropped; one with entries is kept, unshown, until it's exported or
        removed from Clear data — so an update never loses someone's log. */
     if (!(st.foods || []).length) dropFood(st);
     return st;
-  } catch (e) {
-    console.warn('load failed', e);
-    return structuredClone(DEFAULT_STATE);
   }
 }
 
@@ -2053,7 +2098,9 @@ function save() {
   saveTimer = setTimeout(flush, 400);
 }
 
+let bootFailed = false;   // the rescue screen is up: nothing may be written over what's stored
 async function flush() {
+  if (bootFailed) return;
   if (!savePending) return;
   savePending = false;
   clearTimeout(saveTimer);
@@ -2286,7 +2333,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.90.0';
+const APP_VERSION = '0.90.6';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -2381,21 +2428,38 @@ function catalogue() {
   /* Custom movements are the user's own, plus anything migration could not
      resolve. An unresolved name becomes its own movement rather than being
      guessed into an existing one — declining to guess, not guessing. */
-  const all = (C.movements || []).concat((typeof S === 'object' && S && S.customMovements) || []);
-  all.forEach(m => {
+  const builtIn = C.movements || [];
+  builtIn.forEach(m => {
     if (byId.has(m.id)) problems.push(`duplicate movement id "${m.id}"`);
     byId.set(m.id, m);
     const k = m.name.toLowerCase();
     if (byName.has(k)) problems.push(`two movements named "${m.name}"`);
     byName.set(k, { m, a: null });
   });
-  all.forEach(m => (m.aliases || []).forEach(a => {
+  /* The lifter's own movements never make the catalogue invalid. A clash with
+     the shipped list used to throw here — and everything reads the catalogue,
+     so one update that added a movement with the same name as a custom one
+     would have stopped the app opening (bug sweep 2.4). The shipped movement
+     keeps the name; the custom one stays reachable by its id, so sets logged
+     against it keep their history. */
+  const custom = ((typeof S === 'object' && S && S.customMovements) || []).filter(m => m && typeof m.id === 'string' && typeof m.name === 'string');
+  custom.forEach(m => {
+    if (byId.has(m.id)) return;
+    byId.set(m.id, m);
+    const k = m.name.toLowerCase();
+    if (!byName.has(k)) byName.set(k, { m, a: null });
+  });
+  builtIn.forEach(m => (m.aliases || []).forEach(a => {
     const k = a.name.toLowerCase();
     if (byName.has(k)) return;                      // a movement's own name always wins
     const prev = byAlias.get(k);
     if (prev && prev.m.id !== m.id) { problems.push(`alias "${a.name}" on both ${prev.m.id} and ${m.id}`); return; }
     if (!prev) byAlias.set(k, { m, a });
   }));
+  custom.forEach(m => { if (byId.get(m.id) === m) (m.aliases || []).forEach(a => {
+    const k = a && typeof a.name === 'string' ? a.name.toLowerCase() : '';
+    if (k && !byName.has(k) && !byAlias.has(k)) byAlias.set(k, { m, a });
+  }); });
 
   if (problems.length) throw new Error('exercise catalogue invalid: ' + problems.join('; '));
   _cat = { C, V, byId, byName, byAlias };
@@ -6110,6 +6174,7 @@ function openCheckin(date = today()) {
           kcal: c.kcal ?? null,   // no longer entered (food left in 0.25.0); an old value is kept, not wiped
           notes: $('#ciNotes', bg).value.trim(),
           ...picked,
+          mt: Date.now(),   // when it was last saved, so an edit on one phone reaches the others (Drive sync)
         };
         S.checkins = S.checkins.filter(x => x.date !== date);
         S.checkins.push(rec);
@@ -13154,6 +13219,7 @@ function openSettings() {
       <button class="btn sm wide" id="stClear" style="margin-top:9px">Clear data…</button>
       <button class="btn sm danger wide" id="stWipe" style="margin-top:9px">Erase all data</button>
       <input type="file" id="stFile" accept="application/json" style="display:none">
+      <div id="stImpUndo"></div>
       <input type="file" id="stCsvFile" accept=".csv,text/csv" style="display:none">
     `,
     foot: `<span class="muted mono" style="font-size:11px;margin-right:auto">v${APP_VERSION}</span>
@@ -13278,7 +13344,18 @@ function openSettings() {
       $('#stFile', bg).onchange = e => {
         const f = e.target.files[0]; if (!f) return;
         importJSONFile(f);
+        e.target.value = '';   // so picking the same file twice still fires
       };
+      // the log an import replaced stays on the phone until it's put back or the next import
+      importUndoInfo().then(o => {
+        const host = $('#stImpUndo', bg);
+        if (!o || !host) return;
+        const c = logCounts(o.state);
+        host.innerHTML = `<div class="row between" style="gap:10px;align-items:center;margin-top:9px">
+          <div class="grow sub">A backup was imported ${esc(relTime(o.at))}. The log it replaced (${esc(logCountsLine(c))}) is still on this phone.</div>
+          <button class="btn xs" id="stImpUndoGo">Undo import</button></div>`;
+        $('#stImpUndoGo', bg).onclick = () => confirmDlg('Put back the log from before the import? What was imported, and anything logged since, is replaced by it.', () => undoImport(), 'Undo import');
+      });
       $('#stLiftoff', bg).onclick = () => $('#stCsvFile', bg).click();
       $('#stCsvFile', bg).onchange = e => {
         const f = e.target.files[0]; if (!f) return;
@@ -16161,7 +16238,7 @@ const COACH_STEPS = [
     show: A => coachBuilding(A) && !bodyweightKg(), apply: v => {
       if (!(v > 0)) return;
       const c = S.checkins.find(x => x.date === today());
-      if (c) c.weight = v; else S.checkins.push({ date: today(), weight: v, notes: '' });
+      if (c) { c.weight = v; c.mt = Date.now(); } else S.checkins.push({ date: today(), weight: v, notes: '', mt: Date.now() });
     } },
   /* Losing weight: a target becomes a bodyweight goal on Home → Goals. */
   { id: 'targetBw', ask: () => 'Got a target weight? I\'ll add it as a goal and track it.', kind: 'number', label: 'Target weight', unit: () => U(),
@@ -20012,31 +20089,106 @@ function exportJSON() {
   if (page === 'home') render();                  // the nudge goes away
 }
 
+/* Importing a backup replaces the whole log, so it is checked and asked about
+   first (bug sweep 1.2): the file has to be an Ironlog backup, the sheet shows
+   what's on the phone against what's in the file, and the log being replaced
+   is kept on this phone (IMPORT_UNDO_KEY) so Settings can put it back. An
+   empty phone has nothing to lose and isn't asked. */
+const IMPORT_UNDO_KEY = KEY + '.beforeImport';
+function logCounts(st) {
+  const ws = Array.isArray(st.workouts) ? st.workouts.filter(w => w && typeof w === 'object') : [];
+  const done = ws.filter(w => w.status === 'completed');
+  const dates = done.map(w => w.date).filter(d => typeof d === 'string').sort();
+  return { done: done.length, planned: ws.filter(w => w.status === 'planned').length,
+    checkins: Array.isArray(st.checkins) ? st.checkins.length : 0, last: dates.length ? dates[dates.length - 1] : null };
+}
+function logCountsLine(c) {
+  const bits = [`${c.done} logged session${c.done === 1 ? '' : 's'}${c.last && /^\d{4}-\d{2}-\d{2}$/.test(c.last) ? ` (latest ${fmtDate(c.last, { day: 'numeric', month: 'short', year: 'numeric' })})` : ''}`,
+    c.planned ? `${c.planned} planned` : '', `${c.checkins} check-in${c.checkins === 1 ? '' : 's'}`];
+  return bits.filter(Boolean).join(' · ');
+}
 function importJSONFile(f) {
   const rd = new FileReader();
+  rd.onerror = () => toast('Could not read that file');
   rd.onload = () => {
-    try {
-      const data = JSON.parse(rd.result);
-      if (!data.workouts) throw new Error('bad file');
-      /* Older backups still carry the food log (food left in 0.25.0).
-         Keep a food log already on this device; ignore the file's. */
-      const keepFood = S.foods && S.foods.length ? { foods: S.foods, t: ['kcalTarget', 'proteinTarget', 'carbTarget', 'fatTarget', 'foodExportedAt'].map(k => [k, S.settings[k]]) } : null;
-      // with none here, the file's is kept as it was — an export must come back whole (B7)
-      if (keepFood) {
-        delete data.foods;
-        if (data.settings) ['kcalTarget', 'proteinTarget', 'carbTarget', 'fatTarget', 'foodExportedAt'].forEach(k => { delete data.settings[k]; });
-      }
-      S = Object.assign(structuredClone(DEFAULT_STATE), data);
-      S.settings = Object.assign(structuredClone(DEFAULT_STATE.settings), data.settings || {});
-      if (keepFood) { S.foods = keepFood.foods; keepFood.t.forEach(([k, v]) => { if (v != null) S.settings[k] = v; }); }
-      save();
-      /* the backup carries its own skin — follow it, or the page would be
-         painted in one skin while the setting said the other */
-      applySkin(S.settings.skin);
-      closeAllModals(); render(); toast('Data imported', 'green');
-    } catch (err) { toast('Could not read that file'); }
+    let data;
+    try { data = JSON.parse(rd.result); } catch (err) { return toast('That isn\'t a backup Ironlog can read'); }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return toast('That isn\'t an Ironlog backup');
+    if (data.format === SYNC_FORMAT && data.data) return toast('That\'s the Drive sync file — connect Google Drive in Settings to restore from it');
+    if (!Array.isArray(data.workouts)) return toast('That isn\'t an Ironlog backup — it has no list of sessions');
+    const here = logCounts(S), there = logCounts(data);
+    if (!here.done && !here.planned && !here.checkins && !S.active) return applyImportedState(data, false);
+    modal({
+      title: 'Replace your log?',
+      body: `<p style="margin:0 0 10px;color:var(--dim)">Importing a backup <b>replaces everything</b> on this phone with what's in the file. It doesn't merge.</p>
+        <div class="card tight" style="margin-bottom:8px"><div class="eyebrow">On this phone now</div><div>${esc(logCountsLine(here))}${S.active ? ' · a workout in progress' : ''}</div></div>
+        <div class="card tight" style="margin-bottom:10px"><div class="eyebrow">In the file</div><div>${esc(logCountsLine(there))}</div></div>
+        ${there.last && here.last && there.last < here.last ? `<p style="margin:0 0 10px;color:var(--gold)">The file is older than what's on this phone — sessions after ${esc(fmtDate(there.last, { day: 'numeric', month: 'short' }))} aren't in it.</p>` : ''}
+        <p class="sub" style="margin:0">What's on the phone now is kept so you can undo this from Settings → Data.</p>`,
+      foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn danger" id="impGo">Replace</button>`,
+      onOpen: bg => { $('#impGo', bg).onclick = () => { closeModal(); applyImportedState(data, true); }; },
+    });
   };
   rd.readAsText(f);
+}
+/* The state fix-ups load() applies, shared with import so a backup from any
+   version lands the same way as a stored log. */
+function fixupState(st) {
+  /* 0.3.0: the `backfilled` boolean became `source`. Only 'backfill' is the plan's
+     prescription — imported history is real lifting and always counts toward PRs.
+     `backfilled` is left in place so an older export re-imported through Settings
+     still migrates the same way. */
+  st.workouts.forEach(w => { if (!w.source) w.source = w.backfilled ? 'backfill' : 'logged'; });
+  /* 0.22's import review saved a picked exercise as the string
+     "[object Object]"; as an alias it would steer every re-import there. */
+  Object.keys(st.exAliases || {}).forEach(k => { if (st.exAliases[k] === '[object Object]') delete st.exAliases[k]; });
+  return st;
+}
+async function applyImportedState(data, keepUndo) {
+  try {
+    /* Older backups still carry the food log (food left in 0.25.0).
+       Keep a food log already on this device; ignore the file's. */
+    const keepFood = S.foods && S.foods.length ? { foods: S.foods, t: ['kcalTarget', 'proteinTarget', 'carbTarget', 'fatTarget', 'foodExportedAt'].map(k => [k, S.settings[k]]) } : null;
+    // with none here, the file's is kept as it was — an export must come back whole (B7)
+    if (keepFood) {
+      delete data.foods;
+      if (data.settings && typeof data.settings === 'object') ['kcalTarget', 'proteinTarget', 'carbTarget', 'fatTarget', 'foodExportedAt'].forEach(k => { delete data.settings[k]; });
+    }
+    const next = fixupState(normaliseState(data));
+    if (keepFood) { next.foods = keepFood.foods; keepFood.t.forEach(([k, v]) => { if (v != null) next.settings[k] = v; }); }
+    else if (!(next.foods || []).length) dropFood(next);
+    // the log being replaced, set aside before anything is written over it
+    if (keepUndo && !(await storePut(IMPORT_UNDO_KEY, JSON.stringify({ at: Date.now(), state: S })))) return toast('Couldn\'t set your current log aside, so nothing was imported');
+    clearTimeout(saveTimer); savePending = false;
+    S = next;
+    syncForgetKnown();
+    bustCatalogue();
+    /* A backup from before 0.7.0 names exercises instead of pointing at them;
+       boot migrates those, and an import has to as well or every page throws
+       until the next restart (bug sweep 2.2). */
+    if ((S.schemaVersion || 1) < 2) migrateToV2(S);
+    bust();
+    save();
+    /* the backup carries its own skin — follow it, or the page would be
+       painted in one skin while the setting said the other */
+    applySkin(S.settings.skin);
+    closeAllModals(); go(S.active ? 'workout' : 'home'); toast('Backup imported', 'green');
+  } catch (err) { console.warn('import failed', err); toast('Could not import that file — nothing was changed'); }
+}
+async function importUndoInfo() {
+  try { const raw = await storeGet(IMPORT_UNDO_KEY); const o = raw ? JSON.parse(raw) : null; return o && o.state ? o : null; } catch (e) { return null; }
+}
+async function undoImport() {
+  const o = await importUndoInfo();
+  if (!o) return toast('Nothing to undo');
+  clearTimeout(saveTimer); savePending = false;
+  S = fixupState(normaliseState(o.state));
+  syncForgetKnown();
+  bustCatalogue(); bust();
+  save(); await flush();
+  try { await idb('readwrite', st => st.delete(IMPORT_UNDO_KEY)); } catch (e) { /* stays until the next import */ }
+  applySkin(S.settings.skin);
+  closeAllModals(); go(S.active ? 'workout' : 'home'); toast('Your log from before the import is back', 'green');
 }
 
 
@@ -21203,12 +21355,13 @@ if (window.visualViewport) {
 
 /* First paint waits on the initial read. Without this the app would render an
    empty log for a frame and then flash the real one in over the top. */
-async function boot() {
+async function bootApp() {
   /* The inline script in <head> has already put the skin on <html> from the
      localStorage mirror, so the veil can be painted in the right colours here
      and the stored setting only has to confirm it below. */
   const w98 = document.documentElement.dataset.skin === 'win98';
   const veil = document.createElement('div');
+  veil.id = 'bootVeil';
   veil.style.cssText = 'position:fixed;inset:0;z-index:9999;display:grid;place-items:center;' +
     (w98 ? 'background:#000000;color:#00ff41;font:700 14px/1.4 "Cascadia Mono",Consolas,ui-monospace,monospace;letter-spacing:.08em'
          : 'background:#0d0f14;color:#8b93a7;font:500 15px/1.4 system-ui,-apple-system,sans-serif');
@@ -21249,6 +21402,70 @@ async function boot() {
   veil.remove();
   requestPersistence().then(storageStatus);
 }
+
+/* If opening the log throws — in the read, the migration or the first paint —
+   the loading screen used to stay up for good, with no way to reach Export
+   (bug sweep 1.3 / 2.1). Now it says so, writes nothing, and offers a copy of
+   exactly what is stored. Plain DOM and inline styles: nothing here may lean
+   on the parts of the app that just failed. */
+async function bootRescue(err) {
+  bootFailed = true;
+  clearTimeout(saveTimer);
+  console.error('Ironlog could not open the log', err);
+  const veil = document.getElementById('bootVeil'); if (veil) veil.remove();
+  let raw = null;
+  try { raw = await storeGet(KEY); } catch (e) { /* shown as nothing to save */ }
+  const msg = String((err && (err.stack || err.message)) || err || 'unknown error').split('\n').slice(0, 3).join(' · ');
+  const btn = 'display:block;width:100%;min-height:48px;margin:10px 0 0;padding:12px 14px;border-radius:10px;border:1px solid #3a4152;background:#1a1e28;color:#e8ecf3;font:600 15px/1.2 system-ui,-apple-system,sans-serif';
+  const box = document.createElement('div');
+  box.id = 'bootRescue';
+  box.setAttribute('role', 'alertdialog'); box.setAttribute('aria-labelledby', 'brTitle'); box.setAttribute('aria-describedby', 'brBody');
+  box.style.cssText = 'position:fixed;inset:0;z-index:9999;overflow:auto;padding:28px 18px;background:#0d0f14;color:#e8ecf3;font:500 15px/1.5 system-ui,-apple-system,sans-serif';
+  box.innerHTML = `<div style="max-width:460px;margin:0 auto">
+    <h1 id="brTitle" style="font-size:20px;margin:0 0 10px">Ironlog couldn't open your log</h1>
+    <p id="brBody" style="margin:0 0 6px">${raw ? 'Your data is still stored on this phone and nothing has been deleted or changed. Save a copy of it first, then try again.' : 'Nothing could be read from this phone\'s storage. Try again; if this keeps happening, restore from your last backup.'}</p>
+    ${raw ? `<button id="brSave" style="${btn};background:#ff5c35;border-color:#ff5c35;color:#111">Save a copy of my data</button>` : ''}
+    <button id="brRetry" style="${btn}">Try again</button>
+    <button id="brFresh" style="${btn};color:#ff8f8f">Start with an empty log…</button>
+    <p style="margin:16px 0 4px;color:#8b93a7;font-size:13px">What went wrong (v${esc(APP_VERSION)}):</p>
+    <p style="margin:0;color:#8b93a7;font:12px/1.4 ui-monospace,Consolas,monospace;word-break:break-word">${esc(msg)}</p>
+  </div>`;
+  document.body.appendChild(box);
+  const q = id => box.querySelector('#' + id);
+  let saved = false;
+  if (q('brSave')) q('brSave').onclick = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([raw], { type: 'application/json' }));
+    a.download = `ironlog-rescue-${iso()}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    saved = true;
+    q('brSave').textContent = 'Saved — check your downloads';
+  };
+  q('brRetry').onclick = () => location.reload();
+  q('brFresh').onclick = async () => {
+    if (!confirm(raw && !saved ? 'You haven\'t saved a copy yet. Start with an empty log anyway? What is stored now is set aside on this phone, not deleted, but it can only be got back with help.'
+      : 'Start with an empty log? What is stored now is set aside on this phone, not deleted.')) return;
+    try {
+      const fresh = structuredClone(DEFAULT_STATE); fresh.schemaVersion = 2; fresh.settings.lastSeenVersion = APP_VERSION;
+      if (!raw) {
+        /* Storage didn't answer, so the real log may still be in there. Ask
+           once more; if it's still silent, the empty log goes to the fallback
+           store only — IndexedDB is left alone, and whatever it holds is what
+           opens again the day it answers. */
+        let again = null, silent = false;
+        try { again = await idb('readonly', st => st.get(KEY)); } catch (e) { silent = true; }
+        if (again != null) return location.reload();
+        if (silent) { localStorage.setItem(KEY, JSON.stringify(fresh)); return location.reload(); }
+      }
+      if (raw) await idb('readwrite', st => st.put(raw, KEY + '.rescue'));   // set aside, never thrown away
+      await idb('readwrite', st => st.put(JSON.stringify(fresh), KEY));
+      location.reload();
+    } catch (e) { alert('Could not write to storage: ' + ((e && e.message) || e)); }
+  };
+  q(raw ? 'brSave' : 'brRetry').focus();
+}
+function boot() { return bootApp().catch(bootRescue); }
 
 boot();
 

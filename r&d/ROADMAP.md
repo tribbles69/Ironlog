@@ -48,6 +48,16 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    E12 next (E11 shipped 0.64.0, E12's first build 0.65.0); D8 shipped 0.66.0.
    D9 finished in 0.73.0.
 
+   **Where the section-00 sweep got to (2026-11-11, 0.90.6, branch
+   `fix/bug-sweep-2026-11`):** 00-B1 is done — the ranked list is
+   `r&d/notes/bug-sweep-2026-11.md`. 00-B2 is part done: findings 1.1–1.5,
+   2.1–2.3 and a new one, 2.4 (a custom exercise sharing a name with a
+   built-in one threw in `catalogue()`; add it to the list), shipped as
+   0.90.1–0.90.6. **Next: 1.6** (custom exercises missing from Drive sync),
+   then 1.7, 1.8, 3.x, 4.x in the list's order. 3.4, 3.6, 3.7, part of 1.8
+   and 4.5 wait on Aaron. 00-V1 onward not started. Stopped here because the
+   Fable allowance ran out.
+
    **Next up (2026-11-11, Aaron):** section **00** (bug fixes, then VBT, then design)
    comes before everything else, in page order. Then what's left of section
    **0** (01–03 shipped; 04c moved into 00). After those, carry on from
@@ -149,7 +159,7 @@ fix per commit, version bump, changelog entry.
 
 ### Bug fixes
 
-### [ ] 00-B1. Whole-app bug audit
+### [x] 00-B1. Whole-app bug audit — done 2026-11-11 against 0.90.0 (`r&d/notes/bug-sweep-2026-11.md`; about a fifth of `index.html` read line by line, the rest click-tested — the note says which)
 Read all of `index.html`, `slew-core.js`, `slew-video.js`, `sw.js` and the
 `r&d/tools` scripts. Write every bug found to
 `r&d/notes/bug-sweep-2026-11.md`, ranked by severity:

@@ -13,6 +13,29 @@ rather than guessed.
 
 ---
 
+## 0.90.6 — 11 Nov 2026
+- **Fixed: an exercise of your own could stop the app opening after an update.** If an update added an exercise with the same name as one you'd created yourself, Ironlog refused to load its exercise list. The built-in exercise now takes the name and yours keeps its history.
+
+## 0.90.5 — 11 Nov 2026
+- **Fixed: restoring an older backup could delete newer sessions from Google Drive.** After importing a backup, the next sync treated anything the backup didn't have as deleted, and removed it from Drive and from your other phones. Now the next sync after an import only adds: whatever is in Drive and not in the backup comes back onto the phone.
+
+## 0.90.4 — 11 Nov 2026
+- **Fixed: Drive sync deleted things you had removed and then added back.** Remove a program, sync, install it again, and the next sync wiped every planned session. The same happened to a check-in deleted and re-entered, a custom exercise name, and a coach plan rebuilt after "Forget everything". Anything you add back on this phone now stays.
+- **Fixed: a changed check-in didn't reach your other phone.** Check-ins now record when they were last saved, so the newer one wins when two phones sync.
+
+## 0.90.3 — 11 Nov 2026
+- **Changed: Import JSON asks before it replaces your log.** It used to overwrite everything the moment you picked a file. It now shows what's on the phone next to what's in the file, warns if the file is older, and waits for **Replace**.
+- **New: Undo import.** The log an import replaced is kept on the phone. Settings → Data shows an **Undo import** button until you use it or import again.
+- **Fixed: a wrong file could wipe the log.** Any JSON file with the right-looking heading was accepted. Files that aren't Ironlog backups are now turned away with nothing changed.
+- **Fixed: very old backups crashed every page until the app was restarted.** Backups from before 0.7.0 are now converted as they come in.
+
+## 0.90.2 — 11 Nov 2026
+- **Fixed: a log that couldn't be read was quietly replaced by an empty one.** If the saved log was damaged, or the phone's storage didn't answer for a moment at start-up, Ironlog opened as if new and then saved that empty log over the real one. It now stops at the rescue screen instead and writes nothing until you choose.
+
+## 0.90.1 — 11 Nov 2026
+- **Fixed: the app could get stuck on "Loading your log…" for good.** A backup file with a gap in it (a list missing or empty in the wrong way) could be imported and then stop the app opening at all. Ironlog now repairs those gaps when it opens.
+- **New: a rescue screen.** If your log ever can't be opened, Ironlog now says so instead of hanging, changes nothing, and gives you a **Save a copy of my data** button before anything else.
+
 ## 0.90.0 — 9 Nov 2026
 - **Fixed: Measure missed the slow last reps of a long set.** Reps that slowed right down near the end of an AMRAP read short and were thrown away as too small. On the 9 Nov push day it now finds all 16 reps of the OHP AMRAP (80 of 81 across the session).
 - **New: short-range lifts can be measured.** Measure now counts reps down to 4 cm of travel, so calf raises and other short movements register. In a set of 4 or more, a "rep" much shorter than the rest (lifting the bar off the hooks, a fidget) is still left out. Sets of 1–3 keep the usual minimum.
