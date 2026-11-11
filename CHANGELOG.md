@@ -13,6 +13,10 @@ rather than guessed.
 
 ---
 
+## 0.94.4 — 11 Nov 2026
+- **Changed: empty screens point somewhere.** With nothing planned, Train now offers **Open the calendar** and **Ask the coach**. With nothing logged, Stats offers **Go to Train**.
+- **Fixed:** the search box on Stats now has a name for screen readers.
+
 ## 0.94.3 — 11 Nov 2026
 - **New: jump to a section in Settings.** Settings is long, so there's now a row of buttons at the top — Look & units, Timers, Places & kit, AI & extras, Program, Video, Data & backup — that takes you straight to that part. Nothing in Settings has moved.
 

@@ -2344,7 +2344,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.94.3';
+const APP_VERSION = '0.94.4';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -6695,7 +6695,8 @@ function workoutLanding() {
         <div class="row" style="gap:6px"><button class="btn sm ghost" data-miss="${p.id}">${missBtn(p)}</button>
         <button class="btn sm primary" data-start-planned="${p.id}">Start</button></div>
       </div>
-    </div>`).join('') : `<div class="card"><div class="empty"><span class="big">▤</span>No planned workouts.<br>Plan one from the calendar.</div></div>`}
+    </div>`).join('') : `<div class="card"><div class="empty"><span class="big">▤</span>No planned workouts.<br>Plan a session on the calendar, or let the coach build you a plan.</div>
+      <div class="row" style="gap:8px;margin-top:10px"><button class="btn sm grow" data-go="calendar">Open the calendar</button><button class="btn sm grow" id="emptyCoach">Ask the coach</button></div></div>`}
 
   <div class="sechead"><h2>Repeat a session</h2></div>
   ${recent.length ? recent.map(r => `
@@ -8680,7 +8681,7 @@ function viewAnalytics() {
   ${mainLiftChart()}`}
 
   ${analyticsTab !== 'exercises' ? '' : stats.length ? `
-  <input id="anQ" placeholder="Search exercises…" value="${esc(analyticsQuery)}" autocomplete="off" style="margin-bottom:10px">
+  <input id="anQ" aria-label="Search exercises" placeholder="Search exercises…" value="${esc(analyticsQuery)}" autocomplete="off" style="margin-bottom:10px">
   <div class="seg" style="margin-bottom:13px">
     ${[['sessions', 'Sessions'], ['pr', 'PR'], ['progress', 'Progress'], ['recent', 'Recent']]
         .map(([k, l]) => `<button data-sort="${k}" class="${analyticsSort === k ? 'on' : ''}">${l}</button>`).join('')}
@@ -8700,7 +8701,8 @@ function viewAnalytics() {
         <div class="trend ${t}" style="width:52px;text-align:right">${s.pct > 0 ? '▲' : s.pct < 0 ? '▼' : '—'} ${Math.abs(Math.round(s.pct))}%</div>
       </div>`;
         }).join('') || `<div class="empty">No exercise matches “${esc(analyticsQuery)}”.</div>`}
-  </div>` : `<div class="card"><div class="empty"><span class="big">◫</span>No completed workouts yet.<br>Log a session and this fills up.</div></div>`}
+  </div>` : `<div class="card"><div class="empty"><span class="big">◫</span>No completed workouts yet.<br>Log a session and this fills up.</div>
+      <div class="row" style="margin-top:10px"><button class="btn sm primary grow" data-go="workout">Go to Train</button></div></div>`}
   `;
 }
 
@@ -14093,6 +14095,7 @@ function wire() {
   if (page === 'workout') {
     if (!S.active) {
       $('#startBlank').onclick = newBlank;
+      { const ec = $('#emptyCoach'); if (ec) ec.onclick = () => openCoach(); }   // the empty Planned list offers the coach (00-D1)
       $('#startCardio').onclick = openCardioSetup;
       $('#startIntervals').onclick = openIntervalSetup;
       $('#startMobility').onclick = openMobilityPicker;

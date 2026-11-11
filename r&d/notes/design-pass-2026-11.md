@@ -93,3 +93,68 @@ preferences (skin, units, timers), kit (places, bars, plates) and data
 (program, backfill, export, Drive, erase). Splitting it into two or three
 sheets would be the real fix; that changes where things live, so it's
 listed under "For Aaron" below rather than done.
+
+### 0.94.4 — empty screens that lead somewhere
+**What:**
+- Train with nothing planned said "Plan one from the calendar." It now has
+  two buttons: **Open the calendar** and **Ask the coach**.
+- Stats with nothing logged now has **Go to Train**.
+- The Stats search box had no accessible name (only placeholder text); it's
+  now "Search exercises".
+**Why:** an empty state that names another page should take you there, and
+a new lifter with no plan is exactly who the coach's plan builder is for.
+
+## After the changes
+
+Same script, every page and main sheet, both skins, at 0.94.4:
+- **Names:** none missing.
+- **Tap size:** nothing under 38 px tall outside the live set table and the
+  98 skin's window chrome (below).
+- **Contrast, default skin:** no failures.
+- **Contrast, 98 skin:** the script can't judge it. It reported the brand in
+  the top bar, the LCD readout and the green tick, which are light text on
+  black drawn over bevels the script reads as the page background. By eye
+  they're fine. Disabled buttons (2.2:1) are exempt from the rule.
+
+## Looked at and left alone
+
+- **The live workout screen.** Set table, tick, ± set, Measure and Video are
+  as they were. The equipment chips (Barbell, Bilateral) are 36 px tall —
+  under 40, but inside the area the roadmap says not to touch.
+- **The nav.** No reason found to change it.
+- **98 skin window chrome.** The title-bar buttons (24 × 22) and the menu
+  bar (File, View, Coach, Tools, Help — 23 px tall) are small on a phone.
+  That's the joke of the skin, and padding them would overlap the title bar
+  and the toolbar. Everything in those menus is also reachable from the
+  ordinary buttons.
+
+## For Aaron — seen, not done
+
+Nothing was removed. These are the things that looked like they want a
+decision rather than a tidy:
+
+1. **Settings is three things in one sheet** — preferences, kit, and data.
+   A split (say Settings / My kit / Data & backup) would shorten all three.
+   0.94.3's jump row is the stopgap.
+2. **Top bar: three icons with no words** (tools, profile, settings). They
+   have labels for a screen reader; a sighted new user has to guess. A
+   single menu, or small captions, would help.
+3. **Home has seven kinds of card** before Goals (About, backup, event
+   countdown, run-in line, mobility line, coach card, check-in, week
+   numbers). With today's session now first it matters less, but it could
+   be two: "today" and "this week".
+4. **Health starts with three tiles that repeat the cards under them**
+   (bodyweight, body fat, waist). Possibly pointless on a phone; fine as a
+   summary if the page gets longer.
+5. **Backfill** (Settings → mark past planned sessions done at their
+   prescribed loads) does nothing useful for a plan with no weights, which
+   is what ships now — see bug sweep 3.4. It may have outlived its use.
+6. **"Count backfilled sessions toward PRs"** sits in Settings between
+   Debug mode and the opener %; it only means something to someone who has
+   used Backfill.
+7. **Two ways to say the same thing remain:** Events page vs "meets" in the
+   data counts line in Settings ("3 meets"); "Train" tab vs "workout" in a
+   few toasts ("Finish the active workout first").
+8. **The Train page's three equal buttons** (Cardio, Intervals, Mobility)
+   wrap their icons and labels differently at 375 px; one row of icon-over-
+   label would be steadier.

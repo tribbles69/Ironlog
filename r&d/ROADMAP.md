@@ -53,7 +53,8 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    `r&d/notes/bug-sweep-2026-11.md`. 00-B2: every severity 1 and 2 finding
    is fixed, and every 3 and 4 that needs no decision (0.90.1–0.90.17).
    **Waiting on Aaron:** 3.4, 3.6, 3.7, 3.10, the relink part of 1.8 and the
-   question in 4.5 — all in the note. **Next: 00-V1.**
+   question in 4.5 — all in the note. 00-V1 to 00-V4 shipped 0.91.0–0.93.1 and
+   00-D1 0.94.0–0.94.4 (branch `design/ui-pass-2026-11`). **Next: 00-D2.**
 
    **Next up (2026-11-11, Aaron):** section **00** (bug fixes, then VBT, then design)
    comes before everything else, in page order. Then what's left of section
@@ -208,7 +209,7 @@ Aaron asked for a design pass in the same sweep, after the VBT items. He's
 happy for the agent to make the UI and menu changes it judges best — no
 sign-off needed per change — within the rules below.
 
-### [ ] 00-D1. UI and menu pass
+### [x] 00-D1. UI and menu pass — shipped 0.94.0–0.94.4 (40 px tap areas on small buttons; Home leads with today's session; Stats / Skip-or-move labels; a jump row in Settings; empty states with actions; what and why in `r&d/notes/design-pass-2026-11.md`, with eight things left for Aaron to decide. **The axe check was not run** — loading it was blocked in the session; a script checked names, contrast and tap size instead. Aaron: run axe once, or OK an agent loading it)
 Go through every page, sheet and menu in both skins and improve what's
 cluttered, inconsistent or hard to reach: layout, spacing, hierarchy, labels,
 menu structure, empty states, onboarding. Write what you changed and why to
