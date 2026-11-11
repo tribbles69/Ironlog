@@ -13,6 +13,9 @@ rather than guessed.
 
 ---
 
+## 0.93.1 — 11 Nov 2026
+- **Changed: the bar-speed export holds more.** Settings → Export raw traces now also lists every set you've measured in the last 60 days, by sensor or video, with each rep's speed and whether the RIR was yours or the sensor's. It's there so Measure can be checked against a proper bar-speed device. It works even with Bar-speed debug off.
+
 ## 0.93.0 — 11 Nov 2026
 - **New: film your set inside Ironlog.** ▶ Video on a lift (and Tools → Bar path) now has a **● Record** button next to Choose video. Prop the phone side-on, tap Record, do the set, tap Stop, and it goes straight into the usual trim → bar path → squat depth steps. No need to film in the camera app and find the clip afterwards.
 - The clip stays on your phone and is only kept if you save the finished bar-path video. ⟲ Flip switches between the back and front cameras. A recording stops itself after 3 minutes.

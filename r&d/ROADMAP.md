@@ -197,7 +197,7 @@ picking it from the gallery, then run it through the existing bar path (04a)
 and squat depth (04b) flow. On the device only, no uploads. Check on phone —
 add an A4 checklist item.
 
-### [ ] 00-V4. Validation (Aaron + code)
+### [x] 00-V4. Validation (Aaron + code) — code side shipped 0.93.1 (the bar-speed export lists every measured set, sensor and video; `r&d/tools/vbt-validate.cjs` writes a sheet to fill in with the reference device's speeds and turns it into the results-table rows: MCV bias, limits of agreement, RIR error; steps in `r&d/notes/vbt-validation.md` → Filling the results table. **The sets with a reference device are still Aaron's to do**, and the e1RM-in-range check isn't built)
 Whatever `r&d/notes/vbt-validation.md` still needs on the code side to compare
 Measure and video against a known device. The sets themselves are Aaron's to
 film and log.

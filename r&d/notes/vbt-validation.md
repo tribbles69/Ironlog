@@ -211,3 +211,35 @@ measured. To check it: Measure working sets and **type your own RIR on
 every one** (A4 item 23). Twenty typed sets across squat, bench and
 deadlift, a few of them to failure, would give a real error figure — and the
 sets to failure also calibrate `vlF` and the failure speed.
+
+## Filling the results table (00-V4, 0.93.1)
+
+The code side of the protocol at the top of this note. The sets are Aaron's
+to film and log; this is how they turn into rows.
+
+1. Do the protocol sets with the reference device on the bar. **◉ Measure**
+   each set (or **▶ Video → ● Record** for the video table). Type your own
+   RIR on every working set.
+2. Write down the device's mean concentric velocity for every rep.
+3. Settings → **Export raw traces**. From 0.93.1 the file (format
+   `ironlog-vbt-raw`, v3) lists every measured set of the last 60 days under
+   `readings` — sensor and video — with per-rep speed, range of motion, the
+   estimate and its method, and the set's RIR marked `typed` or `sensor`.
+4. `node "r&d/tools/vbt-validate.cjs" --template export.json > reference.csv`
+   writes one row per measured set. Fill in `ref_device` and `ref_mps` (the
+   device's per-rep speeds, space-separated). `true_rir` is pre-filled only
+   where you typed it.
+5. `node "r&d/tools/vbt-validate.cjs" export.json reference.csv` prints the
+   MCV bias, the Bland–Altman limits of agreement and the RIR mean absolute
+   error per lift and source, and the rows to paste into **Results** above.
+
+What it does and doesn't do:
+- Reps are paired in order. A set where Ironlog and the device counted
+  different numbers of reps is reported as left out, not paired.
+- Pocket sets come out as their own source (`sensor-pocket`).
+- RIR error uses typed RIRs only, and skips "6+" and sets where the sensor
+  missed reps.
+- **Not done: the e1RM-in-range share.** It needs a tested single within
+  three days of each warm-up profile; the column is in the CSV for it.
+- The tool has only been run on made-up numbers. No reference-device data
+  exists yet.

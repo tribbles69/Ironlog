@@ -2337,7 +2337,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.93.0';
+const APP_VERSION = '0.93.1';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -7051,8 +7051,22 @@ function vbtRawKeep(rec) {
 }
 function exportVbtRaw() {
   const l = vbtRawList();
-  if (!l.length) return toast('No raw traces kept yet — turn it on, then measure a set');
   const all = [...(S.active ? [S.active] : []), ...S.workouts];
+  /* Every measured set of the last 60 days, sensor or video, as the lifter
+     saw it: per-rep speeds, the estimate, and the RIR with who entered it.
+     This is what r&d/tools/vbt-validate.cjs lines up against a reference
+     device (00-V4); the raw traces below it are for re-running detection. */
+  const since = addDaysISO(today(), -60), readings = [];
+  all.forEach(w => { if (!(w.date >= since)) return; (w.exercises || []).forEach(e => (e.sets || []).forEach((s, si) => {
+    const v = s.vbt; if (!v || !v.reps) return;
+    readings.push({ at: v.at, date: w.date, workout: w.name, exercise: exName(e), set: setRefText(e.sets, si), w: s.w, r: s.r,
+      rir: s.rpe != null ? rpeToRir(s.rpe) : null, rirFrom: s.rpe == null ? null : rirFromSensor(s) ? 'sensor' : 'typed',
+      source: v.mode === 'video' ? 'video' : 'sensor', place: v.place || null, lift: v.lift || null, best: v.best, loss: v.loss,
+      v: v.reps.map(r => r.v), romCm: v.reps.map(r => Math.round(r.rom * 100)),
+      est: v.est ? { rir: v.est.rir, method: v.est.method, spread: v.est.spread, ...(v.est.atLeast ? { atLeast: true } : {}) } : null });
+  })); });
+  readings.sort((a, b) => a.at - b.at);
+  if (!l.length && !readings.length) return toast('Nothing to export yet — measure a set first');
   const traces = l.map(t => {
     for (const w of all) for (const e of w.exercises || []) {
       const si = (e.sets || []).findIndex(s => s.vbt && s.vbt.at === t.at);
@@ -7060,7 +7074,7 @@ function exportVbtRaw() {
     }
     return { ...t, logged: null };
   });
-  saveBlob(JSON.stringify({ format: 'ironlog-vbt-raw', v: 2, exportedAt: new Date().toISOString(), traces }), 'application/json', `ironlog-vbt-raw-${today()}.json`);
+  saveBlob(JSON.stringify({ format: 'ironlog-vbt-raw', v: 3, app: APP_VERSION, exportedAt: new Date().toISOString(), readings, traces }), 'application/json', `ironlog-vbt-raw-${today()}.json`);
 }
 
 /* A finished workout shows bar speed the way the live card did: every

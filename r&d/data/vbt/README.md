@@ -6,6 +6,8 @@ Measure detected, and the set as logged. For roadmap **00-V1** (tilt
 correction) and **00-V2** (bar-speed RIR accuracy). Add new exports here with
 the date in the file name; don't edit the originals.
 
+Exports from 0.93.1 are **v3**: the same `traces`, plus `readings` (every measured set of the last 60 days as the lifter saw it) and, on each trace, `tilt` (share of samples tilt-corrected) and `found` (reps after the filters). `logged.rirFrom` says whether the set's RIR was typed or filled by the sensor. Tools: `vbt-sim.cjs` (rep counts), `vbt-rir.cjs` (RIR, old vs new), `vbt-validate.cjs` (against a reference device).
+
 ## ironlog-vbt-raw-2026-11-11.json — 20 traces
 
 **9 Nov, Wk 4 · Push (9 traces):** overhead press (warm-up, 1 unlogged set,
