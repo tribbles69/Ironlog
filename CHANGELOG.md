@@ -13,6 +13,9 @@ rather than guessed.
 
 ---
 
+## 0.90.11 — 11 Nov 2026
+- **Fixed: rep ranges told you to add 2.5 kg to a gripper.** Grippers and bands only come in fixed ratings. At the top of the range Ironlog now says to move to the next gripper (or band) up, and the **Use** button isn't offered for them.
+
 ## 0.90.10 — 11 Nov 2026
 - **Fixed: "Reps NaN" and 0 kg volume on the session summary.** A session that included a carry or a timed hold showed NaN for reps and lost its volume total. Sets without reps are now left out of those sums instead of breaking them. Share cards and the edit screen had the same fault.
 

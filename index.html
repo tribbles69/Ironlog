@@ -2337,7 +2337,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.90.10';
+const APP_VERSION = '0.90.11';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -5658,8 +5658,11 @@ const WHY = {
     if (allTop && allRir) {
       kind = 'up';
       const step = e.leaf && (e.leaf.equipment === 'dumbbells' || e.leaf.equipment === 'kettlebell') ? 2 : 2.5;
+      if (fixedStepKit(e.leaf)) { t.step('→ up', `the next ${fixedStepKit(e.leaf)} up`, 'fixed ratings: no weight is worked out'); t.result('Next', `next ${fixedStepKit(e.leaf)} × ${lo}`); }
+      else {
       t.step('→ up', `max(${nice(dw(W))} × 1.025, ${nice(dw(W))} + ${step}) rounded`, 'the bigger of +2.5% or one step, rounded to what loads');
       t.result('Next', `${wt(rangeNextLoad(W, e.leaf))} × ${lo}`);
+      }
     } else if (at[0].r < lo) { kind = 'below'; t.step(`First set under ${lo}`, `${at[0].r} reps`, '→ below the range'); }
     else { kind = 'build'; if (allTop) t.note(`Reached ${hi}, but harder than RIR ${tr}: same weight again.`); }
     t.result('Verdict', kind);
@@ -14256,6 +14259,13 @@ function adoptRange(e) {
   const r = rangeFromText(e.notes) || (S.settings.rangeBy || {})[exKey(e)];
   if (r) e.range = [r[0], r[1]];
 }
+/* Kit that only comes in fixed ratings: a torsion gripper, a finger band. There
+   is no "2.5 kg more" — the next step is the next one up, whatever it's rated
+   (bug sweep 3.2, E13). */
+function fixedStepKit(leaf) {
+  const eq = leaf && leaf.equipment;
+  return eq === 'gripper' ? 'gripper' : eq === 'extension_band' || eq === 'resistance_band' ? 'band' : null;
+}
 function rangeNextLoad(w, leaf) {
   const step = leaf && (leaf.equipment === 'dumbbells' || leaf.equipment === 'kettlebell') ? 2 : 2.5;
   const next = roundLoadFor(Math.max(w * 1.025, w + step), leaf);
@@ -14272,12 +14282,14 @@ function rangeVerdict(e, sets, date) {
   const W = Math.max(...work.map(s => s.w)), at = work.filter(s => s.w === W);
   const rirs = at.filter(s => s.rpe != null).map(s => rpeToRir(s.rpe));
   const base = { w: W, lo, hi, t, reps: at.map(s => s.r), noRir: !rirs.length };
-  if (at.every(s => s.r >= hi) && rirs.every(r => r >= t)) return { ...base, kind: 'up', next: rangeNextLoad(W, e.leaf) };
+  if (at.every(s => s.r >= hi) && rirs.every(r => r >= t)) return { ...base, kind: 'up', ...(fixedStepKit(e.leaf) ? { next: null, kit: fixedStepKit(e.leaf) } : { next: rangeNextLoad(W, e.leaf) }) };
   if (at[0].r < lo) return { ...base, kind: 'below' };
   return { ...base, kind: 'build', grind: at.every(s => s.r >= hi) };
 }
 function verdictWords(v, today2) {
   const rir = v.noRir ? ' (no RIR logged)' : '';
+  if (v.kind === 'up' && v.next == null) return today2 ? `Top of the range at RIR ${v.t}+${rir} → next time the next ${v.kit || 'step'} up, from ${v.lo} reps`
+    : `top of the range${rir} → try the next ${v.kit || 'step'} up, from ${v.lo} reps`;
   if (v.kind === 'up') return today2 ? `Top of the range at RIR ${v.t}+${rir} → next time ${wt(v.next)} × ${v.lo}`
     : `top of the range${rir} → try ${wt(v.next)} × ${v.lo}`;
   if (v.kind === 'below') return today2 ? `Under ${v.lo} reps — stay at ${wt(v.w)} until you reach ${v.lo}, or drop the weight`
@@ -14310,7 +14322,7 @@ function rangeLine(e, ei) {
     if (v) {
       msg = `Last time ${wt(v.w)} — ${esc(verdictWords(v, false))}`;
       const pending = e.sets.filter(s => !s.done && isPRSet(s) && s.setType !== 'amrap');
-      if (v.kind === 'up' && !e.auto && pending.some(s => s.w !== v.next || s.r !== v.lo)) use = `<button class="btn xs primary" data-range-use="${ei}">Use</button>`;
+      if (v.kind === 'up' && v.next != null && !e.auto && pending.some(s => s.w !== v.next || s.r !== v.lo)) use = `<button class="btn xs primary" data-range-use="${ei}">Use</button>`;
     }
   }
   return `<div class="rangeline"><div class="row" style="gap:8px;align-items:center">
@@ -16940,7 +16952,7 @@ function coDebrief(wo) {
     const v = rangeVerdict(x.e, x.sets.filter(s => s.done), wo.date);
     if (!v) return;
     lines.push(`${exName(x.e)}: ${verdictWords(v, false)}.`);
-    if (v.kind === 'up') next.push([3, `${exName(x.e)}: ${wt(v.next)} × ${v.lo} next time.`]);
+    if (v.kind === 'up') next.push([3, v.next == null ? `${exName(x.e)}: the next ${v.kit || 'step'} up next time, from ${v.lo} reps.` : `${exName(x.e)}: ${wt(v.next)} × ${v.lo} next time.`]);
   });
   const stalled = work.filter(x => x.e.leaf && stallFor(exKey(x.e))).map(x => exName(x.e));
   if (stalled.length) { lines.push(`Stalled: ${stalled.join(', ')}.`); next.push([2, `${stalled[0]} has stalled — ask me why before the next session.`]); }
@@ -19387,7 +19399,7 @@ function wireActive(v) {
   v.querySelectorAll('[data-range-use]').forEach(b => b.onclick = () => {
     const ex = a.exercises[+b.dataset.rangeUse], last = lastSession(exKey(ex));
     const vd = last && rangeVerdict(ex, last.sets, last.date);
-    if (!vd || vd.kind !== 'up') return;
+    if (!vd || vd.kind !== 'up' || vd.next == null) return;
     let n = 0;
     ex.sets.forEach(s => { if (!s.done && isPRSet(s) && s.setType !== 'amrap') { s.w = vd.next; s.r = vd.lo; delete s.auto; n++; } });
     save(); render();

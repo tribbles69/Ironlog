@@ -194,7 +194,7 @@ Carries have no `r`, so `w × r` is NaN; the stored `summary.volume` becomes
 on the next finish or edit; stored summaries of old sessions stay as they
 are unless Aaron wants them rebuilt.)
 
-### [ ] 3.2 The rep-range "add weight" step assumes 2.5 kg (roadmap's known one, E13) — From the code
+### [x] 3.2 (0.90.11) The rep-range "add weight" step assumes 2.5 kg (roadmap's known one, E13) — From the code
 **Where:** `rangeNextLoad` (~14152), `roundLoadFor` (~14690).
 A fixed-rating gripper, a finger band, a machine stack or a kettlebell can't
 go up 2.5 kg. For a gripper the line reads "next time 42.5 kg".
