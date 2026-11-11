@@ -112,7 +112,7 @@ safety prompt, and the tombstones then delete them on other phones too.
 **Fix:** on import (and on Erase all data), clear `known` so the next sync is
 a plain merge with nothing treated as deleted.
 
-### [ ] 1.6 Custom exercises aren't in the Drive backup or the CSV — Confirmed (display), From the code (sync)
+### [x] 1.6 (0.90.7) Custom exercises aren't in the Drive backup or the CSV — Confirmed (display), From the code (sync)
 **Where:** `SYNC_SETS` / `SYNC_MAPS` (~1687) leave out `customMovements`;
 the CSV carries only the leaf.
 Sessions sync, but the definitions of exercises the catalogue didn't know
@@ -122,7 +122,7 @@ don't. On a new phone after a Drive restore they show as raw ids
 import and sync, rebuild a missing custom movement from the entry's
 `legacyName`.
 
-### [ ] 1.7 An update can restart the app while you're editing — From the code
+### [x] 1.7 (0.90.8) An update can restart the app while you're editing — Confirmed
 **Where:** service-worker block (~21259) and `applyUpdate` (~3041).
 With no workout running, a new version reloads the page 1.4 s after it
 downloads. An open Edit session sheet, a half-typed check-in or a fitting
@@ -131,7 +131,7 @@ save before it reloads.
 **Fix:** don't auto-restart while a sheet is open (show the toast and wait,
 as for a live workout); `await flush()` before every reload.
 
-### [ ] 1.8 Finishing a plan session drops its link to the plan — Confirmed
+### [x] 1.8 (0.90.9, new sessions only — relinking old ones waits on Aaron) Finishing a plan session drops its link to the plan — Confirmed
 **Where:** `finishWorkout` (~7566): `prog` is only kept when the session has
 a `block`.
 A planned session from a program with no block names is saved without
@@ -184,7 +184,7 @@ reachable by id so its sets keep their history.
 
 ## Severity 3 — wrong numbers
 
-### [ ] 3.1 Session summary shows "Reps NaN" and saves no volume when a carry or hold is in the session — Confirmed
+### [x] 3.1 (0.90.10) Session summary shows "Reps NaN" and saves no volume when a carry or hold is in the session — Confirmed
 **Where:** `finishWorkout` summary (~7568), `saveEdit` (~8400),
 `backfillPlanned` (~10817), and the summary sheet's rep total.
 Carries have no `r`, so `w × r` is NaN; the stored `summary.volume` becomes
@@ -194,14 +194,14 @@ Carries have no `r`, so `w × r` is NaN; the stored `summary.volume` becomes
 on the next finish or edit; stored summaries of old sessions stay as they
 are unless Aaron wants them rebuilt.)
 
-### [ ] 3.2 The rep-range "add weight" step assumes 2.5 kg (roadmap's known one, E13) — From the code
+### [x] 3.2 (0.90.11) The rep-range "add weight" step assumes 2.5 kg (roadmap's known one, E13) — From the code
 **Where:** `rangeNextLoad` (~14152), `roundLoadFor` (~14690).
 A fixed-rating gripper, a finger band, a machine stack or a kettlebell can't
 go up 2.5 kg. For a gripper the line reads "next time 42.5 kg".
 **Fix:** for `gripper` / `extension_band`, say "move up a gripper" with no
 number; leave the others to 3.3.
 
-### [ ] 3.3 Dumbbell loads round to 2 kg even in lb — Confirmed
+### [x] 3.3 (0.90.12) Dumbbell loads round to 2 kg even in lb — Confirmed
 **Where:** `roundLoadFor` (~14691).
 In lb the suggestion for a 20.3 kg dumbbell is 44.1 lb. Should be the
 nearest 5 lb.
@@ -217,7 +217,7 @@ sessions in each lift's stats.
 skipped (the Missed flow already exists). **Ask Aaron** before touching any
 that are already backfilled — that's stored data.
 
-### [ ] 3.5 Measure records the last set's weight, not the set being measured — From the code
+### [x] 3.5 (0.90.13) Measure records the last set's weight, not the set being measured — From the code
 **Where:** `openVbtRecord` (~11713): `ex.sets.filter(s => s.w > 0).slice(-1)`.
 Measuring a warm-up while the top set is already typed uses the top set's
 weight for power and in the debug trace (`kg`). The 9 Nov traces may carry
@@ -240,23 +240,36 @@ give the same number.
 **Fix:** none suggested without a decision — any change moves existing PR
 and e1RM numbers. **For Aaron to decide; not part of 00-B2 unless he says.**
 
-### [ ] 3.8 Bar-speed RIR is unreliable on long sets
+### [x] 3.8 (0.92.0, not validated) Bar-speed RIR is unreliable on long sets
 Already known (35 × 17 read RIR 12). Belongs to **00-V2**; listed so the
 sweep is complete.
 
-### [ ] 3.9 "No reps found" quotes the wrong minimum travel — From the code
+### [x] 3.9 (0.91.0) "No reps found" quotes the wrong minimum travel — From the code
 **Where:** `vbtReviewDlg` (~11925) says the bar must travel at least 10 cm;
-the real floor has been 4 cm since 0.90.0.
+the real floor has been 4 cm since 0.90.0. Goes in with the 00-V1 version,
+which touches the same sheet.
+
+### [ ] 3.10 Two lifts in the shipped program aren't in the exercise catalogue — Confirmed
+Found during 00-B2 (the audit read the validator's failure wrongly — see 4.7).
+**Where:** `program.json` names *Landmine Press* and *Tibialis Raise*;
+neither is in `r&d/data/exercises.json`.
+Installing the program turns them into custom movements
+(`custom-landmine-press`, `custom-tibialis-raise`): no muscles, so no
+Weekly sets credit and no recovery; no demo; no bar-speed profile.
+**Fix:** add both to the catalogue. **Ask Aaron first:** anyone who has
+already logged them (Aaron, weeks 1–4) has those sets under the custom ids.
+Adding the built-in ones starts a second history unless the old sets are
+re-pointed, and that is a change to stored data.
 
 ---
 
 ## Severity 4 — broken or confusing UI
 
-### [ ] 4.1 Closing Edit session throws the edits away without asking — From the code
+### [x] 4.1 (0.90.15) Closing Edit session throws the edits away without asking — From the code
 **Where:** `renderEditWorkout` (~8225). Back, Escape, a tap outside or
 Cancel all discard. **Fix:** ask if anything changed.
 
-### [ ] 4.2 "Erase all data" doesn't erase all data — From the code
+### [x] 4.2 (0.90.16) "Erase all data" doesn't erase all data — From the code
 **Where:** `#stWipe` (~13309).
 It resets the log but leaves progress photos, daily clips, raw bar-speed
 traces, the AI key and the Drive link. With Drive connected, the next sync
@@ -265,13 +278,13 @@ sees an empty phone and restores everything.
 traces; disconnect Drive (the file stays in the user's Drive) so it doesn't
 come back by surprise.
 
-### [ ] 4.3 Nine controls with no accessible label (C4) — Confirmed
+### [x] 4.3 (0.90.14) Nine controls with no accessible label (C4) — Confirmed
 Calendar `‹` `›` (`#calPrev`, `#calNext`); Settings plate-row `−` (`data-prm`)
 and the Drive client ID box (`#stClientId`); Profile sex, date of birth,
 height, bodyweight and activity (`#pfSex`, `#pfDob`, `#pfHeight`, `#pfBw`,
 `#pfAct`) — their labels aren't tied to the fields.
 
-### [ ] 4.4 The service worker updates the app behind the update prompt — From the code
+### [x] 4.4 (0.90.17) The service worker updates the app behind the update prompt — Confirmed
 **Where:** `sw.js` fetch handler (73–93).
 Every launch re-fetches each file and writes it into the *current* cache.
 So a new `index.html` is in use on the second launch whether or not the
@@ -285,19 +298,22 @@ bar-speed calibration, places, rest times and plates don't travel after the
 first restore. Not a bug against the spec. **For Aaron:** sync at least
 `slewProfiles` and `places`?
 
-### [ ] 4.6 First launch reloads about a second in — From the code
+### [x] 4.6 (0.90.8) First launch reloads about a second in — From the code
 The worker takes control on first install and the page reloads
 (`controllerchange`), which can interrupt the welcome sheet. Known in a
 comment at `load`. **Fix:** skip the reload when there was no controller
 before.
 
-### [ ] 4.7 Tools
-- `validate-exercises.js` throws a TypeError at line 141 after its "zero
-  orphans" check fails. It only knows `r&d/data/exercises.json`; the app also
-  resolves names through the extended database, so *Tibialis Raise* and
-  *Landmine Press* count as orphans there but resolve fine in the app.
-  **Fix:** guard the null, and either add the two movements to the catalogue
-  or teach the validator about the extended database.
+### [ ] 4.7 Tools — crash fixed, stale checks left
+- `validate-exercises.js` threw a TypeError at line 141 after its "zero
+  orphans" check failed. **Fixed** (no version, tools only): it now reports
+  and carries on. The audit said the two names "resolve fine in the app";
+  that was wrong — they only resolved because the test had already installed
+  the program, which makes them custom movements. See 3.10.
+- Still open: seven of its checks describe the old 77-week program (333
+  sessions, 119 movements, 8 timed movements…) and fail against the WDC
+  program that ships now. They need rewriting for the current program or
+  deleting; nothing in the app depends on them.
 
 ---
 
@@ -308,4 +324,15 @@ import) → 1.1 (sync tombstones) → 1.5 → 1.4 → 1.6 → 1.7 → 1.8 → 3.
 3.3 → 3.5 → 3.9 → 4.x.
 
 **Waiting on Aaron before any fix:** 3.4 (already-backfilled sessions),
-3.6, 3.7, the relink part of 1.8, and the question in 4.5.
+3.6, 3.7, 3.10, the relink part of 1.8, and the question in 4.5.
+
+## Where 00-B2 stands (11 Nov 2026, 0.90.17)
+
+Everything in severity 1 and 2 is fixed, and everything in 3 and 4 that
+doesn't need a decision. Left: the six items above (Aaron), 3.8 and 3.9
+(with the VBT work), and the stale validator checks in 4.7.
+
+Also still true after 1.1: goals, meets and edits to planned sessions carry
+no "last changed" time, so a change to one of those on one phone doesn't
+replace the copy on another. Nothing is lost; the two phones just keep their
+own version.

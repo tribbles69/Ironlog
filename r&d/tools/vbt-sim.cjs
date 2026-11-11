@@ -26,8 +26,8 @@ vm.runInContext(fs.readFileSync(path.join(ROOT, 'slew-core.js'), 'utf8'), ctx);
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 const src = html.match(/const VBT_HP_V[\s\S]*?\nfunction vbtSummary\(reps\) \{[\s\S]*?\n\}\n/);
 if (!src) { console.error('vbtIntegrate … vbtSummary not found in index.html'); process.exit(1); }
-vm.runInContext(src[0] + 'globalThis.vbtIntegrate = vbtIntegrate; globalThis.vbtDropBlips = vbtDropBlips; globalThis.VBT_MIN_ROM = VBT_MIN_ROM;', ctx);
-const { Slew, vbtIntegrate, vbtDropBlips, VBT_MIN_ROM } = ctx;
+vm.runInContext(src[0] + 'globalThis.vbtIntegrate = vbtIntegrate; globalThis.vbtDropBlips = vbtDropBlips; globalThis.VBT_MIN_ROM = VBT_MIN_ROM; globalThis.vbtTiltMotion = vbtTiltMotion;', ctx);
+const { Slew, vbtIntegrate, vbtDropBlips, VBT_MIN_ROM, vbtTiltMotion } = ctx;
 const arg = k => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : null; };
 
 let seed = 1;
@@ -72,24 +72,29 @@ function count(motion, minRom, integrate, ironlog) {
 }
 const oldWay = m => count(m.motion, m.minRom, x => Slew.integrateMotion(x), false);
 const newWay = m => count(m.motion, m.minRom, vbtIntegrate, true);
+/* As Measure runs since 0.91.0: tilt-corrected where the trace has the phone's
+   3-axis readings (exports from 0.90.0 on), otherwise the same as newWay. */
+const tiltWay = m => count(vbtTiltMotion(m.motion, m.xyz).motion, m.minRom, vbtIntegrate, true);
 
 /* Real traces */
 if (arg('--traces')) {
   const d = JSON.parse(fs.readFileSync(arg('--traces'), 'utf8'));
   const truth = arg('--truth') ? arg('--truth').split(',').map(Number) : null;
-  let was = 0, now = 0, total = 0, bad = 0;
+  let was = 0, now = 0, tl = 0, total = 0, bad = 0, tilted = 0;
+  const cm = reps => { const r = reps.map(x => x.rom * 100); return r.length ? `${Math.min(...r).toFixed(0)}–${Math.max(...r).toFixed(0)} cm` : '—'; };
   d.traces.forEach((t, i) => {
     const want = truth ? truth[i] : t.logged && t.logged.r;
     if (!(want > 0)) { console.log(`skip   trace ${i + 1} (${t.lift}, not attached to a set)`); return; }
-    const m = { motion: t.t.map((x, j) => ({ t: x, a: t.a[j], still: t.still[j] === '1' })), minRom: t.profile.minRom };
-    const a = oldWay(m).length, reps = newWay(m), b = reps.length;
-    was += Math.min(a, want); now += Math.min(b, want); total += want;
-    const worse = b < a, extra = b > want;
+    const m = { motion: t.t.map((x, j) => ({ t: x, a: t.a[j], still: t.still[j] === '1' })), minRom: t.profile.minRom, xyz: t.xyz || null };
+    const a = oldWay(m).length, plain = newWay(m), reps = tiltWay(m), b = reps.length;
+    if (m.xyz) tilted++;
+    was += Math.min(a, want); now += Math.min(plain.length, want); tl += Math.min(b, want); total += want;
+    const worse = b < Math.min(plain.length, want), extra = b > want;
     if (worse || extra) bad++;
     const label = t.logged ? `${t.logged.exercise} ${t.logged.set} ${t.logged.w}×${t.logged.r}` : `${t.lift} trace ${i + 1}`;
-    if (verbose || worse || extra) console.log(`${worse ? 'WORSE ' : extra ? 'EXTRA ' : '      '}${label.padEnd(36)} Slew ${a}/${want}  Ironlog ${b}/${want}  ${reps.map(r => r.concentric.meanVelocity.toFixed(2)).join('/')}`);
+    if (verbose || worse || extra) console.log(`${worse ? 'WORSE ' : extra ? 'EXTRA ' : '      '}${label.padEnd(36)} Slew ${a}/${want}  no tilt ${plain.length}/${want} (${cm(plain)})  ${m.xyz ? 'tilt' : 'same'} ${b}/${want} (${cm(reps)})  ${reps.map(r => r.concentric.meanVelocity.toFixed(2)).join('/')}`);
   });
-  console.log(`Reps found: Slew.integrateMotion ${was}/${total}, vbtIntegrate ${now}/${total}`);
+  console.log(`Reps found: Slew.integrateMotion ${was}/${total}, vbtIntegrate without tilt ${now}/${total}, as shipped ${tl}/${total} (${tilted} of ${d.traces.length} traces carry 3-axis readings)`);
   if (bad) console.error(`${bad} set(s) worse or over-counted`);
   process.exit(bad ? 1 : 0);
 }

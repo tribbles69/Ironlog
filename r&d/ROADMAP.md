@@ -48,15 +48,12 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    E12 next (E11 shipped 0.64.0, E12's first build 0.65.0); D8 shipped 0.66.0.
    D9 finished in 0.73.0.
 
-   **Where the section-00 sweep got to (2026-11-11, 0.90.6, branch
+   **Where the section-00 sweep got to (2026-11-11, 0.90.17, branch
    `fix/bug-sweep-2026-11`):** 00-B1 is done — the ranked list is
-   `r&d/notes/bug-sweep-2026-11.md`. 00-B2 is part done: findings 1.1–1.5,
-   2.1–2.3 and a new one, 2.4 (a custom exercise sharing a name with a
-   built-in one threw in `catalogue()`; add it to the list), shipped as
-   0.90.1–0.90.6. **Next: 1.6** (custom exercises missing from Drive sync),
-   then 1.7, 1.8, 3.x, 4.x in the list's order. 3.4, 3.6, 3.7, part of 1.8
-   and 4.5 wait on Aaron. 00-V1 onward not started. Stopped here because the
-   Fable allowance ran out.
+   `r&d/notes/bug-sweep-2026-11.md`. 00-B2: every severity 1 and 2 finding
+   is fixed, and every 3 and 4 that needs no decision (0.90.1–0.90.17).
+   **Waiting on Aaron:** 3.4, 3.6, 3.7, 3.10, the relink part of 1.8 and the
+   question in 4.5 — all in the note. **Next: 00-V1.**
 
    **Next up (2026-11-11, Aaron):** section **00** (bug fixes, then VBT, then design)
    comes before everything else, in page order. Then what's left of section
@@ -173,7 +170,7 @@ Read all of `index.html`, `slew-core.js`, `slew-video.js`, `sw.js` and the
 Note for each: where it is, how to reproduce, and a suggested fix. Don't fix
 anything in this step — the list is the deliverable.
 
-### [ ] 00-B2. Fix the audit's findings, top of the list down
+### [ ] 00-B2. Fix the audit's findings, top of the list down — **0.90.1–0.90.17 shipped**: all of severity 1 and 2, and what needs no decision in 3 and 4 (the gripper step is 0.90.11). Left open for Aaron's calls: 3.4, 3.6, 3.7, 3.10, part of 1.8, 4.5 (`r&d/notes/bug-sweep-2026-11.md`)
 One fix per version. Severity 1 and 2 before anything else. Anything that
 would change existing PR numbers or stored data gets flagged to Aaron first
 (as D10 was). Known small one to include: the rep-range "add weight" step
@@ -181,26 +178,26 @@ assumes 2.5 kg, which a fixed-rating gripper can't do (E13).
 
 ### VBT
 
-### [ ] 00-V1. Tilt correction for Measure
+### [x] 00-V1. Tilt correction for Measure — shipped 0.91.0 (each sample re-read against the phone's own gravity; 9 Nov still 80 of 81 but those traces have no 3-axis data so they only prove the fallback; 11 Nov 65 of 65 with steadier range of motion; before/after in `r&d/notes/vbt-validation.md`; **Aaron: A4 item 21** — a heavy day recorded with debug on is what would really test it)
 0.90.0 started recording the phone's full 3-axis readings so the phone
 tilting as the bar rolls could be corrected later. Use Aaron's saved
 bar-speed debug traces (`r&d/data/vbt/` — start with its README) to correct for tilt, then re-check rep counts and
 speeds against the 9 Nov push day (80 of 81 reps found in 0.90.0 — must not
 get worse). Record before/after in `r&d/notes/vbt-validation.md`.
 
-### [ ] 00-V2. Bar-speed RIR accuracy
+### [x] 00-V2. Bar-speed RIR accuracy — shipped 0.92.0, **not validated** (the traces hold only two typed RIRs — the rest were the sensor's own estimates written back into the set; the two worst misreads are fixed, 35 × 17 from RIR 12 to ~3 and a 40 kg warm-up from 0.2 to ~4; estimates are now only written into a set when observed or calibrated, and sensor-filled RIRs are marked; `r&d/notes/vbt-validation.md`, `r&d/tools/vbt-rir.cjs`; **Aaron: A4 item 23** — type your RIR on measured sets so there's something to check against)
 Changelog 0.89.0 says bar-speed RIR is still a rough guide. Compare the
 estimated RIR against the RIR Aaron logged on the same sets (debug traces and
 history), find where it's off (lift, set length, pocket vs bar mode) and tune
 it. Keep showing it as an estimate; still hide it when reps were missed.
 
-### [ ] 00-V3. Record video in the app (04c, moved up from section 0)
+### [x] 00-V3. Record video in the app (04c, moved up from section 0) — shipped 0.93.0 (● Record on the first screen of ▶ Video and Tools → Bar path; rear camera, straight into the existing trim → bar path → squat depth flow; on the device only; spec `r&d/specs/bar-path-spec.md` §10; tested with a simulated camera only — **Aaron: A4 item 24**)
 Finish part c of item 04: record the side-on clip inside Ironlog rather than
 picking it from the gallery, then run it through the existing bar path (04a)
 and squat depth (04b) flow. On the device only, no uploads. Check on phone —
 add an A4 checklist item.
 
-### [ ] 00-V4. Validation (Aaron + code)
+### [x] 00-V4. Validation (Aaron + code) — code side shipped 0.93.1 (the bar-speed export lists every measured set, sensor and video; `r&d/tools/vbt-validate.cjs` writes a sheet to fill in with the reference device's speeds and turns it into the results-table rows: MCV bias, limits of agreement, RIR error; steps in `r&d/notes/vbt-validation.md` → Filling the results table. **The sets with a reference device are still Aaron's to do**, and the e1RM-in-range check isn't built)
 Whatever `r&d/notes/vbt-validation.md` still needs on the code side to compare
 Measure and video against a known device. The sets themselves are Aaron's to
 film and log.
@@ -430,6 +427,33 @@ these come back; report anything that fails):
     Is the hip–knee–ankle drawing on the right leg? Note any "too close to
     call" you'd have given a clear light either way — the 3 cm offset and the
     ±2.5 cm band are first guesses (`POSE.offsetCm`, `POSE.bandCm`).
+21. **Tilt correction (0.91.0):** Settings → turn **Bar-speed debug** on,
+    then Measure a normal push day and a pull or leg day with real weights,
+    logging the true rep count on every set. Export the traces and add the
+    file to `r&d/data/vbt/`. The 9 Nov push day had no 3-axis readings, so
+    tilt correction has only been checked on the 5 kg accessory day. Watch
+    for: a first rep going missing (the new "over within 1.8 s of Start is
+    setup" rule), and whether ranges of motion look the same rep to rep.
+    Also answer the front-raise question in `r&d/notes/vbt-validation.md`.
+24. **Record in the app (0.93.0):** in a workout, ▶ Video → **● Record**.
+    Does the rear camera open (allow it), is the picture the right way up,
+    and does the screen stay on? Record a set with the phone propped
+    side-on, tap Stop, and check the trim sliders cover the whole clip and
+    the plate is found as it is from a gallery clip. Is the motion smooth
+    enough — compare the speeds with the same set filmed in the phone's own
+    camera app. Try ⟲ Flip, and a clip over a minute.
+23. **Bar-speed RIR (0.92.0):** with Bar-speed debug on, Measure your
+    working sets for a couple of weeks and **type your own RIR on every
+    one** before looking at the sensor's. Ironlog no longer fills the box
+    unless it saw a missed rep or the lift is calibrated. Take one set per
+    main lift to failure. Then export the traces: `node
+    "r&d/tools/vbt-rir.cjs" <file>` prints the sensor's RIR beside yours.
+22. **Bug-sweep fixes (0.90.1–0.90.17):** import an old JSON backup — the
+    **Replace your log?** sheet should show both counts, and Settings → Data
+    should then offer **Undo import**. Change a rep in Edit session and tap
+    outside the sheet: it should ask before discarding. Sync to Drive from
+    the phone once and check nothing goes missing (the merge was only run
+    with two simulated phones).
 
 ### [x] A5. Checks against Blast's bugs — checked 0.27.1 (superset item waits for B3)
 Blast shipped these; make sure Ironlog doesn't have them. Tick each.

@@ -1699,6 +1699,9 @@ const SYNC_SETS = {
   workouts: x => x.id, misses: x => x.id, goals: x => x.id, meets: x => x.id, imports: x => x.id,
   checkins: x => x.date, measures: x => x.id, calipers: x => x.id, mobTests: x => x.id, bp: x => x.id, glucose: x => x.id, fitTests: x => x.id,
   customEx: x => (typeof x === 'string' ? x : JSON.stringify(x)), programs: x => String(x),
+  /* The lifter's own exercises. Left out until 0.90.7, so a phone restored
+     from Drive had the sessions but not the names (bug sweep 1.6). */
+  customMovements: x => x.id,
 };
 const SYNC_MAPS = ['exAliases', 'programStarts', 'coach', 'programNames', 'exNotes'];
 const SYNC_LOCAL_SETTINGS = ['lastSeenVersion', 'backupSnoozeUntil', 'lastExportAt'];
@@ -1948,6 +1951,7 @@ async function driveSync(interactive) {
     }
     const before = { w: S.workouts.length, c: S.checkins.length };
     Object.assign(S, m.data);
+    bustCatalogue(); healCustomMovements();   // custom exercises may have come in; ones a backup never carried are rebuilt from the sets
     const fresh = !local.workouts.length && !local.checkins.length;
     if (remote && remote.data && remote.data.settings && fresh) {
       const keep = {}; SYNC_LOCAL_SETTINGS.forEach(k => { if (k in S.settings) keep[k] = S.settings[k]; });
@@ -2002,7 +2006,7 @@ function syncLine() {
     ${m.connected ? `<label class="row" style="gap:8px;align-items:center;margin-bottom:8px"><input type="checkbox" id="stSyncFinish" ${m.autoFinish !== false ? 'checked' : ''} style="width:auto">
       <span class="sub">Back up when I tap Done after a session (Google may flash its sign-in)</span></label>` : ''}
     <details style="margin-bottom:6px"><summary class="sub">Advanced: Google client ID</summary>
-      <input id="stClientId" value="${esc(m.clientId || '')}" placeholder="${esc(GOOGLE_CLIENT_ID || '….apps.googleusercontent.com')}" autocomplete="off" spellcheck="false" style="margin-top:6px">
+      <input id="stClientId" aria-label="Google client ID" value="${esc(m.clientId || '')}" placeholder="${esc(GOOGLE_CLIENT_ID || '….apps.googleusercontent.com')}" autocomplete="off" spellcheck="false" style="margin-top:6px">
       <div class="sub" style="margin-top:4px">Only needed if this copy wasn't built with one. Setup: r&amp;d/specs/drive-sync-spec.md.</div></details>
   </div>`;
 }
@@ -2333,7 +2337,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.90.6';
+const APP_VERSION = '0.93.1';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -3102,8 +3106,11 @@ async function fetchLatestVersion() {
 /* Graceful first: let the waiting worker take over. If there is none — the
    usual case when the shell is stale but the worker already activated — clear
    the caches and reload, which always works. */
+let updateAsked = false;   // the lifter tapped Update: the worker taking over should reload, even on a first session
 async function applyUpdate() {
+  updateAsked = true;
   toast('Updating…');
+  try { await flush(); } catch (e) { /* the reload goes ahead; pagehide tries once more */ }
   try {
     const reg = await navigator.serviceWorker.getRegistration();
     if (reg) {
@@ -3185,6 +3192,41 @@ function clearTargets() {
   ];
 }
 
+/* Erase all data means all of it (bug sweep 4.2). It used to reset the log
+   and leave progress photos, daily clips, raw bar-speed traces and the Drive
+   link behind — and with Drive still connected, the next sync saw an empty
+   phone and put everything back. The sheet says exactly what goes. The backup
+   file in the lifter's own Drive is theirs and is never touched. */
+function openEraseAll() {
+  const c = logCounts(S), drive = !!syncMeta().connected;
+  modal({
+    title: 'Erase all data',
+    body: `<p style="margin:0 0 8px;color:var(--dim)">This removes everything Ironlog holds on this phone:</p>
+      <div class="wl-list" style="margin-bottom:10px">
+        <div>Your log — ${esc(logCountsLine(c))} — with goals, meets, plans, coach notes and settings</div>
+        <div>Progress photos and daily clips</div>
+        <div>Bar-speed debug traces, a custom muscle-map skin, and the copy kept for Undo import</div>
+      </div>
+      <p class="sub" style="margin:0 0 10px">${drive ? 'Google Drive is disconnected on this phone so the log isn\'t synced straight back. <b>The backup file in your Drive is not deleted</b> — connect again to restore from it, or delete it in Drive yourself.' : 'There is no Drive backup connected, so unless you have exported a copy this cannot be undone.'}</p>
+      <label class="row" style="gap:8px;align-items:center"><input type="checkbox" id="erKey" style="width:auto"><span class="sub">Also forget my AI key</span></label>`,
+    foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn danger" id="erGo">Erase everything</button>`,
+    onOpen: bg => { $('#erGo', bg).onclick = () => { const k = $('#erKey', bg).checked; confirmDlg('Erase everything on this phone now? This cannot be undone.', () => eraseEverything(k), 'Erase everything'); }; },
+  });
+}
+async function eraseEverything(forgetKey) {
+  clearTimeout(saveTimer); savePending = false;
+  stopRest();
+  try { await driveDisconnect(); } catch (e) { /* offline: the link is dropped below anyway */ }
+  try { await idb('readwrite', st => st.clear()); } catch (e) { /* storage down: the fresh log below still replaces the old one */ }
+  try { [KEY, VBT_RAW_KEY, 'ironlog.aiUsage'].forEach(k => localStorage.removeItem(k)); } catch (e) { /* blocked */ }
+  if (forgetKey) setAiKey('');
+  S = structuredClone(DEFAULT_STATE);
+  S.schemaVersion = 2; S.settings.lastSeenVersion = APP_VERSION;
+  bustCatalogue(); bust();
+  save(); await flush();
+  applySkin(S.settings.skin); closeAllModals(); go('home'); toast('All data erased');
+}
+
 function openClearData() {
   const draw = () => {
     const t = clearTargets();
@@ -3229,6 +3271,26 @@ function ensureCustomMovement(name) {
   S.customMovements = S.customMovements || [];
   if (!S.customMovements.some(m => m.id === cm.id)) { S.customMovements.push(cm); bustCatalogue(); }
   return cm;
+}
+/* A set that points at a custom movement this phone has no record of — it
+   came from a Drive backup made before custom movements were synced, or from
+   a CSV, which carries only the pointer. Without a record it showed as its
+   raw id ("custom-zercher-carry"). The record is rebuilt under the same id
+   from the name the set was logged with, so the set itself is untouched. */
+function healCustomMovements() {
+  const have = new Set((S.customMovements || []).map(m => m && m.id));
+  let n = 0;
+  const see = e => {
+    const id = e && e.leaf && e.leaf.movement;
+    if (typeof id !== 'string' || !id.startsWith('custom-') || have.has(id) || movementById(id)) return;
+    const name = (typeof e.legacyName === 'string' && e.legacyName.trim()) || id.slice(7).replace(/-/g, ' ');
+    (S.customMovements = S.customMovements || []).push({ ...customMovementFor(name), id });
+    have.add(id); n++;
+  };
+  (S.workouts || []).forEach(w => (w.exercises || []).forEach(see));
+  if (S.active) (S.active.exercises || []).forEach(see);
+  if (n) bustCatalogue();
+  return n;
 }
 function leafForName(name) {
   const r = resolveName(name);
@@ -4597,7 +4659,10 @@ function modal({ title, body, foot, onOpen, wide, sticky, onClose }) {
   bg._ret = document.activeElement;   // focus goes back here when it closes
   /* sticky: a stray tap on the backdrop must not end a running timer. */
   bg.addEventListener('click', e => {
-    if ((e.target === bg && !sticky) || e.target.hasAttribute('data-close')) { closeModal(); if (onClose) onClose(); }
+    if ((e.target === bg && !sticky) || e.target.hasAttribute('data-close')) {
+      if (bg._guard && !bg._guard()) return;   // a sheet with unsaved work asks first
+      closeModal(); if (onClose) onClose();
+    }
   });
   $('#modalRoot').appendChild(bg);
   modalStack.push(bg);
@@ -5250,7 +5315,7 @@ function reportData(from, to, opt) {
   const vbtNote = s => {
     const v = s.vbt; if (!v) return '';
     const miss = vbtMissed(s);
-    return ` [${v.best.toFixed(2)} m/s${v.loss >= 5 ? `, loss ${v.loss.toFixed(0)}%` : ''}${vbtEst(v, s) ? `, bar-speed RIR ${nice(rpeToRir(v.est.rpe))}` : ''}${miss ? `, sensor found ${v.reps.length} of ${s.r} reps` : ''}${v.reps && v.reps.length ? `; reps ${v.reps.map(r => r.v.toFixed(2)).join('/')}` : ''}]`;
+    return ` [${v.best.toFixed(2)} m/s${v.loss >= 5 ? `, loss ${v.loss.toFixed(0)}%` : ''}${vbtEst(v, s) ? `, bar-speed RIR ${vbtRirText(v.est)}` : ''}${miss ? `, sensor found ${v.reps.length} of ${s.r} reps` : ''}${v.reps && v.reps.length ? `; reps ${v.reps.map(r => r.v.toFixed(2)).join('/')}` : ''}]`;
   };
   const setLine = (e, s) => setText(e, s) + (opt.vbt ? vbtNote(s) : '') + (opt.notes && s.feel && s.feel.note ? ` (“${s.feel.note}”)` : '');
   const sessions = wos.map(wo => {
@@ -5631,8 +5696,11 @@ const WHY = {
     if (allTop && allRir) {
       kind = 'up';
       const step = e.leaf && (e.leaf.equipment === 'dumbbells' || e.leaf.equipment === 'kettlebell') ? 2 : 2.5;
+      if (fixedStepKit(e.leaf)) { t.step('→ up', `the next ${fixedStepKit(e.leaf)} up`, 'fixed ratings: no weight is worked out'); t.result('Next', `next ${fixedStepKit(e.leaf)} × ${lo}`); }
+      else {
       t.step('→ up', `max(${nice(dw(W))} × 1.025, ${nice(dw(W))} + ${step}) rounded`, 'the bigger of +2.5% or one step, rounded to what loads');
       t.result('Next', `${wt(rangeNextLoad(W, e.leaf))} × ${lo}`);
+      }
     } else if (at[0].r < lo) { kind = 'below'; t.step(`First set under ${lo}`, `${at[0].r} reps`, '→ below the range'); }
     else { kind = 'build'; if (allTop) t.note(`Reached ${hi}, but harder than RIR ${tr}: same weight again.`); }
     t.result('Verdict', kind);
@@ -6290,10 +6358,10 @@ function viewCalendar() {
   <h1 class="sr-only">Calendar</h1>
   <div class="card">
     <div class="cal-head">
-      <button class="btn sm ghost" id="calPrev">‹</button>
+      <button class="btn sm ghost" id="calPrev" aria-label="Previous month">‹</button>
       <div class="center"><div style="font-weight:750;font-size:16px">${calCursor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</div>
         <div class="sub">${monthWos.length} sessions · ${wt(monthVol, 0)} volume</div></div>
-      <button class="btn sm ghost" id="calNext">›</button>
+      <button class="btn sm ghost" id="calNext" aria-label="Next month">›</button>
     </div>
     <div class="cal-dow">${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => `<span>${d}</span>`).join('')}</div>
     <div class="cal-grid">${grid}</div>
@@ -6959,7 +7027,7 @@ function repDetail(v, logged) {
   return `<div class="repdetail">${logged > reps.length ? `<div class="chip gold" style="margin:2px 0 6px;white-space:normal">The ${vid ? 'video' : 'sensor'} found ${reps.length} of your ${logged} reps, so this set's speed and RIR aren't reliable</div>` : ''}${chart}
     ${vid && v.path ? `<div class="bp-hist">${bpPathSvg(v.path, 130)}<div>${drift}${depthSummary(reps) ? `<div class="sub" style="font-size:11px;margin-top:4px">Depth: ${esc(depthSummary(reps))} — a guide</div>` : ''}</div></div>` : ''}
     <table class="reptable"><thead><tr><th>Rep</th><th>m/s</th><th>Peak</th><th>cm</th><th>↑ s</th><th>RIR</th><th></th></tr></thead><tbody>${rows}</tbody></table>
-    <div class="sub" style="font-size:11px;margin-top:4px">Velocity loss ${v.loss.toFixed(0)}%${vbtEst(v) && !(logged > reps.length) ? ` · set RIR ${nice(rpeToRir(v.est.rpe))}${v.est.method ? ` (${esc(v.est.method)})` : ''}` : ''} · ${v.rate} Hz · confidence ${(v.conf * 100).toFixed(0)}%${v.place === 'pocket' ? ' · pocket' : ''}${vid ? ' · from video, an estimate' : ''}${uncal ? ' · profile not calibrated yet' : ''}</div>
+    <div class="sub" style="font-size:11px;margin-top:4px">Velocity loss ${v.loss.toFixed(0)}%${vbtEst(v) && !(logged > reps.length) ? ` · set RIR ${vbtRirText(v.est)}${v.est.method ? ` (${esc(v.est.method)})` : ''}` : ''} · ${v.rate} Hz · confidence ${(v.conf * 100).toFixed(0)}%${v.place === 'pocket' ? ' · pocket' : ''}${vid ? ' · from video, an estimate' : ''}${uncal ? ' · profile not calibrated yet' : ''}</div>
   </div>`;
 }
 /* Raw sensor traces, for tuning rep detection (Settings → Bar-speed debug).
@@ -6983,16 +7051,30 @@ function vbtRawKeep(rec) {
 }
 function exportVbtRaw() {
   const l = vbtRawList();
-  if (!l.length) return toast('No raw traces kept yet — turn it on, then measure a set');
   const all = [...(S.active ? [S.active] : []), ...S.workouts];
+  /* Every measured set of the last 60 days, sensor or video, as the lifter
+     saw it: per-rep speeds, the estimate, and the RIR with who entered it.
+     This is what r&d/tools/vbt-validate.cjs lines up against a reference
+     device (00-V4); the raw traces below it are for re-running detection. */
+  const since = addDaysISO(today(), -60), readings = [];
+  all.forEach(w => { if (!(w.date >= since)) return; (w.exercises || []).forEach(e => (e.sets || []).forEach((s, si) => {
+    const v = s.vbt; if (!v || !v.reps) return;
+    readings.push({ at: v.at, date: w.date, workout: w.name, exercise: exName(e), set: setRefText(e.sets, si), w: s.w, r: s.r,
+      rir: s.rpe != null ? rpeToRir(s.rpe) : null, rirFrom: s.rpe == null ? null : rirFromSensor(s) ? 'sensor' : 'typed',
+      source: v.mode === 'video' ? 'video' : 'sensor', place: v.place || null, lift: v.lift || null, best: v.best, loss: v.loss,
+      v: v.reps.map(r => r.v), romCm: v.reps.map(r => Math.round(r.rom * 100)),
+      est: v.est ? { rir: v.est.rir, method: v.est.method, spread: v.est.spread, ...(v.est.atLeast ? { atLeast: true } : {}) } : null });
+  })); });
+  readings.sort((a, b) => a.at - b.at);
+  if (!l.length && !readings.length) return toast('Nothing to export yet — measure a set first');
   const traces = l.map(t => {
     for (const w of all) for (const e of w.exercises || []) {
       const si = (e.sets || []).findIndex(s => s.vbt && s.vbt.at === t.at);
-      if (si >= 0) { const s = e.sets[si]; return { ...t, logged: { date: w.date, workout: w.name, exercise: exName(e), set: setRefText(e.sets, si), w: s.w, r: s.r, rir: s.rpe != null ? rpeToRir(s.rpe) : null } }; }
+      if (si >= 0) { const s = e.sets[si]; return { ...t, logged: { date: w.date, workout: w.name, exercise: exName(e), set: setRefText(e.sets, si), w: s.w, r: s.r, rir: s.rpe != null ? rpeToRir(s.rpe) : null, rirFrom: s.rpe == null ? null : rirFromSensor(s) ? 'sensor' : 'typed' } }; }
     }
     return { ...t, logged: null };
   });
-  saveBlob(JSON.stringify({ format: 'ironlog-vbt-raw', v: 2, exportedAt: new Date().toISOString(), traces }), 'application/json', `ironlog-vbt-raw-${today()}.json`);
+  saveBlob(JSON.stringify({ format: 'ironlog-vbt-raw', v: 3, app: APP_VERSION, exportedAt: new Date().toISOString(), readings, traces }), 'application/json', `ironlog-vbt-raw-${today()}.json`);
 }
 
 /* A finished workout shows bar speed the way the live card did: every
@@ -7014,7 +7096,7 @@ function vbtStrip(e, pre = '') {
       <summary class="row between" aria-label="${esc(setRefText(e.sets, i))}: ${v.best.toFixed(2)} metres per second. Show each rep">
       <span class="sub"><span class="chev" aria-hidden="true">▸</span>${setRefText(e.sets, i)}</span>
       <span class="mono grow">${v.best.toFixed(2)} m/s${v.loss >= 5 ? ` <span class="dimmer">▾${v.loss.toFixed(0)}%</span>` : ''}${e.tempo ? vbtTimes(v) : ''}${repSpark(v)}${vbtMissed(s) ? ` <span style="color:var(--gold)">${v.reps.length}/${s.r}</span>` : ''}</span>
-      ${vbtEst(v, s) ? `<span class="mono sub" style="color:var(--purple)">RIR ${nice(rpeToRir(v.est.rpe))}</span>` : ''}${why('vbt', v)}
+      ${vbtEst(v, s) ? `<span class="mono sub" style="color:var(--purple)">RIR ${vbtRirText(v.est)}</span>` : ''}${why('vbt', v)}
       </summary>${repDetail(v, s.r)}
     </details>`;
   }).join('')}</div>`;
@@ -7628,9 +7710,12 @@ function finishWorkout(force) {
   const mins = a.start ? Math.max(1, Math.round((Date.now() - a.start) / 60000)) : 0;
   const done = {
     id: a.id, date: a.date, name: a.name, status: 'completed', source: 'logged',
-    ...(a.off ? { off: true } : {}), ...(a.block ? { block: a.block, prog: a.prog } : {}), ...(a.place ? { place: a.place } : {}),
+    /* prog is kept whenever the session came from a plan — it used to be kept only
+       alongside a block name, so a plan with no block names never counted its
+       finished sessions (bug sweep 1.8) */
+    ...(a.off ? { off: true } : {}), ...(a.prog ? { prog: a.prog } : {}), ...(a.block ? { block: a.block } : {}), ...(a.place ? { place: a.place } : {}),
     exercises: logged, start: a.start, end: Date.now(), ...(hasFeel(a) ? { feel: a.feel } : {}),
-    summary: { mins, prs, volume: logged.reduce((t, e) => t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + s.w * s.r, 0), 0) },
+    summary: { mins, prs, volume: logged.reduce((t, e) => t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + (s.w || 0) * (s.r || 0), 0), 0) },
   };
 
   // if this came from a plan, replace the planned entry
@@ -7704,7 +7789,7 @@ function sessionTotals(wo) {
   return {
     ws,
     sets: ws.reduce((n, o) => n + o.sets.filter(s => !isDrop(s)).length, 0),   // a drop chain is one set
-    reps: ws.reduce((n, o) => n + o.sets.reduce((a, s) => a + s.r, 0), 0),
+    reps: ws.reduce((n, o) => n + o.sets.reduce((a, s) => a + (s.r || 0), 0), 0),
     /* setVolume, not s.w * s.r: a carry or hold has no reps, and one undefined
        turned the whole report's volume into NaN, printed as "0kg". */
     volume: ws.reduce((n, o) => n + o.sets.reduce((a, s) => a + (o.e.leaf ? setVolume(o.e.leaf, s) : (s.w || 0) * (s.r || 0)), 0), 0),
@@ -7857,10 +7942,10 @@ function fullCardCanvas(wo) {
     x.strokeStyle = CARD.line; x.lineWidth = 2;
     x.beginPath(); x.moveTo(P, y); x.lineTo(W - P, y); x.stroke();
     const working = sets.filter(s => isWorking(s));
-    const vol = working.reduce((a, s) => a + s.w * s.r, 0);
+    const vol = working.reduce((a, s) => a + (s.w || 0) * (s.r || 0), 0);
     const scored = inRepsPool(e) ? working.filter(s => isPRSet(s) && s.r > 0) : [];
     const prSet = prKeys.has(exKey(e)) && scored.length ? bestSetOf(scored) : null;   // the one set prsFor scored
-    const reps = working.reduce((a, s) => a + s.r, 0);
+    const reps = working.reduce((a, s) => a + (s.r || 0), 0);
     x.textAlign = 'left'; x.fillStyle = CARD.text; x.font = cardFont(29, 680);
     x.fillText(fitText(x, exFull(e) + (e.tempo ? `  · ${e.tempo}` : ''), W - P * 2 - 260), P, y + 42);
     x.textAlign = 'right'; x.fillStyle = CARD.dim; x.font = cardFont(24, 600);
@@ -8157,7 +8242,7 @@ function e1ChangeRows(rows) {
 
 function showSummary(wo) {
   const sets = wo.exercises.reduce((n, e) => n + e.sets.filter(s => isPRSet(s)).length, 0);
-  const reps = wo.exercises.reduce((n, e) => n + e.sets.filter(s => isWorking(s)).reduce((a, s) => a + s.r, 0), 0);
+  const reps = wo.exercises.reduce((n, e) => n + e.sets.filter(s => isWorking(s)).reduce((a, s) => a + (s.r || 0), 0), 0);
   const prs = wo.summary.prs;
   modal({
     title: 'Session complete',
@@ -8197,7 +8282,7 @@ function showSummary(wo) {
       const ws = e.sets.filter(s => isWorking(s));
       const warm = e.sets.filter(s => isWarm(s));
       const timed = isTimed(e), kind = kindOf(e), plain = kind === 'reps' || kind === 'time';
-      const v = ws.reduce((a, s) => a + s.w * s.r, 0);
+      const v = ws.reduce((a, s) => a + (s.w || 0) * (s.r || 0), 0);
       // a timed entry's headline is total time held, and its best set the longest one
       const totSec = ws.reduce((a, s) => a + (s.sec || 0), 0);
       const top = !ws.length ? null
@@ -8277,13 +8362,14 @@ function viewCompleted(id) {
    follow an edit with no second bookkeeping path; only summary.prs, the
    at-finish snapshot, is rebuilt.
    ============================================================ */
-let editDraft = null;
+let editDraft = null, editOrig = '';   // editOrig: the draft as it was opened, to tell whether anything changed
 
 function openEditWorkout(id) {
   const wo = S.workouts.find(w => w.id === id);
   if (!wo || wo.status !== 'completed') return;
   editDraft = structuredClone(wo);
   editDraft.exercises.forEach(e => e.sets.forEach(s => { s.done = s.done !== false; }));
+  editOrig = JSON.stringify(editDraft);
   renderEditWorkout();
 }
 
@@ -8348,6 +8434,14 @@ function renderEditWorkout() {
         d.date = $('#eDate', bg).value || d.date;
       };
       const re = () => { grab(); renderEditWorkout(); };
+      /* Cancel, ✕, Escape or a tap outside used to drop every change without a
+         word (bug sweep 4.1). With changes made, it asks. */
+      bg._guard = () => {
+        grab();
+        if (!editDraft || JSON.stringify(editDraft) === editOrig) return true;
+        confirmDlg('Discard the changes you made to this session?', () => { editDraft = null; closeAllModals(); }, 'Discard changes');
+        return false;
+      };
       // typing updates the draft silently so focus is never stolen
       bg.querySelectorAll('[data-ef]').forEach(inp => {
         selectOnFocus(inp);
@@ -8462,7 +8556,7 @@ function saveEdit(force) {
     ...orig, name: d.name, date: d.date, exercises: logged, edited: Date.now(), off: d.off || undefined, feel: hasFeel(d) ? d.feel : undefined,
     summary: {
       ...(orig.summary || {}),
-      volume: logged.reduce((t, e) => t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + s.w * s.r, 0), 0),
+      volume: logged.reduce((t, e) => t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + (s.w || 0) * (s.r || 0), 0), 0),
       prs: [],
     },
   };
@@ -10880,7 +10974,7 @@ function backfillPlanned(days) {
     w.summary = {
       mins: 0, prs: [],
       volume: w.exercises.reduce((t, e) =>
-        t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + s.w * s.r, 0), 0),
+        t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + (s.w || 0) * (s.r || 0), 0), 0),
     };
   });
   save(); bust();
@@ -11351,7 +11445,7 @@ function importLiftoff(sessions, mapping, unit, src = 'liftoff') {
       start: null, end: parseISO(s.date).getTime(),
       summary: {
         mins: s.mins, prs: [],
-        volume: merged.reduce((t, e) => t + e.sets.reduce((x, v) => x + v.w * v.r, 0), 0),
+        volume: merged.reduce((t, e) => t + e.sets.reduce((x, v) => x + (v.w || 0) * (v.r || 0), 0), 0),
       },
     });
     added++;
@@ -11706,6 +11800,12 @@ function vbtAvailable() {
    minute set at 60 Hz is ~10,800 of them, and the whole of Ironlog lives in one
    IndexedDB blob that is rewritten on every save. */
 function packVbt(rec, est, liftId, place) {
+  /* Each rep's RIR follows from the set's: the last rep is the set estimate,
+     the one before it one more, and so on. (They used to come from Slew's
+     per-rep estimator, which could say RIR 4 on the last rep of a set the
+     set estimate called RIR 1.) No set estimate, or only a floor: no per-rep
+     figures. */
+  const nReps = rec.reps.length, setRir = est && Number.isFinite(est.rir) && !est.atLeast ? est.rir : null;
   return {
     at: rec.timestamp,
     lift: liftId,
@@ -11715,19 +11815,20 @@ function packVbt(rec, est, liftId, place) {
     best: +rec.summary.bestMeanVelocity.toFixed(3),
     loss: +rec.summary.velocityLoss.toFixed(1),
     conf: +(rec.summary.confidence * (place === 'pocket' ? 0.6 : 1)).toFixed(2),   // a phone in a pocket reads the body, not the bar
-    reps: rec.reps.map(r => ({
+    reps: rec.reps.map((r, ri) => ({
       v: +r.concentric.meanVelocity.toFixed(3),
       peak: +r.concentric.peakVelocity.toFixed(3),
       rom: +r.rom.toFixed(3),
       con: r.concentric.duration > 0 ? Math.round(r.concentric.duration / 100) / 10 : null,   // seconds, for tempo (D3)
       ecc: r.eccentric && r.eccentric.duration > 0 ? Math.round(r.eccentric.duration / 100) / 10 : null,
-      rpe: r.rpe == null ? null : +r.rpe.toFixed(1),
+      rpe: setRir == null ? null : +Math.max(1, Math.min(10, 10 - (setRir + (nReps - 1 - ri)))).toFixed(1),
       conf: +r.quality.confidence.toFixed(2),
       flags: r.quality.flags || [],
     })),
     est: est ? {
       rpe: Number.isFinite(est.rpe) ? +est.rpe.toFixed(1) : null, rir: Number.isFinite(est.rir) ? +est.rir.toFixed(1) : null, method: est.method,
       spread: Number.isFinite(est.spread) ? +est.spread.toFixed(1) : null, because: est.because, romCut: !!est.romCut,
+      ...(est.atLeast ? { atLeast: true } : {}), fill: !!est.fill,   // atLeast: the number is a floor ("6+"); fill: strong enough to write into the set's RIR
     } : null,
   };
 }
@@ -11747,12 +11848,15 @@ let _vbtCap = null;
 function vbtCaptureClass() {
   if (_vbtCap) return _vbtCap;
   _vbtCap = class extends Slew.MotionCapture {
-    start() { this.xyz = S.settings.vbtKeepRaw ? { lx: [], ly: [], lz: [], gx: [], gy: [], gz: [] } : null; super.start(); }
+    /* Kept for every set since 0.91.0, not only in debug: the tilt correction
+       (vbtTiltMotion) works from these. Memory only; nothing is stored on the
+       set, and the debug export still happens only when that setting is on. */
+    start() { this.xyz = { lx: [], ly: [], lz: [], gx: [], gy: [], gz: [] }; super.start(); }
     onMotion(e) {
       const n = this.samples.length;
       super.onMotion(e);
       if (!this.xyz || this.samples.length === n) return;
-      const l = e.acceleration || {}, g = e.accelerationIncludingGravity || {}, r = v => v == null ? null : Math.round(v * 1000) / 1000;
+      const l = e.acceleration || {}, g = e.accelerationIncludingGravity || {}, r = v => v == null ? null : +v;
       this.xyz.lx.push(r(l.x)); this.xyz.ly.push(r(l.y)); this.xyz.lz.push(r(l.z));
       this.xyz.gx.push(r(g.x)); this.xyz.gy.push(r(g.y)); this.xyz.gz.push(r(g.z));
     }
@@ -11775,7 +11879,12 @@ function openVbtRecord(ei, opts = {}) {
      estimated. Segmentation needs a minimum travel, so borrow the shallowest
      one rather than inventing a velocity model. */
   const profile = liftId ? slewProfile(liftId) : { ...Slew.defaultProfile('Machine (stack)'), v0: 0 };
-  const load = ex.sets.filter(s => s.w > 0).slice(-1)[0];
+  /* The weight of the set this reading will attach to (attachVbt: the first set
+     not yet done or measured). It used to take the exercise's last weighted set,
+     so a warm-up measured with the top set already typed in was recorded, and
+     its power worked out, at the top set's weight (bug sweep 3.5). */
+  const tgt = ex.sets.find(s => !s.done && !s.vbt);
+  const load = tgt && tgt.w > 0 ? tgt : ex.sets.filter(s => s.w > 0).slice(-1)[0];
   const loadKg = load ? load.w : 0;
 
   modal({
@@ -11840,12 +11949,13 @@ function openVbtRecord(ei, opts = {}) {
         btn.textContent = 'Start';
         btn.classList.remove('danger');
         const motion = vbtCapture ? vbtCapture.samples.slice() : [];
-        const xyz = vbtCapture && vbtCapture.xyz;   // debug only: full 3-axis readings, for tilt work
+        const xyz = vbtCapture && vbtCapture.xyz;   // the phone's full 3-axis readings, for the tilt correction
         if (motion.length < 40) { setMsg(`Only ${motion.length} samples — the sensor reported almost nothing.`); return; }
+        const tilted = vbtTiltMotion(motion, xyz);   // vertical re-read against where "down" really was at each sample
 
         /* Follows sensorPipeline exactly, but keeps the failure evidence so the
            set estimate can use an observed failure rather than extrapolating. */
-        const samples = vbtIntegrate(motion);
+        const samples = vbtIntegrate(tilted.motion);
         const scaled = samples.map(s => ({ ...s, x: s.x * (profile.scale || 1) }));
         const out = Slew.analyse(scaled, {
           targetHz: 60, minRom: Math.min(profile.minRom, VBT_MIN_ROM),
@@ -11854,7 +11964,7 @@ function openVbtRecord(ei, opts = {}) {
         const found = vbtDropBlips(out.reps, profile.minRom);
         const reps = liftId ? Slew.withRpe(found, profile) : found;
         const failure = trustFailure(out.failure, found, liftId, profile);
-        const est = liftId ? Slew.estimateSet(reps, profile, failure) : null;
+        const est = liftId ? vbtEstimateSet(reps, profile, failure) : null;
         const rate = motion.length > 1
           ? (motion.length - 1) / ((motion[motion.length - 1].t - motion[0].t) / 1000 || 1) : 0;
         const rec = {
@@ -11867,7 +11977,8 @@ function openVbtRecord(ei, opts = {}) {
         vbtRawKeep({ at: packed.at, lift: liftId, kg: loadKg || null, place, mode, hz: packed.rate, detected: out.reps.length,
           profile: { scale: profile.scale || 1, minRom: profile.minRom },
           t: motion.map(m => Math.round(m.t)), a: motion.map(m => +m.a.toFixed(3)), still: motion.map(m => m.still ? 1 : 0).join(''),
-          ...(xyz ? { xyz } : {}) });
+          tilt: tilted.used, found: found.length,   // tilt: share of samples re-read (0 = the correction wasn't applied); found: reps after the filters
+          ...(xyz && S.settings.vbtKeepRaw ? { xyz: Object.fromEntries(Object.entries(xyz).map(([k, v]) => [k, v.map(x => x == null ? null : Math.round(x * 1000) / 1000)])) } : {}) });
         if (opts.onRecorded) return opts.onRecorded(packed, est, failure);
         if (mode === 'profile') return lvRecorded(ei, packed);
         vbtReviewDlg(ei, packed, est, failure);
@@ -11892,6 +12003,37 @@ function openVbtRecord(ei, opts = {}) {
    (Slew 36). Synthetic (r&d/tools/vbt-sim.cjs): no set worse, no extra reps.
    Very slow reps read short on range — a guide, as all of this is. */
 const VBT_HP_V = 0.15, VBT_HP_X = 0.05, VBT_FS = 60;
+/* Tilt correction (00-V1). Slew reads "vertical" against a gravity direction
+   it only updates while the bar is still. But the phone turns as the bar rolls
+   in the hands, and on any lift that moves in an arc (a curl turned it 117°,
+   an overhead press 81°), so mid-rep the old "down" is wrong: gravity leaks
+   into the reading and real vertical movement leaks out of it. The phone
+   already knows where down is at every sample — its own gyro-fused gravity is
+   the with-gravity reading minus the linear one — so each sample's linear
+   acceleration is projected onto that instead. 11 Nov 2026 traces (5 kg bar,
+   11 sets): range of motion steadied (overhead press 44–58 cm, was 17–40) and
+   two miscounted sets came right. r&d/notes/vbt-validation.md.
+   xyz: { lx, ly, lz, gx, gy, gz } one row per motion sample. Returns the
+   motion with `a` replaced, and the share of samples it could re-read; under
+   90% (a phone with no linear reading) the motion comes back untouched. */
+function vbtTiltMotion(motion, xyz) {
+  const n = motion.length;
+  if (!xyz || !xyz.lx || xyz.lx.length !== n || !n) return { motion, used: 0 };
+  const out = new Array(n);
+  let bias = 0, ok = 0;
+  for (let i = 0; i < n; i++) {
+    const m = motion[i], lx = xyz.lx[i], ly = xyz.ly[i], lz = xyz.lz[i], gx = xyz.gx[i], gy = xyz.gy[i], gz = xyz.gz[i];
+    if (lx == null || ly == null || lz == null || gx == null || gy == null || gz == null) { out[i] = m; continue; }
+    const dx = gx - lx, dy = gy - ly, dz = gz - lz, g = Math.hypot(dx, dy, dz);
+    if (!(g > 7 && g < 12.5)) { out[i] = m; continue; }       // not gravity-sized: the phone's fusion hasn't settled
+    const aV = (lx * dx + ly * dy + lz * dz) / g;
+    if (m.still) bias += (aV - bias) * 0.05;                    // the same slow zero Slew keeps while the bar rests
+    out[i] = { t: m.t, a: aV - bias, still: m.still };
+    ok++;
+  }
+  const used = Math.round(ok / n * 100) / 100;
+  return used >= 0.9 ? { motion: out, used } : { motion, used: 0 };
+}
 function vbtLowPass(x, fc, fs) {
   if (x.length < 4) return [...x];
   const wc = Math.tan(Math.PI * fc / fs), k1 = Math.SQRT2 * wc, k2 = wc * wc;
@@ -11935,8 +12077,15 @@ function vbtIntegrate(motion) {
    warm-ups; genuine reps never fell below 0.71). A set of 1–3 has no median
    worth trusting, so it keeps the lift's own floor. 9 Nov traces: 80 of 81
    reps, none extra. */
-const VBT_MIN_ROM = 0.04;
-function vbtDropBlips(reps, liftMinRom) {
+const VBT_MIN_ROM = 0.04, VBT_SETUP_MS = 1800;
+function vbtDropBlips(reps0, liftMinRom) {
+  /* In a set of 4+, a "rep" that is already over 1.8 s after Start is the bar
+     being got into position: nobody taps the phone, takes the bar and finishes
+     a rep that fast (11 Nov squat: the bar going onto the back read as a 39 cm
+     rep ending at 1.5 s; the earliest real first rep on either day ended at
+     2.7 s). */
+  const early = r => r.tEnd < VBT_SETUP_MS || ((r.quality && r.quality.flags) || []).includes('clipped-start');
+  const reps = reps0.length >= 4 && early(reps0[0]) ? reps0.slice(1) : reps0;
   if (reps.length < 4) return reps.filter(r => r.rom >= (liftMinRom || 0)).map((r, i) => ({ ...r, index: i + 1 }));
   const s = reps.map(r => r.rom).sort((x, y) => x - y), med = s[Math.floor(s.length / 2)];
   return reps.filter(r => r.rom >= 0.6 * med).map((r, i) => ({ ...r, index: i + 1 }));
@@ -11955,6 +12104,84 @@ function vbtSummary(reps) {
    was more than about three reps' worth of speed above the limit, the evidence
    is dropped and the estimate falls back to the speed trend. Dropped evidence
    also never calibrates the limit (attachVbt reads est.measuredV0). */
+/* Bar-speed RIR for a set (00-V2). Slew's own estimator stays as it is for
+   a set that ends in a missed rep or a near-stall — that is observed, not
+   estimated. For everything else it compared the phone's speed with a
+   typical failure speed for the lift, either straight ("profile") or by
+   carrying the whole set's average slow-down forward ("decay"). On the 9 Nov
+   push day both went wrong: a 40 kg warm-up triple read RIR 0.2, because the
+   phone under-reads slow heavy reps and a population failure speed knows
+   nothing about this phone; a 17-rep AMRAP that lost 41% of its speed read
+   RIR 12, because reps slow gently for most of a set and sharply at the end,
+   so the average slope says there is a long way to go.
+
+   What survives a mis-scaled phone is the set compared with itself: how much
+   speed was lost from the opening reps to the last one. The share of the
+   possible reps done rises with that loss in much the same way whatever the
+   load — about half done at 40% of the loss seen at failure, 85% done at 80%
+   of it. So: done = (loss ÷ loss-at-failure)^0.75, and reps left =
+   reps × (1 − done) ÷ done. Loss-at-failure is the lift's vlF (the lifter's
+   own once a set to failure has been measured, else the population figure).
+   Where the lifter's own failure speed has been measured on this phone, the
+   last five reps' slope carried to that speed is averaged in.
+
+   Not validated: there are two typed RIRs in all the traces. So it says
+   less, not more — under 8% loss or past 6 in reserve it gives no number,
+   and `fill` says whether the estimate is strong enough to write into the
+   set's RIR (observed, or calibrated to this lifter); otherwise it is shown
+   beside the set and the RIR box is left for the lifter. */
+const VBT_RIR = { minReps: 3, minLoss: 0.08, shape: 0.75, cap: 6, recent: 5, failLoss: 0.15 };
+function vbtEstimateSet(reps, profile, failure) {
+  let base = Slew.estimateSet(reps, profile, failure);
+  if (!base) return null;
+  const observed = e => e.method === 'observed-failure' || e.method === 'observed-grind';
+  /* A missed rep or near-stall is only believed when the set had slowed down
+     as well. Putting the bar down after an easy set reads as a failed attempt
+     (11 Nov: a 5 kg row, 3% slower by the end, came out as RIR 0), and that
+     would also have been stored as the lifter's failure speed. A set of one
+     or two has no slow-down to check, so the evidence stands. */
+  let doubted = false;
+  if (observed(base) && reps.length >= VBT_RIR.minReps && !(base.velocityLoss >= VBT_RIR.failLoss)) {
+    base = Slew.estimateSet(reps, profile, undefined) || base;
+    doubted = !observed(base);
+  }
+  if (observed(base)) return { ...base, fill: true };
+  const n = reps.length, v = reps.map(r => r.concentric.meanVelocity), last = v[n - 1];
+  const none = why => ({ ...base, rir: NaN, rpe: NaN, spread: NaN, method: 'unknown', fill: false,
+    because: why + (doubted ? ' Something at the end looked like a missed rep, but the set had not slowed down, so it was left out.' : '') });
+  if (n < VBT_RIR.minReps) return none('Too few reps to read effort from bar speed — it needs at least three to see you slowing down.');
+  const loss = base.velocityLoss, vlF = profile.vlF > 0 ? profile.vlF : 0.45;
+  if (!(loss >= VBT_RIR.minLoss)) return none(`Your bar speed barely dropped across this set (${Math.round(Math.max(0, loss) * 100)}%), so there was plenty in reserve — more than bar speed can put a number on.`);
+  const done = Math.max(0.05, Math.min(1, (loss / vlF) ** VBT_RIR.shape));
+  let rir = n * (1 - done) / done, method = 'velocity-loss';
+  const own = profile.v0Observed > 0;   // this lifter's failure speed, measured on this phone
+  let because = `You lost ${Math.round(loss * 100)}% of your bar speed over ${n} reps. Sets of this lift usually end at about ${Math.round(vlF * 100)}%${profile.vlFCal ? ' (yours, measured)' : ''}, which puts you about ${Math.round(done * 100)}% of the way to failure.`;
+  if (own) {
+    const k = Math.min(VBT_RIR.recent, n), tail = v.slice(n - k), mx = (k - 1) / 2, my = tail.reduce((a, b) => a + b, 0) / k;
+    let num = 0, den = 0;
+    tail.forEach((y, i) => { num += (i - mx) * (y - my); den += (i - mx) ** 2; });
+    const slope = den > 0 ? num / den : 0;
+    if (slope < -0.005 && last > profile.v0Observed) {
+      rir = (rir + Math.min(12, (last - profile.v0Observed) / -slope)) / 2;
+      method = 'velocity-loss+limit';
+      because += ` Your last reps were slowing by ${Math.round(-slope * 1000)} mm/s each towards the ${profile.v0Observed.toFixed(2)} m/s you have failed at before; the two readings are averaged.`;
+    }
+  }
+  if (base.romCut) rir = Math.max(0, rir - Math.max(0, Math.min(2, (base.romLoss - 0.12) * 6)));   // reps getting shorter: nearer the limit than speed alone says
+  if (rir > VBT_RIR.cap) return { ...base, rir: VBT_RIR.cap, rpe: 10 - VBT_RIR.cap, atLeast: true, spread: NaN, method, fill: false,
+    because: `You lost only ${Math.round(loss * 100)}% of your bar speed over ${n} reps — ${VBT_RIR.cap} or more in reserve.` };
+  const spread = Math.max(1, rir * 0.5) * (own ? 0.7 : 1);
+  return { ...base, rir, rpe: Math.max(1, Math.min(10, 10 - rir)), spread, method, because, fill: own };
+}
+/* "RIR 3", or "RIR 6+" when the estimate is only a floor. */
+function vbtRirText(e) { return `${nice(rpeToRir(e.rpe))}${e.atLeast ? '+' : ''}`; }
+/* A set whose RIR was written in by the sensor rather than typed. Recorded
+   since 0.92.0 (`rpeFrom`), and only while the number is still the sensor's:
+   retype it and it is yours. Before that the two can't be told apart — in the
+   9 and 11 Nov traces "RIR 9" on the 17-rep AMRAP was the sensor's own guess. */
+function rirFromSensor(s) {
+  return !!(s && s.rpeFrom === 'vbt' && s.vbt && s.vbt.est && s.vbt.est.rpe != null && s.rpe === Math.round(s.vbt.est.rpe * 2) / 2);
+}
 function trustFailure(f, reps, liftId, profile) {
   if (!f || !liftId || !(f.failedAttempt || f.grind) || !reps || !reps.length) return f;
   const lastV = reps[reps.length - 1].concentric.meanVelocity;
@@ -11980,14 +12207,14 @@ function vbtReviewDlg(ei, v, est, failure) {
       <div class="stats grid3" style="margin-bottom:10px">
         <div class="stat"><div class="k">Best</div><div class="v">${v.best.toFixed(2)}<small>m/s</small></div></div>
         <div class="stat"><div class="k">Velocity loss</div><div class="v" style="color:${v.loss >= 25 ? 'var(--gold)' : 'var(--text)'}">${v.loss.toFixed(0)}<small>%</small></div></div>
-        <div class="stat"><div class="k">Effort</div><div class="v" style="color:var(--purple)">${vbtEst(v) ? 'RIR ' + nice(rpeToRir(v.est.rpe)) : '—'}</div></div>
+        <div class="stat"><div class="k">Effort</div><div class="v" style="color:var(--purple)">${vbtEst(v) ? 'RIR ' + vbtRirText(v.est) : '—'}</div></div>
       </div>
       ${rows}
       ${v.est ? `<div class="sub" style="margin-top:9px">${esc(v.est.because)}${v.est.spread ? ` <span class="dimmer">±${v.est.spread} RIR</span>` : ''}</div>` : `<div class="sub" style="margin-top:9px">Speed and reps only — this movement has no velocity profile, so effort is not estimated.</div>`}
       ${failure && failure.failedAttempt ? `<div class="chip gold" style="margin-top:9px">A missed rep was detected and left out of the count</div>` : ''}
       ${failure && failure.ignored ? `<div class="sub" style="margin-top:9px">Something after the set looked like a missed rep, but your last rep moved at ${failure.ignoredV.toFixed(2)} m/s — too fast to be a failure — so it was ignored.</div>` : ''}
       <div class="sub" style="margin-top:9px">${v.rate} Hz · confidence ${(v.conf * 100).toFixed(0)}%${v.reps.some(r => r.flags.length) ? ' · ' + [...new Set(v.reps.flatMap(r => r.flags))].join(', ') : ''}</div>`
-      : `<div class="empty">No reps came out of that recording. The bar has to travel at least ${Math.round((Slew.defaultProfile('Machine (stack)').minRom) * 100)} cm and come to rest between reps.</div>`,
+      : `<div class="empty">No reps came out of that recording. The bar has to travel at least ${Math.round(VBT_MIN_ROM * 100)} cm and come to rest between reps.</div>`,
     foot: `<button class="btn ghost" data-close>Discard</button>${v.reps.length ? `<button class="btn primary" id="vbAttach">Attach to this exercise</button>` : ''}`,
     onOpen(bg) {
       const at = $('#vbAttach', bg);
@@ -12015,7 +12242,13 @@ function attachVbt(ei, v, est) {
   s.vbt = v;
   if (!s.r) s.r = v.reps.length;
   const missed = vbtMissed(s);   // the sensor found fewer reps than the set has: its RIR and failure speed can't be trusted
-  if (s.rpe == null && vbtEst(v, s)) s.rpe = Math.round(v.est.rpe * 2) / 2;
+  /* Only an estimate strong enough to stand in for the lifter's own call is
+     written into the set (est.fill: an observed failure or near-stall, or a
+     lift calibrated to this lifter). It is marked as the sensor's, so the log
+     can always tell a typed RIR from a filled one. Readings before 0.92.0
+     carry no `fill` and behave as they did. */
+  const filled = s.rpe == null && vbtEst(v, s) && v.est.fill !== false;
+  if (filled) { s.rpe = Math.round(v.est.rpe * 2) / 2; s.rpeFrom = 'vbt'; }
 
   /* Calibration by observation: a set taken to failure measures this lifter's
      own 0-RIR velocity, and every later estimate stops leaning on a population
@@ -12026,7 +12259,7 @@ function attachVbt(ei, v, est) {
     addMvtObservation(v.lift, est.measuredV0);
     toast(`Calibrated ${v.lift} — failure speed ${est.measuredV0.toFixed(2)} m/s, limit now ${mvtFor(v.lift).toFixed(2)} m/s`, 'gold');
   } else {
-    toast(`${setRefText(ex.sets, target)} measured — ${v.best.toFixed(2)} m/s`, 'green');
+    toast(`${setRefText(ex.sets, target)} measured — ${v.best.toFixed(2)} m/s${vbtEst(v, s) && !filled && s.rpe == null ? ` · bar speed suggests RIR ${vbtRirText(v.est)}, a guide — type your own` : ''}`, 'green');
   }
   save(); bust(); render();
 }
@@ -12197,7 +12430,7 @@ function bpAnalyse(tk, o) {
   const out = Slew.analyse(samples, { targetHz: 60, minRom: profile.minRom, ...(loadKg > 0 ? { loadKg } : {}) });
   const reps = liftId ? Slew.withRpe(out.reps, profile) : out.reps;
   const failure = trustFailure(out.failure, out.reps, liftId, profile);
-  const est = liftId && reps.length ? Slew.estimateSet(reps, profile, failure) : null;
+  const est = liftId && reps.length ? vbtEstimateSet(reps, profile, failure) : null;
   const rec = { timestamp: Date.now(), reps, summary: out.summary, provenance: { mode: 'video', sampleRate: 60, sourceRate: BP.hz } };
   const v = packVbt(rec, est, liftId, 'video');
   v.conf = +Math.min(v.conf, coverage).toFixed(2);
@@ -12246,7 +12479,28 @@ function openBarPath(ei = null) {
   const host = document.createElement('div');
   const ov = document.createElement('canvas');
   const fileIn = document.createElement('input'); fileIn.type = 'file'; fileIn.accept = 'video/*'; fileIn.style.display = 'none';
-  const cleanup = () => { stopFlag = true; video.pause(); if (url) URL.revokeObjectURL(url); };
+  /* Recording in the app (00-V3, bar-path-spec §04c). The camera's own stream
+     goes straight to MediaRecorder — no canvas in between, so the clip keeps the
+     camera's frame rate — and the result is handed to the same trim step a
+     gallery clip goes to. It stays in memory on this phone: nothing is saved
+     unless the lifter saves the finished bar-path video, and nothing is sent
+     anywhere. */
+  const REC_MAX_S = 180;
+  let recStream = null, rec = null, recT0 = 0, recTick = 0, recDur = 0;
+  const canRecord = () => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && clipMime());
+  const recStop = () => {
+    clearInterval(recTick); recTick = 0;
+    if (rec && rec.state !== 'inactive') { try { rec.onstop = null; rec.stop(); } catch (e) { /* already stopped */ } }
+    rec = null;
+    if (recStream) recStream.getTracks().forEach(t => t.stop());
+    recStream = null;
+    if (video.srcObject) { video.pause(); video.srcObject = null; }
+    Awake.release('bprec');
+  };
+  /* A clip straight from MediaRecorder often reports no length (WebM without
+     a duration header). The recording was timed, so that is used instead. */
+  const durOf = () => (Number.isFinite(video.duration) && video.duration > 0 ? video.duration : recDur);
+  const cleanup = () => { stopFlag = true; recStop(); video.pause(); if (url) URL.revokeObjectURL(url); };
 
   const guide = `<div class="bp-guide"><b>Film it like this</b>
     <ul><li><b>Side-on, square to the bar</b> — looking straight at the plate. Every 15° off makes the path and speed read a few % short.</li>
@@ -12271,24 +12525,105 @@ function openBarPath(ei = null) {
   };
 
   const stepPick = () => show(`${guide}${ex ? `<div class="sub" style="margin-top:8px">For <b>${esc(exName(ex))}</b>${lastW ? ` at ${wt(lastW)}` : ''} — the result attaches to its next set.</div>` : ''}`,
-    `<button class="btn ghost" id="bpCancel">Cancel</button><button class="btn primary" id="bpChoose">Choose video</button>`,
+    `<button class="btn ghost" id="bpCancel">Cancel</button><button class="btn ${canRecord() ? '' : 'primary'}" id="bpChoose">Choose video</button>${canRecord() ? '<button class="btn primary" id="bpRecord">● Record</button>' : ''}`,
     bg => {
       $('#bpCancel', bg).onclick = () => { cleanup(); closeModal(); };
       $('#bpChoose', bg).onclick = () => fileIn.click();
+      const rb = $('#bpRecord', bg); if (rb) rb.onclick = () => stepRecord();
     });
+
+  const useClip = (blobOrFile, knownDur) => {
+    if (url) URL.revokeObjectURL(url);
+    recDur = knownDur || 0;
+    url = URL.createObjectURL(blobOrFile);
+    video.srcObject = null; video.muted = true;
+    video.src = url;
+    video.onloadedmetadata = () => {
+      video.onloadedmetadata = null;
+      const ready = () => { from = 0; to = Math.max(0.5, durOf() || 0); stepTrim(); };
+      if (Number.isFinite(video.duration)) return ready();
+      /* No length in the file: asking for a time far past the end makes the
+         browser read through to it and work the length out, after which the
+         clip seeks like any other. */
+      let done = false;
+      const settle = () => { if (done) return; done = true; video.removeEventListener('timeupdate', settle); video.currentTime = 0; ready(); };
+      video.addEventListener('timeupdate', settle);
+      setTimeout(settle, 4000);
+      try { video.currentTime = 1e101; } catch (e) { settle(); }
+    };
+    video.onerror = () => toast('Couldn\'t read that video');
+  };
+
+  const stepRecord = async () => {
+    let facing = S.settings.bpFacing || 'environment';
+    const open = async () => {
+      if (recStream) recStream.getTracks().forEach(t => t.stop());
+      recStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 60 } }, audio: false });
+      video.removeAttribute('src'); video.srcObject = recStream; video.muted = true;
+      await video.play().catch(() => {});
+    };
+    try { await open(); } catch (e) { recStop(); return toast('Camera not available — allow it in the browser, or choose a video instead'); }
+    Awake.hold('bprec');
+    const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+    show(`${stage()}
+      <div class="row between" style="margin-top:10px;gap:8px;align-items:center">
+        <div class="sub grow" id="bpRecMsg">Prop the phone side-on at plate height, 2–3 m away, the whole lift in frame. Tap Record, do the set, come back and tap Stop — you trim the walk to and from the bar afterwards.</div>
+        <div class="mono" id="bpRecT" aria-live="off" style="font-size:18px;min-width:52px;text-align:right">0:00</div>
+      </div>`,
+      `<button class="btn ghost" id="bpBack">Back</button><button class="btn ghost" id="bpFlip" aria-label="Switch camera">⟲ Flip</button><button class="btn primary" id="bpRecGo">● Record</button>`,
+      bg => {
+        const go = $('#bpRecGo', bg), flip = $('#bpFlip', bg), back = $('#bpBack', bg), msg = $('#bpRecMsg', bg), tEl = $('#bpRecT', bg);
+        back.onclick = () => { recStop(); stepPick(); };
+        flip.onclick = async () => {
+          facing = facing === 'environment' ? 'user' : 'environment'; S.settings.bpFacing = facing; save();
+          try { await open(); } catch (e) { toast('That camera isn\'t available'); }
+        };
+        const finish = () => new Promise(res => {
+          const chunks = rec._chunks, mime = rec.mimeType || clipMime();
+          rec.onstop = () => res(new Blob(chunks, { type: (mime || 'video/webm').split(';')[0] }));
+          rec.stop();
+        });
+        const stopNow = async () => {
+          if (!rec || rec.state === 'inactive') return;
+          clearInterval(recTick); recTick = 0;
+          const secs = (performance.now() - recT0) / 1000;
+          go.disabled = true; go.textContent = 'Saving…';
+          const blob = await finish();
+          recStop();
+          if (secs < 1 || !blob.size) { toast('That recording was too short'); return stepPick(); }
+          Cue.done();
+          useClip(blob, secs);
+        };
+        go.onclick = () => {
+          if (rec && rec.state === 'recording') return stopNow();
+          if (!recStream) return;
+          try { rec = new MediaRecorder(recStream, { mimeType: clipMime(), videoBitsPerSecond: 4e6 }); }
+          catch (e) { try { rec = new MediaRecorder(recStream); } catch (e2) { return toast('This browser can\'t record here — choose a video instead'); } }
+          rec._chunks = [];
+          rec.ondataavailable = ev => { if (ev.data && ev.data.size) rec._chunks.push(ev.data); };
+          rec.start(1000);
+          recT0 = performance.now();
+          Cue.unlock(); Cue.beep(880, 120);
+          go.textContent = '■ Stop'; go.classList.add('danger'); go.classList.remove('primary');
+          flip.disabled = true; back.disabled = true;
+          msg.textContent = 'Recording. Do the set, then come back and tap Stop.';
+          recTick = setInterval(() => {
+            const s = (performance.now() - recT0) / 1000;
+            tEl.textContent = fmt(s);
+            if (s >= REC_MAX_S) { toast(`Stopped at ${REC_MAX_S / 60} minutes — one set per clip`); stopNow(); }
+          }, 250);
+        };
+      });
+  };
 
   fileIn.onchange = () => {
     const f = fileIn.files[0]; fileIn.value = '';
     if (!f) return;
-    if (url) URL.revokeObjectURL(url);
-    url = URL.createObjectURL(f);
-    video.src = url;
-    video.onloadedmetadata = () => { from = 0; to = Math.max(0.5, video.duration || 0); stepTrim(); };
-    video.onerror = () => toast('Couldn\'t read that video');
+    useClip(f, 0);
   };
 
   const stepTrim = () => {
-    const d = video.duration || 0;
+    const d = durOf() || 0;
     const liftSel = ex ? '' : `<div class="field"><label for="bpLift">Lift</label><select id="bpLift">${Object.keys(Slew.DEFAULT_PROFILES).map(k => `<option ${k === liftId ? 'selected' : ''}>${esc(k)}</option>`).join('')}</select></div>`;
     show(`${stage()}
       <div class="grid2" style="margin-top:10px">
@@ -12442,7 +12777,7 @@ function openBarPath(ei = null) {
       ${v.reps.length ? `<div class="stats grid3" style="margin:10px 0">
         <div class="stat"><div class="k">Best</div><div class="v">${v.best.toFixed(2)}<small>m/s</small></div></div>
         <div class="stat"><div class="k">Velocity loss</div><div class="v">${v.loss.toFixed(0)}<small>%</small></div></div>
-        <div class="stat"><div class="k">Effort</div><div class="v" style="color:var(--purple)">${vbtEst(v) ? 'RIR ' + nice(rpeToRir(v.est.rpe)) : '—'}</div></div>
+        <div class="stat"><div class="k">Effort</div><div class="v" style="color:var(--purple)">${vbtEst(v) ? 'RIR ' + vbtRirText(v.est) : '—'}</div></div>
       </div>
       <table class="reptable"><thead><tr><th>Rep</th><th>m/s</th><th>Peak</th><th>cm</th><th>↔ cm</th><th>↑ s</th>${hasDepth ? '<th>Depth</th>' : ''}</tr></thead><tbody>
         ${v.reps.map((r, i) => `<tr><td style="color:${SERIES_COLORS[i % SERIES_COLORS.length]}">${i + 1}</td><td>${r.v.toFixed(2)}</td><td>${r.peak ? r.peak.toFixed(2) : '—'}</td><td>${(r.rom * 100).toFixed(0)}</td><td>${r.drift != null ? r.drift.toFixed(1) : '—'}</td><td>${r.con ? r.con.toFixed(1) : '—'}</td>${hasDepth ? `<td style="color:${r.depth ? DEPTH_COL[r.depth.call] : ''}" title="${r.depth ? esc(DEPTH_WORD[r.depth.call]) : ''}">${r.depth ? `${r.depth.call === 'deep' ? '✓' : r.depth.call === 'high' ? '✗' : r.depth.call === 'close' ? '≈' : '?'} ${r.depth.cm > 0 ? '+' : ''}${r.depth.cm.toFixed(1)}` : '—'}</td>` : ''}</tr>`).join('')}
@@ -12780,7 +13115,7 @@ function lvRecorded(ei, v) {
   ex.lvp.points.push({ kg: s.w, v: v.best, place: v.place, si, at: v.at });
   s.vbt = v;
   if (!s.r) s.r = v.reps.length;
-  if (!isWarm(s) && s.rpe == null && vbtEst(v, s)) s.rpe = Math.round(v.est.rpe * 2) / 2;   // a working set measured in profile mode logs its RIR, as attaching does
+  if (!isWarm(s) && s.rpe == null && vbtEst(v, s) && v.est.fill !== false) { s.rpe = Math.round(v.est.rpe * 2) / 2; s.rpeFrom = 'vbt'; }   // a working set measured in profile mode logs its RIR, as attaching does
   if (isWarm(s)) s.done = true;                        // a measured warm-up is a done warm-up
   save(); bust(); render();
   const d = lvDay(ex);
@@ -12961,23 +13296,23 @@ function openProfile(snap) {
         <input id="pfHandle" value="${esc(st.handle || '')}" placeholder="@yourname — leave blank for none"></div>
 
       <div class="row" style="gap:8px">
-        <div class="grow"><label>Sex</label>
+        <div class="grow"><label for="pfSex">Sex</label>
           <select id="pfSex">
             <option value="male"${st.sex === 'male' ? ' selected' : ''}>Male</option>
             <option value="female"${st.sex === 'female' ? ' selected' : ''}>Female</option>
           </select>
           <div class="sub" style="margin-top:4px">Sets the DOTS coefficient.</div>
         </div>
-        <div class="grow"><label>Date of birth</label>
+        <div class="grow"><label for="pfDob">Date of birth</label>
           <input type="date" id="pfDob" value="${esc(st.dob || '')}" max="${today()}">
           <div class="sub" style="margin-top:4px">${age == null ? 'For your age category.' : `${age} · ${cat || 'no category'} (IPF)`}</div>
         </div>
       </div>
 
       <div class="row" style="gap:8px">
-        <div class="grow"><label>Height (cm)</label>
+        <div class="grow"><label for="pfHeight">Height (cm)</label>
           <input type="number" inputmode="numeric" id="pfHeight" value="${st.heightCm || ''}" placeholder="—"></div>
-        <div class="grow"><label>Bodyweight (${U()})</label>
+        <div class="grow"><label for="pfBw">Bodyweight (${U()})</label>
           <input type="number" step="0.1" inputmode="decimal" id="pfBw" value="${st.bodyweight ? dw(st.bodyweight) : ''}" placeholder="—">
         </div>
       </div>
@@ -13001,7 +13336,7 @@ function openProfile(snap) {
       <div class="hr"></div>
       <div class="eyebrow" style="margin-bottom:6px">Daily energy</div>
       <div class="row" style="gap:8px">
-        <div class="grow"><label>Activity</label>
+        <div class="grow"><label for="pfAct">Activity</label>
           <select id="pfAct">${Object.entries(ACTIVITY).map(([k, a]) =>
         `<option value="${k}"${st.activity === k ? ' selected' : ''}>${a.label} — ${a.note}</option>`).join('')}</select></div>
       </div>
@@ -13121,7 +13456,7 @@ function openSettings() {
           <span class="sub">${U()} ×</span>
           <input type="number" inputmode="numeric" data-pp="${i}" value="${p.pairs}" style="width:64px" aria-label="Pairs of ${dw(p.kg, 2)} ${U()} plates">
           <span class="sub grow">pairs</span>
-          <button class="btn sm ghost" data-prm="${i}">−</button>
+          <button class="btn sm ghost" data-prm="${i}" aria-label="Remove the ${dw(p.kg, 2)} ${U()} plates">−</button>
         </div>`).join('')}</div>
       <button class="btn xs ghost" id="stAddPlate">+ Add plate</button>
       <div class="field" style="margin-top:10px"><label for="stCollar">Collars — each (${U()})</label>
@@ -13383,9 +13718,7 @@ function openSettings() {
       $('#stHelp', bg).onclick = () => { closeModal(); openHelp(); };
       $('#stProfile', bg).onclick = () => { closeModal(); openProfile(); };
       $('#stPlaces', bg).onclick = () => { closeModal(); openPlaces(); };
-      $('#stWipe', bg).onclick = () => confirmDlg('This erases every workout, check-in, goal and meet. It cannot be undone.', () => {
-        S = structuredClone(DEFAULT_STATE); save(); applySkin(S.settings.skin); closeAllModals(); go('home'); toast('All data erased');
-      }, 'Erase everything');
+      $('#stWipe', bg).onclick = () => openEraseAll();
       $('#stSave', bg).onclick = () => {
         S.settings.units = units;
         const op = +$('#stOpener', bg).value;
@@ -14226,8 +14559,15 @@ function adoptRange(e) {
   const r = rangeFromText(e.notes) || (S.settings.rangeBy || {})[exKey(e)];
   if (r) e.range = [r[0], r[1]];
 }
+/* Kit that only comes in fixed ratings: a torsion gripper, a finger band. There
+   is no "2.5 kg more" — the next step is the next one up, whatever it's rated
+   (bug sweep 3.2, E13). */
+function fixedStepKit(leaf) {
+  const eq = leaf && leaf.equipment;
+  return eq === 'gripper' ? 'gripper' : eq === 'extension_band' || eq === 'resistance_band' ? 'band' : null;
+}
 function rangeNextLoad(w, leaf) {
-  const step = leaf && (leaf.equipment === 'dumbbells' || leaf.equipment === 'kettlebell') ? 2 : 2.5;
+  const step = toKg(leaf && (leaf.equipment === 'dumbbells' || leaf.equipment === 'kettlebell') ? (U() === 'lb' ? 5 : 2) : inc());   // one step in the lifter's units, as kg
   const next = roundLoadFor(Math.max(w * 1.025, w + step), leaf);
   return next > w ? next : w + step;
 }
@@ -14242,12 +14582,14 @@ function rangeVerdict(e, sets, date) {
   const W = Math.max(...work.map(s => s.w)), at = work.filter(s => s.w === W);
   const rirs = at.filter(s => s.rpe != null).map(s => rpeToRir(s.rpe));
   const base = { w: W, lo, hi, t, reps: at.map(s => s.r), noRir: !rirs.length };
-  if (at.every(s => s.r >= hi) && rirs.every(r => r >= t)) return { ...base, kind: 'up', next: rangeNextLoad(W, e.leaf) };
+  if (at.every(s => s.r >= hi) && rirs.every(r => r >= t)) return { ...base, kind: 'up', ...(fixedStepKit(e.leaf) ? { next: null, kit: fixedStepKit(e.leaf) } : { next: rangeNextLoad(W, e.leaf) }) };
   if (at[0].r < lo) return { ...base, kind: 'below' };
   return { ...base, kind: 'build', grind: at.every(s => s.r >= hi) };
 }
 function verdictWords(v, today2) {
   const rir = v.noRir ? ' (no RIR logged)' : '';
+  if (v.kind === 'up' && v.next == null) return today2 ? `Top of the range at RIR ${v.t}+${rir} → next time the next ${v.kit || 'step'} up, from ${v.lo} reps`
+    : `top of the range${rir} → try the next ${v.kit || 'step'} up, from ${v.lo} reps`;
   if (v.kind === 'up') return today2 ? `Top of the range at RIR ${v.t}+${rir} → next time ${wt(v.next)} × ${v.lo}`
     : `top of the range${rir} → try ${wt(v.next)} × ${v.lo}`;
   if (v.kind === 'below') return today2 ? `Under ${v.lo} reps — stay at ${wt(v.w)} until you reach ${v.lo}, or drop the weight`
@@ -14280,7 +14622,7 @@ function rangeLine(e, ei) {
     if (v) {
       msg = `Last time ${wt(v.w)} — ${esc(verdictWords(v, false))}`;
       const pending = e.sets.filter(s => !s.done && isPRSet(s) && s.setType !== 'amrap');
-      if (v.kind === 'up' && !e.auto && pending.some(s => s.w !== v.next || s.r !== v.lo)) use = `<button class="btn xs primary" data-range-use="${ei}">Use</button>`;
+      if (v.kind === 'up' && v.next != null && !e.auto && pending.some(s => s.w !== v.next || s.r !== v.lo)) use = `<button class="btn xs primary" data-range-use="${ei}">Use</button>`;
     }
   }
   return `<div class="rangeline"><div class="row" style="gap:8px;align-items:center">
@@ -14765,7 +15107,9 @@ function loadFor(e1, reps, rir) {
   return eff <= 1 ? e1 : e1 / (1 + Math.min(eff, 12) / 30);
 }
 function roundLoadFor(kg, leaf) {
-  if (leaf && (leaf.equipment === 'dumbbells' || leaf.equipment === 'kettlebell')) return Math.round(kg / 2) * 2;
+  /* Dumbbells and kettlebells step in 2 kg, or 5 lb for a lifter working in
+     pounds (it used to be 2 kg either way: 44.1 lb — bug sweep 3.3). */
+  if (leaf && (leaf.equipment === 'dumbbells' || leaf.equipment === 'kettlebell')) return U() === 'lb' ? toKg(Math.round(fromKg(kg) / 5) * 5) : Math.round(kg / 2) * 2;
   return roundBar(kg);
 }
 function median(xs) {
@@ -15986,7 +16330,7 @@ function fitSave(D) {
     if (exercises.length) S.workouts.push({
       id: uid(), date: t.date, name: 'Fitting test', status: 'completed', source: 'logged', fitTest: t.id, notes: '',
       exercises, start: null, end: Date.now(),
-      summary: { mins: 0, prs: [], volume: exercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + s.w * s.r, 0), 0) },
+      summary: { mins: 0, prs: [], volume: exercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + (s.w || 0) * (s.r || 0), 0), 0) },
     });
   }
   S.fitDraft = null;
@@ -16743,7 +17087,7 @@ function coachDigest() {
   coLifted(14).forEach(wo => wo.exercises.forEach(e => e.sets.forEach(s => {
     if (!s.done || !isWorking(s) || s.rpe == null) return;
     if (s.t != null) gaps.push(rpeToRir(s.rpe) - s.t);
-    if (vbtEst(s.vbt, s)) vgaps.push(rpeToRir(s.rpe) - rpeToRir(s.vbt.est.rpe));
+    if (vbtEst(s.vbt, s) && !rirFromSensor(s)) vgaps.push(rpeToRir(s.rpe) - rpeToRir(s.vbt.est.rpe));   // a sensor-filled RIR agrees with itself
   })));
   let streak = 0;
   for (let i = 0; i < 26; i++) { if (coLifted(7, addDaysISO(t, -7 * i)).length) streak++; else break; }
@@ -16910,12 +17254,12 @@ function coDebrief(wo) {
     const v = rangeVerdict(x.e, x.sets.filter(s => s.done), wo.date);
     if (!v) return;
     lines.push(`${exName(x.e)}: ${verdictWords(v, false)}.`);
-    if (v.kind === 'up') next.push([3, `${exName(x.e)}: ${wt(v.next)} × ${v.lo} next time.`]);
+    if (v.kind === 'up') next.push([3, v.next == null ? `${exName(x.e)}: the next ${v.kit || 'step'} up next time, from ${v.lo} reps.` : `${exName(x.e)}: ${wt(v.next)} × ${v.lo} next time.`]);
   });
   const stalled = work.filter(x => x.e.leaf && stallFor(exKey(x.e))).map(x => exName(x.e));
   if (stalled.length) { lines.push(`Stalled: ${stalled.join(', ')}.`); next.push([2, `${stalled[0]} has stalled — ask me why before the next session.`]); }
   const vg = [];
-  work.forEach(x => x.sets.forEach(s => { if (s.done && vbtEst(s.vbt, s) && s.rpe != null) vg.push(rpeToRir(s.rpe) - rpeToRir(s.vbt.est.rpe)); }));
+  work.forEach(x => x.sets.forEach(s => { if (s.done && vbtEst(s.vbt, s) && s.rpe != null && !rirFromSensor(s)) vg.push(rpeToRir(s.rpe) - rpeToRir(s.vbt.est.rpe)); }));
   if (vg.length >= 2) { const g = coAvg(vg); if (Math.abs(g) >= 1) lines.push(`Bar speed says you had ${g > 0 ? 'fewer' : 'more'} reps left than you logged (about ${nice(Math.abs(g))}).`); }
   const pain = [...wo.exercises.filter(e => e.sets.some(s => s.feel && s.feel.pain)).map(exName), ...(wo.feel && wo.feel.pain ? ['the session'] : [])];
   if (pain.length) { lines.push(`You flagged pain on ${pain.join(', ')}.`); next.push([6, 'You flagged pain — if it\'s still there, stop and get it checked by a professional. I can\'t advise on injuries.']); }
@@ -19357,7 +19701,7 @@ function wireActive(v) {
   v.querySelectorAll('[data-range-use]').forEach(b => b.onclick = () => {
     const ex = a.exercises[+b.dataset.rangeUse], last = lastSession(exKey(ex));
     const vd = last && rangeVerdict(ex, last.sets, last.date);
-    if (!vd || vd.kind !== 'up') return;
+    if (!vd || vd.kind !== 'up' || vd.next == null) return;
     let n = 0;
     ex.sets.forEach(s => { if (!s.done && isPRSet(s) && s.setType !== 'amrap') { s.w = vd.next; s.r = vd.lo; delete s.auto; n++; } });
     save(); render();
@@ -20167,6 +20511,7 @@ async function applyImportedState(data, keepUndo) {
        boot migrates those, and an import has to as well or every page throws
        until the next restart (bug sweep 2.2). */
     if ((S.schemaVersion || 1) < 2) migrateToV2(S);
+    healCustomMovements();
     bust();
     save();
     /* the backup carries its own skin — follow it, or the page would be
@@ -21120,6 +21465,7 @@ function importIronlogCSV(text) {
   const have = new Set(S.workouts.map(w => w.id));
   const add = list.filter(w => !have.has(w.id));
   S.workouts.push(...add);
+  healCustomMovements();   // the CSV carries the pointer to a custom exercise, not its name record
   save(); bust();
   return { added: add.length, skipped: list.length - add.length };
 }
@@ -21327,7 +21673,12 @@ $('#navCoach').onclick = () => openCoach();
 $('#settingsBtn').onclick = openSettings;
 $('#profileBtn').onclick = () => openProfile();
 $('#toolsBtn').onclick = () => openTools();
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalStack.length) closeModal(); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || !modalStack.length) return;
+  const top = modalStack[modalStack.length - 1];
+  if (top._guard && !top._guard()) return;
+  closeModal();
+});
 
 /* Fields let go of focus when you're done with them (roadmap A5, Blast #49).
    On Android, dismissing the keyboard with Back or Done leaves the field
@@ -21385,6 +21736,7 @@ async function bootApp() {
     if (applied.orphans.length) console.warn('migration: unresolved names became custom movements:', applied.orphans);
     save(); await flush();
   }
+  if (healCustomMovements()) save();   // sets pointing at a custom exercise with no record (an older Drive restore or CSV)
 
   /* No auto-install. It used to drop a personal 77-week plan and two meets into
      any empty state — every new user, and this account after "Erase all data".
@@ -21475,10 +21827,15 @@ boot();
    next launch — never mid-session, which would lose the sets on screen. */
 if ('serviceWorker' in navigator) {
   let reloading = false;
+  /* On a first install the worker takes control of a page that had none. That
+     isn't an update, and reloading for it cut the welcome sheet off a second
+     after it opened (bug sweep 4.6). */
+  const hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (reloading) return;
+    if (reloading || (!hadController && !updateAsked)) return;
     reloading = true;
-    location.reload();
+    // the last edit is written before the page goes (bug sweep 1.7)
+    Promise.resolve().then(flush).catch(() => {}).then(() => location.reload());
   });
 
   window.addEventListener('load', () => {
@@ -21488,12 +21845,16 @@ if ('serviceWorker' in navigator) {
         if (!sw) return;
         sw.addEventListener('statechange', () => {
           if (sw.state !== 'installed' || !navigator.serviceWorker.controller) return;
-          if (S && S.active) {
+          /* Mid-workout, or with any sheet open (an edit, a check-in, a test in
+             progress): leave it waiting. Restarting there threw away whatever
+             was typed and not yet saved (bug sweep 1.7). */
+          const busy = () => !!(S && S.active) || modalStack.length > 0 || !!document.getElementById('bootRescue');
+          if (busy()) {
             toast('Update downloaded — it will apply next time you open the app');
-            return;                                  // mid-workout: leave it waiting
+            return;
           }
           toast('Update ready — restarting', 'green');
-          setTimeout(() => reg.waiting && reg.waiting.postMessage({ type: 'SKIP_WAITING' }), 1400);
+          setTimeout(() => { if (!busy() && reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' }); }, 1400);
         });
       });
       setInterval(() => reg.update(), 60 * 60 * 1000);

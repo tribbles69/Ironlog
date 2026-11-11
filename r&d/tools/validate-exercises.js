@@ -138,8 +138,9 @@ ok(ambiguous === 0, 'zero leaf-ambiguous entries (was 489 / 34.9% before leaf-be
 
 const totalEntries = Object.values(entries).reduce((a, b) => a + b, 0);
 console.log(`\n  ${names.length} names / ${totalEntries} entries resolved — ` +
-            `${names.filter(n => resolve(n).via === 'alias').length} via alias, ` +
-            `${names.filter(n => resolve(n).via === 'name').length} via name`);
+            `${names.filter(n => (resolve(n) || {}).via === 'alias').length} via alias,` +
+            `${names.filter(n => (resolve(n) || {}).via === 'name').length} via name` +
+            (orphans.length ? `, ${orphans.length} not in the catalogue — the app installs those as custom movements` : ''));
 
 /* --------------------------------------------- 3. the program file
    The phase 1 figures (327 sessions, 4409 sets, 143 zero-rep sets standing in

@@ -13,6 +13,64 @@ rather than guessed.
 
 ---
 
+## 0.93.1 — 11 Nov 2026
+- **Changed: the bar-speed export holds more.** Settings → Export raw traces now also lists every set you've measured in the last 60 days, by sensor or video, with each rep's speed and whether the RIR was yours or the sensor's. It's there so Measure can be checked against a proper bar-speed device. It works even with Bar-speed debug off.
+
+## 0.93.0 — 11 Nov 2026
+- **New: film your set inside Ironlog.** ▶ Video on a lift (and Tools → Bar path) now has a **● Record** button next to Choose video. Prop the phone side-on, tap Record, do the set, tap Stop, and it goes straight into the usual trim → bar path → squat depth steps. No need to film in the camera app and find the clip afterwards.
+- The clip stays on your phone and is only kept if you save the finished bar-path video. ⟲ Flip switches between the back and front cameras. A recording stops itself after 3 minutes.
+
+## 0.92.0 — 11 Nov 2026
+- **Changed: bar-speed RIR is worked out differently.** It now reads how much speed you lost across the set, rather than comparing your speed with a typical lifter's. On the 9 Nov push day a 17-rep set taken close to failure had read RIR 12 and now reads about 3; a 40 kg warm-up triple had read RIR 0 and now reads about 4. It's still an estimate, and it hasn't been checked against enough real ratings yet.
+- **Changed: Measure no longer types RIR in for you**, unless it saw a missed rep or a near-stall, or the lift has been calibrated to you. Otherwise it shows its figure next to the set ("bar speed suggests RIR 3") and leaves the box for you.
+- **Changed: when your speed barely drops, it says "6+" or gives no number** instead of a precise-looking guess.
+- **Fixed: putting the bar down after an easy set could read as a missed rep** and RIR 0.
+- **Fixed: the rep-by-rep RIR column could disagree with the set's RIR.** It now counts back from it.
+- Still hidden when the sensor found fewer reps than you logged.
+
+## 0.91.0 — 11 Nov 2026
+- **New: Measure corrects for the phone tilting.** The phone turns as the bar rolls in your hands, and a lot on curls, raises and presses, which made the bar's travel read short and uneven. Measure now tracks which way is down at every instant. On the 11 Nov accessory day, overhead press travel went from 17–40 cm rep to rep to a steady 44–58 cm, and two sets that had miscounted came out right.
+- **Changed: speeds on those lifts read higher than before**, because the travel was being under-read. They're still a guide until checked against a proper device.
+- **Fixed: getting the bar into position could count as a rep.** In a set of four or more, a "rep" that's already finished within about two seconds of tapping Start is left out.
+- **Fixed: the "No reps found" message quoted the wrong minimum travel** (10 cm; it's 4 cm).
+- Heavy sets haven't been checked with this yet. The 9 Nov push day recordings didn't include the extra sensor data, so they read exactly as before (80 of 81 reps).
+
+## 0.90.17 — 11 Nov 2026
+- **Fixed: updates could slip in without asking.** The app re-downloaded its files in the background on every launch, so a new version could be in use on the second launch even if you'd chosen "Later", or halfway through a workout. On a weak signal it could also end up with a mix of old and new files. A new version now arrives whole, and only through the update prompt.
+
+## 0.90.16 — 11 Nov 2026
+- **Fixed: "Erase all data" didn't erase everything.** It left progress photos, daily clips and bar-speed debug traces on the phone, and if Google Drive was connected the next sync put the whole log back. It now removes all of it, disconnects Drive on this phone, and tells you first exactly what will go. The backup file in your own Drive is never deleted. Your AI key is kept unless you tick the box.
+
+## 0.90.15 — 11 Nov 2026
+- **Fixed: Edit session threw your changes away without asking.** Cancel, the ✕, Back or a stray tap outside the sheet all discarded what you'd changed. If you've changed anything, it now asks first.
+
+## 0.90.14 — 11 Nov 2026
+- **Fixed: nine controls a screen reader couldn't name.** The calendar's month arrows, the plate "−" buttons and Google client ID box in Settings, and the five fields on your profile (sex, date of birth, height, bodyweight, activity) now announce what they are.
+
+## 0.90.13 — 11 Nov 2026
+- **Fixed: Measure used the wrong weight for warm-ups.** If your top set's weight was already typed in, a warm-up measured before it was recorded at the top set's weight, which threw off its power figure and the bar-speed debug file. Measure now uses the weight of the set the reading attaches to.
+
+## 0.90.12 — 11 Nov 2026
+- **Fixed: dumbbell suggestions in pounds.** If you work in lb, suggested dumbbell and kettlebell weights were still rounded to 2 kg, giving figures like 44.1 lb. They now round to the nearest 5 lb. Nothing changes if you work in kg.
+
+## 0.90.11 — 11 Nov 2026
+- **Fixed: rep ranges told you to add 2.5 kg to a gripper.** Grippers and bands only come in fixed ratings. At the top of the range Ironlog now says to move to the next gripper (or band) up, and the **Use** button isn't offered for them.
+
+## 0.90.10 — 11 Nov 2026
+- **Fixed: "Reps NaN" and 0 kg volume on the session summary.** A session that included a carry or a timed hold showed NaN for reps and lost its volume total. Sets without reps are now left out of those sums instead of breaking them. Share cards and the edit screen had the same fault.
+
+## 0.90.9 — 11 Nov 2026
+- **Fixed: finished sessions didn't count towards their plan.** A session started from a plan that has no named blocks (most coach-built and imported plans) lost its link to the plan when you finished it, so the plan's "Completed" count stayed at zero. New sessions now keep the link. Sessions already finished aren't changed.
+
+## 0.90.8 — 11 Nov 2026
+- **Fixed: an update could restart the app while you were typing.** With no workout running, a new version restarted the app a second after it downloaded, even with a sheet open, and whatever you'd typed into an edit or a check-in was lost. An update now waits while any sheet is open and applies the next time you open the app.
+- **Fixed: the last change could be missed when updating.** Ironlog now finishes saving before it restarts for an update.
+- **Fixed: the app reloaded itself a second after the very first launch**, which could cut off the welcome screen.
+
+## 0.90.7 — 11 Nov 2026
+- **Fixed: your own exercises lost their names on a new phone.** Exercises you'd created weren't part of the Google Drive backup, so after a restore they showed as codes like "custom-zercher-carry". They're now backed up with everything else.
+- **Fixed: the same after a CSV import or an older restore.** Where a set points at one of your own exercises and its name record is missing, Ironlog rebuilds it from the name the set was logged with.
+
 ## 0.90.6 — 11 Nov 2026
 - **Fixed: an exercise of your own could stop the app opening after an update.** If an update added an exercise with the same name as one you'd created yourself, Ironlog refused to load its exercise list. The built-in exercise now takes the name and yours keeps its history.
 

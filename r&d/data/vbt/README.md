@@ -6,6 +6,8 @@ Measure detected, and the set as logged. For roadmap **00-V1** (tilt
 correction) and **00-V2** (bar-speed RIR accuracy). Add new exports here with
 the date in the file name; don't edit the originals.
 
+Exports from 0.93.1 are **v3**: the same `traces`, plus `readings` (every measured set of the last 60 days as the lifter saw it) and, on each trace, `tilt` (share of samples tilt-corrected) and `found` (reps after the filters). `logged.rirFrom` says whether the set's RIR was typed or filled by the sensor. Tools: `vbt-sim.cjs` (rep counts), `vbt-rir.cjs` (RIR, old vs new), `vbt-validate.cjs` (against a reference device).
+
 ## ironlog-vbt-raw-2026-11-11.json — 20 traces
 
 **9 Nov, Wk 4 · Push (9 traces):** overhead press (warm-up, 1 unlogged set,
@@ -31,6 +33,8 @@ Light weight, so speed is about movement shape, not effort.
 | 09:37 | **not logged** — probably the overhead triceps extension Aaron planned (check with him) | ? | 6 | none |
 | 09:37 | Bent Over Row set 1 | 6 | 6 | Row / pulldown |
 | 09:38 | Bent Over Row set 2 | 6 | 6 | Row / pulldown |
+
+The **Detected** column is the count before Measure drops fidgets and lift-offs (the trace's `detected` field), not what the lifter was shown. For what each version finds, see `r&d/notes/vbt-validation.md` → Tilt correction.
 
 What this shows at a glance:
 - **Over-counting on arcs and light loads:** curls, front raise, OHP and squat
