@@ -13,6 +13,9 @@ rather than guessed.
 
 ---
 
+## 0.90.6 — 11 Nov 2026
+- **Fixed: an exercise of your own could stop the app opening after an update.** If an update added an exercise with the same name as one you'd created yourself, Ironlog refused to load its exercise list. The built-in exercise now takes the name and yours keeps its history.
+
 ## 0.90.5 — 11 Nov 2026
 - **Fixed: restoring an older backup could delete newer sessions from Google Drive.** After importing a backup, the next sync treated anything the backup didn't have as deleted, and removed it from Drive and from your other phones. Now the next sync after an import only adds: whatever is in Drive and not in the backup comes back onto the phone.
 

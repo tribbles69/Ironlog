@@ -48,6 +48,16 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    E12 next (E11 shipped 0.64.0, E12's first build 0.65.0); D8 shipped 0.66.0.
    D9 finished in 0.73.0.
 
+   **Where the section-00 sweep got to (2026-11-11, 0.90.6, branch
+   `fix/bug-sweep-2026-11`):** 00-B1 is done — the ranked list is
+   `r&d/notes/bug-sweep-2026-11.md`. 00-B2 is part done: findings 1.1–1.5,
+   2.1–2.3 and a new one, 2.4 (a custom exercise sharing a name with a
+   built-in one threw in `catalogue()`; add it to the list), shipped as
+   0.90.1–0.90.6. **Next: 1.6** (custom exercises missing from Drive sync),
+   then 1.7, 1.8, 3.x, 4.x in the list's order. 3.4, 3.6, 3.7, part of 1.8
+   and 4.5 wait on Aaron. 00-V1 onward not started. Stopped here because the
+   Fable allowance ran out.
+
    **Next up (2026-11-11, Aaron):** section **00** (bug fixes, then VBT, then design)
    comes before everything else, in page order. Then what's left of section
    **0** (01–03 shipped; 04c moved into 00). After those, carry on from

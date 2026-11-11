@@ -2333,7 +2333,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.90.5';
+const APP_VERSION = '0.90.6';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -2428,21 +2428,38 @@ function catalogue() {
   /* Custom movements are the user's own, plus anything migration could not
      resolve. An unresolved name becomes its own movement rather than being
      guessed into an existing one — declining to guess, not guessing. */
-  const all = (C.movements || []).concat((typeof S === 'object' && S && S.customMovements) || []);
-  all.forEach(m => {
+  const builtIn = C.movements || [];
+  builtIn.forEach(m => {
     if (byId.has(m.id)) problems.push(`duplicate movement id "${m.id}"`);
     byId.set(m.id, m);
     const k = m.name.toLowerCase();
     if (byName.has(k)) problems.push(`two movements named "${m.name}"`);
     byName.set(k, { m, a: null });
   });
-  all.forEach(m => (m.aliases || []).forEach(a => {
+  /* The lifter's own movements never make the catalogue invalid. A clash with
+     the shipped list used to throw here — and everything reads the catalogue,
+     so one update that added a movement with the same name as a custom one
+     would have stopped the app opening (bug sweep 2.4). The shipped movement
+     keeps the name; the custom one stays reachable by its id, so sets logged
+     against it keep their history. */
+  const custom = ((typeof S === 'object' && S && S.customMovements) || []).filter(m => m && typeof m.id === 'string' && typeof m.name === 'string');
+  custom.forEach(m => {
+    if (byId.has(m.id)) return;
+    byId.set(m.id, m);
+    const k = m.name.toLowerCase();
+    if (!byName.has(k)) byName.set(k, { m, a: null });
+  });
+  builtIn.forEach(m => (m.aliases || []).forEach(a => {
     const k = a.name.toLowerCase();
     if (byName.has(k)) return;                      // a movement's own name always wins
     const prev = byAlias.get(k);
     if (prev && prev.m.id !== m.id) { problems.push(`alias "${a.name}" on both ${prev.m.id} and ${m.id}`); return; }
     if (!prev) byAlias.set(k, { m, a });
   }));
+  custom.forEach(m => { if (byId.get(m.id) === m) (m.aliases || []).forEach(a => {
+    const k = a && typeof a.name === 'string' ? a.name.toLowerCase() : '';
+    if (k && !byName.has(k) && !byAlias.has(k)) byAlias.set(k, { m, a });
+  }); });
 
   if (problems.length) throw new Error('exercise catalogue invalid: ' + problems.join('; '));
   _cat = { C, V, byId, byName, byAlias };
