@@ -13,6 +13,9 @@ rather than guessed.
 
 ---
 
+## 0.90.2 — 11 Nov 2026
+- **Fixed: a log that couldn't be read was quietly replaced by an empty one.** If the saved log was damaged, or the phone's storage didn't answer for a moment at start-up, Ironlog opened as if new and then saved that empty log over the real one. It now stops at the rescue screen instead and writes nothing until you choose.
+
 ## 0.90.1 — 11 Nov 2026
 - **Fixed: the app could get stuck on "Loading your log…" for good.** A backup file with a gap in it (a list missing or empty in the wrong way) could be imported and then stop the app opening at all. Ironlog now repairs those gaps when it opens.
 - **New: a rescue screen.** If your log ever can't be opened, Ironlog now says so instead of hanging, changes nothing, and gives you a **Save a copy of my data** button before anything else.

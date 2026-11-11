@@ -91,7 +91,7 @@ back to its default; the same function used by import in 1.2). Wrap `boot` in
 a try/catch that shows a rescue screen: the error, "Save a copy of my data"
 (the raw stored string), and "Start fresh".
 
-### [ ] 1.4 Unreadable stored data is silently replaced by an empty log — Confirmed
+### [x] 1.4 (0.90.2) Unreadable stored data is silently replaced by an empty log — Confirmed
 **Where:** `load` catch (~2039) and `storeGet` (~1532).
 If the stored JSON won't parse, `load` returns an empty state and the next
 save writes it over the original. If IndexedDB fails to *read* (blocked, a

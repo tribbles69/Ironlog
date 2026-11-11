@@ -1529,12 +1529,23 @@ function idb(mode, fn) {
   }));
 }
 
-async function storeGet(k) {
+/* A read that fails is not the same as nothing stored (bug sweep 1.4): the
+   app used to open as a fresh install either way, and the next save could
+   land on top of the real log once IndexedDB answered again. So a failed
+   read with no fallback copy throws when `strict` (the log itself, at boot),
+   and boot shows the rescue screen. Skins, photos and clips keep the old
+   answer of "nothing there". A browser with no IndexedDB at all still runs
+   on localStorage as before. */
+async function storeGet(k, strict) {
+  let failed = null;
   try {
     const v = await idb('readonly', st => st.get(k));
     if (v != null) return v;          // undefined = fresh install, not an error
-  } catch (e) { /* fall through */ }
-  try { return localStorage.getItem(k); } catch (e) { return null; }
+  } catch (e) { failed = e; }
+  let ls = null;
+  try { ls = localStorage.getItem(k); } catch (e) { /* blocked: same as empty */ }
+  if (strict && ls == null && failed && self.indexedDB) throw new Error(`This phone's storage didn't answer (${failed.message || failed.name || 'read failed'})`);
+  return ls;
 }
 
 async function storePut(k, v) {
@@ -2024,12 +2035,13 @@ function normaliseState(parsed) {
   // settings is merged a level deeper, so a key added to DEFAULT_STATE later still gets its default
   st.settings = Object.assign(structuredClone(DEFAULT_STATE.settings), plain(src.settings) ? src.settings : {});
   ['customMovements', 'foods'].forEach(k => { if (k in st && !Array.isArray(st[k])) delete st[k]; });   // optional lists, read with || []
+  ['workouts', 'checkins', 'goals', 'meets', 'misses'].forEach(k => { st[k] = st[k].filter(plain); });       // lists of records hold only records
   return st;
 }
 
 let freshInstall = false;   // no stored state at boot: What's new has nothing to tell
 async function load() {
-  const raw = await storeGet(KEY);
+  const raw = await storeGet(KEY, true);
   if (!raw) {
     /* A fresh install has nothing to catch up on. Marked here, on the state
        itself, rather than at the end of boot: the first launch reloads when
@@ -2039,13 +2051,18 @@ async function load() {
     st.settings.lastSeenVersion = APP_VERSION;
     return st;
   }
-  try {
-    const st = normaliseState(JSON.parse(raw));
+  /* Stored data that won't read is never swapped for an empty log (bug sweep
+     1.4): the migration below would save that empty log straight over it. It
+     throws instead, and boot's rescue screen offers a copy of what's there. */
+  let parsed;
+  try { parsed = JSON.parse(raw); } catch (e) { throw new Error(`The stored log isn't readable (${e.message})`); }
+  {
+    const st = normaliseState(parsed);
     /* 0.3.0: the `backfilled` boolean became `source`. Only 'backfill' is the plan's
        prescription — imported history is real lifting and always counts toward PRs.
        `backfilled` is left in place so an older export re-imported through Settings
        still migrates the same way. */
-    st.workouts.forEach(w => { if (!w.source) w.source = w.backfilled ? 'backfill' : 'logged'; });
+    st.workouts.forEach(w => { if (w && typeof w === 'object' && !w.source) w.source = w.backfilled ? 'backfill' : 'logged'; });
     /* 0.22's import review saved a picked exercise as the string
        "[object Object]"; as an alias it would steer every re-import there. */
     Object.keys(st.exAliases || {}).forEach(k => { if (st.exAliases[k] === '[object Object]') delete st.exAliases[k]; });
@@ -2054,9 +2071,6 @@ async function load() {
        removed from Clear data — so an update never loses someone's log. */
     if (!(st.foods || []).length) dropFood(st);
     return st;
-  } catch (e) {
-    console.warn('load failed', e);
-    return structuredClone(DEFAULT_STATE);
   }
 }
 
@@ -2306,7 +2320,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.90.1';
+const APP_VERSION = '0.90.2';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -21315,8 +21329,18 @@ async function bootRescue(err) {
     if (!confirm(raw && !saved ? 'You haven\'t saved a copy yet. Start with an empty log anyway? What is stored now is set aside on this phone, not deleted, but it can only be got back with help.'
       : 'Start with an empty log? What is stored now is set aside on this phone, not deleted.')) return;
     try {
-      if (raw) await idb('readwrite', st => st.put(raw, KEY + '.rescue'));   // set aside, never thrown away
       const fresh = structuredClone(DEFAULT_STATE); fresh.schemaVersion = 2; fresh.settings.lastSeenVersion = APP_VERSION;
+      if (!raw) {
+        /* Storage didn't answer, so the real log may still be in there. Ask
+           once more; if it's still silent, the empty log goes to the fallback
+           store only — IndexedDB is left alone, and whatever it holds is what
+           opens again the day it answers. */
+        let again = null, silent = false;
+        try { again = await idb('readonly', st => st.get(KEY)); } catch (e) { silent = true; }
+        if (again != null) return location.reload();
+        if (silent) { localStorage.setItem(KEY, JSON.stringify(fresh)); return location.reload(); }
+      }
+      if (raw) await idb('readwrite', st => st.put(raw, KEY + '.rescue'));   // set aside, never thrown away
       await idb('readwrite', st => st.put(JSON.stringify(fresh), KEY));
       location.reload();
     } catch (e) { alert('Could not write to storage: ' + ((e && e.message) || e)); }
