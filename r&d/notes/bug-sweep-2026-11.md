@@ -184,7 +184,7 @@ reachable by id so its sets keep their history.
 
 ## Severity 3 — wrong numbers
 
-### [ ] 3.1 Session summary shows "Reps NaN" and saves no volume when a carry or hold is in the session — Confirmed
+### [x] 3.1 (0.90.10) Session summary shows "Reps NaN" and saves no volume when a carry or hold is in the session — Confirmed
 **Where:** `finishWorkout` summary (~7568), `saveEdit` (~8400),
 `backfillPlanned` (~10817), and the summary sheet's rep total.
 Carries have no `r`, so `w × r` is NaN; the stored `summary.volume` becomes

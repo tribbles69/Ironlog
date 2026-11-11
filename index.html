@@ -7660,7 +7660,7 @@ function finishWorkout(force) {
        finished sessions (bug sweep 1.8) */
     ...(a.off ? { off: true } : {}), ...(a.prog ? { prog: a.prog } : {}), ...(a.block ? { block: a.block } : {}), ...(a.place ? { place: a.place } : {}),
     exercises: logged, start: a.start, end: Date.now(), ...(hasFeel(a) ? { feel: a.feel } : {}),
-    summary: { mins, prs, volume: logged.reduce((t, e) => t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + s.w * s.r, 0), 0) },
+    summary: { mins, prs, volume: logged.reduce((t, e) => t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + (s.w || 0) * (s.r || 0), 0), 0) },
   };
 
   // if this came from a plan, replace the planned entry
@@ -7734,7 +7734,7 @@ function sessionTotals(wo) {
   return {
     ws,
     sets: ws.reduce((n, o) => n + o.sets.filter(s => !isDrop(s)).length, 0),   // a drop chain is one set
-    reps: ws.reduce((n, o) => n + o.sets.reduce((a, s) => a + s.r, 0), 0),
+    reps: ws.reduce((n, o) => n + o.sets.reduce((a, s) => a + (s.r || 0), 0), 0),
     /* setVolume, not s.w * s.r: a carry or hold has no reps, and one undefined
        turned the whole report's volume into NaN, printed as "0kg". */
     volume: ws.reduce((n, o) => n + o.sets.reduce((a, s) => a + (o.e.leaf ? setVolume(o.e.leaf, s) : (s.w || 0) * (s.r || 0)), 0), 0),
@@ -7887,10 +7887,10 @@ function fullCardCanvas(wo) {
     x.strokeStyle = CARD.line; x.lineWidth = 2;
     x.beginPath(); x.moveTo(P, y); x.lineTo(W - P, y); x.stroke();
     const working = sets.filter(s => isWorking(s));
-    const vol = working.reduce((a, s) => a + s.w * s.r, 0);
+    const vol = working.reduce((a, s) => a + (s.w || 0) * (s.r || 0), 0);
     const scored = inRepsPool(e) ? working.filter(s => isPRSet(s) && s.r > 0) : [];
     const prSet = prKeys.has(exKey(e)) && scored.length ? bestSetOf(scored) : null;   // the one set prsFor scored
-    const reps = working.reduce((a, s) => a + s.r, 0);
+    const reps = working.reduce((a, s) => a + (s.r || 0), 0);
     x.textAlign = 'left'; x.fillStyle = CARD.text; x.font = cardFont(29, 680);
     x.fillText(fitText(x, exFull(e) + (e.tempo ? `  · ${e.tempo}` : ''), W - P * 2 - 260), P, y + 42);
     x.textAlign = 'right'; x.fillStyle = CARD.dim; x.font = cardFont(24, 600);
@@ -8187,7 +8187,7 @@ function e1ChangeRows(rows) {
 
 function showSummary(wo) {
   const sets = wo.exercises.reduce((n, e) => n + e.sets.filter(s => isPRSet(s)).length, 0);
-  const reps = wo.exercises.reduce((n, e) => n + e.sets.filter(s => isWorking(s)).reduce((a, s) => a + s.r, 0), 0);
+  const reps = wo.exercises.reduce((n, e) => n + e.sets.filter(s => isWorking(s)).reduce((a, s) => a + (s.r || 0), 0), 0);
   const prs = wo.summary.prs;
   modal({
     title: 'Session complete',
@@ -8227,7 +8227,7 @@ function showSummary(wo) {
       const ws = e.sets.filter(s => isWorking(s));
       const warm = e.sets.filter(s => isWarm(s));
       const timed = isTimed(e), kind = kindOf(e), plain = kind === 'reps' || kind === 'time';
-      const v = ws.reduce((a, s) => a + s.w * s.r, 0);
+      const v = ws.reduce((a, s) => a + (s.w || 0) * (s.r || 0), 0);
       // a timed entry's headline is total time held, and its best set the longest one
       const totSec = ws.reduce((a, s) => a + (s.sec || 0), 0);
       const top = !ws.length ? null
@@ -8492,7 +8492,7 @@ function saveEdit(force) {
     ...orig, name: d.name, date: d.date, exercises: logged, edited: Date.now(), off: d.off || undefined, feel: hasFeel(d) ? d.feel : undefined,
     summary: {
       ...(orig.summary || {}),
-      volume: logged.reduce((t, e) => t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + s.w * s.r, 0), 0),
+      volume: logged.reduce((t, e) => t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + (s.w || 0) * (s.r || 0), 0), 0),
       prs: [],
     },
   };
@@ -10910,7 +10910,7 @@ function backfillPlanned(days) {
     w.summary = {
       mins: 0, prs: [],
       volume: w.exercises.reduce((t, e) =>
-        t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + s.w * s.r, 0), 0),
+        t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + (s.w || 0) * (s.r || 0), 0), 0),
     };
   });
   save(); bust();
@@ -11381,7 +11381,7 @@ function importLiftoff(sessions, mapping, unit, src = 'liftoff') {
       start: null, end: parseISO(s.date).getTime(),
       summary: {
         mins: s.mins, prs: [],
-        volume: merged.reduce((t, e) => t + e.sets.reduce((x, v) => x + v.w * v.r, 0), 0),
+        volume: merged.reduce((t, e) => t + e.sets.reduce((x, v) => x + (v.w || 0) * (v.r || 0), 0), 0),
       },
     });
     added++;
@@ -16016,7 +16016,7 @@ function fitSave(D) {
     if (exercises.length) S.workouts.push({
       id: uid(), date: t.date, name: 'Fitting test', status: 'completed', source: 'logged', fitTest: t.id, notes: '',
       exercises, start: null, end: Date.now(),
-      summary: { mins: 0, prs: [], volume: exercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + s.w * s.r, 0), 0) },
+      summary: { mins: 0, prs: [], volume: exercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + (s.w || 0) * (s.r || 0), 0), 0) },
     });
   }
   S.fitDraft = null;

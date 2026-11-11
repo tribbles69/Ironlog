@@ -13,6 +13,9 @@ rather than guessed.
 
 ---
 
+## 0.90.10 — 11 Nov 2026
+- **Fixed: "Reps NaN" and 0 kg volume on the session summary.** A session that included a carry or a timed hold showed NaN for reps and lost its volume total. Sets without reps are now left out of those sums instead of breaking them. Share cards and the edit screen had the same fault.
+
 ## 0.90.9 — 11 Nov 2026
 - **Fixed: finished sessions didn't count towards their plan.** A session started from a plan that has no named blocks (most coach-built and imported plans) lost its link to the plan when you finished it, so the plan's "Completed" count stayed at zero. New sessions now keep the link. Sessions already finished aren't changed.
 
