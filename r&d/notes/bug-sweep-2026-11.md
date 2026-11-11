@@ -217,7 +217,7 @@ sessions in each lift's stats.
 skipped (the Missed flow already exists). **Ask Aaron** before touching any
 that are already backfilled — that's stored data.
 
-### [ ] 3.5 Measure records the last set's weight, not the set being measured — From the code
+### [x] 3.5 (0.90.13) Measure records the last set's weight, not the set being measured — From the code
 **Where:** `openVbtRecord` (~11713): `ex.sets.filter(s => s.w > 0).slice(-1)`.
 Measuring a warm-up while the top set is already typed uses the top set's
 weight for power and in the debug trace (`kg`). The 9 Nov traces may carry

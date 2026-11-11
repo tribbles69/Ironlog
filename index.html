@@ -2337,7 +2337,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.90.12';
+const APP_VERSION = '0.90.13';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -11808,7 +11808,12 @@ function openVbtRecord(ei, opts = {}) {
      estimated. Segmentation needs a minimum travel, so borrow the shallowest
      one rather than inventing a velocity model. */
   const profile = liftId ? slewProfile(liftId) : { ...Slew.defaultProfile('Machine (stack)'), v0: 0 };
-  const load = ex.sets.filter(s => s.w > 0).slice(-1)[0];
+  /* The weight of the set this reading will attach to (attachVbt: the first set
+     not yet done or measured). It used to take the exercise's last weighted set,
+     so a warm-up measured with the top set already typed in was recorded, and
+     its power worked out, at the top set's weight (bug sweep 3.5). */
+  const tgt = ex.sets.find(s => !s.done && !s.vbt);
+  const load = tgt && tgt.w > 0 ? tgt : ex.sets.filter(s => s.w > 0).slice(-1)[0];
   const loadKg = load ? load.w : 0;
 
   modal({

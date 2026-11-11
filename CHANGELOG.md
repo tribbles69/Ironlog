@@ -13,6 +13,9 @@ rather than guessed.
 
 ---
 
+## 0.90.13 — 11 Nov 2026
+- **Fixed: Measure used the wrong weight for warm-ups.** If your top set's weight was already typed in, a warm-up measured before it was recorded at the top set's weight, which threw off its power figure and the bar-speed debug file. Measure now uses the weight of the set the reading attaches to.
+
 ## 0.90.12 — 11 Nov 2026
 - **Fixed: dumbbell suggestions in pounds.** If you work in lb, suggested dumbbell and kettlebell weights were still rounded to 2 kg, giving figures like 44.1 lb. They now round to the nearest 5 lb. Nothing changes if you work in kg.
 
