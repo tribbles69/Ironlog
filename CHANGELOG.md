@@ -13,6 +13,11 @@ rather than guessed.
 
 ---
 
+## 0.95.0 — 11 Nov 2026
+- **New: a recorded voice for the interval timer.** Round calls, rests, warm-up, cool-down and the finish are now spoken by a recorded voice instead of the phone's robot one. It covers every built-in preset and your own timers up to 12 rounds with the usual rest lengths; anything else uses the phone's voice for that session, as before. It works offline and adds 171 KB.
+- The recorded voice says "Go. Round three" rather than "Round 3 of 8" — the total is on the screen.
+- Cardio and mobility still use the phone's voice: what they say is built from numbers and exercise names on the spot, which can't be pre-recorded.
+
 ## 0.94.4 — 11 Nov 2026
 - **Changed: empty screens point somewhere.** With nothing planned, Train now offers **Open the calendar** and **Ask the coach**. With nothing logged, Stats offers **Go to Train**.
 - **Fixed:** the search box on Stats now has a name for screen readers.

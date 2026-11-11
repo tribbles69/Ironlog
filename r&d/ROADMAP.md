@@ -436,6 +436,7 @@ these come back; report anything that fails):
     for: a first rep going missing (the new "over within 1.8 s of Start is
     setup" rule), and whether ranges of motion look the same rep to rep.
     Also answer the front-raise question in `r&d/notes/vbt-validation.md`.
+25. **Interval voice (0.95.0):** Train → ⏱ Intervals → Tabata with Voice on. Listen to a full run: is every call clear over gym noise and music, the right words at the right moment, and not cut off? (Nobody has heard these yet — they were checked by waveform and word timings only.) Then set a 25-second rest and check the phone's own voice takes over for the whole session.
 24. **Record in the app (0.93.0):** in a workout, ▶ Video → **● Record**.
     Does the rear camera open (allow it), is the picture the right way up,
     and does the screen stay on? Record a set with the phone propped

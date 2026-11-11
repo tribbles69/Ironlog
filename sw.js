@@ -1,7 +1,7 @@
 /* Ironlog service worker.
    Bump VERSION whenever the app files change — that's what triggers the
    "Update ready" prompt on the next launch. */
-const VERSION = 'ironlog-v155';
+const VERSION = 'ironlog-v156';
 
 const ASSETS = [
   './',
@@ -15,6 +15,7 @@ const ASSETS = [
   './icon-512.png',
   './icon-maskable-512.png',
   './skins/template.png',
+  './audio/intervals.mp3',   // recorded interval-timer cues (00-D2), 171 KB
 ];
 
 self.addEventListener('install', e => {

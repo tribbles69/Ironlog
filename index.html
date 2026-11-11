@@ -2344,7 +2344,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.94.4';
+const APP_VERSION = '0.95.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -19379,14 +19379,59 @@ function ivSpoken(sec) {
 const IV_WORD = { warm:'Warm-up', work: 'Work', rest: 'Rest', cool: 'Cool-down', done: 'Done' };
 /* Where the clock is in the schedule: the phase index (phases.length once it's all done). */
 function ivAt(phases, el) { const i = phases.findIndex(x => el < x.end); return i < 0 ? phases.length : i; }
+/* Recorded cues for the interval timer (00-D2), in place of the phone's speech
+   voice. One small MP3 (audio/intervals.mp3, built by r&d/tools/build-voice.cjs
+   from ElevenLabs takes) holds every cue; IV_VOICE says where each one sits,
+   [start, length] in seconds. A session is all recorded or all the phone's
+   voice, never a mix: ivVoiceCovers() decides when it starts. The phone's
+   voice stays as the fallback — no file, a timer the clips don't cover, or a
+   cue whose wording has changed. */
+const IV_VOICE = {"go1":[0,1.153],"go2":[1.403,1.186],"go3":[2.839,1.121],"go4":[4.21,1.049],"go5":[5.509,1.101],"go6":[6.86,1.1],"go7":[8.21,1.303],"go8":[9.763,1.036],"go9":[11.049,1.03],"go10":[12.329,0.997],"go11":[13.576,1.101],"go12":[14.927,1.242],"rest10":[16.358,1.111],"rest15":[17.719,1.214],"rest20":[19.183,1],"rest30":[20.433,1.048],"rest45":[21.731,1.193],"rest60":[23.174,0.791],"rest90":[24.215,1.059],"rest120":[25.524,0.865],"rest180":[26.639,0.862],"last":[27.751,0.942],"done":[28.943,1.591],"warm":[30.724,1.676],"cool":[32.65,2.031]};
+const IvVoice = {
+  buf: null, loading: null,
+  /* Fetch and decode once. Quietly gives up offline or on a browser that can't
+     decode it; the phone's voice then speaks as before. */
+  load() {
+    if (this.buf || this.loading) return this.loading || Promise.resolve(this.buf);
+    const ctx = Cue.unlock();
+    if (!ctx || !window.fetch) return Promise.resolve(null);
+    this.loading = fetch('audio/intervals.mp3').then(r => { if (!r.ok) throw new Error('no cue file'); return r.arrayBuffer(); })
+      .then(a => new Promise((res, rej) => { const p = ctx.decodeAudioData(a, res, rej); if (p && p.catch) p.catch(rej); }))
+      .then(b => { this.buf = b; return b; }).catch(() => null).finally(() => { this.loading = null; });
+    return this.loading;
+  },
+  /* Play one cue. False when it can't, so the caller can speak instead. */
+  play(id) {
+    const at = IV_VOICE[id], ctx = Cue.ctx;
+    if (!at || !this.buf || !ctx || ctx.state === 'closed') return false;
+    try {
+      const src = ctx.createBufferSource(), g = ctx.createGain();
+      src.buffer = this.buf; g.gain.value = 1;
+      src.connect(g); g.connect(ctx.destination);
+      src.start(ctx.currentTime + 0.02, Math.max(0, at[0] - 0.02), at[1] + 0.06);
+      return true;
+    } catch (e) { return false; }
+  },
+};
+/* The cue id for a phase of this plan, or null if there's no recording for it. */
+function ivVoiceId(x, rounds) {
+  if (!x) return 'done';
+  if (x.kind === 'work') return x.round === rounds && rounds > 1 ? 'last' : IV_VOICE['go' + x.round] ? 'go' + x.round : null;
+  if (x.kind === 'rest') return IV_VOICE['rest' + x.sec] ? 'rest' + x.sec : null;
+  return x.kind === 'warm' ? 'warm' : x.kind === 'cool' ? 'cool' : null;
+}
+function ivVoiceCovers(phases, rounds) { return phases.every(x => ivVoiceId(x, rounds)); }
 function ivAnnounce(c, i) {
   const P = c.iv.phases, x = P[i], rounds = c.iv.plan.rounds;
-  if (!x) { Cue.done(); setTimeout(() => say('Intervals done. Finish when you\'re ready'), 450); return; }
+  /* recorded when this session started that way and the clips are in memory;
+     a reload mid-session falls back to the phone's voice until they load again */
+  const spoken = text => { const id = c.iv.rec && c.cfg.voice && S.settings.ivVoice !== 'phone' ? ivVoiceId(x, rounds) : null; if (!(id && IvVoice.play(id))) { say(text); if (c.iv.rec) IvVoice.load(); } };
+  if (!x) { Cue.done(); setTimeout(() => spoken('Intervals done. Finish when you\'re ready'), 450); return; }
   if (x.kind === 'work') { Cue.beep(1200, 450); Cue.buzz(300); }
   else { Cue.beep(600, 450); Cue.buzz([120, 80, 120]); }
   const text = x.kind === 'work' ? (x.round === rounds && rounds > 1 ? 'Last round. Go' : `Go. Round ${x.round} of ${rounds}`)
     : x.kind === 'rest' ? `Rest. ${ivSpoken(x.sec)}` : IV_WORD[x.kind];
-  setTimeout(() => say(text), 500);
+  setTimeout(() => spoken(text), 500);
 }
 /* Called every cardio tick. Catching up after the screen slept announces only where the clock is now. */
 function ivTick(c, el) {
@@ -19433,6 +19478,7 @@ function paintIv(c) {
 function openIntervalSetup() {
   if (S.active) { toast('Finish the active workout first'); return go('workout'); }
   const last = S.settings.ivLast || {};
+  IvVoice.load();   // the recorded cues, fetched while the timer is being set up so they're ready at Start
   let p = { ...(ivPresets().find(x => x.id === last.preset) || IV_PRESETS[0]), ...(last.plan || {}) };
   let presetId = last.preset || IV_PRESETS[0].id;
   let machine = CARDIO_MACHINES[last.machine] ? last.machine : 'other', voice = last.voice !== false;
@@ -19536,6 +19582,8 @@ function startIntervals(plan, machine, voice) {
   if (!a || a.kind !== 'cardio') return;
   a.name = `Intervals · ${cardioMachine(machine).label}`;
   a.cardio.iv = { plan, phases: ivPhases(plan), idx: -1, roundsDone: 0 };
+  /* recorded voice for the whole session, if every cue it will need exists and the file is already decoded */
+  if (S.settings.ivVoice !== 'phone' && IvVoice.buf && ivVoiceCovers(a.cardio.iv.phases, plan.rounds)) a.cardio.iv.rec = true;
   Awake.hold('cardio');
   save(); render();
 }
