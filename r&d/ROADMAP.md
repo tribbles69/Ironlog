@@ -191,7 +191,7 @@ estimated RIR against the RIR Aaron logged on the same sets (debug traces and
 history), find where it's off (lift, set length, pocket vs bar mode) and tune
 it. Keep showing it as an estimate; still hide it when reps were missed.
 
-### [ ] 00-V3. Record video in the app (04c, moved up from section 0)
+### [x] 00-V3. Record video in the app (04c, moved up from section 0) — shipped 0.93.0 (● Record on the first screen of ▶ Video and Tools → Bar path; rear camera, straight into the existing trim → bar path → squat depth flow; on the device only; spec `r&d/specs/bar-path-spec.md` §10; tested with a simulated camera only — **Aaron: A4 item 24**)
 Finish part c of item 04: record the side-on clip inside Ironlog rather than
 picking it from the gallery, then run it through the existing bar path (04a)
 and squat depth (04b) flow. On the device only, no uploads. Check on phone —
@@ -435,6 +435,13 @@ these come back; report anything that fails):
     for: a first rep going missing (the new "over within 1.8 s of Start is
     setup" rule), and whether ranges of motion look the same rep to rep.
     Also answer the front-raise question in `r&d/notes/vbt-validation.md`.
+24. **Record in the app (0.93.0):** in a workout, ▶ Video → **● Record**.
+    Does the rear camera open (allow it), is the picture the right way up,
+    and does the screen stay on? Record a set with the phone propped
+    side-on, tap Stop, and check the trim sliders cover the whole clip and
+    the plate is found as it is from a gallery clip. Is the motion smooth
+    enough — compare the speeds with the same set filmed in the phone's own
+    camera app. Try ⟲ Flip, and a clip over a minute.
 23. **Bar-speed RIR (0.92.0):** with Bar-speed debug on, Measure your
     working sets for a couple of weeks and **type your own RIR on every
     one** before looking at the sensor's. Ironlog no longer fills the box

@@ -179,12 +179,34 @@ Rule judged: the hip crease lower than the top of the knee at the bottom
   bar paths **without a visible plate** (a body-point proxy, marked lower
   confidence) — e.g. a safety-bar squat with the plate hidden.
 
-## 10. Recording in the app (04c, later)
+## 10. Recording in the app (04c) — built 0.93.0
 
 `getUserMedia` at the highest frame rate the phone offers, with a framing
 guide (a level line and a plate-height marker), saving the raw clip to the
 gallery as well. Browsers on Android often cap or vary the frame rate, which
 is why gallery-first.
+
+**As built (roadmap 00-V3):** the first screen of ▶ Video / Tools → Bar path
+has **● Record** beside **Choose video** (Record is the main button where
+the browser can record). It opens the rear camera (1280 × 720 asked for, 60
+fps asked for; **⟲ Flip** switches camera and is remembered in
+`settings.bpFacing`), shows the live picture, and records the camera stream
+straight into `MediaRecorder` at 4 Mbit/s — MP4 where the browser can,
+else WebM. Stop hands the clip to the same trim step a gallery clip goes to,
+so bar path (04a) and squat depth (04b) run unchanged. The screen is kept
+awake while the camera is open, and a clip stops itself at 3 minutes.
+
+- **On the device only.** The clip is held in memory for the analysis and
+  dropped when the sheet closes. Nothing is uploaded.
+- **Not built from the paragraph above:** the level line and plate-height
+  marker (the filming guide text is shown instead), and saving the raw clip
+  to the gallery — the existing **Save with bar path** covers keeping a
+  copy. Both are small if wanted.
+- A WebM from `MediaRecorder` often carries no length; the recording is
+  timed and the browser is made to work the length out before trimming.
+- Checked with a simulated camera only (a drawn plate moving on a canvas):
+  record → stop → trim → plate found. **A real phone camera is A4 item 24**,
+  including what frame rate Chrome actually gives.
 
 ## 11. Decisions for Aaron (before building)
 

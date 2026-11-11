@@ -13,6 +13,10 @@ rather than guessed.
 
 ---
 
+## 0.93.0 — 11 Nov 2026
+- **New: film your set inside Ironlog.** ▶ Video on a lift (and Tools → Bar path) now has a **● Record** button next to Choose video. Prop the phone side-on, tap Record, do the set, tap Stop, and it goes straight into the usual trim → bar path → squat depth steps. No need to film in the camera app and find the clip afterwards.
+- The clip stays on your phone and is only kept if you save the finished bar-path video. ⟲ Flip switches between the back and front cameras. A recording stops itself after 3 minutes.
+
 ## 0.92.0 — 11 Nov 2026
 - **Changed: bar-speed RIR is worked out differently.** It now reads how much speed you lost across the set, rather than comparing your speed with a typical lifter's. On the 9 Nov push day a 17-rep set taken close to failure had read RIR 12 and now reads about 3; a 40 kg warm-up triple had read RIR 0 and now reads about 4. It's still an estimate, and it hasn't been checked against enough real ratings yet.
 - **Changed: Measure no longer types RIR in for you**, unless it saw a missed rep or a near-stall, or the lift has been calibrated to you. Otherwise it shows its figure next to the set ("bar speed suggests RIR 3") and leaves the box for you.

@@ -2337,7 +2337,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.92.0';
+const APP_VERSION = '0.93.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -12465,7 +12465,28 @@ function openBarPath(ei = null) {
   const host = document.createElement('div');
   const ov = document.createElement('canvas');
   const fileIn = document.createElement('input'); fileIn.type = 'file'; fileIn.accept = 'video/*'; fileIn.style.display = 'none';
-  const cleanup = () => { stopFlag = true; video.pause(); if (url) URL.revokeObjectURL(url); };
+  /* Recording in the app (00-V3, bar-path-spec §04c). The camera's own stream
+     goes straight to MediaRecorder — no canvas in between, so the clip keeps the
+     camera's frame rate — and the result is handed to the same trim step a
+     gallery clip goes to. It stays in memory on this phone: nothing is saved
+     unless the lifter saves the finished bar-path video, and nothing is sent
+     anywhere. */
+  const REC_MAX_S = 180;
+  let recStream = null, rec = null, recT0 = 0, recTick = 0, recDur = 0;
+  const canRecord = () => !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && clipMime());
+  const recStop = () => {
+    clearInterval(recTick); recTick = 0;
+    if (rec && rec.state !== 'inactive') { try { rec.onstop = null; rec.stop(); } catch (e) { /* already stopped */ } }
+    rec = null;
+    if (recStream) recStream.getTracks().forEach(t => t.stop());
+    recStream = null;
+    if (video.srcObject) { video.pause(); video.srcObject = null; }
+    Awake.release('bprec');
+  };
+  /* A clip straight from MediaRecorder often reports no length (WebM without
+     a duration header). The recording was timed, so that is used instead. */
+  const durOf = () => (Number.isFinite(video.duration) && video.duration > 0 ? video.duration : recDur);
+  const cleanup = () => { stopFlag = true; recStop(); video.pause(); if (url) URL.revokeObjectURL(url); };
 
   const guide = `<div class="bp-guide"><b>Film it like this</b>
     <ul><li><b>Side-on, square to the bar</b> — looking straight at the plate. Every 15° off makes the path and speed read a few % short.</li>
@@ -12490,24 +12511,105 @@ function openBarPath(ei = null) {
   };
 
   const stepPick = () => show(`${guide}${ex ? `<div class="sub" style="margin-top:8px">For <b>${esc(exName(ex))}</b>${lastW ? ` at ${wt(lastW)}` : ''} — the result attaches to its next set.</div>` : ''}`,
-    `<button class="btn ghost" id="bpCancel">Cancel</button><button class="btn primary" id="bpChoose">Choose video</button>`,
+    `<button class="btn ghost" id="bpCancel">Cancel</button><button class="btn ${canRecord() ? '' : 'primary'}" id="bpChoose">Choose video</button>${canRecord() ? '<button class="btn primary" id="bpRecord">● Record</button>' : ''}`,
     bg => {
       $('#bpCancel', bg).onclick = () => { cleanup(); closeModal(); };
       $('#bpChoose', bg).onclick = () => fileIn.click();
+      const rb = $('#bpRecord', bg); if (rb) rb.onclick = () => stepRecord();
     });
+
+  const useClip = (blobOrFile, knownDur) => {
+    if (url) URL.revokeObjectURL(url);
+    recDur = knownDur || 0;
+    url = URL.createObjectURL(blobOrFile);
+    video.srcObject = null; video.muted = true;
+    video.src = url;
+    video.onloadedmetadata = () => {
+      video.onloadedmetadata = null;
+      const ready = () => { from = 0; to = Math.max(0.5, durOf() || 0); stepTrim(); };
+      if (Number.isFinite(video.duration)) return ready();
+      /* No length in the file: asking for a time far past the end makes the
+         browser read through to it and work the length out, after which the
+         clip seeks like any other. */
+      let done = false;
+      const settle = () => { if (done) return; done = true; video.removeEventListener('timeupdate', settle); video.currentTime = 0; ready(); };
+      video.addEventListener('timeupdate', settle);
+      setTimeout(settle, 4000);
+      try { video.currentTime = 1e101; } catch (e) { settle(); }
+    };
+    video.onerror = () => toast('Couldn\'t read that video');
+  };
+
+  const stepRecord = async () => {
+    let facing = S.settings.bpFacing || 'environment';
+    const open = async () => {
+      if (recStream) recStream.getTracks().forEach(t => t.stop());
+      recStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 60 } }, audio: false });
+      video.removeAttribute('src'); video.srcObject = recStream; video.muted = true;
+      await video.play().catch(() => {});
+    };
+    try { await open(); } catch (e) { recStop(); return toast('Camera not available — allow it in the browser, or choose a video instead'); }
+    Awake.hold('bprec');
+    const fmt = s => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
+    show(`${stage()}
+      <div class="row between" style="margin-top:10px;gap:8px;align-items:center">
+        <div class="sub grow" id="bpRecMsg">Prop the phone side-on at plate height, 2–3 m away, the whole lift in frame. Tap Record, do the set, come back and tap Stop — you trim the walk to and from the bar afterwards.</div>
+        <div class="mono" id="bpRecT" aria-live="off" style="font-size:18px;min-width:52px;text-align:right">0:00</div>
+      </div>`,
+      `<button class="btn ghost" id="bpBack">Back</button><button class="btn ghost" id="bpFlip" aria-label="Switch camera">⟲ Flip</button><button class="btn primary" id="bpRecGo">● Record</button>`,
+      bg => {
+        const go = $('#bpRecGo', bg), flip = $('#bpFlip', bg), back = $('#bpBack', bg), msg = $('#bpRecMsg', bg), tEl = $('#bpRecT', bg);
+        back.onclick = () => { recStop(); stepPick(); };
+        flip.onclick = async () => {
+          facing = facing === 'environment' ? 'user' : 'environment'; S.settings.bpFacing = facing; save();
+          try { await open(); } catch (e) { toast('That camera isn\'t available'); }
+        };
+        const finish = () => new Promise(res => {
+          const chunks = rec._chunks, mime = rec.mimeType || clipMime();
+          rec.onstop = () => res(new Blob(chunks, { type: (mime || 'video/webm').split(';')[0] }));
+          rec.stop();
+        });
+        const stopNow = async () => {
+          if (!rec || rec.state === 'inactive') return;
+          clearInterval(recTick); recTick = 0;
+          const secs = (performance.now() - recT0) / 1000;
+          go.disabled = true; go.textContent = 'Saving…';
+          const blob = await finish();
+          recStop();
+          if (secs < 1 || !blob.size) { toast('That recording was too short'); return stepPick(); }
+          Cue.done();
+          useClip(blob, secs);
+        };
+        go.onclick = () => {
+          if (rec && rec.state === 'recording') return stopNow();
+          if (!recStream) return;
+          try { rec = new MediaRecorder(recStream, { mimeType: clipMime(), videoBitsPerSecond: 4e6 }); }
+          catch (e) { try { rec = new MediaRecorder(recStream); } catch (e2) { return toast('This browser can\'t record here — choose a video instead'); } }
+          rec._chunks = [];
+          rec.ondataavailable = ev => { if (ev.data && ev.data.size) rec._chunks.push(ev.data); };
+          rec.start(1000);
+          recT0 = performance.now();
+          Cue.unlock(); Cue.beep(880, 120);
+          go.textContent = '■ Stop'; go.classList.add('danger'); go.classList.remove('primary');
+          flip.disabled = true; back.disabled = true;
+          msg.textContent = 'Recording. Do the set, then come back and tap Stop.';
+          recTick = setInterval(() => {
+            const s = (performance.now() - recT0) / 1000;
+            tEl.textContent = fmt(s);
+            if (s >= REC_MAX_S) { toast(`Stopped at ${REC_MAX_S / 60} minutes — one set per clip`); stopNow(); }
+          }, 250);
+        };
+      });
+  };
 
   fileIn.onchange = () => {
     const f = fileIn.files[0]; fileIn.value = '';
     if (!f) return;
-    if (url) URL.revokeObjectURL(url);
-    url = URL.createObjectURL(f);
-    video.src = url;
-    video.onloadedmetadata = () => { from = 0; to = Math.max(0.5, video.duration || 0); stepTrim(); };
-    video.onerror = () => toast('Couldn\'t read that video');
+    useClip(f, 0);
   };
 
   const stepTrim = () => {
-    const d = video.duration || 0;
+    const d = durOf() || 0;
     const liftSel = ex ? '' : `<div class="field"><label for="bpLift">Lift</label><select id="bpLift">${Object.keys(Slew.DEFAULT_PROFILES).map(k => `<option ${k === liftId ? 'selected' : ''}>${esc(k)}</option>`).join('')}</select></div>`;
     show(`${stage()}
       <div class="grid2" style="margin-top:10px">
