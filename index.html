@@ -2344,7 +2344,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.95.0';
+const APP_VERSION = '0.95.1';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4097,6 +4097,11 @@ const SKIN_COLS = 11, SKIN_ROWS = 12;
 const SKIN_TEMPLATE_COLORS = ['#ffc9b8', '#ff9a7a', '#ff5c35', '#c43a15', '#7a1f08'];   // = SHADES in r&d/tools/skin-sheet.mjs
 const BODY_SKINS = [
   { id: 'template', name: 'Template', src: 'skins/template.png', legend: SKIN_TEMPLATE_COLORS },
+  /* A figure skin (00-D2): one picture per tier, cut to the template's muscle
+     shapes by r&d/tools/build-skin.cjs. Not precached — it is fetched the
+     first time it's picked and kept from then on; offline before that, the
+     map falls back to the template. */
+  { id: 'goblin', name: 'Goblin to orc', src: 'skins/goblin.webp' },
 ];
 const BODY_SKIN_KEY = 'ironlog-bodyskin-custom';   // imported sheet, as a data URL
 /* Falls back to the first skin, so a removed skin id in old settings can't
@@ -4865,6 +4870,8 @@ function openWelcome(step = 1) {
   if (step === 1) return modal({
     title: 'Welcome to Ironlog', sticky: true,
     body: `${dots}
+      <img src="skins/goblin-strip.webp" alt="" width="960" height="320" onerror="this.remove()" style="display:block;width:100%;height:auto;margin:0 0 4px">
+      <div class="sub" style="text-align:center;margin-bottom:12px">Start a goblin. Train your way to an orc.</div>
       <div class="wl-list">
         <div><b>Your log stays on this phone.</b> No account and no Ironlog server — nothing about your training leaves the device unless you send it.</div>
         <div><b>Back it up to your own Google Drive</b> if you like (Settings), so a lost phone doesn't mean a lost log. Or export a file any time.</div>

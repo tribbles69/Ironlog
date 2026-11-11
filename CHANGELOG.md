@@ -13,6 +13,10 @@ rather than guessed.
 
 ---
 
+## 0.95.1 — 11 Nov 2026
+- **New: a second muscle-map skin, Goblin to orc.** Stats → Muscles → Skin. Each muscle starts as pale goblin and turns into orc as its score climbs, so a strong chest on untrained legs is an orc's chest on a goblin's legs. The orange template is still there and is still what you get by default.
+- **New: a picture on the welcome screen** — the six stages, goblin to orc.
+
 ## 0.95.0 — 11 Nov 2026
 - **New: a recorded voice for the interval timer.** Round calls, rests, warm-up, cool-down and the finish are now spoken by a recorded voice instead of the phone's robot one. It covers every built-in preset and your own timers up to 12 rounds with the usual rest lengths; anything else uses the phone's voice for that session, as before. It works offline and adds 171 KB.
 - The recorded voice says "Go. Round three" rather than "Round 3 of 8" — the total is on the screen.

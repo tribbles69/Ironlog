@@ -54,7 +54,9 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    is fixed, and every 3 and 4 that needs no decision (0.90.1–0.90.17).
    **Waiting on Aaron:** 3.4, 3.6, 3.7, 3.10, the relink part of 1.8 and the
    question in 4.5 — all in the note. 00-V1 to 00-V4 shipped 0.91.0–0.93.1 and
-   00-D1 0.94.0–0.94.4 (branch `design/ui-pass-2026-11`). **Next: 00-D2.**
+   00-D1 0.94.0–0.94.4; 00-D2 part done 0.95.0–0.95.1 (branch
+   `design/assets-2026-11`, which holds all of it). **Next:** Aaron's calls
+   above, A4 items 21–26, then what's left of 00-D2, then section 0 and E3.
 
    **Next up (2026-11-11, Aaron):** section **00** (bug fixes, then VBT, then design)
    comes before everything else, in page order. Then what's left of section
@@ -226,7 +228,7 @@ menu structure, empty states, onboarding. Write what you changed and why to
 - Ship in small versions (one area per version) with changelog entries, so
   anything Aaron dislikes can be rolled back on its own.
 
-### [ ] 00-D2. Art and audio (was E16)
+### [ ] 00-D2. Art and audio (was E16) — **part shipped 0.95.0–0.95.1**: recorded voice for the interval timer (25 cues, 171 KB, phone voice as fallback), a goblin-to-orc muscle-map skin beside the template, and the welcome picture. List, prompts, spend (26 Higgsfield credits, 777 ElevenLabs) and what's left in `r&d/notes/assets-pass.md`. **Left:** PR card backgrounds, and cardio and mobility voice — their cues are built from numbers and exercise names on the spot, so they can't be recordings without a way to speak numbers. Nobody has listened to the audio yet (A4 item 25) or seen the skin on a phone (item 26)
 After 00-D1, so the art fits the new layout: go through the app and replace
 placeholder or weak art and audio with generated assets. Aaron has connected
 **Higgsfield** (images; skip video, it's costly) and **ElevenLabs** (voice,
@@ -436,6 +438,7 @@ these come back; report anything that fails):
     for: a first rep going missing (the new "over within 1.8 s of Start is
     setup" rule), and whether ranges of motion look the same rep to rep.
     Also answer the front-raise question in `r&d/notes/vbt-validation.md`.
+26. **Goblin skin (0.95.1):** Stats → Muscles → Skin ▾ → **Goblin to orc**. Does it load, do taps still land on the right muscle, and do you like it — with your real scores, in both Strength and Recovery? Should it be the default? Also look at the picture on the welcome sheet (a fresh install shows it).
 25. **Interval voice (0.95.0):** Train → ⏱ Intervals → Tabata with Voice on. Listen to a full run: is every call clear over gym noise and music, the right words at the right moment, and not cut off? (Nobody has heard these yet — they were checked by waveform and word timings only.) Then set a 25-second rest and check the phone's own voice takes over for the whole session.
 24. **Record in the app (0.93.0):** in a workout, ▶ Video → **● Record**.
     Does the rear camera open (allow it), is the picture the right way up,
