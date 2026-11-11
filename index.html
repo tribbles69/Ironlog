@@ -190,6 +190,13 @@ h3{font-size:13.5px;margin:0 0 8px}
 .btn.wide{width:100%}
 .btn.sm{padding:6px 11px;font-size:12.5px;border-radius:8px}
 .btn.xs{padding:4px 8px;font-size:11.5px;border-radius:7px}
+/* Small controls keep their size but take a finger (00-D1, C4): an invisible pad
+   brings the tap area to 40 px tall and at least 34 px wide, so nothing in the
+   layout moves. Narrower sideways so two small buttons side by side don't steal
+   each other's taps. The set table's own × and plate buttons are left alone: they
+   sit against the weight box and are already 38–40 px tall. */
+.btn.xs,.btn.sm,.icon-btn,button.chip{position:relative}
+.btn.xs::after,.btn.sm::after,.icon-btn::after,button.chip::after{content:"";position:absolute;left:50%;top:50%;width:max(100%,34px);height:max(100%,40px);transform:translate(-50%,-50%)}
 .btn.big{padding:15px;font-size:15px;border-radius:12px}
 .btn:disabled{opacity:.4;cursor:not-allowed}
 
@@ -2337,7 +2344,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.93.1';
+const APP_VERSION = '0.94.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {

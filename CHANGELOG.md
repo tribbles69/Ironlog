@@ -13,6 +13,9 @@ rather than guessed.
 
 ---
 
+## 0.94.0 — 11 Nov 2026
+- **Changed: small buttons are easier to hit.** Start, Missed, Edit, the “+ Add” buttons, the ✕ on every sheet and the other small buttons now respond to a tap anywhere within a finger-sized area around them. They look the same and nothing has moved.
+
 ## 0.93.1 — 11 Nov 2026
 - **Changed: the bar-speed export holds more.** Settings → Export raw traces now also lists every set you've measured in the last 60 days, by sensor or video, with each rep's speed and whether the RIR was yours or the sensor's. It's there so Measure can be checked against a proper bar-speed device. It works even with Bar-speed debug off.
 
