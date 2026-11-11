@@ -2337,7 +2337,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.90.7';
+const APP_VERSION = '0.90.8';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -3106,8 +3106,11 @@ async function fetchLatestVersion() {
 /* Graceful first: let the waiting worker take over. If there is none — the
    usual case when the shell is stale but the worker already activated — clear
    the caches and reload, which always works. */
+let updateAsked = false;   // the lifter tapped Update: the worker taking over should reload, even on a first session
 async function applyUpdate() {
+  updateAsked = true;
   toast('Updating…');
+  try { await flush(); } catch (e) { /* the reload goes ahead; pagehide tries once more */ }
   try {
     const reg = await navigator.serviceWorker.getRegistration();
     if (reg) {
@@ -21502,10 +21505,15 @@ boot();
    next launch — never mid-session, which would lose the sets on screen. */
 if ('serviceWorker' in navigator) {
   let reloading = false;
+  /* On a first install the worker takes control of a page that had none. That
+     isn't an update, and reloading for it cut the welcome sheet off a second
+     after it opened (bug sweep 4.6). */
+  const hadController = !!navigator.serviceWorker.controller;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
-    if (reloading) return;
+    if (reloading || (!hadController && !updateAsked)) return;
     reloading = true;
-    location.reload();
+    // the last edit is written before the page goes (bug sweep 1.7)
+    Promise.resolve().then(flush).catch(() => {}).then(() => location.reload());
   });
 
   window.addEventListener('load', () => {
@@ -21515,12 +21523,16 @@ if ('serviceWorker' in navigator) {
         if (!sw) return;
         sw.addEventListener('statechange', () => {
           if (sw.state !== 'installed' || !navigator.serviceWorker.controller) return;
-          if (S && S.active) {
+          /* Mid-workout, or with any sheet open (an edit, a check-in, a test in
+             progress): leave it waiting. Restarting there threw away whatever
+             was typed and not yet saved (bug sweep 1.7). */
+          const busy = () => !!(S && S.active) || modalStack.length > 0 || !!document.getElementById('bootRescue');
+          if (busy()) {
             toast('Update downloaded — it will apply next time you open the app');
-            return;                                  // mid-workout: leave it waiting
+            return;
           }
           toast('Update ready — restarting', 'green');
-          setTimeout(() => reg.waiting && reg.waiting.postMessage({ type: 'SKIP_WAITING' }), 1400);
+          setTimeout(() => { if (!busy() && reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' }); }, 1400);
         });
       });
       setInterval(() => reg.update(), 60 * 60 * 1000);

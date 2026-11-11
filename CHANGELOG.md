@@ -13,6 +13,11 @@ rather than guessed.
 
 ---
 
+## 0.90.8 — 11 Nov 2026
+- **Fixed: an update could restart the app while you were typing.** With no workout running, a new version restarted the app a second after it downloaded, even with a sheet open, and whatever you'd typed into an edit or a check-in was lost. An update now waits while any sheet is open and applies the next time you open the app.
+- **Fixed: the last change could be missed when updating.** Ironlog now finishes saving before it restarts for an update.
+- **Fixed: the app reloaded itself a second after the very first launch**, which could cut off the welcome screen.
+
 ## 0.90.7 — 11 Nov 2026
 - **Fixed: your own exercises lost their names on a new phone.** Exercises you'd created weren't part of the Google Drive backup, so after a restore they showed as codes like "custom-zercher-carry". They're now backed up with everything else.
 - **Fixed: the same after a CSV import or an older restore.** Where a set points at one of your own exercises and its name record is missing, Ironlog rebuilds it from the name the set was logged with.

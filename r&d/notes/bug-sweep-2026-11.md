@@ -122,7 +122,7 @@ don't. On a new phone after a Drive restore they show as raw ids
 import and sync, rebuild a missing custom movement from the entry's
 `legacyName`.
 
-### [ ] 1.7 An update can restart the app while you're editing — From the code
+### [x] 1.7 (0.90.8) An update can restart the app while you're editing — Confirmed
 **Where:** service-worker block (~21259) and `applyUpdate` (~3041).
 With no workout running, a new version reloads the page 1.4 s after it
 downloads. An open Edit session sheet, a half-typed check-in or a fitting
@@ -285,7 +285,7 @@ bar-speed calibration, places, rest times and plates don't travel after the
 first restore. Not a bug against the spec. **For Aaron:** sync at least
 `slewProfiles` and `places`?
 
-### [ ] 4.6 First launch reloads about a second in — From the code
+### [x] 4.6 (0.90.8) First launch reloads about a second in — From the code
 The worker takes control on first install and the page reloads
 (`controllerchange`), which can interrupt the welcome sheet. Known in a
 comment at `load`. **Fix:** skip the reload when there was no controller
