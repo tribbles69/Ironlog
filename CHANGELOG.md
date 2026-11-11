@@ -13,6 +13,9 @@ rather than guessed.
 
 ---
 
+## 0.94.2 — 11 Nov 2026
+- **Changed: clearer labels.** The Stats page is now headed Stats (it said Analytics). On a session that hasn't happened yet, the Missed button now reads **Skip / move** — it only says Missed once the day has passed. It opens the same sheet.
+
 ## 0.94.1 — 11 Nov 2026
 - **Changed: Home opens on today's session.** Today's training is now the first thing on Home, with Start right there, instead of below the check-in and the week's numbers. If you haven't logged anything yet, Home still starts with the introduction.
 - **Fixed:** two sessions done on the same day ran into each other on Home.

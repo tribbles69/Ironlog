@@ -2344,7 +2344,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.94.1';
+const APP_VERSION = '0.94.2';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -5123,7 +5123,7 @@ function viewHome() {
       <div class="row between" style="margin-bottom:8px">
         <div class="grow"><div style="font-weight:700">${esc(p.name)}${autoBlock(p) ? ' <span class="chip" title="Loads are set from your RIR when you start">⟳ AUTO</span>' : ''}</div>
         <div class="sub">${p.exercises.length} exercise${p.exercises.length === 1 ? '' : 's'} planned</div></div>
-        <div class="row" style="gap:6px"><button class="btn ghost sm" data-miss="${p.id}">Missed</button>
+        <div class="row" style="gap:6px"><button class="btn ghost sm" data-miss="${p.id}">${missBtn(p)}</button>
         <button class="btn primary sm" data-start-planned="${p.id}">Start</button></div>
       </div>
       <div>${p.exercises.map(e => `<div class="exline"><span>${exNameHtml(e)}</span>
@@ -6475,7 +6475,7 @@ function plannedCard(wo) {
       ${e.notes ? `<div class="note">${esc(e.notes)}</div>` : ''}
     </div>`).join('')}
     <div class="row" style="gap:8px;margin-top:11px">
-      <button class="btn sm" data-miss="${wo.id}">Missed</button>
+      <button class="btn sm" data-miss="${wo.id}">${missBtn(wo)}</button>
       <button class="btn sm danger" data-del-workout="${wo.id}">Delete</button>
     </div>
   </div>`;
@@ -6682,7 +6682,7 @@ function workoutLanding() {
   ${od.map(p => `<div class="card tight"><div class="row between">
         <div class="grow"><div style="font-weight:650">${esc(p.name)}</div>
           <div class="sub">${fmtDate(p.date)} · ${relDay(p.date)}</div></div>
-        <div class="row" style="gap:6px"><button class="btn sm" data-miss="${p.id}">Missed</button>
+        <div class="row" style="gap:6px"><button class="btn sm" data-miss="${p.id}">${missBtn(p)}</button>
         <button class="btn sm primary" data-start-planned="${p.id}">Start</button></div>
       </div></div>`).join('')}` : ''; })()}
 
@@ -6692,7 +6692,7 @@ function workoutLanding() {
       <div class="row between">
         <div class="grow"><div style="font-weight:650">${esc(p.name)}${autoBlock(p) ? ' <span class="chip" title="Loads are set from your RIR when you start">⟳ AUTO</span>' : ''}</div>
           <div class="sub">${fmtDate(p.date)} · ${relDay(p.date)} · ${p.exercises.length} exercises</div></div>
-        <div class="row" style="gap:6px"><button class="btn sm ghost" data-miss="${p.id}">Missed</button>
+        <div class="row" style="gap:6px"><button class="btn sm ghost" data-miss="${p.id}">${missBtn(p)}</button>
         <button class="btn sm primary" data-start-planned="${p.id}">Start</button></div>
       </div>
     </div>`).join('') : `<div class="card"><div class="empty"><span class="big">▤</span>No planned workouts.<br>Plan one from the calendar.</div></div>`}
@@ -6749,15 +6749,19 @@ function overduePlanned() {
   return S.workouts.filter(w => w.status === 'planned' && w.date < t && daysBetween(w.date, t) <= 7)
     .sort((a, b) => a.date < b.date ? -1 : 1);
 }
+/* A session can only have been missed once its day has passed. Today's and
+   later ones get the same sheet under what it does for them: skip or move
+   (00-D1 — "Missed" sat on sessions a week away). */
+function missBtn(w) { return w.date < today() ? 'Missed' : 'Skip / move'; }
 function openMissed(id) {
   const w = S.workouts.find(x => x.id === id && x.status === 'planned');
   if (!w) return;
   let reason = null, move = false;
   const t = today(), base = w.date > t ? w.date : t;
   modal({
-    title: 'Missed session',
+    title: w.date < t ? 'Missed session' : 'Skip or move this session',
     body: `<div class="sub" style="margin-top:0"><b>${esc(w.name)}</b> · ${esc(fmtDate(w.date))}</div>
-      <div class="eyebrow" style="margin:14px 0 8px">Why?</div>
+      <div class="eyebrow" style="margin:14px 0 8px">${w.date < t ? 'Why?' : 'Why isn\'t it happening as planned?'}</div>
       <div class="row wrap" id="msWhy" style="gap:7px">${MISS_REASONS.map(([k, l]) => `<button class="chip" data-r="${k}" aria-pressed="false" style="cursor:pointer">${esc(l)}</button>`).join('')}</div>
       <div class="field" style="margin-top:12px"><label for="msNote">Note — optional</label><input id="msNote" maxlength="120" placeholder="e.g. glutes still sore from Wednesday"></div>
       <div class="eyebrow" style="margin:14px 0 8px">What happens to it</div>
@@ -6789,7 +6793,7 @@ function openMissed(id) {
         else { m.wo = structuredClone(w); S.workouts = S.workouts.filter(x => x.id !== w.id); }
         (S.misses = S.misses || []).push(m);
         save(); closeModal(); render();
-        toast(move ? `Moved to ${fmtDate(to, { weekday: 'short', day: 'numeric', month: 'short' })}` : 'Logged as missed', 'green');
+        toast(move ? `Moved to ${fmtDate(to, { weekday: 'short', day: 'numeric', month: 'short' })}` : w.date < today() ? 'Logged as missed' : 'Taken off your plan', 'green');
       };
     },
   });
@@ -8607,7 +8611,7 @@ function viewAnalytics() {
   const totalPRs = S.workouts.filter(w => w.status === 'completed').reduce((a, w) => a + prsFor(w).length, 0);
 
   return `
-  <h1>Analytics</h1>
+  <h1>Stats</h1>
   <div class="sub" style="margin-bottom:14px">Every exercise you've logged, ranked.</div>
 
   <div class="seg" id="anTabs" style="margin-bottom:13px">

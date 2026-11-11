@@ -67,3 +67,15 @@ history, the About card still comes first, as `home-landing-spec.md` set
 out, and Today's training stays where it was.
 **For Aaron:** the check-in is now second. If you'd rather check in before
 you see the session, this is the commit to revert.
+
+### 0.94.2 — labels that say what the thing is
+**What:**
+- The Stats page was headed **Analytics**; it's now **Stats**, the same word
+  as its tab.
+- A planned session that hasn't happened yet no longer has a **Missed**
+  button. Today's and future sessions show **Skip / move**; the sheet is
+  titled *Skip or move this session* and asks *Why isn't it happening as
+  planned?* Past days keep **Missed** and *Missed session*. Skipping a future
+  one now says *Taken off your plan* instead of *Logged as missed*.
+**Why:** one word per place; and "Missed" on next Tuesday's session read as
+a mistake. The sheet, the reasons and what's stored are the same.
