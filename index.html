@@ -2337,7 +2337,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.90.15';
+const APP_VERSION = '0.90.16';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -3190,6 +3190,41 @@ function clearTargets() {
       n: Object.keys(S.exAliases || {}).length,
       run: () => { S.exAliases = {}; } },
   ];
+}
+
+/* Erase all data means all of it (bug sweep 4.2). It used to reset the log
+   and leave progress photos, daily clips, raw bar-speed traces and the Drive
+   link behind — and with Drive still connected, the next sync saw an empty
+   phone and put everything back. The sheet says exactly what goes. The backup
+   file in the lifter's own Drive is theirs and is never touched. */
+function openEraseAll() {
+  const c = logCounts(S), drive = !!syncMeta().connected;
+  modal({
+    title: 'Erase all data',
+    body: `<p style="margin:0 0 8px;color:var(--dim)">This removes everything Ironlog holds on this phone:</p>
+      <div class="wl-list" style="margin-bottom:10px">
+        <div>Your log — ${esc(logCountsLine(c))} — with goals, meets, plans, coach notes and settings</div>
+        <div>Progress photos and daily clips</div>
+        <div>Bar-speed debug traces, a custom muscle-map skin, and the copy kept for Undo import</div>
+      </div>
+      <p class="sub" style="margin:0 0 10px">${drive ? 'Google Drive is disconnected on this phone so the log isn\'t synced straight back. <b>The backup file in your Drive is not deleted</b> — connect again to restore from it, or delete it in Drive yourself.' : 'There is no Drive backup connected, so unless you have exported a copy this cannot be undone.'}</p>
+      <label class="row" style="gap:8px;align-items:center"><input type="checkbox" id="erKey" style="width:auto"><span class="sub">Also forget my AI key</span></label>`,
+    foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn danger" id="erGo">Erase everything</button>`,
+    onOpen: bg => { $('#erGo', bg).onclick = () => { const k = $('#erKey', bg).checked; confirmDlg('Erase everything on this phone now? This cannot be undone.', () => eraseEverything(k), 'Erase everything'); }; },
+  });
+}
+async function eraseEverything(forgetKey) {
+  clearTimeout(saveTimer); savePending = false;
+  stopRest();
+  try { await driveDisconnect(); } catch (e) { /* offline: the link is dropped below anyway */ }
+  try { await idb('readwrite', st => st.clear()); } catch (e) { /* storage down: the fresh log below still replaces the old one */ }
+  try { [KEY, VBT_RAW_KEY, 'ironlog.aiUsage'].forEach(k => localStorage.removeItem(k)); } catch (e) { /* blocked */ }
+  if (forgetKey) setAiKey('');
+  S = structuredClone(DEFAULT_STATE);
+  S.schemaVersion = 2; S.settings.lastSeenVersion = APP_VERSION;
+  bustCatalogue(); bust();
+  save(); await flush();
+  applySkin(S.settings.skin); closeAllModals(); go('home'); toast('All data erased');
 }
 
 function openClearData() {
@@ -13433,9 +13468,7 @@ function openSettings() {
       $('#stHelp', bg).onclick = () => { closeModal(); openHelp(); };
       $('#stProfile', bg).onclick = () => { closeModal(); openProfile(); };
       $('#stPlaces', bg).onclick = () => { closeModal(); openPlaces(); };
-      $('#stWipe', bg).onclick = () => confirmDlg('This erases every workout, check-in, goal and meet. It cannot be undone.', () => {
-        S = structuredClone(DEFAULT_STATE); save(); applySkin(S.settings.skin); closeAllModals(); go('home'); toast('All data erased');
-      }, 'Erase everything');
+      $('#stWipe', bg).onclick = () => openEraseAll();
       $('#stSave', bg).onclick = () => {
         S.settings.units = units;
         const op = +$('#stOpener', bg).value;

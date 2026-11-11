@@ -256,7 +256,7 @@ the real floor has been 4 cm since 0.90.0.
 **Where:** `renderEditWorkout` (~8225). Back, Escape, a tap outside or
 Cancel all discard. **Fix:** ask if anything changed.
 
-### [ ] 4.2 "Erase all data" doesn't erase all data — From the code
+### [x] 4.2 (0.90.16) "Erase all data" doesn't erase all data — From the code
 **Where:** `#stWipe` (~13309).
 It resets the log but leaves progress photos, daily clips, raw bar-speed
 traces, the AI key and the Drive link. With Drive connected, the next sync
