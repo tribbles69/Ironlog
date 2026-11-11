@@ -102,7 +102,7 @@ has recovered, over the real log.
 parse, don't save over it: keep the raw string under a rescue key and show
 the rescue screen from 1.3.
 
-### [ ] 1.5 Restoring an older JSON backup, then syncing, deletes newer sessions from Drive — From the code
+### [x] 1.5 (0.90.5) Restoring an older JSON backup, then syncing, deletes newer sessions from Drive — Confirmed
 **Where:** `importJSONFile` doesn't touch the sync bookkeeping
 (`ironlog.sync` → `known`).
 After the import, anything Drive knew about that isn't in the file looks

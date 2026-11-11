@@ -1708,6 +1708,13 @@ const SYNC_LOCAL_SETTINGS = ['lastSeenVersion', 'backupSnoozeUntil', 'lastExport
 function syncMeta() { try { return JSON.parse(localStorage.getItem('ironlog.sync') || '{}') || {}; } catch (e) { return {}; } }
 function setSyncMeta(m) { try { localStorage.setItem('ironlog.sync', JSON.stringify(m)); } catch (e) { /* storage blocked: sync still works, just forgets */ } }
 function driveClientId() { return syncMeta().clientId || GOOGLE_CLIENT_ID; }
+/* After the whole log is swapped (a backup imported, or that import undone),
+   what this phone "knew" at its last sync no longer describes it. Left in
+   place, every record the backup doesn't have would read as deleted here, and
+   the next sync would remove up to five of them from Drive and from every
+   other phone without asking (bug sweep 1.5). Forgotten, the next sync is a
+   plain merge: nothing is treated as deleted. */
+function syncForgetKnown() { const m = syncMeta(); if (m.known) { delete m.known; setSyncMeta(m); } }
 /* When a record last changed: the newest of its stamps. (It used to take the
    first one present, so a session moved and later edited kept the move's time.) */
 function stampOf(x) { return x && typeof x === 'object' ? Math.max(+x.mt || 0, +x.edited || 0, +x.end || 0, +x.start || 0) : 0; }
@@ -2326,7 +2333,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.90.4';
+const APP_VERSION = '0.90.5';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -20137,6 +20144,7 @@ async function applyImportedState(data, keepUndo) {
     if (keepUndo && !(await storePut(IMPORT_UNDO_KEY, JSON.stringify({ at: Date.now(), state: S })))) return toast('Couldn\'t set your current log aside, so nothing was imported');
     clearTimeout(saveTimer); savePending = false;
     S = next;
+    syncForgetKnown();
     bustCatalogue();
     /* A backup from before 0.7.0 names exercises instead of pointing at them;
        boot migrates those, and an import has to as well or every page throws
@@ -20158,6 +20166,7 @@ async function undoImport() {
   if (!o) return toast('Nothing to undo');
   clearTimeout(saveTimer); savePending = false;
   S = fixupState(normaliseState(o.state));
+  syncForgetKnown();
   bustCatalogue(); bust();
   save(); await flush();
   try { await idb('readwrite', st => st.delete(IMPORT_UNDO_KEY)); } catch (e) { /* stays until the next import */ }

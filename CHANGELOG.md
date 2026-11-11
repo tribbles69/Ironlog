@@ -13,6 +13,9 @@ rather than guessed.
 
 ---
 
+## 0.90.5 — 11 Nov 2026
+- **Fixed: restoring an older backup could delete newer sessions from Google Drive.** After importing a backup, the next sync treated anything the backup didn't have as deleted, and removed it from Drive and from your other phones. Now the next sync after an import only adds: whatever is in Drive and not in the backup comes back onto the phone.
+
 ## 0.90.4 — 11 Nov 2026
 - **Fixed: Drive sync deleted things you had removed and then added back.** Remove a program, sync, install it again, and the next sync wiped every planned session. The same happened to a check-in deleted and re-entered, a custom exercise name, and a coach plan rebuilt after "Forget everything". Anything you add back on this phone now stays.
 - **Fixed: a changed check-in didn't reach your other phone.** Check-ins now record when they were last saved, so the newer one wins when two phones sync.
