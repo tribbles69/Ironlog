@@ -48,7 +48,7 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    E12 next (E11 shipped 0.64.0, E12's first build 0.65.0); D8 shipped 0.66.0.
    D9 finished in 0.73.0.
 
-   **Next up (2026-11-10, Aaron):** section **00** (bug fixes, then VBT)
+   **Next up (2026-11-11, Aaron):** section **00** (bug fixes, then VBT, then design)
    comes before everything else, in page order. Then what's left of section
    **0** (01–03 shipped; 04c moved into 00). After those, carry on from
    **E3**.
@@ -194,6 +194,62 @@ add an A4 checklist item.
 Whatever `r&d/notes/vbt-validation.md` still needs on the code side to compare
 Measure and video against a known device. The sets themselves are Aaron's to
 film and log.
+
+### Design (added 2026-11-11, Aaron)
+
+Aaron asked for a design pass in the same sweep, after the VBT items. He's
+happy for the agent to make the UI and menu changes it judges best — no
+sign-off needed per change — within the rules below.
+
+### [ ] 00-D1. UI and menu pass
+Go through every page, sheet and menu in both skins and improve what's
+cluttered, inconsistent or hard to reach: layout, spacing, hierarchy, labels,
+menu structure, empty states, onboarding. Write what you changed and why to
+`r&d/notes/design-pass-2026-11.md` as you go.
+- **Don't slow down logging.** The live workout screen keeps its 1–2 tap set
+  logging (B2) and 40 px controls; nothing new between a set and the tick.
+- Keep the agreed nav (Home · Calendar · Train · Stats · Health, Coach in the
+  middle, Tools in the top bar) unless there's a strong reason; if you change
+  it, say why in the note and keep the old routes working (D12).
+- Every change passes C4: TalkBack labels, contrast, re-run the axe check in
+  both skins.
+- No features removed. If something seems pointless, list it in the note for
+  Aaron instead of deleting it.
+- Ship in small versions (one area per version) with changelog entries, so
+  anything Aaron dislikes can be rolled back on its own.
+
+### [ ] 00-D2. Art and audio (was E16)
+After 00-D1, so the art fits the new layout: go through the app and replace
+placeholder or weak art and audio with generated assets. Aaron has connected
+**Higgsfield** (images; skip video, it's costly) and **ElevenLabs** (voice,
+sound). Both are MCP connectors on Aaron's account — check they show in
+`/mcp`; if not, list what's needed and carry on with the rest.
+- **Make a list first** in `r&d/notes/assets-pass.md`: every placeholder or
+  weak asset (art, icons, sounds, spoken cues), what it should become, and
+  which tool makes it, then generate it — Aaron is happy for this pass to
+  spend the credits (Higgsfield ~80 credits on Basic; ElevenLabs Starter
+  30k/month). Check the cost before big batches and stop before running out.
+- **Art (Higgsfield):** the muscle-map skins first — the shipped
+  `skins/template.png` is a placeholder; Aaron's idea is a goblin that turns
+  into an orc muscle by muscle. One cell per muscle per tier, matching the
+  sheet layout in `r&d/skins/`, so it drops in as a normal skin. Then PR share
+  card backgrounds (E2), the welcome screen (C1) and the in-app Home (D14).
+- **Audio (ElevenLabs):** recorded voice cues for the interval timer (02),
+  HR-zone cardio (D15) and mobility holds (E5), in place of the phone's speech
+  voice; cleaner beeps for `Cue` if they're worth it.
+- **ElevenLabs is on the Starter plan (Aaron, 2026-11-11)**, which includes
+  the commercial licence. Audio generated while subscribed can be shipped and
+  stays licensed even after the plan is cancelled, so no placeholders and no
+  redo before launch. Generate everything while the plan is active. Higgsfield
+  (Basic, paid) art is the same: commercial use allowed, no attribution.
+- **Keep the app light and offline:** compress everything, cache it in
+  `sw.js`, and keep the phone's speech voice as the fallback so any cue whose
+  wording changes still works without new recordings. Large packs can be an
+  optional download, like squat depth (04b).
+- Generated art and voices must be safe to ship in a free app (check each
+  tool's licence terms) and must not imitate a real person's voice or an
+  existing brand or character.
+
 
 ---
 
@@ -1047,34 +1103,7 @@ per setup) is the evidence. Then write a spec (`r&d/specs/calm-spec.md`).
   screen kept awake (`Awake`). Offer an import of Logn's JSON export so its
   history isn't lost. Logn stays a standalone app either way.
 
-### [ ] E16. Art and audio pass — Higgsfield and ElevenLabs (Aaron asked 2026-11-10)
-Near the end, once the features above are in: go through the app and replace
-placeholder or weak art and audio with generated assets. Aaron has connected
-**Higgsfield** (images, video) and **ElevenLabs** (voice, sound) and is happy
-for this pass to spend those credits.
-- **Make a list first** in `r&d/notes/assets-pass.md`: every placeholder or
-  weak asset (art, icons, sounds, spoken cues), what it should become, and
-  which tool makes it. Aaron picks from the list before anything is generated.
-- **Art (Higgsfield):** the muscle-map skins first — the shipped
-  `skins/template.png` is a placeholder; Aaron's idea is a goblin that turns
-  into an orc muscle by muscle. One cell per muscle per tier, matching the
-  sheet layout in `r&d/skins/`, so it drops in as a normal skin. Then PR share
-  card backgrounds (E2), the welcome screen (C1) and the in-app Home (D14).
-- **Audio (ElevenLabs):** recorded voice cues for the interval timer (02),
-  HR-zone cardio (D15) and mobility holds (E5), in place of the phone's speech
-  voice; cleaner beeps for `Cue` if they're worth it.
-- **ElevenLabs is on the Starter plan (Aaron, 2026-11-11)**, which includes
-  the commercial licence. Audio generated while subscribed can be shipped and
-  stays licensed even after the plan is cancelled, so no placeholders and no
-  redo before launch. Generate everything while the plan is active. Higgsfield
-  (Basic, paid) art is the same: commercial use allowed, no attribution.
-- **Keep the app light and offline:** compress everything, cache it in
-  `sw.js`, and keep the phone's speech voice as the fallback so any cue whose
-  wording changes still works without new recordings. Large packs can be an
-  optional download, like squat depth (04b).
-- Generated art and voices must be safe to ship in a free app (check each
-  tool's licence terms) and must not imitate a real person's voice or an
-  existing brand or character.
+### [ ] E16. Art and audio pass — moved to **00-D2** (2026-11-11)
 
 ---
 
