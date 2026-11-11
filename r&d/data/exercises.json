@@ -1637,6 +1637,27 @@
       "verified": true
     },
     {
+      "id": "tibialis-raise",
+      "name": "Tibialis Raise",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["bodyweight", "plate", "dumbbells", "kettlebell", "machine", "resistance_band"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["tibialis anterior"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Tib Raise" },
+        { "name": "Tibialis Anterior Raise" },
+        { "name": "Toe Raise" },
+        { "name": "Tib Bar Raise", "equipment": "plate" }
+      ],
+      "verified": false,
+      "singleImplement": true,
+      "legacyIds": ["custom-tibialis-raise"]
+    },
+    {
       "id": "deadlift",
       "name": "Deadlift",
       "category": "legs",
@@ -2277,6 +2298,25 @@
         { "name": "Axle Clean and Press", "equipment": "axle" }
       ],
       "verified": true
+    },
+    {
+      "id": "landmine-press",
+      "name": "Landmine Press",
+      "category": "shoulders",
+      "type": "strength",
+      "equipment": ["barbell"],
+      "defaultEquipment": "barbell",
+      "execution": ["unilateral", "bilateral", "alternating"],
+      "defaultExecution": "unilateral",
+      "primary": ["front deltoids", "upper pectorals"],
+      "secondary": ["triceps", "core"],
+      "aliases": [
+        { "name": "Single Arm Landmine Press", "execution": "unilateral" },
+        { "name": "Half Kneeling Landmine Press", "execution": "unilateral" },
+        { "name": "Landmine Shoulder Press" }
+      ],
+      "verified": false,
+      "legacyIds": ["custom-landmine-press"]
     },
     {
       "id": "push-press",

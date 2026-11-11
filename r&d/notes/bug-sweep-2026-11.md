@@ -249,7 +249,7 @@ sweep is complete.
 the real floor has been 4 cm since 0.90.0. Goes in with the 00-V1 version,
 which touches the same sheet.
 
-### [ ] 3.10 Two lifts in the shipped program aren't in the exercise catalogue — Confirmed
+### [x] 3.10 (0.96.0) Two lifts in the shipped program aren't in the exercise catalogue — Confirmed
 Found during 00-B2 (the audit read the validator's failure wrongly — see 4.7).
 **Where:** `program.json` names *Landmine Press* and *Tibialis Raise*;
 neither is in `r&d/data/exercises.json`.
@@ -260,6 +260,15 @@ Weekly sets credit and no recovery; no demo; no bar-speed profile.
 already logged them (Aaron, weeks 1–4) has those sets under the custom ids.
 Adding the built-in ones starts a second history unless the old sets are
 re-pointed, and that is a change to stored data.
+**Shipped (0.96.0, Aaron's call):** both in the catalogue with muscles and a
+demo (the tibialis raise needed the demo engine's `heel` to go negative: toes
+lift, pivoting on the heel). No bar-speed profile — none of Slew's nine fits.
+A once-only migration moves every pointer to the old custom ids onto the new
+ones (sets, planned sessions, keys in rest times, goals, notes), at the leaf
+the program now installs (landmine press: unilateral), then removes the
+emptied custom records. The catalogue keeps the old ids as `legacyIds`, so a
+straggler from a CSV or an un-updated phone still resolves, and is moved over
+on import or sync. Rescue copy: `ironlog.v1.before-legacy-movements-0.96.0`.
 
 ---
 

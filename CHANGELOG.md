@@ -13,6 +13,12 @@ rather than guessed.
 
 ---
 
+## 0.96.0 — 11 Nov 2026
+- **New: Landmine Press and Tibialis Raise are built-in exercises.** They were in the program but not in the exercise list, so installing the program made them your own custom exercises with no muscles, no demo and nothing on the muscle map. Now they have muscles (Weekly sets and recovery count them), an animated demo on the Info tab, and setup notes.
+- **Changed: sets you'd already logged under the custom versions move across** to the built-in ones, so there's one history, not two. The landmine press is now logged per arm, as the program writes it. The empty custom exercises are removed. A copy of your log from before the move is kept on the phone.
+- Tibialis raises count towards the lower leg on the muscle map (it shows that as Calves — there's no shin muscle on the map).
+- Neither lift has a bar-speed profile: none of the Measure profiles fits an arc press or a toe raise, and a wrong profile gives a confident wrong RIR.
+
 ## 0.95.1 — 11 Nov 2026
 - **New: a second muscle-map skin, Goblin to orc.** Stats → Muscles → Skin. Each muscle starts as pale goblin and turns into orc as its score climbs, so a strong chest on untrained legs is an orc's chest on a goblin's legs. The orange template is still there and is still what you get by default.
 - **New: a picture on the welcome screen** — the six stages, goblin to orc.
