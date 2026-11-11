@@ -174,7 +174,7 @@ assumes 2.5 kg, which a fixed-rating gripper can't do (E13).
 ### [ ] 00-V1. Tilt correction for Measure
 0.90.0 started recording the phone's full 3-axis readings so the phone
 tilting as the bar rolls could be corrected later. Use Aaron's saved
-bar-speed debug traces to correct for tilt, then re-check rep counts and
+bar-speed debug traces (`r&d/data/vbt/` — start with its README) to correct for tilt, then re-check rep counts and
 speeds against the 9 Nov push day (80 of 81 reps found in 0.90.0 — must not
 get worse). Record before/after in `r&d/notes/vbt-validation.md`.
 
