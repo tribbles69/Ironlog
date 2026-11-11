@@ -112,7 +112,7 @@ safety prompt, and the tombstones then delete them on other phones too.
 **Fix:** on import (and on Erase all data), clear `known` so the next sync is
 a plain merge with nothing treated as deleted.
 
-### [ ] 1.6 Custom exercises aren't in the Drive backup or the CSV — Confirmed (display), From the code (sync)
+### [x] 1.6 (0.90.7) Custom exercises aren't in the Drive backup or the CSV — Confirmed (display), From the code (sync)
 **Where:** `SYNC_SETS` / `SYNC_MAPS` (~1687) leave out `customMovements`;
 the CSV carries only the leaf.
 Sessions sync, but the definitions of exercises the catalogue didn't know

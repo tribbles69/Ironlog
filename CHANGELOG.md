@@ -13,6 +13,10 @@ rather than guessed.
 
 ---
 
+## 0.90.7 — 11 Nov 2026
+- **Fixed: your own exercises lost their names on a new phone.** Exercises you'd created weren't part of the Google Drive backup, so after a restore they showed as codes like "custom-zercher-carry". They're now backed up with everything else.
+- **Fixed: the same after a CSV import or an older restore.** Where a set points at one of your own exercises and its name record is missing, Ironlog rebuilds it from the name the set was logged with.
+
 ## 0.90.6 — 11 Nov 2026
 - **Fixed: an exercise of your own could stop the app opening after an update.** If an update added an exercise with the same name as one you'd created yourself, Ironlog refused to load its exercise list. The built-in exercise now takes the name and yours keeps its history.
 

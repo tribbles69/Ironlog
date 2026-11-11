@@ -1699,6 +1699,9 @@ const SYNC_SETS = {
   workouts: x => x.id, misses: x => x.id, goals: x => x.id, meets: x => x.id, imports: x => x.id,
   checkins: x => x.date, measures: x => x.id, calipers: x => x.id, mobTests: x => x.id, bp: x => x.id, glucose: x => x.id, fitTests: x => x.id,
   customEx: x => (typeof x === 'string' ? x : JSON.stringify(x)), programs: x => String(x),
+  /* The lifter's own exercises. Left out until 0.90.7, so a phone restored
+     from Drive had the sessions but not the names (bug sweep 1.6). */
+  customMovements: x => x.id,
 };
 const SYNC_MAPS = ['exAliases', 'programStarts', 'coach', 'programNames', 'exNotes'];
 const SYNC_LOCAL_SETTINGS = ['lastSeenVersion', 'backupSnoozeUntil', 'lastExportAt'];
@@ -1948,6 +1951,7 @@ async function driveSync(interactive) {
     }
     const before = { w: S.workouts.length, c: S.checkins.length };
     Object.assign(S, m.data);
+    bustCatalogue(); healCustomMovements();   // custom exercises may have come in; ones a backup never carried are rebuilt from the sets
     const fresh = !local.workouts.length && !local.checkins.length;
     if (remote && remote.data && remote.data.settings && fresh) {
       const keep = {}; SYNC_LOCAL_SETTINGS.forEach(k => { if (k in S.settings) keep[k] = S.settings[k]; });
@@ -2333,7 +2337,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.90.6';
+const APP_VERSION = '0.90.7';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -3229,6 +3233,26 @@ function ensureCustomMovement(name) {
   S.customMovements = S.customMovements || [];
   if (!S.customMovements.some(m => m.id === cm.id)) { S.customMovements.push(cm); bustCatalogue(); }
   return cm;
+}
+/* A set that points at a custom movement this phone has no record of — it
+   came from a Drive backup made before custom movements were synced, or from
+   a CSV, which carries only the pointer. Without a record it showed as its
+   raw id ("custom-zercher-carry"). The record is rebuilt under the same id
+   from the name the set was logged with, so the set itself is untouched. */
+function healCustomMovements() {
+  const have = new Set((S.customMovements || []).map(m => m && m.id));
+  let n = 0;
+  const see = e => {
+    const id = e && e.leaf && e.leaf.movement;
+    if (typeof id !== 'string' || !id.startsWith('custom-') || have.has(id) || movementById(id)) return;
+    const name = (typeof e.legacyName === 'string' && e.legacyName.trim()) || id.slice(7).replace(/-/g, ' ');
+    (S.customMovements = S.customMovements || []).push({ ...customMovementFor(name), id });
+    have.add(id); n++;
+  };
+  (S.workouts || []).forEach(w => (w.exercises || []).forEach(see));
+  if (S.active) (S.active.exercises || []).forEach(see);
+  if (n) bustCatalogue();
+  return n;
 }
 function leafForName(name) {
   const r = resolveName(name);
@@ -20167,6 +20191,7 @@ async function applyImportedState(data, keepUndo) {
        boot migrates those, and an import has to as well or every page throws
        until the next restart (bug sweep 2.2). */
     if ((S.schemaVersion || 1) < 2) migrateToV2(S);
+    healCustomMovements();
     bust();
     save();
     /* the backup carries its own skin — follow it, or the page would be
@@ -21120,6 +21145,7 @@ function importIronlogCSV(text) {
   const have = new Set(S.workouts.map(w => w.id));
   const add = list.filter(w => !have.has(w.id));
   S.workouts.push(...add);
+  healCustomMovements();   // the CSV carries the pointer to a custom exercise, not its name record
   save(); bust();
   return { added: add.length, skipped: list.length - add.length };
 }
@@ -21385,6 +21411,7 @@ async function bootApp() {
     if (applied.orphans.length) console.warn('migration: unresolved names became custom movements:', applied.orphans);
     save(); await flush();
   }
+  if (healCustomMovements()) save();   // sets pointing at a custom exercise with no record (an older Drive restore or CSV)
 
   /* No auto-install. It used to drop a personal 77-week plan and two meets into
      any empty state — every new user, and this account after "Erase all data".
