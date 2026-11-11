@@ -244,7 +244,7 @@ and e1RM numbers. **For Aaron to decide; not part of 00-B2 unless he says.**
 Already known (35 × 17 read RIR 12). Belongs to **00-V2**; listed so the
 sweep is complete.
 
-### [ ] 3.9 "No reps found" quotes the wrong minimum travel — From the code
+### [x] 3.9 (0.91.0) "No reps found" quotes the wrong minimum travel — From the code
 **Where:** `vbtReviewDlg` (~11925) says the bar must travel at least 10 cm;
 the real floor has been 4 cm since 0.90.0. Goes in with the 00-V1 version,
 which touches the same sheet.

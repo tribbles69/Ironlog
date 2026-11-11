@@ -2337,7 +2337,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.90.17';
+const APP_VERSION = '0.91.0';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -11827,12 +11827,15 @@ let _vbtCap = null;
 function vbtCaptureClass() {
   if (_vbtCap) return _vbtCap;
   _vbtCap = class extends Slew.MotionCapture {
-    start() { this.xyz = S.settings.vbtKeepRaw ? { lx: [], ly: [], lz: [], gx: [], gy: [], gz: [] } : null; super.start(); }
+    /* Kept for every set since 0.91.0, not only in debug: the tilt correction
+       (vbtTiltMotion) works from these. Memory only; nothing is stored on the
+       set, and the debug export still happens only when that setting is on. */
+    start() { this.xyz = { lx: [], ly: [], lz: [], gx: [], gy: [], gz: [] }; super.start(); }
     onMotion(e) {
       const n = this.samples.length;
       super.onMotion(e);
       if (!this.xyz || this.samples.length === n) return;
-      const l = e.acceleration || {}, g = e.accelerationIncludingGravity || {}, r = v => v == null ? null : Math.round(v * 1000) / 1000;
+      const l = e.acceleration || {}, g = e.accelerationIncludingGravity || {}, r = v => v == null ? null : +v;
       this.xyz.lx.push(r(l.x)); this.xyz.ly.push(r(l.y)); this.xyz.lz.push(r(l.z));
       this.xyz.gx.push(r(g.x)); this.xyz.gy.push(r(g.y)); this.xyz.gz.push(r(g.z));
     }
@@ -11925,12 +11928,13 @@ function openVbtRecord(ei, opts = {}) {
         btn.textContent = 'Start';
         btn.classList.remove('danger');
         const motion = vbtCapture ? vbtCapture.samples.slice() : [];
-        const xyz = vbtCapture && vbtCapture.xyz;   // debug only: full 3-axis readings, for tilt work
+        const xyz = vbtCapture && vbtCapture.xyz;   // the phone's full 3-axis readings, for the tilt correction
         if (motion.length < 40) { setMsg(`Only ${motion.length} samples — the sensor reported almost nothing.`); return; }
+        const tilted = vbtTiltMotion(motion, xyz);   // vertical re-read against where "down" really was at each sample
 
         /* Follows sensorPipeline exactly, but keeps the failure evidence so the
            set estimate can use an observed failure rather than extrapolating. */
-        const samples = vbtIntegrate(motion);
+        const samples = vbtIntegrate(tilted.motion);
         const scaled = samples.map(s => ({ ...s, x: s.x * (profile.scale || 1) }));
         const out = Slew.analyse(scaled, {
           targetHz: 60, minRom: Math.min(profile.minRom, VBT_MIN_ROM),
@@ -11952,7 +11956,8 @@ function openVbtRecord(ei, opts = {}) {
         vbtRawKeep({ at: packed.at, lift: liftId, kg: loadKg || null, place, mode, hz: packed.rate, detected: out.reps.length,
           profile: { scale: profile.scale || 1, minRom: profile.minRom },
           t: motion.map(m => Math.round(m.t)), a: motion.map(m => +m.a.toFixed(3)), still: motion.map(m => m.still ? 1 : 0).join(''),
-          ...(xyz ? { xyz } : {}) });
+          tilt: tilted.used, found: found.length,   // tilt: share of samples re-read (0 = the correction wasn't applied); found: reps after the filters
+          ...(xyz && S.settings.vbtKeepRaw ? { xyz: Object.fromEntries(Object.entries(xyz).map(([k, v]) => [k, v.map(x => x == null ? null : Math.round(x * 1000) / 1000)])) } : {}) });
         if (opts.onRecorded) return opts.onRecorded(packed, est, failure);
         if (mode === 'profile') return lvRecorded(ei, packed);
         vbtReviewDlg(ei, packed, est, failure);
@@ -11977,6 +11982,37 @@ function openVbtRecord(ei, opts = {}) {
    (Slew 36). Synthetic (r&d/tools/vbt-sim.cjs): no set worse, no extra reps.
    Very slow reps read short on range — a guide, as all of this is. */
 const VBT_HP_V = 0.15, VBT_HP_X = 0.05, VBT_FS = 60;
+/* Tilt correction (00-V1). Slew reads "vertical" against a gravity direction
+   it only updates while the bar is still. But the phone turns as the bar rolls
+   in the hands, and on any lift that moves in an arc (a curl turned it 117°,
+   an overhead press 81°), so mid-rep the old "down" is wrong: gravity leaks
+   into the reading and real vertical movement leaks out of it. The phone
+   already knows where down is at every sample — its own gyro-fused gravity is
+   the with-gravity reading minus the linear one — so each sample's linear
+   acceleration is projected onto that instead. 11 Nov 2026 traces (5 kg bar,
+   11 sets): range of motion steadied (overhead press 44–58 cm, was 17–40) and
+   two miscounted sets came right. r&d/notes/vbt-validation.md.
+   xyz: { lx, ly, lz, gx, gy, gz } one row per motion sample. Returns the
+   motion with `a` replaced, and the share of samples it could re-read; under
+   90% (a phone with no linear reading) the motion comes back untouched. */
+function vbtTiltMotion(motion, xyz) {
+  const n = motion.length;
+  if (!xyz || !xyz.lx || xyz.lx.length !== n || !n) return { motion, used: 0 };
+  const out = new Array(n);
+  let bias = 0, ok = 0;
+  for (let i = 0; i < n; i++) {
+    const m = motion[i], lx = xyz.lx[i], ly = xyz.ly[i], lz = xyz.lz[i], gx = xyz.gx[i], gy = xyz.gy[i], gz = xyz.gz[i];
+    if (lx == null || ly == null || lz == null || gx == null || gy == null || gz == null) { out[i] = m; continue; }
+    const dx = gx - lx, dy = gy - ly, dz = gz - lz, g = Math.hypot(dx, dy, dz);
+    if (!(g > 7 && g < 12.5)) { out[i] = m; continue; }       // not gravity-sized: the phone's fusion hasn't settled
+    const aV = (lx * dx + ly * dy + lz * dz) / g;
+    if (m.still) bias += (aV - bias) * 0.05;                    // the same slow zero Slew keeps while the bar rests
+    out[i] = { t: m.t, a: aV - bias, still: m.still };
+    ok++;
+  }
+  const used = Math.round(ok / n * 100) / 100;
+  return used >= 0.9 ? { motion: out, used } : { motion, used: 0 };
+}
 function vbtLowPass(x, fc, fs) {
   if (x.length < 4) return [...x];
   const wc = Math.tan(Math.PI * fc / fs), k1 = Math.SQRT2 * wc, k2 = wc * wc;
@@ -12020,8 +12056,15 @@ function vbtIntegrate(motion) {
    warm-ups; genuine reps never fell below 0.71). A set of 1–3 has no median
    worth trusting, so it keeps the lift's own floor. 9 Nov traces: 80 of 81
    reps, none extra. */
-const VBT_MIN_ROM = 0.04;
-function vbtDropBlips(reps, liftMinRom) {
+const VBT_MIN_ROM = 0.04, VBT_SETUP_MS = 1800;
+function vbtDropBlips(reps0, liftMinRom) {
+  /* In a set of 4+, a "rep" that is already over 1.8 s after Start is the bar
+     being got into position: nobody taps the phone, takes the bar and finishes
+     a rep that fast (11 Nov squat: the bar going onto the back read as a 39 cm
+     rep ending at 1.5 s; the earliest real first rep on either day ended at
+     2.7 s). */
+  const early = r => r.tEnd < VBT_SETUP_MS || ((r.quality && r.quality.flags) || []).includes('clipped-start');
+  const reps = reps0.length >= 4 && early(reps0[0]) ? reps0.slice(1) : reps0;
   if (reps.length < 4) return reps.filter(r => r.rom >= (liftMinRom || 0)).map((r, i) => ({ ...r, index: i + 1 }));
   const s = reps.map(r => r.rom).sort((x, y) => x - y), med = s[Math.floor(s.length / 2)];
   return reps.filter(r => r.rom >= 0.6 * med).map((r, i) => ({ ...r, index: i + 1 }));
@@ -12072,7 +12115,7 @@ function vbtReviewDlg(ei, v, est, failure) {
       ${failure && failure.failedAttempt ? `<div class="chip gold" style="margin-top:9px">A missed rep was detected and left out of the count</div>` : ''}
       ${failure && failure.ignored ? `<div class="sub" style="margin-top:9px">Something after the set looked like a missed rep, but your last rep moved at ${failure.ignoredV.toFixed(2)} m/s — too fast to be a failure — so it was ignored.</div>` : ''}
       <div class="sub" style="margin-top:9px">${v.rate} Hz · confidence ${(v.conf * 100).toFixed(0)}%${v.reps.some(r => r.flags.length) ? ' · ' + [...new Set(v.reps.flatMap(r => r.flags))].join(', ') : ''}</div>`
-      : `<div class="empty">No reps came out of that recording. The bar has to travel at least ${Math.round((Slew.defaultProfile('Machine (stack)').minRom) * 100)} cm and come to rest between reps.</div>`,
+      : `<div class="empty">No reps came out of that recording. The bar has to travel at least ${Math.round(VBT_MIN_ROM * 100)} cm and come to rest between reps.</div>`,
     foot: `<button class="btn ghost" data-close>Discard</button>${v.reps.length ? `<button class="btn primary" id="vbAttach">Attach to this exercise</button>` : ''}`,
     onOpen(bg) {
       const at = $('#vbAttach', bg);

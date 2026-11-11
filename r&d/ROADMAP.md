@@ -178,7 +178,7 @@ assumes 2.5 kg, which a fixed-rating gripper can't do (E13).
 
 ### VBT
 
-### [ ] 00-V1. Tilt correction for Measure
+### [x] 00-V1. Tilt correction for Measure — shipped 0.91.0 (each sample re-read against the phone's own gravity; 9 Nov still 80 of 81 but those traces have no 3-axis data so they only prove the fallback; 11 Nov 65 of 65 with steadier range of motion; before/after in `r&d/notes/vbt-validation.md`; **Aaron: A4 item 21** — a heavy day recorded with debug on is what would really test it)
 0.90.0 started recording the phone's full 3-axis readings so the phone
 tilting as the bar rolls could be corrected later. Use Aaron's saved
 bar-speed debug traces (`r&d/data/vbt/` — start with its README) to correct for tilt, then re-check rep counts and
@@ -427,6 +427,20 @@ these come back; report anything that fails):
     Is the hip–knee–ankle drawing on the right leg? Note any "too close to
     call" you'd have given a clear light either way — the 3 cm offset and the
     ±2.5 cm band are first guesses (`POSE.offsetCm`, `POSE.bandCm`).
+21. **Tilt correction (0.91.0):** Settings → turn **Bar-speed debug** on,
+    then Measure a normal push day and a pull or leg day with real weights,
+    logging the true rep count on every set. Export the traces and add the
+    file to `r&d/data/vbt/`. The 9 Nov push day had no 3-axis readings, so
+    tilt correction has only been checked on the 5 kg accessory day. Watch
+    for: a first rep going missing (the new "over within 1.8 s of Start is
+    setup" rule), and whether ranges of motion look the same rep to rep.
+    Also answer the front-raise question in `r&d/notes/vbt-validation.md`.
+22. **Bug-sweep fixes (0.90.1–0.90.17):** import an old JSON backup — the
+    **Replace your log?** sheet should show both counts, and Settings → Data
+    should then offer **Undo import**. Change a rep in Edit session and tap
+    outside the sheet: it should ask before discarding. Sync to Drive from
+    the phone once and check nothing goes missing (the merge was only run
+    with two simulated phones).
 
 ### [x] A5. Checks against Blast's bugs — checked 0.27.1 (superset item waits for B3)
 Blast shipped these; make sure Ironlog doesn't have them. Tick each.

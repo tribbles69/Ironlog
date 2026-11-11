@@ -83,3 +83,63 @@ unreliable on these sets: 35 × 17 read RIR 12 although it ended near failure
 (44 % velocity loss). Tuning that is separate work.
 
 Re-run: `node "r&d/tools/vbt-sim.cjs" --traces <export.json> -v`
+
+## Tilt correction (00-V1, 0.91.0)
+
+**What changed.** Slew reads "vertical" against a gravity direction it only
+updates while the bar is still. The phone turns during a rep — the bar rolls
+in the hands, and curls, raises and presses move in an arc — so mid-rep that
+direction is stale. Measure now re-reads every sample against the phone's
+own gravity at that instant (the with-gravity reading minus the linear one,
+which the phone already fuses from its gyro): `vbtTiltMotion` in
+`index.html`. It needs the 3-axis readings, which are now kept in memory for
+every set (still only exported when Bar-speed debug is on).
+
+**How far the phone turned** on the 11 Nov sets (5 kg bar, phone on the
+bar): curl 117–119°, overhead press 63–81°, squat 77° (most of it getting the
+bar onto the back), bent-over row 44–54°, front raise 49°, RDL 20–34°.
+
+**Before and after**, `node "r&d/tools/vbt-sim.cjs" --traces
+"r&d/data/vbt/ironlog-vbt-raw-2026-11-11.json" --truth
+8,16,9,10,8,3,5,5,17,6,6,6,6,6,6,6,5,6,6,6 -v`:
+
+| set (11 Nov, 5 kg) | did | 0.90.0 | 0.91.0 | range of motion 0.90.0 → 0.91.0 |
+|---|---|---|---|---|
+| Biceps curl 1 | 6 | 6 | 6 | 34–49 → 44–54 cm |
+| Biceps curl 2 | 6 | 6 | 6 | 37–51 → 38–51 cm |
+| RDL 1 | 6 | 6 | 6 | 33–40 → 35–42 cm |
+| RDL 2 | 6 | **5** | 6 | 30–36 → 23–42 cm |
+| Overhead press 1 | 6 | **7** | 6 | 17–40 → 44–58 cm |
+| Overhead press 2 | 6 | 6 | 6 | 32–49 → 42–53 cm |
+| Back squat | 6 | 6 | 6 | 26–57 → 35–53 cm |
+| Front raise | 5 logged | **7** | **6** | 49–80 → 69–83 cm |
+| Not logged (triceps extension?) | 6 | 6 | 6 | 66–89 → 66–80 cm |
+| Bent-over row 1 | 6 | 6 | 6 | 33–40 → 34–41 cm |
+| Bent-over row 2 | 6 | 6 | 6 | 29–39 → 31–37 cm |
+
+- **9 Nov push day: 80 of 81, unchanged.** Those nine traces were recorded
+  before 0.90.0 and carry no 3-axis readings, so the correction can't run on
+  them; they go through exactly the 0.90.0 path. This shows the fallback is
+  intact. It does **not** show what tilt correction does to heavy sets —
+  that needs a new recording (A4 item 21).
+- **11 Nov: 65 of 65 logged reps found** (0.90.0: 64), and sets with a wrong
+  count went from three to one.
+- **Front raise reads 6 against 5 logged.** The six are evenly spaced
+  (every ~2.5 s), 69–83 cm, 1.1–1.4 m/s — they look like six real reps.
+  Aaron: did you do six and log five?
+- **Back squat** read 7 with tilt correction alone: getting the bar onto the
+  back became a clean 39 cm "rep" ending 1.5 s after Start. New rule in
+  `vbtDropBlips`: in a set of 4+, a first rep that is over within 1.8 s of
+  Start is setup, not a rep (the earliest real first rep on either day
+  ended at 2.7 s). One example only — watch for it dropping a real rep.
+- Synthetic sets (`vbt-sim.cjs` with no arguments): 453 of 480, the same
+  as before. They have no tilt in them, so they only guard the rest.
+
+**Speeds went up on the arc lifts** (overhead press 1: 0.31–0.71 →
+0.77–1.14 m/s) because the range of motion was being under-read. Nothing
+here says the new speeds are right, only that they're consistent rep to rep.
+The reference-device table above is still empty.
+
+**Not covered:** a phone with no linear-acceleration reading falls back to
+the old path (`tilt: 0` in the debug trace). Pocket mode goes through the
+same correction; no pocket traces exist to check it against.

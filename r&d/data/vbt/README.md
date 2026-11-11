@@ -32,6 +32,8 @@ Light weight, so speed is about movement shape, not effort.
 | 09:37 | Bent Over Row set 1 | 6 | 6 | Row / pulldown |
 | 09:38 | Bent Over Row set 2 | 6 | 6 | Row / pulldown |
 
+The **Detected** column is the count before Measure drops fidgets and lift-offs (the trace's `detected` field), not what the lifter was shown. For what each version finds, see `r&d/notes/vbt-validation.md` → Tilt correction.
+
 What this shows at a glance:
 - **Over-counting on arcs and light loads:** curls, front raise, OHP and squat
   all detected more reps than were done. Straight-line pulls (RDL set 1, rows)

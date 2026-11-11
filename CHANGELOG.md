@@ -13,6 +13,13 @@ rather than guessed.
 
 ---
 
+## 0.91.0 — 11 Nov 2026
+- **New: Measure corrects for the phone tilting.** The phone turns as the bar rolls in your hands, and a lot on curls, raises and presses, which made the bar's travel read short and uneven. Measure now tracks which way is down at every instant. On the 11 Nov accessory day, overhead press travel went from 17–40 cm rep to rep to a steady 44–58 cm, and two sets that had miscounted came out right.
+- **Changed: speeds on those lifts read higher than before**, because the travel was being under-read. They're still a guide until checked against a proper device.
+- **Fixed: getting the bar into position could count as a rep.** In a set of four or more, a "rep" that's already finished within about two seconds of tapping Start is left out.
+- **Fixed: the "No reps found" message quoted the wrong minimum travel** (10 cm; it's 4 cm).
+- Heavy sets haven't been checked with this yet. The 9 Nov push day recordings didn't include the extra sensor data, so they read exactly as before (80 of 81 reps).
+
 ## 0.90.17 — 11 Nov 2026
 - **Fixed: updates could slip in without asking.** The app re-downloaded its files in the background on every launch, so a new version could be in use on the second launch even if you'd chosen "Later", or halfway through a workout. On a weak signal it could also end up with a mix of old and new files. A new version now arrives whole, and only through the update prompt.
 
