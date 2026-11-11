@@ -1,7 +1,7 @@
 /* Ironlog service worker.
    Bump VERSION whenever the app files change — that's what triggers the
    "Update ready" prompt on the next launch. */
-const VERSION = 'ironlog-v145';
+const VERSION = 'ironlog-v146';
 
 const ASSETS = [
   './',
@@ -18,7 +18,10 @@ const ASSETS = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(VERSION).then(c => c.addAll(ASSETS)));
+  /* cache: 'reload' — straight from the server, past the browser's own HTTP
+     cache. Cached files are no longer refreshed after install (see fetch), so
+     a stale copy picked up here would stay until the next version. */
+  e.waitUntil(caches.open(VERSION).then(c => c.addAll(ASSETS.map(u => new Request(u, { cache: 'reload' })))));
 });
 
 self.addEventListener('activate', e => {
@@ -74,15 +77,19 @@ self.addEventListener('fetch', e => {
     const cache = await caches.open(VERSION);
     const cached = await cache.match(req, { ignoreSearch: true });
 
-    // Refresh in the background; the cached copy is what gets shown now.
-    const fromNet = fetch(req).then(res => {
-      if (res && res.ok && res.type === 'basic') cache.put(req, res.clone());
-      return res;
-    }).catch(() => null);
-
+    /* A cached file is never refreshed in place. It used to be re-fetched on
+       every launch and written back into this same cache, so a new index.html
+       was in use on the second launch whether or not the update had been
+       accepted — mid-workout included — and on a patchy signal one file
+       could be new while another was old. New files arrive with a new worker
+       (a new VERSION), which the app applies when it's safe to. */
     if (cached) return cached;
 
-    const res = await fromNet;
+    // not precached: fetch it, and keep it so it works offline next time
+    const res = await fetch(req).then(r => {
+      if (r && r.ok && r.type === 'basic') cache.put(req, r.clone());
+      return r;
+    }).catch(() => null);
     if (res) return res;
 
     if (req.mode === 'navigate') {

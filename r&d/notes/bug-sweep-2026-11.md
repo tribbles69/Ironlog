@@ -271,7 +271,7 @@ and the Drive client ID box (`#stClientId`); Profile sex, date of birth,
 height, bodyweight and activity (`#pfSex`, `#pfDob`, `#pfHeight`, `#pfBw`,
 `#pfAct`) — their labels aren't tied to the fields.
 
-### [ ] 4.4 The service worker updates the app behind the update prompt — From the code
+### [x] 4.4 (0.90.17) The service worker updates the app behind the update prompt — Confirmed
 **Where:** `sw.js` fetch handler (73–93).
 Every launch re-fetches each file and writes it into the *current* cache.
 So a new `index.html` is in use on the second launch whether or not the

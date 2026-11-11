@@ -13,6 +13,9 @@ rather than guessed.
 
 ---
 
+## 0.90.17 — 11 Nov 2026
+- **Fixed: updates could slip in without asking.** The app re-downloaded its files in the background on every launch, so a new version could be in use on the second launch even if you'd chosen "Later", or halfway through a workout. On a weak signal it could also end up with a mix of old and new files. A new version now arrives whole, and only through the update prompt.
+
 ## 0.90.16 — 11 Nov 2026
 - **Fixed: "Erase all data" didn't erase everything.** It left progress photos, daily clips and bar-speed debug traces on the phone, and if Google Drive was connected the next sync put the whole log back. It now removes all of it, disconnects Drive on this phone, and tells you first exactly what will go. The backup file in your own Drive is never deleted. Your AI key is kept unless you tick the box.
 
