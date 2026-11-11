@@ -48,15 +48,12 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    E12 next (E11 shipped 0.64.0, E12's first build 0.65.0); D8 shipped 0.66.0.
    D9 finished in 0.73.0.
 
-   **Where the section-00 sweep got to (2026-11-11, 0.90.6, branch
+   **Where the section-00 sweep got to (2026-11-11, 0.90.17, branch
    `fix/bug-sweep-2026-11`):** 00-B1 is done — the ranked list is
-   `r&d/notes/bug-sweep-2026-11.md`. 00-B2 is part done: findings 1.1–1.5,
-   2.1–2.3 and a new one, 2.4 (a custom exercise sharing a name with a
-   built-in one threw in `catalogue()`; add it to the list), shipped as
-   0.90.1–0.90.6. **Next: 1.6** (custom exercises missing from Drive sync),
-   then 1.7, 1.8, 3.x, 4.x in the list's order. 3.4, 3.6, 3.7, part of 1.8
-   and 4.5 wait on Aaron. 00-V1 onward not started. Stopped here because the
-   Fable allowance ran out.
+   `r&d/notes/bug-sweep-2026-11.md`. 00-B2: every severity 1 and 2 finding
+   is fixed, and every 3 and 4 that needs no decision (0.90.1–0.90.17).
+   **Waiting on Aaron:** 3.4, 3.6, 3.7, 3.10, the relink part of 1.8 and the
+   question in 4.5 — all in the note. **Next: 00-V1.**
 
    **Next up (2026-11-11, Aaron):** section **00** (bug fixes, then VBT, then design)
    comes before everything else, in page order. Then what's left of section
@@ -173,7 +170,7 @@ Read all of `index.html`, `slew-core.js`, `slew-video.js`, `sw.js` and the
 Note for each: where it is, how to reproduce, and a suggested fix. Don't fix
 anything in this step — the list is the deliverable.
 
-### [ ] 00-B2. Fix the audit's findings, top of the list down
+### [ ] 00-B2. Fix the audit's findings, top of the list down — **0.90.1–0.90.17 shipped**: all of severity 1 and 2, and what needs no decision in 3 and 4 (the gripper step is 0.90.11). Left open for Aaron's calls: 3.4, 3.6, 3.7, 3.10, part of 1.8, 4.5 (`r&d/notes/bug-sweep-2026-11.md`)
 One fix per version. Severity 1 and 2 before anything else. Anything that
 would change existing PR numbers or stored data gets flagged to Aaron first
 (as D10 was). Known small one to include: the rep-range "add weight" step

@@ -246,7 +246,20 @@ sweep is complete.
 
 ### [ ] 3.9 "No reps found" quotes the wrong minimum travel — From the code
 **Where:** `vbtReviewDlg` (~11925) says the bar must travel at least 10 cm;
-the real floor has been 4 cm since 0.90.0.
+the real floor has been 4 cm since 0.90.0. Goes in with the 00-V1 version,
+which touches the same sheet.
+
+### [ ] 3.10 Two lifts in the shipped program aren't in the exercise catalogue — Confirmed
+Found during 00-B2 (the audit read the validator's failure wrongly — see 4.7).
+**Where:** `program.json` names *Landmine Press* and *Tibialis Raise*;
+neither is in `r&d/data/exercises.json`.
+Installing the program turns them into custom movements
+(`custom-landmine-press`, `custom-tibialis-raise`): no muscles, so no
+Weekly sets credit and no recovery; no demo; no bar-speed profile.
+**Fix:** add both to the catalogue. **Ask Aaron first:** anyone who has
+already logged them (Aaron, weeks 1–4) has those sets under the custom ids.
+Adding the built-in ones starts a second history unless the old sets are
+re-pointed, and that is a change to stored data.
 
 ---
 
@@ -291,13 +304,16 @@ The worker takes control on first install and the page reloads
 comment at `load`. **Fix:** skip the reload when there was no controller
 before.
 
-### [ ] 4.7 Tools
-- `validate-exercises.js` throws a TypeError at line 141 after its "zero
-  orphans" check fails. It only knows `r&d/data/exercises.json`; the app also
-  resolves names through the extended database, so *Tibialis Raise* and
-  *Landmine Press* count as orphans there but resolve fine in the app.
-  **Fix:** guard the null, and either add the two movements to the catalogue
-  or teach the validator about the extended database.
+### [ ] 4.7 Tools — crash fixed, stale checks left
+- `validate-exercises.js` threw a TypeError at line 141 after its "zero
+  orphans" check failed. **Fixed** (no version, tools only): it now reports
+  and carries on. The audit said the two names "resolve fine in the app";
+  that was wrong — they only resolved because the test had already installed
+  the program, which makes them custom movements. See 3.10.
+- Still open: seven of its checks describe the old 77-week program (333
+  sessions, 119 movements, 8 timed movements…) and fail against the WDC
+  program that ships now. They need rewriting for the current program or
+  deleting; nothing in the app depends on them.
 
 ---
 
@@ -308,4 +324,15 @@ import) → 1.1 (sync tombstones) → 1.5 → 1.4 → 1.6 → 1.7 → 1.8 → 3.
 3.3 → 3.5 → 3.9 → 4.x.
 
 **Waiting on Aaron before any fix:** 3.4 (already-backfilled sessions),
-3.6, 3.7, the relink part of 1.8, and the question in 4.5.
+3.6, 3.7, 3.10, the relink part of 1.8, and the question in 4.5.
+
+## Where 00-B2 stands (11 Nov 2026, 0.90.17)
+
+Everything in severity 1 and 2 is fixed, and everything in 3 and 4 that
+doesn't need a decision. Left: the six items above (Aaron), 3.8 and 3.9
+(with the VBT work), and the stale validator checks in 4.7.
+
+Also still true after 1.1: goals, meets and edits to planned sessions carry
+no "last changed" time, so a change to one of those on one phone doesn't
+replace the copy on another. Nothing is lost; the two phones just keep their
+own version.
