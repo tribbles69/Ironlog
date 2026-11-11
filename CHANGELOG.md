@@ -13,6 +13,9 @@ rather than guessed.
 
 ---
 
+## 0.90.15 — 11 Nov 2026
+- **Fixed: Edit session threw your changes away without asking.** Cancel, the ✕, Back or a stray tap outside the sheet all discarded what you'd changed. If you've changed anything, it now asks first.
+
 ## 0.90.14 — 11 Nov 2026
 - **Fixed: nine controls a screen reader couldn't name.** The calendar's month arrows, the plate "−" buttons and Google client ID box in Settings, and the five fields on your profile (sex, date of birth, height, bodyweight, activity) now announce what they are.
 

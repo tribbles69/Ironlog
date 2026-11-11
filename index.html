@@ -2337,7 +2337,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.90.14';
+const APP_VERSION = '0.90.15';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -4624,7 +4624,10 @@ function modal({ title, body, foot, onOpen, wide, sticky, onClose }) {
   bg._ret = document.activeElement;   // focus goes back here when it closes
   /* sticky: a stray tap on the backdrop must not end a running timer. */
   bg.addEventListener('click', e => {
-    if ((e.target === bg && !sticky) || e.target.hasAttribute('data-close')) { closeModal(); if (onClose) onClose(); }
+    if ((e.target === bg && !sticky) || e.target.hasAttribute('data-close')) {
+      if (bg._guard && !bg._guard()) return;   // a sheet with unsaved work asks first
+      closeModal(); if (onClose) onClose();
+    }
   });
   $('#modalRoot').appendChild(bg);
   modalStack.push(bg);
@@ -8310,13 +8313,14 @@ function viewCompleted(id) {
    follow an edit with no second bookkeeping path; only summary.prs, the
    at-finish snapshot, is rebuilt.
    ============================================================ */
-let editDraft = null;
+let editDraft = null, editOrig = '';   // editOrig: the draft as it was opened, to tell whether anything changed
 
 function openEditWorkout(id) {
   const wo = S.workouts.find(w => w.id === id);
   if (!wo || wo.status !== 'completed') return;
   editDraft = structuredClone(wo);
   editDraft.exercises.forEach(e => e.sets.forEach(s => { s.done = s.done !== false; }));
+  editOrig = JSON.stringify(editDraft);
   renderEditWorkout();
 }
 
@@ -8381,6 +8385,14 @@ function renderEditWorkout() {
         d.date = $('#eDate', bg).value || d.date;
       };
       const re = () => { grab(); renderEditWorkout(); };
+      /* Cancel, ✕, Escape or a tap outside used to drop every change without a
+         word (bug sweep 4.1). With changes made, it asks. */
+      bg._guard = () => {
+        grab();
+        if (!editDraft || JSON.stringify(editDraft) === editOrig) return true;
+        confirmDlg('Discard the changes you made to this session?', () => { editDraft = null; closeAllModals(); }, 'Discard changes');
+        return false;
+      };
       // typing updates the draft silently so focus is never stolen
       bg.querySelectorAll('[data-ef]').forEach(inp => {
         selectOnFocus(inp);
@@ -21378,7 +21390,12 @@ $('#navCoach').onclick = () => openCoach();
 $('#settingsBtn').onclick = openSettings;
 $('#profileBtn').onclick = () => openProfile();
 $('#toolsBtn').onclick = () => openTools();
-document.addEventListener('keydown', e => { if (e.key === 'Escape' && modalStack.length) closeModal(); });
+document.addEventListener('keydown', e => {
+  if (e.key !== 'Escape' || !modalStack.length) return;
+  const top = modalStack[modalStack.length - 1];
+  if (top._guard && !top._guard()) return;
+  closeModal();
+});
 
 /* Fields let go of focus when you're done with them (roadmap A5, Blast #49).
    On Android, dismissing the keyboard with Back or Done leaves the field

@@ -252,7 +252,7 @@ the real floor has been 4 cm since 0.90.0.
 
 ## Severity 4 — broken or confusing UI
 
-### [ ] 4.1 Closing Edit session throws the edits away without asking — From the code
+### [x] 4.1 (0.90.15) Closing Edit session throws the edits away without asking — From the code
 **Where:** `renderEditWorkout` (~8225). Back, Escape, a tap outside or
 Cancel all discard. **Fix:** ask if anything changed.
 
