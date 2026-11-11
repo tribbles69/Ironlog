@@ -13,6 +13,9 @@ rather than guessed.
 
 ---
 
+## 0.94.3 — 11 Nov 2026
+- **New: jump to a section in Settings.** Settings is long, so there's now a row of buttons at the top — Look & units, Timers, Places & kit, AI & extras, Program, Video, Data & backup — that takes you straight to that part. Nothing in Settings has moved.
+
 ## 0.94.2 — 11 Nov 2026
 - **Changed: clearer labels.** The Stats page is now headed Stats (it said Analytics). On a session that hasn't happened yet, the Missed button now reads **Skip / move** — it only says Missed once the day has passed. It opens the same sheet.
 

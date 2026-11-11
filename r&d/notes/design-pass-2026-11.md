@@ -79,3 +79,17 @@ you see the session, this is the commit to revert.
   one now says *Taken off your plan* instead of *Logged as missed*.
 **Why:** one word per place; and "Missed" on next Tuesday's session read as
 a mistake. The sheet, the reasons and what's stored are the same.
+
+### 0.94.3 — Settings has a way in
+**What:** a row of seven chips at the top of Settings — Look & units,
+Timers, Places & kit, AI & extras, Program, Video, Data & backup. Tapping
+one scrolls to that section and moves focus there (so TalkBack lands on it
+too; it honours "reduce motion").
+**Why:** Settings is one sheet about 4,600 px tall — six screens at phone
+size — with Export, Import, Drive and Erase at the very bottom. Nothing was
+moved or regrouped, so everything is where it was for anyone who knows it.
+**Not done, for Aaron to decide:** Settings mixes three kinds of thing —
+preferences (skin, units, timers), kit (places, bars, plates) and data
+(program, backfill, export, Drive, erase). Splitting it into two or three
+sheets would be the real fix; that changes where things live, so it's
+listed under "For Aaron" below rather than done.

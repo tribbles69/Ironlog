@@ -2344,7 +2344,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.94.2';
+const APP_VERSION = '0.94.3';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -13408,7 +13408,11 @@ function openSettings() {
   modal({
     title: 'Settings',
     body: `
-      <div class="field"><label>Skin</label>
+      <nav class="row wrap" id="stJump" aria-label="Jump to a section of Settings" style="gap:6px;margin-bottom:14px">
+        ${[['stSecLook', 'Look & units'], ['stSecTimers', 'Timers'], ['stSecKit', 'Places & kit'], ['stSecAi', 'AI & extras'], ['stSecProgram', 'Program'], ['stSecVideo', 'Video'], ['stSecData', 'Data & backup']]
+          .map(([id, label]) => `<button class="chip" data-stjump="${id}" style="cursor:pointer">${label}</button>`).join('')}
+      </nav>
+      <div class="field" id="stSecLook"><label>Skin</label>
         <div class="seg" id="skinSeg">
           <button data-sk="ironlog" class="${S.settings.skin !== 'win98' ? 'on' : ''}">Ironlog</button>
           <button data-sk="win98" class="${S.settings.skin === 'win98' ? 'on' : ''}">Windows 98</button>
@@ -13421,7 +13425,7 @@ function openSettings() {
           <button data-u="lb" class="${U() === 'lb' ? 'on' : ''}">Pounds</button>
         </div></div>
       <div class="grid2">
-        <div class="field"><label>Timer sound</label>
+        <div class="field" id="stSecTimers"><label>Timer sound</label>
           <div class="seg" id="sndSeg">
             <button data-v="1" class="${S.settings.sound !== false ? 'on' : ''}">On</button>
             <button data-v="0" class="${S.settings.sound === false ? 'on' : ''}">Off</button>
@@ -13455,7 +13459,7 @@ function openSettings() {
         <div class="sub" style="margin-top:4px">Sex and bodyweight set your DOTS; they live in the profile now rather than here.</div>
       </div>
       <div class="hr"></div>
-      <div class="eyebrow" style="margin-bottom:6px">Places</div>
+      <div class="eyebrow" id="stSecKit" style="margin-bottom:6px">Places</div>
       <div class="sub" style="margin-bottom:8px">${places().length ? `${places().map(x => esc(x.name)).join(' · ')} — the kit at each, so exercises you can't do there are greyed.` : 'Name where you train and the kit there — Home, Gym, a hotel — and exercises you can\'t do there are greyed.'}</div>
       <button class="btn sm wide ghost" id="stPlaces" style="margin-bottom:4px">${places().length ? 'Manage places →' : 'Set up places →'}</button>
       <div class="hr"></div>
@@ -13489,7 +13493,7 @@ function openSettings() {
         <div class="sub" style="margin-top:4px">Used for placing predictions. Openers are conservative, thirds get missed, nerves cost kilos — 96% is a reasonable default.</div>
       </div>
       <div class="hr"></div>
-      <div class="eyebrow" style="margin-bottom:6px">AI — on your own key</div>
+      <div class="eyebrow" id="stSecAi" style="margin-bottom:6px">AI — on your own key</div>
       <div class="sub" style="margin-bottom:8px">Optional. Ironlog has no AI server: with your own Anthropic key, the phone calls Anthropic directly and you pay them for what you use — fractions of a penny a time. Everything works without it.</div>
       <div class="field"><label for="stKey">Anthropic API key</label>
         <div class="row" style="gap:6px"><input id="stKey" type="password" autocomplete="off" spellcheck="false" style="flex:1"
@@ -13523,7 +13527,7 @@ function openSettings() {
       </div>
       ${PROGRAM_MANIFEST ? `
       <div class="hr"></div>
-      <div class="eyebrow" style="margin-bottom:8px">Training program</div>
+      <div class="eyebrow" id="stSecProgram" style="margin-bottom:8px">Training program</div>
       <div class="row between" style="margin-bottom:10px">
         <div class="grow"><div style="font-weight:650;font-size:13.5px">${esc(PROGRAM_MANIFEST.name)}</div>
           <div class="sub">${programInstalled(PROGRAM_MANIFEST.id)
@@ -13550,10 +13554,10 @@ function openSettings() {
         <button class="btn sm" id="stBackfill">Mark done</button>
       </div>
       <div class="sub" id="stBfCount" style="margin-top:6px">${countPlanned(14)} planned session${countPlanned(14) === 1 ? '' : 's'} up to yesterday</div>
-      <div class="hr"></div>
+      <div class="hr" id="stSecVideo"></div>
       ${poseSettingsHtml()}
       <div class="hr"></div>
-      <div class="eyebrow" style="margin-bottom:8px">Data</div>
+      <div class="eyebrow" id="stSecData" style="margin-bottom:8px">Data</div>
       <div class="sub" style="margin-bottom:10px">${S.workouts.length} workouts · ${S.checkins.length} check-ins · ${S.meets.length} meets · ${S.goals.length} goals</div>
       ${storageLine()}
       <div class="eyebrow" style="margin:4px 0 6px">Google Drive</div>
@@ -13688,6 +13692,15 @@ function openSettings() {
       };
       $('#stExport', bg).onclick = () => { exportJSON(); refreshStorageLine(bg); };
       wirePoseSettings(bg);
+      /* Settings runs to about six screens. The row at the top jumps to a
+         section and puts focus there, so a screen reader lands on it too (00-D1). */
+      bg.querySelectorAll('[data-stjump]').forEach(b => b.onclick = () => {
+        const el = bg.querySelector('#' + b.dataset.stjump);
+        if (!el) return;
+        el.scrollIntoView({ block: 'start', behavior: window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+        el.setAttribute('tabindex', '-1');
+        try { el.focus({ preventScroll: true }); } catch (e) { /* old browser */ }
+      });
       $('#stVbtRaw', bg).onchange = ev => { S.settings.vbtKeepRaw = ev.target.checked; save(); toast(ev.target.checked ? 'Keeping raw traces from your next measured set' : 'Raw traces off — kept ones stay until exported or replaced'); };
       $('#stVbtRawExp', bg).onclick = () => exportVbtRaw();
       $('#stExportCsv', bg).onclick = () => { exportCSV(); refreshStorageLine(bg); };
