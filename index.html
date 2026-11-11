@@ -2174,10 +2174,18 @@ function roundBar(kg) { // round to nearest loadable increment, in display units
 }
 
 // e1RM — Epley, capped at 12 reps for sanity
+/* The reps left in the tank that e1RM counts. RPE 8 means two left, so the
+   set is worth reps + 2. Past RIR 5 nobody's guess is reliable, so RIR 6 and
+   up count as 5 (bug sweep 3.7) — before, they counted as 0, so 100 × 5 at
+   RIR 6 was worth less than at RIR 5. No effort logged, or one outside the
+   scale, counts as 0. */
+function e1Rir(rpe) {
+  if (rpe == null || rpe === '' || !Number.isFinite(+rpe) || +rpe > 10) return 0;
+  return +rpe < 5 ? 5 : 10 - rpe;
+}
 function e1rm(kg, reps, rpe) {
   if (!kg || !reps) return 0;
-  // RPE 8 means two left in the tank, so the set is worth reps + 2.
-  const rir = (rpe >= 5 && rpe <= 10) ? (10 - rpe) : 0;
+  const rir = e1Rir(rpe);
   const eff = reps + rir;
   if (eff <= 1) return kg;
   return kg * (1 + Math.min(eff, 12) / 30);
@@ -2350,7 +2358,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.96.2';
+const APP_VERSION = '0.96.3';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -5631,8 +5639,9 @@ const WHY = {
   e1: { label: 'estimated 1RM', fn: (kg, r, rpe) => {
     const t = trace('estimated 1RM');
     t.step('Weight', wt(kg)).step('Reps', r);
-    const ok = rpe >= 5 && rpe <= 10, rir = ok ? 10 - rpe : 0, eff = (r || 0) + rir;
-    t.step('Effort', rpe == null ? 'not logged' : rirText(rpe), rpe == null ? 'counted as 0 reps left' : ok ? 'RIR = 10 − RPE' : 'outside RPE 5–10, so counted as 0 reps left');
+    const rir = e1Rir(rpe), eff = (r || 0) + rir;
+    t.step('Effort', rpe == null ? 'not logged' : rirText(rpe), rpe == null ? 'counted as 0 reps left' : rpe > 10 ? 'off the scale, so counted as 0 reps left'
+      : rpe < 5 ? 'past RIR 5, counted as 5 — guesses that far out aren\'t reliable' : 'RIR = 10 − RPE');
     t.step('Reps the set was worth', `${r} + ${nice(rir)} = ${nice(eff)}`, 'reps done + reps left');
     let mine;
     if (!kg || !r) { mine = 0; t.note('No weight or no reps: no estimate.'); }

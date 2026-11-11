@@ -13,6 +13,9 @@ rather than guessed.
 
 ---
 
+## 0.96.3 — 11 Nov 2026
+- **Fixed: an easy set could lower your estimated 1RM.** A set logged at RIR 6 or more used to count as if you had nothing left, so 100 kg × 5 at RIR 6 was worth less than the same set at RIR 5. Anything past RIR 5 now counts as RIR 5. Estimated maxes and PRs from those sets may go up a little.
+
 ## 0.96.2 — 11 Nov 2026
 - **Fixed: two sessions on the same day could both claim the same PR.** A second session now compares against the first one too, by when each finished. If you trained twice in a day, the later session's PR badge may go — the record belongs to the session that set it.
 

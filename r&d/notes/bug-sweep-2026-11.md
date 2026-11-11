@@ -245,13 +245,16 @@ two with none don't see each other. Used by `historyFor`, `holdRecords` and
 `shapeRecords` from `prsFor` and the PR explainer. Plausibility and the other
 date callers are unchanged.
 
-### [ ] 3.7 e1RM drops when a set is logged easier than RIR 5 — From the code
+### [x] 3.7 (0.96.3) e1RM drops when a set is logged easier than RIR 5 — From the code
 **Where:** `e1rm` (~2116): RIR counts only for RPE 5–10.
 100 × 5 at RIR 5 is worth 133 kg; at RIR 6 it's worth 117 kg. Also every
 set tops out at 12 "effective reps", so 12 reps at RIR 0 and 12 at RIR 4
 give the same number.
 **Fix:** none suggested without a decision — any change moves existing PR
 and e1RM numbers. **For Aaron to decide; not part of 00-B2 unless he says.**
+**Shipped (0.96.3, Aaron's call):** RIR 6 and above count as RIR 5
+(`e1Rir`); no effort logged or an off-scale RPE still count as 0. The
+12-rep cap stays, by decision. The e1RM explainer says which rule applied.
 
 ### [x] 3.8 (0.92.0, not validated) Bar-speed RIR is unreliable on long sets
 Already known (35 × 17 read RIR 12). Belongs to **00-V2**; listed so the
