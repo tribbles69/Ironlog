@@ -1063,15 +1063,11 @@ for this pass to spend those credits.
 - **Audio (ElevenLabs):** recorded voice cues for the interval timer (02),
   HR-zone cardio (D15) and mobility holds (E5), in place of the phone's speech
   voice; cleaner beeps for `Cue` if they're worth it.
-- **ElevenLabs is on the free plan for now (Aaron, 2026-11-10).** Free-plan
-  audio is non-commercial and needs "elevenlabs.io" credited if shared, so
-  every clip made now is a **placeholder**. Log each one in
-  `r&d/notes/audio-placeholders.md` as it's made: file path in the repo, the
-  exact text spoken, voice name and ID, model, and date. Before launch, Aaron
-  moves to a paid plan and every line in that file is regenerated from the
-  same text and voice, then ticked off; launch waits until the list is empty.
-  Higgsfield (Basic, paid) art needs no redo — its terms allow commercial use
-  with no attribution.
+- **ElevenLabs is on the Starter plan (Aaron, 2026-11-11)**, which includes
+  the commercial licence. Audio generated while subscribed can be shipped and
+  stays licensed even after the plan is cancelled, so no placeholders and no
+  redo before launch. Generate everything while the plan is active. Higgsfield
+  (Basic, paid) art is the same: commercial use allowed, no attribution.
 - **Keep the app light and offline:** compress everything, cache it in
   `sw.js`, and keep the phone's speech voice as the fallback so any cue whose
   wording changes still works without new recordings. Large packs can be an
