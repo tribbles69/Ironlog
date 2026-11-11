@@ -265,7 +265,7 @@ sees an empty phone and restores everything.
 traces; disconnect Drive (the file stays in the user's Drive) so it doesn't
 come back by surprise.
 
-### [ ] 4.3 Nine controls with no accessible label (C4) — Confirmed
+### [x] 4.3 (0.90.14) Nine controls with no accessible label (C4) — Confirmed
 Calendar `‹` `›` (`#calPrev`, `#calNext`); Settings plate-row `−` (`data-prm`)
 and the Drive client ID box (`#stClientId`); Profile sex, date of birth,
 height, bodyweight and activity (`#pfSex`, `#pfDob`, `#pfHeight`, `#pfBw`,

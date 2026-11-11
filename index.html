@@ -2006,7 +2006,7 @@ function syncLine() {
     ${m.connected ? `<label class="row" style="gap:8px;align-items:center;margin-bottom:8px"><input type="checkbox" id="stSyncFinish" ${m.autoFinish !== false ? 'checked' : ''} style="width:auto">
       <span class="sub">Back up when I tap Done after a session (Google may flash its sign-in)</span></label>` : ''}
     <details style="margin-bottom:6px"><summary class="sub">Advanced: Google client ID</summary>
-      <input id="stClientId" value="${esc(m.clientId || '')}" placeholder="${esc(GOOGLE_CLIENT_ID || '….apps.googleusercontent.com')}" autocomplete="off" spellcheck="false" style="margin-top:6px">
+      <input id="stClientId" aria-label="Google client ID" value="${esc(m.clientId || '')}" placeholder="${esc(GOOGLE_CLIENT_ID || '….apps.googleusercontent.com')}" autocomplete="off" spellcheck="false" style="margin-top:6px">
       <div class="sub" style="margin-top:4px">Only needed if this copy wasn't built with one. Setup: r&amp;d/specs/drive-sync-spec.md.</div></details>
   </div>`;
 }
@@ -2337,7 +2337,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.90.13';
+const APP_VERSION = '0.90.14';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -6320,10 +6320,10 @@ function viewCalendar() {
   <h1 class="sr-only">Calendar</h1>
   <div class="card">
     <div class="cal-head">
-      <button class="btn sm ghost" id="calPrev">‹</button>
+      <button class="btn sm ghost" id="calPrev" aria-label="Previous month">‹</button>
       <div class="center"><div style="font-weight:750;font-size:16px">${calCursor.toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</div>
         <div class="sub">${monthWos.length} sessions · ${wt(monthVol, 0)} volume</div></div>
-      <button class="btn sm ghost" id="calNext">›</button>
+      <button class="btn sm ghost" id="calNext" aria-label="Next month">›</button>
     </div>
     <div class="cal-dow">${['M', 'T', 'W', 'T', 'F', 'S', 'S'].map(d => `<span>${d}</span>`).join('')}</div>
     <div class="cal-grid">${grid}</div>
@@ -12999,23 +12999,23 @@ function openProfile(snap) {
         <input id="pfHandle" value="${esc(st.handle || '')}" placeholder="@yourname — leave blank for none"></div>
 
       <div class="row" style="gap:8px">
-        <div class="grow"><label>Sex</label>
+        <div class="grow"><label for="pfSex">Sex</label>
           <select id="pfSex">
             <option value="male"${st.sex === 'male' ? ' selected' : ''}>Male</option>
             <option value="female"${st.sex === 'female' ? ' selected' : ''}>Female</option>
           </select>
           <div class="sub" style="margin-top:4px">Sets the DOTS coefficient.</div>
         </div>
-        <div class="grow"><label>Date of birth</label>
+        <div class="grow"><label for="pfDob">Date of birth</label>
           <input type="date" id="pfDob" value="${esc(st.dob || '')}" max="${today()}">
           <div class="sub" style="margin-top:4px">${age == null ? 'For your age category.' : `${age} · ${cat || 'no category'} (IPF)`}</div>
         </div>
       </div>
 
       <div class="row" style="gap:8px">
-        <div class="grow"><label>Height (cm)</label>
+        <div class="grow"><label for="pfHeight">Height (cm)</label>
           <input type="number" inputmode="numeric" id="pfHeight" value="${st.heightCm || ''}" placeholder="—"></div>
-        <div class="grow"><label>Bodyweight (${U()})</label>
+        <div class="grow"><label for="pfBw">Bodyweight (${U()})</label>
           <input type="number" step="0.1" inputmode="decimal" id="pfBw" value="${st.bodyweight ? dw(st.bodyweight) : ''}" placeholder="—">
         </div>
       </div>
@@ -13039,7 +13039,7 @@ function openProfile(snap) {
       <div class="hr"></div>
       <div class="eyebrow" style="margin-bottom:6px">Daily energy</div>
       <div class="row" style="gap:8px">
-        <div class="grow"><label>Activity</label>
+        <div class="grow"><label for="pfAct">Activity</label>
           <select id="pfAct">${Object.entries(ACTIVITY).map(([k, a]) =>
         `<option value="${k}"${st.activity === k ? ' selected' : ''}>${a.label} — ${a.note}</option>`).join('')}</select></div>
       </div>
@@ -13159,7 +13159,7 @@ function openSettings() {
           <span class="sub">${U()} ×</span>
           <input type="number" inputmode="numeric" data-pp="${i}" value="${p.pairs}" style="width:64px" aria-label="Pairs of ${dw(p.kg, 2)} ${U()} plates">
           <span class="sub grow">pairs</span>
-          <button class="btn sm ghost" data-prm="${i}">−</button>
+          <button class="btn sm ghost" data-prm="${i}" aria-label="Remove the ${dw(p.kg, 2)} ${U()} plates">−</button>
         </div>`).join('')}</div>
       <button class="btn xs ghost" id="stAddPlate">+ Add plate</button>
       <div class="field" style="margin-top:10px"><label for="stCollar">Collars — each (${U()})</label>

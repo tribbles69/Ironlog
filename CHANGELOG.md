@@ -13,6 +13,9 @@ rather than guessed.
 
 ---
 
+## 0.90.14 — 11 Nov 2026
+- **Fixed: nine controls a screen reader couldn't name.** The calendar's month arrows, the plate "−" buttons and Google client ID box in Settings, and the five fields on your profile (sex, date of birth, height, bodyweight, activity) now announce what they are.
+
 ## 0.90.13 — 11 Nov 2026
 - **Fixed: Measure used the wrong weight for warm-ups.** If your top set's weight was already typed in, a warm-up measured before it was recorded at the top set's weight, which threw off its power figure and the bar-speed debug file. Measure now uses the weight of the set the reading attaches to.
 
