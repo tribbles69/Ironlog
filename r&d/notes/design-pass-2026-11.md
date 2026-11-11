@@ -52,3 +52,18 @@ turn a tap on the weight into "delete set".
 **Checked:** no button under 38 px tall or 32 px wide on any page or in
 Settings; in the live set table every input, tick and set-number box still
 receives taps at its own corners.
+
+### 0.94.1 — Home leads with today's session
+**What:** for anyone training with Ironlog — a workout in progress, a
+session planned today, or any logged history — **Today's training** is now
+the first card on Home. The About card, backup reminder, event countdown,
+check-in and the week's numbers follow it. Two sessions done on one day now
+have a divider between them.
+**Why:** it's what the page is opened for. It sat a screen and a half down,
+under the About card, the backup reminder, the check-in and three stat
+tiles, so Start needed a scroll every day.
+**Unchanged for someone new:** with no workout, nothing planned today and no
+history, the About card still comes first, as `home-landing-spec.md` set
+out, and Today's training stays where it was.
+**For Aaron:** the check-in is now second. If you'd rather check in before
+you see the session, this is the commit to revert.

@@ -2344,7 +2344,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.94.0';
+const APP_VERSION = '0.94.1';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -5134,7 +5134,7 @@ function viewHome() {
         <div><div style="font-weight:700">${esc(d.name)} <span class="chip green">DONE</span>${srcChip(d)}</div>
         <div class="sub">${d.exercises.length} exercises · ${wt(totalVolume(d), 0)} volume</div></div>
         <button class="btn ghost sm" data-view-workout="${d.id}">View</button>
-      </div>`).join('');
+      </div>`).join('<div class="hr"></div>');   // two sessions in a day ran into each other
   } else {
     scheduleHtml = `<div class="row between">
         <div><div style="font-weight:700">Rest day</div><div class="sub">Nothing scheduled for today</div></div>
@@ -5151,9 +5151,21 @@ function viewHome() {
   const bwDelta = bw7.length > 1 ? bwNow - bw7[0].weight : 0;
   const sessions7 = S.workouts.filter(w => w.status === 'completed' && w.kind !== 'mobility' && daysBetween(w.date, today()) <= 7).length;
 
+  /* Today's session leads Home for anyone who is training with Ironlog — a
+     workout in progress, something planned today, or a log with history
+     (00-D1). It used to sit under the About card, the backup nudge, the
+     check-in and the week's numbers, a screen and a half down. Someone who
+     hasn't started yet still gets the About card first (home-landing-spec). */
+  const trainFirst = !!(S.active || planned.length || S.workouts.some(w => w.status === 'completed'));
+  const training = `<div class="sechead"${trainFirst ? ' style="margin-top:0"' : ''}><h2>Today's training</h2>
+    ${!S.active && !planned.length ? `<button class="btn xs" id="quickStart">Start blank</button>` : ''}
+  </div>
+  <div class="card"${trainFirst ? ' style="margin-bottom:13px"' : ''}>${scheduleHtml}</div>`;
+
   return `
   <h1>${greet}</h1>
   <div class="sub" style="margin-bottom:14px">${new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}${streak() > 1 ? ` · 🔥 ${streak()} day check-in streak` : ''}</div>
+  ${trainFirst ? training : ''}
   ${aboutCard()}
   ${backupCard()}
   ${eventCountdown()}
@@ -5184,10 +5196,7 @@ function viewHome() {
     <div class="stat"><div class="k">Sessions</div><div class="v">${sessions7}</div><div class="d">last 7 days</div></div>
   </div>
 
-  <div class="sechead"><h2>Today's training</h2>
-    ${!S.active && !planned.length ? `<button class="btn xs" id="quickStart">Start blank</button>` : ''}
-  </div>
-  <div class="card">${scheduleHtml}</div>
+  ${trainFirst ? '' : training}
 
   <div class="sechead"><h2>Goals</h2><button class="btn xs" id="addGoal">+ Add</button></div>
   <div class="card">${S.goals.length ? S.goals.map(goalRow).join('') :

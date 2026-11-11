@@ -13,6 +13,10 @@ rather than guessed.
 
 ---
 
+## 0.94.1 — 11 Nov 2026
+- **Changed: Home opens on today's session.** Today's training is now the first thing on Home, with Start right there, instead of below the check-in and the week's numbers. If you haven't logged anything yet, Home still starts with the introduction.
+- **Fixed:** two sessions done on the same day ran into each other on Home.
+
 ## 0.94.0 — 11 Nov 2026
 - **Changed: small buttons are easier to hit.** Start, Missed, Edit, the “+ Add” buttons, the ✕ on every sheet and the other small buttons now respond to a tap anywhere within a finger-sized area around them. They look the same and nothing has moved.
 
