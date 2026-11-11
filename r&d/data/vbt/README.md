@@ -40,5 +40,5 @@ What this shows at a glance:
 - **No lift profile for curl, front raise or triceps extension** (`lift: null`)
   — Measure falls back to a default. Decide whether these need profiles or a
   generic "arc" mode.
-- RIR values on this day (OHP @0, row @9 then @0, squat @4.5) were tapped in
-  quickly and aren't real effort ratings — don't use them for 00-V2.
+- RIR values on this day (OHP @0, row @9 then @0, squat @4.5) on a 5 kg
+  bar can't be real effort ratings — check with Aaron before using them for 00-V2.
