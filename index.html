@@ -2337,7 +2337,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.90.11';
+const APP_VERSION = '0.90.12';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -14267,7 +14267,7 @@ function fixedStepKit(leaf) {
   return eq === 'gripper' ? 'gripper' : eq === 'extension_band' || eq === 'resistance_band' ? 'band' : null;
 }
 function rangeNextLoad(w, leaf) {
-  const step = leaf && (leaf.equipment === 'dumbbells' || leaf.equipment === 'kettlebell') ? 2 : 2.5;
+  const step = toKg(leaf && (leaf.equipment === 'dumbbells' || leaf.equipment === 'kettlebell') ? (U() === 'lb' ? 5 : 2) : inc());   // one step in the lifter's units, as kg
   const next = roundLoadFor(Math.max(w * 1.025, w + step), leaf);
   return next > w ? next : w + step;
 }
@@ -14807,7 +14807,9 @@ function loadFor(e1, reps, rir) {
   return eff <= 1 ? e1 : e1 / (1 + Math.min(eff, 12) / 30);
 }
 function roundLoadFor(kg, leaf) {
-  if (leaf && (leaf.equipment === 'dumbbells' || leaf.equipment === 'kettlebell')) return Math.round(kg / 2) * 2;
+  /* Dumbbells and kettlebells step in 2 kg, or 5 lb for a lifter working in
+     pounds (it used to be 2 kg either way: 44.1 lb — bug sweep 3.3). */
+  if (leaf && (leaf.equipment === 'dumbbells' || leaf.equipment === 'kettlebell')) return U() === 'lb' ? toKg(Math.round(fromKg(kg) / 5) * 5) : Math.round(kg / 2) * 2;
   return roundBar(kg);
 }
 function median(xs) {

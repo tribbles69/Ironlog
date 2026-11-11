@@ -13,6 +13,9 @@ rather than guessed.
 
 ---
 
+## 0.90.12 — 11 Nov 2026
+- **Fixed: dumbbell suggestions in pounds.** If you work in lb, suggested dumbbell and kettlebell weights were still rounded to 2 kg, giving figures like 44.1 lb. They now round to the nearest 5 lb. Nothing changes if you work in kg.
+
 ## 0.90.11 — 11 Nov 2026
 - **Fixed: rep ranges told you to add 2.5 kg to a gripper.** Grippers and bands only come in fixed ratings. At the top of the range Ironlog now says to move to the next gripper (or band) up, and the **Use** button isn't offered for them.
 

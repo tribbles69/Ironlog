@@ -201,7 +201,7 @@ go up 2.5 kg. For a gripper the line reads "next time 42.5 kg".
 **Fix:** for `gripper` / `extension_band`, say "move up a gripper" with no
 number; leave the others to 3.3.
 
-### [ ] 3.3 Dumbbell loads round to 2 kg even in lb — Confirmed
+### [x] 3.3 (0.90.12) Dumbbell loads round to 2 kg even in lb — Confirmed
 **Where:** `roundLoadFor` (~14691).
 In lb the suggestion for a 20.3 kg dumbbell is 44.1 lb. Should be the
 nearest 5 lb.
