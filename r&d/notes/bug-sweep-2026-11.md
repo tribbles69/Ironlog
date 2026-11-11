@@ -169,6 +169,17 @@ A reload fixes it, because boot migrates.
 function` everywhere, and on the next start `load` throws and falls back to
 an empty log (1.4). Fixed by the validation in 1.2.
 
+### [x] 2.4 (0.90.6) A custom exercise with the same name as a built-in one stops the app opening — Confirmed
+Found during 00-B2, while starting 1.6.
+**Where:** `catalogue()` (~2400) threw on any id, name or alias clash, and
+every screen reads the catalogue.
+**Reproduce:** add a custom movement called "Bench Press" (or update to a
+version that ships a movement you had already made yourself) →
+`exercise catalogue invalid: two movements named "Bench Press"` everywhere.
+**Fix (shipped):** custom movements are added after the shipped ones and
+skipped on a clash; the shipped one keeps the name, the custom one stays
+reachable by id so its sets keep their history.
+
 ---
 
 ## Severity 3 — wrong numbers

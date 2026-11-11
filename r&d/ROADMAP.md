@@ -159,7 +159,7 @@ fix per commit, version bump, changelog entry.
 
 ### Bug fixes
 
-### [ ] 00-B1. Whole-app bug audit
+### [x] 00-B1. Whole-app bug audit — done 2026-11-11 against 0.90.0 (`r&d/notes/bug-sweep-2026-11.md`; about a fifth of `index.html` read line by line, the rest click-tested — the note says which)
 Read all of `index.html`, `slew-core.js`, `slew-video.js`, `sw.js` and the
 `r&d/tools` scripts. Write every bug found to
 `r&d/notes/bug-sweep-2026-11.md`, ranked by severity:
