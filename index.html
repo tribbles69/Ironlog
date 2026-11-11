@@ -2057,15 +2057,7 @@ async function load() {
   let parsed;
   try { parsed = JSON.parse(raw); } catch (e) { throw new Error(`The stored log isn't readable (${e.message})`); }
   {
-    const st = normaliseState(parsed);
-    /* 0.3.0: the `backfilled` boolean became `source`. Only 'backfill' is the plan's
-       prescription — imported history is real lifting and always counts toward PRs.
-       `backfilled` is left in place so an older export re-imported through Settings
-       still migrates the same way. */
-    st.workouts.forEach(w => { if (w && typeof w === 'object' && !w.source) w.source = w.backfilled ? 'backfill' : 'logged'; });
-    /* 0.22's import review saved a picked exercise as the string
-       "[object Object]"; as an alias it would steer every re-import there. */
-    Object.keys(st.exAliases || {}).forEach(k => { if (st.exAliases[k] === '[object Object]') delete st.exAliases[k]; });
+    const st = fixupState(normaliseState(parsed));   // source and alias repairs, shared with import
     /* 0.25.0: food logging left the app. An empty food log and its targets
        are dropped; one with entries is kept, unshown, until it's exported or
        removed from Clear data — so an update never loses someone's log. */
@@ -2320,7 +2312,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.90.2';
+const APP_VERSION = '0.90.3';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -13188,6 +13180,7 @@ function openSettings() {
       <button class="btn sm wide" id="stClear" style="margin-top:9px">Clear data…</button>
       <button class="btn sm danger wide" id="stWipe" style="margin-top:9px">Erase all data</button>
       <input type="file" id="stFile" accept="application/json" style="display:none">
+      <div id="stImpUndo"></div>
       <input type="file" id="stCsvFile" accept=".csv,text/csv" style="display:none">
     `,
     foot: `<span class="muted mono" style="font-size:11px;margin-right:auto">v${APP_VERSION}</span>
@@ -13312,7 +13305,18 @@ function openSettings() {
       $('#stFile', bg).onchange = e => {
         const f = e.target.files[0]; if (!f) return;
         importJSONFile(f);
+        e.target.value = '';   // so picking the same file twice still fires
       };
+      // the log an import replaced stays on the phone until it's put back or the next import
+      importUndoInfo().then(o => {
+        const host = $('#stImpUndo', bg);
+        if (!o || !host) return;
+        const c = logCounts(o.state);
+        host.innerHTML = `<div class="row between" style="gap:10px;align-items:center;margin-top:9px">
+          <div class="grow sub">A backup was imported ${esc(relTime(o.at))}. The log it replaced (${esc(logCountsLine(c))}) is still on this phone.</div>
+          <button class="btn xs" id="stImpUndoGo">Undo import</button></div>`;
+        $('#stImpUndoGo', bg).onclick = () => confirmDlg('Put back the log from before the import? What was imported, and anything logged since, is replaced by it.', () => undoImport(), 'Undo import');
+      });
       $('#stLiftoff', bg).onclick = () => $('#stCsvFile', bg).click();
       $('#stCsvFile', bg).onchange = e => {
         const f = e.target.files[0]; if (!f) return;
@@ -20046,31 +20050,104 @@ function exportJSON() {
   if (page === 'home') render();                  // the nudge goes away
 }
 
+/* Importing a backup replaces the whole log, so it is checked and asked about
+   first (bug sweep 1.2): the file has to be an Ironlog backup, the sheet shows
+   what's on the phone against what's in the file, and the log being replaced
+   is kept on this phone (IMPORT_UNDO_KEY) so Settings can put it back. An
+   empty phone has nothing to lose and isn't asked. */
+const IMPORT_UNDO_KEY = KEY + '.beforeImport';
+function logCounts(st) {
+  const ws = Array.isArray(st.workouts) ? st.workouts.filter(w => w && typeof w === 'object') : [];
+  const done = ws.filter(w => w.status === 'completed');
+  const dates = done.map(w => w.date).filter(d => typeof d === 'string').sort();
+  return { done: done.length, planned: ws.filter(w => w.status === 'planned').length,
+    checkins: Array.isArray(st.checkins) ? st.checkins.length : 0, last: dates.length ? dates[dates.length - 1] : null };
+}
+function logCountsLine(c) {
+  const bits = [`${c.done} logged session${c.done === 1 ? '' : 's'}${c.last && /^\d{4}-\d{2}-\d{2}$/.test(c.last) ? ` (latest ${fmtDate(c.last, { day: 'numeric', month: 'short', year: 'numeric' })})` : ''}`,
+    c.planned ? `${c.planned} planned` : '', `${c.checkins} check-in${c.checkins === 1 ? '' : 's'}`];
+  return bits.filter(Boolean).join(' · ');
+}
 function importJSONFile(f) {
   const rd = new FileReader();
+  rd.onerror = () => toast('Could not read that file');
   rd.onload = () => {
-    try {
-      const data = JSON.parse(rd.result);
-      if (!data.workouts) throw new Error('bad file');
-      /* Older backups still carry the food log (food left in 0.25.0).
-         Keep a food log already on this device; ignore the file's. */
-      const keepFood = S.foods && S.foods.length ? { foods: S.foods, t: ['kcalTarget', 'proteinTarget', 'carbTarget', 'fatTarget', 'foodExportedAt'].map(k => [k, S.settings[k]]) } : null;
-      // with none here, the file's is kept as it was — an export must come back whole (B7)
-      if (keepFood) {
-        delete data.foods;
-        if (data.settings) ['kcalTarget', 'proteinTarget', 'carbTarget', 'fatTarget', 'foodExportedAt'].forEach(k => { delete data.settings[k]; });
-      }
-      S = Object.assign(structuredClone(DEFAULT_STATE), data);
-      S.settings = Object.assign(structuredClone(DEFAULT_STATE.settings), data.settings || {});
-      if (keepFood) { S.foods = keepFood.foods; keepFood.t.forEach(([k, v]) => { if (v != null) S.settings[k] = v; }); }
-      save();
-      /* the backup carries its own skin — follow it, or the page would be
-         painted in one skin while the setting said the other */
-      applySkin(S.settings.skin);
-      closeAllModals(); render(); toast('Data imported', 'green');
-    } catch (err) { toast('Could not read that file'); }
+    let data;
+    try { data = JSON.parse(rd.result); } catch (err) { return toast('That isn\'t a backup Ironlog can read'); }
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return toast('That isn\'t an Ironlog backup');
+    if (data.format === SYNC_FORMAT && data.data) return toast('That\'s the Drive sync file — connect Google Drive in Settings to restore from it');
+    if (!Array.isArray(data.workouts)) return toast('That isn\'t an Ironlog backup — it has no list of sessions');
+    const here = logCounts(S), there = logCounts(data);
+    if (!here.done && !here.planned && !here.checkins && !S.active) return applyImportedState(data, false);
+    modal({
+      title: 'Replace your log?',
+      body: `<p style="margin:0 0 10px;color:var(--dim)">Importing a backup <b>replaces everything</b> on this phone with what's in the file. It doesn't merge.</p>
+        <div class="card tight" style="margin-bottom:8px"><div class="eyebrow">On this phone now</div><div>${esc(logCountsLine(here))}${S.active ? ' · a workout in progress' : ''}</div></div>
+        <div class="card tight" style="margin-bottom:10px"><div class="eyebrow">In the file</div><div>${esc(logCountsLine(there))}</div></div>
+        ${there.last && here.last && there.last < here.last ? `<p style="margin:0 0 10px;color:var(--gold)">The file is older than what's on this phone — sessions after ${esc(fmtDate(there.last, { day: 'numeric', month: 'short' }))} aren't in it.</p>` : ''}
+        <p class="sub" style="margin:0">What's on the phone now is kept so you can undo this from Settings → Data.</p>`,
+      foot: `<button class="btn ghost" data-close>Cancel</button><button class="btn danger" id="impGo">Replace</button>`,
+      onOpen: bg => { $('#impGo', bg).onclick = () => { closeModal(); applyImportedState(data, true); }; },
+    });
   };
   rd.readAsText(f);
+}
+/* The state fix-ups load() applies, shared with import so a backup from any
+   version lands the same way as a stored log. */
+function fixupState(st) {
+  /* 0.3.0: the `backfilled` boolean became `source`. Only 'backfill' is the plan's
+     prescription — imported history is real lifting and always counts toward PRs.
+     `backfilled` is left in place so an older export re-imported through Settings
+     still migrates the same way. */
+  st.workouts.forEach(w => { if (!w.source) w.source = w.backfilled ? 'backfill' : 'logged'; });
+  /* 0.22's import review saved a picked exercise as the string
+     "[object Object]"; as an alias it would steer every re-import there. */
+  Object.keys(st.exAliases || {}).forEach(k => { if (st.exAliases[k] === '[object Object]') delete st.exAliases[k]; });
+  return st;
+}
+async function applyImportedState(data, keepUndo) {
+  try {
+    /* Older backups still carry the food log (food left in 0.25.0).
+       Keep a food log already on this device; ignore the file's. */
+    const keepFood = S.foods && S.foods.length ? { foods: S.foods, t: ['kcalTarget', 'proteinTarget', 'carbTarget', 'fatTarget', 'foodExportedAt'].map(k => [k, S.settings[k]]) } : null;
+    // with none here, the file's is kept as it was — an export must come back whole (B7)
+    if (keepFood) {
+      delete data.foods;
+      if (data.settings && typeof data.settings === 'object') ['kcalTarget', 'proteinTarget', 'carbTarget', 'fatTarget', 'foodExportedAt'].forEach(k => { delete data.settings[k]; });
+    }
+    const next = fixupState(normaliseState(data));
+    if (keepFood) { next.foods = keepFood.foods; keepFood.t.forEach(([k, v]) => { if (v != null) next.settings[k] = v; }); }
+    else if (!(next.foods || []).length) dropFood(next);
+    // the log being replaced, set aside before anything is written over it
+    if (keepUndo && !(await storePut(IMPORT_UNDO_KEY, JSON.stringify({ at: Date.now(), state: S })))) return toast('Couldn\'t set your current log aside, so nothing was imported');
+    clearTimeout(saveTimer); savePending = false;
+    S = next;
+    bustCatalogue();
+    /* A backup from before 0.7.0 names exercises instead of pointing at them;
+       boot migrates those, and an import has to as well or every page throws
+       until the next restart (bug sweep 2.2). */
+    if ((S.schemaVersion || 1) < 2) migrateToV2(S);
+    bust();
+    save();
+    /* the backup carries its own skin — follow it, or the page would be
+       painted in one skin while the setting said the other */
+    applySkin(S.settings.skin);
+    closeAllModals(); go(S.active ? 'workout' : 'home'); toast('Backup imported', 'green');
+  } catch (err) { console.warn('import failed', err); toast('Could not import that file — nothing was changed'); }
+}
+async function importUndoInfo() {
+  try { const raw = await storeGet(IMPORT_UNDO_KEY); const o = raw ? JSON.parse(raw) : null; return o && o.state ? o : null; } catch (e) { return null; }
+}
+async function undoImport() {
+  const o = await importUndoInfo();
+  if (!o) return toast('Nothing to undo');
+  clearTimeout(saveTimer); savePending = false;
+  S = fixupState(normaliseState(o.state));
+  bustCatalogue(); bust();
+  save(); await flush();
+  try { await idb('readwrite', st => st.delete(IMPORT_UNDO_KEY)); } catch (e) { /* stays until the next import */ }
+  applySkin(S.settings.skin);
+  closeAllModals(); go(S.active ? 'workout' : 'home'); toast('Your log from before the import is back', 'green');
 }
 
 

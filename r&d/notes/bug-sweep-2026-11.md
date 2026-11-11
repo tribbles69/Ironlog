@@ -66,7 +66,7 @@ here since the last sync), clear its tombstone instead of obeying it. That
 needs no stored-data change. Also stamp check-ins, goals, meets and planned
 sessions with `mt` when they're saved.
 
-### [ ] 1.2 Importing a JSON backup replaces the whole log with no question and no checks — Confirmed
+### [x] 1.2 (0.90.3) Importing a JSON backup replaces the whole log with no question and no checks — Confirmed
 **Where:** `importJSONFile` (~20015); callers in Settings, the 98 File menu,
 and the share target (~4764).
 Any JSON file that has a `workouts` key is accepted and written over
@@ -155,7 +155,7 @@ Same code as 1.3: any exception in `load`, the migration or the first render
 leaves the veil up for good. Fixed by the rescue screen in 1.3. Listed here
 so it isn't lost if 1.3 is narrowed.
 
-### [ ] 2.2 Importing a backup made before 0.7.0 crashes every page until a reload — Confirmed
+### [x] 2.2 (0.90.3) Importing a backup made before 0.7.0 crashes every page until a reload — Confirmed
 **Where:** `importJSONFile` doesn't run the v1 → v2 migration that `boot`
 runs.
 **Reproduce:** import a file whose exercises have `name` and no `leaf` →
@@ -164,7 +164,7 @@ A reload fixes it, because boot migrates.
 **Fix:** run the same normalise-and-migrate step after an import (part of
 1.2).
 
-### [ ] 2.3 Import accepts `workouts` that isn't a list — Confirmed
+### [x] 2.3 (0.90.3) Import accepts `workouts` that isn't a list — Confirmed
 `{"workouts":{}}` passes the check, then `S.workouts.filter is not a
 function` everywhere, and on the next start `load` throws and falls back to
 an empty log (1.4). Fixed by the validation in 1.2.

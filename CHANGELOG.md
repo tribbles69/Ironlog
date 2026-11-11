@@ -13,6 +13,12 @@ rather than guessed.
 
 ---
 
+## 0.90.3 — 11 Nov 2026
+- **Changed: Import JSON asks before it replaces your log.** It used to overwrite everything the moment you picked a file. It now shows what's on the phone next to what's in the file, warns if the file is older, and waits for **Replace**.
+- **New: Undo import.** The log an import replaced is kept on the phone. Settings → Data shows an **Undo import** button until you use it or import again.
+- **Fixed: a wrong file could wipe the log.** Any JSON file with the right-looking heading was accepted. Files that aren't Ironlog backups are now turned away with nothing changed.
+- **Fixed: very old backups crashed every page until the app was restarted.** Backups from before 0.7.0 are now converted as they come in.
+
 ## 0.90.2 — 11 Nov 2026
 - **Fixed: a log that couldn't be read was quietly replaced by an empty one.** If the saved log was damaged, or the phone's storage didn't answer for a moment at start-up, Ironlog opened as if new and then saved that empty log over the real one. It now stops at the rescue screen instead and writes nothing until you choose.
 
