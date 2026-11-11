@@ -143,3 +143,71 @@ The reference-device table above is still empty.
 **Not covered:** a phone with no linear-acceleration reading falls back to
 the old path (`tilt: 0` in the debug trace). Pocket mode goes through the
 same correction; no pocket traces exist to check it against.
+
+## Bar-speed RIR (00-V2, 0.92.0)
+
+**What there is to check against: almost nothing.** The traces carry a
+"logged RIR" for each set, but until 0.92.0 Measure wrote its own estimate
+into an empty RIR box and nothing recorded that it had. So "RIR 9" on the
+17-rep AMRAP, and the 0 / 4.5 / 9 on the 5 kg bar, are the sensor's own
+guesses read back, not Aaron's ratings. Only two RIRs in the file can be
+taken as typed: OHP 35 × 9 at RIR 1 (the sensor missed a rep there, so it
+filled nothing) and incline 55 × 5 at RIR 1 (the sensor gave no estimate).
+Two points can't tune anything. What follows fixes what was plainly wrong
+and sets the app up to collect real ratings.
+
+**Where the old estimate was off** (`node "r&d/tools/vbt-rir.cjs"`):
+
+| set (9 Nov) | what it was | 0.91.0 | 0.92.0 |
+|---|---|---|---|
+| OHP 20 × 8 | warm-up | RIR 12 | 6+ |
+| OHP 35 × 16 | 60 s AMRAP | 0 | 0 |
+| OHP 35 × 9 | typed RIR 1 | 0 (missed rep seen) — hidden, the sensor found 8 of 9 | same |
+| Incline 20 × 10 | warm-up | none | 6+ |
+| Incline 30 × 8 | warm-up | 4.9 | 5.9 |
+| Incline 40 × 3 | warm-up | **0.2** | 3.9 |
+| Incline 60 × 5 | heavy, no RIR logged | 0.5 (near-stall seen) | same |
+| Incline 55 × 5 | RIR 1 | none (speed didn't drop) | none |
+| Incline 35 × 17 | AMRAP, close to failure | **12** | 2.9 |
+
+- **By set length:** long sets were the worst (17 reps → RIR 12). The old
+  method carried the whole set's average slow-down forward; reps slow
+  gently for most of a set and sharply at the end.
+- **By load:** heavier warm-ups read as near failure (40 × 3 → 0.2). The
+  phone under-reads slow reps (incline at 40 kg came out at 0.17–0.24 m/s,
+  slower than a warm-up triple really moves), and the old method compared
+  that with a typical failure speed that knows nothing about this phone.
+- **By lift / pocket vs bar:** not enough to say. Two lifts, all on the
+  bar, one day.
+- **False "missed rep":** on the 5 kg day a row that slowed 3% came out as
+  an observed failure (putting the bar down). That would also have been
+  stored as the lifter's failure speed for the lift.
+
+**The new method** (`vbtEstimateSet` in `index.html`; Slew itself is
+untouched):
+1. A missed rep or near-stall still gives RIR 0 or 0.5, but for a set of
+   three or more only if the set also lost at least 15% of its speed.
+2. Otherwise the set is compared with itself. `done = (velocity loss ÷ loss
+   at failure)^0.75`; `RIR = reps × (1 − done) ÷ done`. Loss at failure is
+   the lift's `vlF` — the lifter's own once measured, else the population
+   figure. This is the published shape (about half the possible reps done
+   at 40% of the failure loss, 85% at 80%), not something fitted here.
+3. If the lifter's own failure speed for the lift has been measured on this
+   phone, the last five reps' slope carried to that speed is averaged in.
+4. Under 8% loss, or fewer than three reps: no number. Over 6: shown as
+   "6+".
+5. Each rep's RIR now counts back from the set's, so the rep table and the
+   set figure can't disagree.
+
+**What gets written into the set.** Only an observed failure or near-stall,
+or an estimate for a lift calibrated to the lifter. Anything else is shown
+beside the set ("bar speed suggests RIR 3, a guide — type your own") and the
+RIR box is left alone. A sensor-filled RIR is now marked (`rpeFrom: 'vbt'`
+on the set; `rirFrom: 'sensor' | 'typed'` in the debug export), and the
+coach's "logged vs bar speed" comparison ignores those.
+
+**Still a guide.** The shape and the 8% / 15% / 6 limits are reasoned, not
+measured. To check it: Measure working sets and **type your own RIR on
+every one** (A4 item 23). Twenty typed sets across squat, bench and
+deadlift, a few of them to failure, would give a real error figure — and the
+sets to failure also calibrate `vlF` and the failure speed.

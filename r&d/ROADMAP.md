@@ -185,7 +185,7 @@ bar-speed debug traces (`r&d/data/vbt/` — start with its README) to correct fo
 speeds against the 9 Nov push day (80 of 81 reps found in 0.90.0 — must not
 get worse). Record before/after in `r&d/notes/vbt-validation.md`.
 
-### [ ] 00-V2. Bar-speed RIR accuracy
+### [x] 00-V2. Bar-speed RIR accuracy — shipped 0.92.0, **not validated** (the traces hold only two typed RIRs — the rest were the sensor's own estimates written back into the set; the two worst misreads are fixed, 35 × 17 from RIR 12 to ~3 and a 40 kg warm-up from 0.2 to ~4; estimates are now only written into a set when observed or calibrated, and sensor-filled RIRs are marked; `r&d/notes/vbt-validation.md`, `r&d/tools/vbt-rir.cjs`; **Aaron: A4 item 23** — type your RIR on measured sets so there's something to check against)
 Changelog 0.89.0 says bar-speed RIR is still a rough guide. Compare the
 estimated RIR against the RIR Aaron logged on the same sets (debug traces and
 history), find where it's off (lift, set length, pocket vs bar mode) and tune
@@ -435,6 +435,12 @@ these come back; report anything that fails):
     for: a first rep going missing (the new "over within 1.8 s of Start is
     setup" rule), and whether ranges of motion look the same rep to rep.
     Also answer the front-raise question in `r&d/notes/vbt-validation.md`.
+23. **Bar-speed RIR (0.92.0):** with Bar-speed debug on, Measure your
+    working sets for a couple of weeks and **type your own RIR on every
+    one** before looking at the sensor's. Ironlog no longer fills the box
+    unless it saw a missed rep or the lift is calibrated. Take one set per
+    main lift to failure. Then export the traces: `node
+    "r&d/tools/vbt-rir.cjs" <file>` prints the sensor's RIR beside yours.
 22. **Bug-sweep fixes (0.90.1–0.90.17):** import an old JSON backup — the
     **Replace your log?** sheet should show both counts, and Settings → Data
     should then offer **Undo import**. Change a rep in Edit session and tap

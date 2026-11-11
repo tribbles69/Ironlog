@@ -13,6 +13,14 @@ rather than guessed.
 
 ---
 
+## 0.92.0 — 11 Nov 2026
+- **Changed: bar-speed RIR is worked out differently.** It now reads how much speed you lost across the set, rather than comparing your speed with a typical lifter's. On the 9 Nov push day a 17-rep set taken close to failure had read RIR 12 and now reads about 3; a 40 kg warm-up triple had read RIR 0 and now reads about 4. It's still an estimate, and it hasn't been checked against enough real ratings yet.
+- **Changed: Measure no longer types RIR in for you**, unless it saw a missed rep or a near-stall, or the lift has been calibrated to you. Otherwise it shows its figure next to the set ("bar speed suggests RIR 3") and leaves the box for you.
+- **Changed: when your speed barely drops, it says "6+" or gives no number** instead of a precise-looking guess.
+- **Fixed: putting the bar down after an easy set could read as a missed rep** and RIR 0.
+- **Fixed: the rep-by-rep RIR column could disagree with the set's RIR.** It now counts back from it.
+- Still hidden when the sensor found fewer reps than you logged.
+
 ## 0.91.0 — 11 Nov 2026
 - **New: Measure corrects for the phone tilting.** The phone turns as the bar rolls in your hands, and a lot on curls, raises and presses, which made the bar's travel read short and uneven. Measure now tracks which way is down at every instant. On the 11 Nov accessory day, overhead press travel went from 17–40 cm rep to rep to a steady 44–58 cm, and two sets that had miscounted came out right.
 - **Changed: speeds on those lifts read higher than before**, because the travel was being under-read. They're still a guide until checked against a proper device.

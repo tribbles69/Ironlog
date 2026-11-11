@@ -240,7 +240,7 @@ give the same number.
 **Fix:** none suggested without a decision — any change moves existing PR
 and e1RM numbers. **For Aaron to decide; not part of 00-B2 unless he says.**
 
-### [ ] 3.8 Bar-speed RIR is unreliable on long sets
+### [x] 3.8 (0.92.0, not validated) Bar-speed RIR is unreliable on long sets
 Already known (35 × 17 read RIR 12). Belongs to **00-V2**; listed so the
 sweep is complete.
 
