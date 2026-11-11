@@ -13,6 +13,10 @@ rather than guessed.
 
 ---
 
+## 0.96.5 — 11 Nov 2026
+- **Changed: your places and your bar-speed calibration now sync through Google Drive.** Add or edit a gym — its kit, bars and plates — on one phone and it turns up on the other; delete it and it goes from both. The same goes for what Measure has learned about each lift. Where both phones changed the same one, the newer change wins.
+- Everything else in Settings — units, rest times, the plates at home and so on — still stays on the phone you set it on.
+
 ## 0.96.4 — 11 Nov 2026
 - **Fixed: older finished sessions from a program count towards it again.** Before 0.90.9, finishing a planned session from a program without block names dropped its link to the program, so the program's Completed count never moved. Those sessions are now linked back, where it's clear which program they came from, and a message says how many. A copy of your log from before the change is kept on the phone.
 

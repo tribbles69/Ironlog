@@ -325,11 +325,17 @@ update sheet was accepted, including mid-workout, and with a patchy signal
 one file can be new while another is old. **Fix:** don't refresh files in
 the versioned cache; only a new worker version brings new files.
 
-### [ ] 4.5 Settings made on one phone never reach another — by the spec, worth a look
+### [x] 4.5 (0.96.5) Settings made on one phone never reach another — by the spec, worth a look
 `drive-sync-spec.md` §4: local settings win except on an empty phone. So
 bar-speed calibration, places, rest times and plates don't travel after the
 first restore. Not a bug against the spec. **For Aaron:** sync at least
 `slewProfiles` and `places`?
+**Shipped (0.96.5, Aaron: yes, just those two):** `places` (by id) and
+`slewProfiles` (by lift) are synced collections now — `SYNC_FROM_SETTINGS`;
+they stay in `S.settings` on the phone and travel as their own collections,
+with tombstones and newest-wins by `mt` (stamped on save). An older file's
+copies inside `settings` are merged in. Spec §4 updated. Per lift, the newer
+calibration wins whole; two phones' failure observations aren't pooled.
 
 ### [x] 4.6 (0.90.8) First launch reloads about a second in — From the code
 The worker takes control on first install and the page reloads
@@ -357,9 +363,18 @@ import) → 1.1 (sync tombstones) → 1.5 → 1.4 → 1.6 → 1.7 → 1.8 → 3.
 3.3 → 3.5 → 3.9 → 4.x.
 
 **Waiting on Aaron before any fix:** 3.4 (already-backfilled sessions),
-3.6, 3.7, 3.10, the relink part of 1.8, and the question in 4.5.
+3.6, 3.7, 3.10, the relink part of 1.8, and the question in 4.5 — all
+decided 11 Nov and shipped 0.96.0–0.96.5 (3.10, 3.4, 3.6, 3.7, 1.8, 4.5).
 
-## Where 00-B2 stands (11 Nov 2026, 0.90.17)
+## Where 00-B2 stands (11 Nov 2026, 0.96.5)
+
+Aaron's six decisions shipped one per version, 0.96.0–0.96.5. Every
+stored-data change runs through one runner (`runDataMigrations`): once per
+log (`S.migrations`), idempotent, the log saved under
+`ironlog.v1.before-<migration id>` before anything changes. Left in 00-B2:
+the stale validator checks in 4.7.
+
+### Earlier (0.90.17)
 
 Everything in severity 1 and 2 is fixed, and everything in 3 and 4 that
 doesn't need a decision. Left: the six items above (Aaron), 3.8 and 3.9

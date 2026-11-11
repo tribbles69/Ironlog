@@ -1709,8 +1709,15 @@ const SYNC_SETS = {
   /* The lifter's own exercises. Left out until 0.90.7, so a phone restored
      from Drive had the sessions but not the names (bug sweep 1.6). */
   customMovements: x => x.id,
+  places: x => x.id,
 };
-const SYNC_MAPS = ['exAliases', 'programStarts', 'coach', 'programNames', 'exNotes'];
+const SYNC_MAPS = ['exAliases', 'programStarts', 'coach', 'programNames', 'exNotes', 'slewProfiles'];
+/* Two settings sync record by record like the collections (bug sweep 4.5):
+   places (kit, bars and plates per gym, keyed by id) and the bar-speed
+   calibration (slewProfiles, keyed by lift). They live in S.settings on the
+   phone and travel as their own collections in the file, with deletes and
+   the newest-wins rule. Every other setting stays per phone (spec §4). */
+const SYNC_FROM_SETTINGS = ['places', 'slewProfiles'];
 const SYNC_LOCAL_SETTINGS = ['lastSeenVersion', 'backupSnoozeUntil', 'lastExportAt'];
 
 /* Device-only bookkeeping, outside S so it never syncs itself:
@@ -1731,8 +1738,9 @@ function stampOf(x) { return x && typeof x === 'object' ? Math.max(+x.mt || 0, +
 
 function syncLocalData() {
   const d = {};
-  Object.keys(SYNC_SETS).forEach(k => { d[k] = S[k] || []; });
-  SYNC_MAPS.forEach(k => { d[k] = S[k] || {}; });
+  const src = k => SYNC_FROM_SETTINGS.includes(k) ? S.settings[k] : S[k];
+  Object.keys(SYNC_SETS).forEach(k => { d[k] = src(k) || []; });
+  SYNC_MAPS.forEach(k => { d[k] = src(k) || {}; });
   return d;
 }
 function syncKnown(d) {
@@ -1936,7 +1944,12 @@ async function driveSync(interactive) {
     if (remote && remote.format !== SYNC_FORMAT) throw new Error(`"${SYNC_FILE}" in your Drive isn't an Ironlog sync file`);
     if (remote && remote.v > SYNC_V) throw new Error('Your Drive backup was made by a newer Ironlog — update this one first');
     const local = syncLocalData(), now = Date.now();
-    let m = mergeSync(local, remote && remote.data, remote && remote.tomb, meta.known, now);
+    /* A file written before 0.96.5 has places and the calibration only inside
+       its settings: read them from there, so they merge in rather than read
+       as missing (no tombstones come with them). */
+    const rdata = remote && remote.data ? { ...remote.data } : null;
+    if (rdata && rdata.settings) SYNC_FROM_SETTINGS.forEach(k => { if (rdata[k] === undefined && rdata.settings[k] != null) rdata[k] = rdata.settings[k]; });
+    let m = mergeSync(local, rdata, remote && remote.tomb, meta.known, now);
     // safety valve: a big deletion here is asked about, never assumed
     const knownN = Object.values(meta.known || {}).reduce((n, a) => n + a.length, 0);
     if (m.localDeletes.length > 5 && m.localDeletes.length > knownN / 4) {
@@ -1954,10 +1967,12 @@ async function driveSync(interactive) {
           },
         });
       });
-      if (keep) m = mergeSync(local, remote && remote.data, remote && remote.tomb, meta.known, now, { keepMissing: true });
+      if (keep) m = mergeSync(local, rdata, remote && remote.tomb, meta.known, now, { keepMissing: true });
     }
     const before = { w: S.workouts.length, c: S.checkins.length };
-    Object.assign(S, m.data);
+    const merged = { ...m.data }, fromSettings = {};
+    SYNC_FROM_SETTINGS.forEach(k => { fromSettings[k] = merged[k]; delete merged[k]; });
+    Object.assign(S, merged);
     bustCatalogue(); healCustomMovements();   // custom exercises may have come in; ones a backup never carried are rebuilt from the sets
     /* a phone that hasn't updated yet can still send sets under an old custom
        id; they move over the same way (and only if there are any) */
@@ -1967,6 +1982,8 @@ async function driveSync(interactive) {
       const keep = {}; SYNC_LOCAL_SETTINGS.forEach(k => { if (k in S.settings) keep[k] = S.settings[k]; });
       S.settings = Object.assign(structuredClone(DEFAULT_STATE.settings), remote.data.settings, keep);
     }
+    SYNC_FROM_SETTINGS.forEach(k => { S.settings[k] = fromSettings[k]; });
+    if (S.settings.place && !places().some(p => p.id === S.settings.place)) S.settings.place = null;   // deleted on another phone
     if (remote && remote.data && remote.data.aiKey && !aiKey()) { try { localStorage.setItem('ironlog.anthropicKey', remote.data.aiKey); } catch (e) { /* no storage */ } }
     const settings = { ...S.settings }; SYNC_LOCAL_SETTINGS.forEach(k => delete settings[k]);
     const data = { ...syncLocalData(), settings, ...(meta.includeKey && aiKey() ? { aiKey: aiKey() } : {}) };
@@ -2358,7 +2375,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.96.4';
+const APP_VERSION = '0.96.5';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -11880,7 +11897,7 @@ function addMvtObservation(liftId, v) {
 }
 function saveSlewProfile(liftId, patch) {
   S.settings.slewProfiles = S.settings.slewProfiles || {};
-  S.settings.slewProfiles[liftId] = { ...(S.settings.slewProfiles[liftId] || {}), ...patch };
+  S.settings.slewProfiles[liftId] = { ...(S.settings.slewProfiles[liftId] || {}), ...patch, mt: Date.now() };   // mt: newest wins in Drive sync (4.5)
   save();
 }
 
@@ -14595,7 +14612,7 @@ function openPlaceEdit(src) {
       $('#peSave', bg).onclick = () => {
         const name = $('#peName', bg).value.trim();
         if (!name) return toast('Give the place a name');
-        const out = { id: p.id, name, kit: ['bodyweight', ...all.filter(v => v !== 'bodyweight' && kit.has(v))] };
+        const out = { id: p.id, name, kit: ['bodyweight', ...all.filter(v => v !== 'bodyweight' && kit.has(v))], mt: Date.now() };   // mt: newest wins in Drive sync (4.5)
         if (own) {
           const nb = [...bg.querySelectorAll('#peInv [data-bn]')].map((el, i) => ({
             name: el.value.trim() || `Bar ${i + 1}`,
@@ -16901,7 +16918,7 @@ function coAsk(st, done) {
 function coAskPlace(st, A, finish) {
   const gym = st.which === 'gym';
   const make = (name, kit, extras) => {
-    const p = { id: uid(), name, kit: ['bodyweight', ...kit].filter((v, i, a) => a.indexOf(v) === i), ...(extras ? { extras } : {}) };
+    const p = { id: uid(), name, kit: ['bodyweight', ...kit].filter((v, i, a) => a.indexOf(v) === i), ...(extras ? { extras } : {}), mt: Date.now() };
     S.settings.places = [...places(), p];
     return p.id;
   };

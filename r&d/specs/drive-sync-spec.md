@@ -79,6 +79,14 @@ Records are keyed by `id`:
    than the record's stamp. An edit made after the deletion survives.
 4. **Settings.** Local settings win, except on a device with no sessions and
    no check-ins (a new phone), where the file's settings are taken.
+   Two exceptions since 0.96.5 (bug sweep 4.5): **places** (`settings.places`,
+   keyed by id) and the **bar-speed calibration** (`settings.slewProfiles`,
+   keyed by lift) sync record by record, like a collection — deletes,
+   tombstones and newest-wins by `mt`, which saving either now stamps. They
+   travel as `data.places` and `data.slewProfiles` in the file (and still
+   inside `data.settings`, for older versions). A file without them is read
+   from its `settings`. If the place this phone is "at" was deleted on
+   another, it lets go of it. Everything else in settings stays per phone.
 5. **Safety valve.** If this device would delete more than 5 records and more
    than a quarter of what it knew, it asks before writing:
    - *Remove from Drive too*, or
