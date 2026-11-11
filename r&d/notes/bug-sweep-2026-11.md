@@ -131,7 +131,7 @@ save before it reloads.
 **Fix:** don't auto-restart while a sheet is open (show the toast and wait,
 as for a live workout); `await flush()` before every reload.
 
-### [ ] 1.8 Finishing a plan session drops its link to the plan — Confirmed
+### [x] 1.8 (0.90.9, new sessions only — relinking old ones waits on Aaron) Finishing a plan session drops its link to the plan — Confirmed
 **Where:** `finishWorkout` (~7566): `prog` is only kept when the session has
 a `block`.
 A planned session from a program with no block names is saved without

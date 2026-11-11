@@ -2337,7 +2337,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.90.8';
+const APP_VERSION = '0.90.9';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -7655,7 +7655,10 @@ function finishWorkout(force) {
   const mins = a.start ? Math.max(1, Math.round((Date.now() - a.start) / 60000)) : 0;
   const done = {
     id: a.id, date: a.date, name: a.name, status: 'completed', source: 'logged',
-    ...(a.off ? { off: true } : {}), ...(a.block ? { block: a.block, prog: a.prog } : {}), ...(a.place ? { place: a.place } : {}),
+    /* prog is kept whenever the session came from a plan — it used to be kept only
+       alongside a block name, so a plan with no block names never counted its
+       finished sessions (bug sweep 1.8) */
+    ...(a.off ? { off: true } : {}), ...(a.prog ? { prog: a.prog } : {}), ...(a.block ? { block: a.block } : {}), ...(a.place ? { place: a.place } : {}),
     exercises: logged, start: a.start, end: Date.now(), ...(hasFeel(a) ? { feel: a.feel } : {}),
     summary: { mins, prs, volume: logged.reduce((t, e) => t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + s.w * s.r, 0), 0) },
   };

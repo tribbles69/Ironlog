@@ -13,6 +13,9 @@ rather than guessed.
 
 ---
 
+## 0.90.9 — 11 Nov 2026
+- **Fixed: finished sessions didn't count towards their plan.** A session started from a plan that has no named blocks (most coach-built and imported plans) lost its link to the plan when you finished it, so the plan's "Completed" count stayed at zero. New sessions now keep the link. Sessions already finished aren't changed.
+
 ## 0.90.8 — 11 Nov 2026
 - **Fixed: an update could restart the app while you were typing.** With no workout running, a new version restarted the app a second after it downloaded, even with a sheet open, and whatever you'd typed into an edit or a check-in was lost. An update now waits while any sheet is open and applies the next time you open the app.
 - **Fixed: the last change could be missed when updating.** Ironlog now finishes saving before it restarts for an update.
