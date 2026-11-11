@@ -78,7 +78,7 @@ current log is gone on the next save (400 ms).
 what's in the file against what's on the phone, ask before replacing, and
 keep the previous state under a second storage key until the next export.
 
-### [ ] 1.3 A bad import can lock the app on "Loading your log…" for good — Confirmed
+### [x] 1.3 (0.90.1) A bad import can lock the app on "Loading your log…" for good — Confirmed
 **Where:** `load` (~2010) and `boot` (~21206).
 `load` merges whatever was stored over the defaults, so a `null` collection
 stays `null`; the first render then throws inside `boot`, which has no error
@@ -91,7 +91,7 @@ back to its default; the same function used by import in 1.2). Wrap `boot` in
 a try/catch that shows a rescue screen: the error, "Save a copy of my data"
 (the raw stored string), and "Start fresh".
 
-### [ ] 1.4 Unreadable stored data is silently replaced by an empty log — From the code
+### [ ] 1.4 Unreadable stored data is silently replaced by an empty log — Confirmed
 **Where:** `load` catch (~2039) and `storeGet` (~1532).
 If the stored JSON won't parse, `load` returns an empty state and the next
 save writes it over the original. If IndexedDB fails to *read* (blocked, a
@@ -150,7 +150,7 @@ first**.)
 Syntax check clean; smoke test and click-through found nothing on a fresh
 install. What's here comes from imports and from the missing safety net.
 
-### [ ] 2.1 Boot has no safety net
+### [x] 2.1 (0.90.1) Boot has no safety net
 Same code as 1.3: any exception in `load`, the migration or the first render
 leaves the veil up for good. Fixed by the rescue screen in 1.3. Listed here
 so it isn't lost if 1.3 is narrowed.

@@ -13,6 +13,10 @@ rather than guessed.
 
 ---
 
+## 0.90.1 — 11 Nov 2026
+- **Fixed: the app could get stuck on "Loading your log…" for good.** A backup file with a gap in it (a list missing or empty in the wrong way) could be imported and then stop the app opening at all. Ironlog now repairs those gaps when it opens.
+- **New: a rescue screen.** If your log ever can't be opened, Ironlog now says so instead of hanging, changes nothing, and gives you a **Save a copy of my data** button before anything else.
+
 ## 0.90.0 — 9 Nov 2026
 - **Fixed: Measure missed the slow last reps of a long set.** Reps that slowed right down near the end of an AMRAP read short and were thrown away as too small. On the 9 Nov push day it now finds all 16 reps of the OHP AMRAP (80 of 81 across the session).
 - **New: short-range lifts can be measured.** Measure now counts reps down to 4 cm of travel, so calf raises and other short movements register. In a set of 4 or more, a "rep" much shorter than the rest (lifting the bar off the hooks, a fidget) is still left out. Sets of 1–3 keep the usual minimum.

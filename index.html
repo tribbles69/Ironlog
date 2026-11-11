@@ -2006,6 +2006,27 @@ function fmtBytes(n) { return n >= 1048576 ? `${(n / 1048576).toFixed(1)} MB` : 
 
 let S = structuredClone(DEFAULT_STATE);   // replaced by the real state in boot()
 
+/* Stored or imported state, laid over the defaults with every collection back
+   to the type the app expects. A list that came back as null (a hand-edited
+   or half-written file) used to throw in the first render and leave the app
+   on its loading screen for good (bug sweep 1.3). Only the top level is
+   touched: a record inside a list is never rewritten here. */
+function normaliseState(parsed) {
+  const plain = v => !!v && typeof v === 'object' && !Array.isArray(v);
+  const src = plain(parsed) ? parsed : {};
+  const st = Object.assign(structuredClone(DEFAULT_STATE), src);
+  Object.keys(DEFAULT_STATE).forEach(k => {
+    const d = DEFAULT_STATE[k];
+    if (Array.isArray(d)) st[k] = Array.isArray(st[k]) ? st[k].filter(x => x != null) : [];
+    else if (plain(d)) { if (!plain(st[k])) st[k] = structuredClone(d); }
+    else if (d === null && st[k] != null && !plain(st[k])) st[k] = null;   // active, fitDraft
+  });
+  // settings is merged a level deeper, so a key added to DEFAULT_STATE later still gets its default
+  st.settings = Object.assign(structuredClone(DEFAULT_STATE.settings), plain(src.settings) ? src.settings : {});
+  ['customMovements', 'foods'].forEach(k => { if (k in st && !Array.isArray(st[k])) delete st[k]; });   // optional lists, read with || []
+  return st;
+}
+
 let freshInstall = false;   // no stored state at boot: What's new has nothing to tell
 async function load() {
   const raw = await storeGet(KEY);
@@ -2019,10 +2040,7 @@ async function load() {
     return st;
   }
   try {
-    const parsed = JSON.parse(raw);
-    const st = Object.assign(structuredClone(DEFAULT_STATE), parsed);
-    // settings is merged a level deeper, so a key added to DEFAULT_STATE later still gets its default
-    st.settings = Object.assign(structuredClone(DEFAULT_STATE.settings), parsed.settings || {});
+    const st = normaliseState(JSON.parse(raw));
     /* 0.3.0: the `backfilled` boolean became `source`. Only 'backfill' is the plan's
        prescription — imported history is real lifting and always counts toward PRs.
        `backfilled` is left in place so an older export re-imported through Settings
@@ -2053,7 +2071,9 @@ function save() {
   saveTimer = setTimeout(flush, 400);
 }
 
+let bootFailed = false;   // the rescue screen is up: nothing may be written over what's stored
 async function flush() {
+  if (bootFailed) return;
   if (!savePending) return;
   savePending = false;
   clearTimeout(saveTimer);
@@ -2286,7 +2306,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.90.0';
+const APP_VERSION = '0.90.1';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -21203,12 +21223,13 @@ if (window.visualViewport) {
 
 /* First paint waits on the initial read. Without this the app would render an
    empty log for a frame and then flash the real one in over the top. */
-async function boot() {
+async function bootApp() {
   /* The inline script in <head> has already put the skin on <html> from the
      localStorage mirror, so the veil can be painted in the right colours here
      and the stored setting only has to confirm it below. */
   const w98 = document.documentElement.dataset.skin === 'win98';
   const veil = document.createElement('div');
+  veil.id = 'bootVeil';
   veil.style.cssText = 'position:fixed;inset:0;z-index:9999;display:grid;place-items:center;' +
     (w98 ? 'background:#000000;color:#00ff41;font:700 14px/1.4 "Cascadia Mono",Consolas,ui-monospace,monospace;letter-spacing:.08em'
          : 'background:#0d0f14;color:#8b93a7;font:500 15px/1.4 system-ui,-apple-system,sans-serif');
@@ -21249,6 +21270,60 @@ async function boot() {
   veil.remove();
   requestPersistence().then(storageStatus);
 }
+
+/* If opening the log throws — in the read, the migration or the first paint —
+   the loading screen used to stay up for good, with no way to reach Export
+   (bug sweep 1.3 / 2.1). Now it says so, writes nothing, and offers a copy of
+   exactly what is stored. Plain DOM and inline styles: nothing here may lean
+   on the parts of the app that just failed. */
+async function bootRescue(err) {
+  bootFailed = true;
+  clearTimeout(saveTimer);
+  console.error('Ironlog could not open the log', err);
+  const veil = document.getElementById('bootVeil'); if (veil) veil.remove();
+  let raw = null;
+  try { raw = await storeGet(KEY); } catch (e) { /* shown as nothing to save */ }
+  const msg = String((err && (err.stack || err.message)) || err || 'unknown error').split('\n').slice(0, 3).join(' · ');
+  const btn = 'display:block;width:100%;min-height:48px;margin:10px 0 0;padding:12px 14px;border-radius:10px;border:1px solid #3a4152;background:#1a1e28;color:#e8ecf3;font:600 15px/1.2 system-ui,-apple-system,sans-serif';
+  const box = document.createElement('div');
+  box.id = 'bootRescue';
+  box.setAttribute('role', 'alertdialog'); box.setAttribute('aria-labelledby', 'brTitle'); box.setAttribute('aria-describedby', 'brBody');
+  box.style.cssText = 'position:fixed;inset:0;z-index:9999;overflow:auto;padding:28px 18px;background:#0d0f14;color:#e8ecf3;font:500 15px/1.5 system-ui,-apple-system,sans-serif';
+  box.innerHTML = `<div style="max-width:460px;margin:0 auto">
+    <h1 id="brTitle" style="font-size:20px;margin:0 0 10px">Ironlog couldn't open your log</h1>
+    <p id="brBody" style="margin:0 0 6px">${raw ? 'Your data is still stored on this phone and nothing has been deleted or changed. Save a copy of it first, then try again.' : 'Nothing could be read from this phone\'s storage. Try again; if this keeps happening, restore from your last backup.'}</p>
+    ${raw ? `<button id="brSave" style="${btn};background:#ff5c35;border-color:#ff5c35;color:#111">Save a copy of my data</button>` : ''}
+    <button id="brRetry" style="${btn}">Try again</button>
+    <button id="brFresh" style="${btn};color:#ff8f8f">Start with an empty log…</button>
+    <p style="margin:16px 0 4px;color:#8b93a7;font-size:13px">What went wrong (v${esc(APP_VERSION)}):</p>
+    <p style="margin:0;color:#8b93a7;font:12px/1.4 ui-monospace,Consolas,monospace;word-break:break-word">${esc(msg)}</p>
+  </div>`;
+  document.body.appendChild(box);
+  const q = id => box.querySelector('#' + id);
+  let saved = false;
+  if (q('brSave')) q('brSave').onclick = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([raw], { type: 'application/json' }));
+    a.download = `ironlog-rescue-${iso()}.json`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+    saved = true;
+    q('brSave').textContent = 'Saved — check your downloads';
+  };
+  q('brRetry').onclick = () => location.reload();
+  q('brFresh').onclick = async () => {
+    if (!confirm(raw && !saved ? 'You haven\'t saved a copy yet. Start with an empty log anyway? What is stored now is set aside on this phone, not deleted, but it can only be got back with help.'
+      : 'Start with an empty log? What is stored now is set aside on this phone, not deleted.')) return;
+    try {
+      if (raw) await idb('readwrite', st => st.put(raw, KEY + '.rescue'));   // set aside, never thrown away
+      const fresh = structuredClone(DEFAULT_STATE); fresh.schemaVersion = 2; fresh.settings.lastSeenVersion = APP_VERSION;
+      await idb('readwrite', st => st.put(JSON.stringify(fresh), KEY));
+      location.reload();
+    } catch (e) { alert('Could not write to storage: ' + ((e && e.message) || e)); }
+  };
+  q(raw ? 'brSave' : 'brRetry').focus();
+}
+function boot() { return bootApp().catch(bootRescue); }
 
 boot();
 
