@@ -233,11 +233,17 @@ the wrong kg for warm-ups because of this — check before using them in
 **Fix:** use the set the reading will attach to (first not-done set without
 a reading), as `attachVbt` does.
 
-### [ ] 3.6 Two sessions on the same day can both claim the same PR — From the code
+### [x] 3.6 (0.96.2) Two sessions on the same day can both claim the same PR — From the code
 **Where:** `prsFor` (~4287) reads history strictly *before* the session's
 date, so a second session that day doesn't see the first.
 **Fix:** compare by date then end time. **Would change which sessions show
 a PR badge — ask Aaron.**
+**Shipped (0.96.2, Aaron's call):** `isBefore(w, before)` — `before` is a
+date as before, or a session: earlier days, plus the same day with an earlier
+finish (`end`, else `start`). A session with no time sorts first on its day;
+two with none don't see each other. Used by `historyFor`, `holdRecords` and
+`shapeRecords` from `prsFor` and the PR explainer. Plausibility and the other
+date callers are unchanged.
 
 ### [ ] 3.7 e1RM drops when a set is logged easier than RIR 5 — From the code
 **Where:** `e1rm` (~2116): RIR counts only for RPE 5–10.

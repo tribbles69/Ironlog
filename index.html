@@ -2350,7 +2350,7 @@ function leafMuscles(leaf) {
   return out;
 }
 
-const APP_VERSION = '0.96.1';
+const APP_VERSION = '0.96.2';
 
 /* ---------------- exercise library ---------------- */
 const LIB = {
@@ -2601,11 +2601,25 @@ function isIso(e) { return !!(e && e.iso === true); }
    held 20 s and a bodyweight hold of 40 s are different records, and the
    heavier one must be able to be one. `best` is the longest hold at any
    weight, `heaviest` the most load ever held. */
+/* "History before a session" (bug sweep 3.6). `before` is a date — sessions
+   on earlier days — or a session itself: earlier days, plus sessions earlier
+   the same day, by when they finished. A second session that day used to read
+   only the days before, so both could claim the same PR. A session with no
+   finish time (imported, backfilled) sorts first on its day; two with none
+   don't see each other, as before. */
+function sessionEndAt(w) { return +w.end || +w.start || 0; }
+function isBefore(w, before) {
+  if (!before) return true;
+  if (typeof before === 'string') return w.date < before;
+  if (w.date !== before.date) return w.date < before.date;
+  if (w.id === before.id) return false;
+  return sessionEndAt(w) < sessionEndAt(before);
+}
 function holdRecords(key, before, skipId) {
   const byWeight = {};
   let best = 0, heaviest = 0, n = 0;
   for (const w of S.workouts) {
-    if (w.status !== 'completed' || (before && w.date >= before) || (skipId && w.id === skipId)) continue;
+    if (w.status !== 'completed' || !isBefore(w, before) || (skipId && w.id === skipId)) continue;
     for (const e of w.exercises) {
       if (!e.leaf || exKey(e) !== key) continue;
       for (const s of e.sets) {
@@ -2693,7 +2707,7 @@ function seriesOf(e) {
 function shapeRecords(key, kind, before, skipId) {
   const R = { n: 0, heavy: 0, fast: {}, far: {}, most: {}, series: null };
   S.workouts.forEach(w => {
-    if (w.status !== 'completed' || (before && w.date >= before) || (skipId && w.id === skipId)) return;
+    if (w.status !== 'completed' || !isBefore(w, before) || (skipId && w.id === skipId)) return;
     w.exercises.forEach(e => {
       if (!e.leaf || exKey(e) !== key || kindOf(e) !== kind) return;
       if (kind === 'series') {
@@ -2750,7 +2764,7 @@ function shapeBeat(kind, R, s) {
 }
 /* PRs from the new shapes (and holds) for one entry, as session PR records:
    { name, key, label, what }. Compared against history before `before` (a
-   date), leaving out the session itself. Reps PRs stay in prsFor. */
+   date or a session, see isBefore), leaving out the session itself. Reps PRs stay in prsFor. */
 function shapePRs(e, before, skipId) {
   const kind = kindOf(e);
   if (kind === 'reps' || !e.leaf) return [];
@@ -4326,11 +4340,11 @@ function openBodySkins() {
 
 /* ---------------- PR engine ---------------- */
 // Returns every logged (completed, non-warmup) set for an exercise, oldest first.
-// `before` (ISO date) limits it to sessions dated earlier — "history as it stood".
+// `before` (ISO date, or a session — see isBefore) limits it to "history as it stood".
 // A set is a set when it has reps; weight may be 0 (pull ups, dips, planks).
 function historyFor(key, before) {
   const out = [];
-  S.workouts.filter(wo => wo.status === 'completed' && (!before || wo.date < before)).forEach(wo => {
+  S.workouts.filter(wo => wo.status === 'completed' && isBefore(wo, before)).forEach(wo => {
     // weight × reps only: capped sets, carries and races keep their own records
     wo.exercises.filter(e => exKey(e) === key && inRepsPool(e)).forEach(e => {
       e.sets.filter(s => s.done && isPRSet(s) && s.r > 0).forEach(s => {
@@ -4434,11 +4448,11 @@ function prsFor(wo) {
   if (_prCache.has(wo.id)) return _prCache.get(wo.id);
   const out = [];
   wo.exercises.forEach(e => {
-    out.push(...shapePRs(e, wo.date, wo.id));   // holds, carries, races, caps, series
+    out.push(...shapePRs(e, wo, wo.id));   // holds, carries, races, caps, series
     if (!inRepsPool(e)) return;
     const sets = e.sets.filter(s => s.done && isPRSet(s) && s.r > 0);
     if (!sets.length) return;
-    const st = statsFor(exKey(e), wo.date);
+    const st = statsFor(exKey(e), wo);   // earlier days, and earlier the same day (3.6)
     if (!st) return;
     const best = bestSetOf(sets);
     if (beatsBest(st, best.w, best.r, best.rpe)) {
@@ -5665,8 +5679,8 @@ const WHY = {
     sets.forEach((s, k) => t.step(`Set ${k + 1}`, setLine(s), s.w > 0 ? `e1RM ${wt(e1rm(s.w, s.r, s.rpe))}` : 'bodyweight'));
     const best = sets.length ? bestSetOf(sets) : null;
     if (best) t.step('Best set', setLine(best), best.w > 0 ? 'highest e1RM' : 'most reps (nothing loaded)');
-    const st = statsFor(p.key, wo.date);
-    t.head('History before this date');
+    const st = statsFor(p.key, wo);
+    t.head('History before this session');
     if (!st) return t.note('Nothing logged before: a first session sets the marks, it isn\'t a PR.');
     t.step('Sets counted', st.totalSets, S.settings.prCountEst !== false ? 'backfilled sets count (Settings)' : 'backfilled sets left out (Settings)');
     let mine;
