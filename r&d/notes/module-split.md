@@ -313,7 +313,7 @@ One commit each. After every one: the full baseline, `node --check` on every
 - [x] **12. `js/workout.js`.**
 - [x] **13. `js/ui.js`.** What is left of `app.js` is boot: rename it
   `js/main.js`.
-- [ ] **14. Stylesheets out** (`css/app.css`, `css/skin98.css`), if wanted
+- [x] **14. Stylesheets out** (`css/app.css`, `css/skin98.css`), if wanted
   (question 3). `index.html` is then about 5 kB.
 - [ ] **15. Docs.** `CLAUDE.md`, `r&d/README.md` and the roadmap's standing
   rules say "the app is a single large `index.html`" and name the

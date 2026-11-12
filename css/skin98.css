@@ -1,0 +1,552 @@
+/* ============================================================
+   WINDOWS 98 SKIN
+
+   Everything below is scoped to html[data-skin="win98"], so with the skin off
+   not one declaration here can reach the page. It is deliberately one
+   contiguous block appended after the base sheet rather than edits woven
+   through it: the base sheet stays the thing you read to understand the app,
+   and the skin stays a thing you could delete in one selection.
+
+   The look is the chrome of Windows 98 — grey faces, hard bevels, navy title
+   bars, square everything — wrapped around black CRT panels, because a set
+   table read at arm's length mid-lift wants high contrast, and black-on-grey
+   at 11px does not give you that.
+
+   Bevels are box-shadow insets rather than border-style:outset. Two reasons:
+   outset renders differently in every engine, and a border would consume
+   layout box, so every element would shift by 2px when the skin flipped.
+   An inset shadow paints over the padding and moves nothing.
+   ============================================================ */
+html[data-skin="win98"]{
+  /* the 98 system palette */
+  --w-face:#c0c0c0;   /* button face   */
+  --w-hi:#ffffff;     /* button highlight */
+  --w-sh:#808080;     /* button shadow */
+  --w-dk:#000000;     /* dark shadow   */
+  --w-navy:#000080;   /* active title / selection */
+  --w-navy2:#1084d0;
+  --w-lcd:#00ff41;    /* the green readout */
+  --w-amber:#ffb000;
+  /* A swatch, not ink. --gold is surface-aware and darkens on a grey dialog
+     face, which is right for text and wrong for something painted gold with
+     black written on it — that would darken the paint and keep the ink. */
+  --w-gold:#ffe000;
+
+  --w-raise:inset 1px 1px 0 var(--w-hi), inset -1px -1px 0 var(--w-dk),
+            inset 2px 2px 0 var(--w-face), inset -2px -2px 0 var(--w-sh);
+  --w-sink: inset 1px 1px 0 var(--w-sh), inset -1px -1px 0 var(--w-hi),
+            inset 2px 2px 0 var(--w-dk), inset -2px -2px 0 var(--w-face);
+  --w-sink-thin:inset 1px 1px 0 var(--w-sh), inset -1px -1px 0 var(--w-hi);
+
+  --w-ui:Tahoma,"MS Sans Serif",Verdana,Geneva,sans-serif;
+  --w-mono:"Cascadia Mono",Consolas,"DejaVu Sans Mono","Liberation Mono",ui-monospace,monospace;
+
+  /* fixed chrome heights — the sticky stack below is computed from these */
+  --w-title-h:30px;
+  --w-menu-h:26px;
+  --w-lcd-h:62px;
+
+  /* the base sheet's own tokens, re-pointed. Most of the app follows from
+     these alone; the explicit overrides further down are only for the places
+     that hardcoded a colour instead of reaching for a variable. */
+  --bg:#000; --bg2:#000; --card:#000; --card2:#0b0b0b;
+  --line:#808080; --line2:#c0c0c0;
+  --txt:#ffffff; --dim:#c0c0c0; --dim2:#8a8a8a;
+  --accent:#ff2020; --accent2:#ff6b6b;
+  --gold:#ffe000; --green:#00ff41; --blue:#4fc3ff; --purple:#c8a2ff; --red:#ff2020;
+  --radius:0;
+  --nav-h:76px;
+}
+
+/* 1. Nothing is rounded in 1998. One rule, rather than unpicking 43
+      border-radius declarations that the default skin still wants. */
+html[data-skin="win98"] *{border-radius:0 !important}
+
+/* 2. Type. Chrome in the UI face, everything inside a panel monospaced —
+      which also buys the set table tabular figures for free. */
+html[data-skin="win98"] body{
+  background:var(--w-face);
+  color:var(--txt);
+  font-family:var(--w-mono);
+  font-size:13px;
+}
+html[data-skin="win98"] button,
+html[data-skin="win98"] input,
+html[data-skin="win98"] select,
+html[data-skin="win98"] textarea{font-family:var(--w-mono)}
+html[data-skin="win98"] h1,
+html[data-skin="win98"] h2,
+html[data-skin="win98"] h3,
+html[data-skin="win98"] .eyebrow,
+html[data-skin="win98"] .ex-name,
+html[data-skin="win98"] .settable th,
+html[data-skin="win98"] .rep-tab th{
+  text-transform:uppercase;letter-spacing:.06em;font-family:var(--w-mono);
+}
+html[data-skin="win98"] .mono,
+html[data-skin="win98"] .timer,
+html[data-skin="win98"] .stat .v,
+html[data-skin="win98"] .rank-sc{font-family:var(--w-mono)}
+
+/* ---------- 3. window chrome ----------
+   Title bar, menu bar and the LCD banner (#topbar) stack as one pinned window
+   frame. Each is sticky at the cumulative height of the ones above it, so the
+   frame stays put and only the client area scrolls — which is the whole point
+   of a window. */
+#w98-title{
+  position:sticky;top:0;z-index:60;
+  height:var(--w-title-h);
+  display:flex;align-items:center;gap:6px;
+  padding:0 3px 0 4px;
+  background:linear-gradient(90deg,var(--w-navy),var(--w-navy2));
+  box-shadow:var(--w-raise);
+  border-bottom:1px solid var(--w-face);
+  font-family:var(--w-ui);
+}
+#w98-title .t{
+  flex:1;min-width:0;
+  color:#fff;font-weight:700;font-size:13px;letter-spacing:.02em;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+#w98-title .ic{
+  width:18px;height:18px;flex:none;display:grid;place-items:center;
+  background:var(--w-dk);color:var(--accent);font-size:11px;line-height:1;
+}
+#w98-title .wbtns{display:flex;gap:2px;flex:none}
+#w98-title .wbtn{
+  width:24px;height:22px;flex:none;
+  background:var(--w-face);box-shadow:var(--w-raise);border:0;
+  color:var(--w-dk);font-family:var(--w-ui);font-size:11px;font-weight:700;line-height:1;
+  display:grid;place-items:center;cursor:pointer;padding:0;
+}
+#w98-title .wbtn:active{box-shadow:var(--w-sink)}
+
+#w98-menu{
+  position:sticky;top:var(--w-title-h);z-index:59;
+  height:var(--w-menu-h);
+  display:flex;align-items:stretch;
+  background:var(--w-face);
+  border-bottom:1px solid var(--w-sh);
+  font-family:var(--w-ui);
+}
+#w98-menu > .m{position:relative}
+#w98-menu .mlab{
+  height:100%;padding:0 10px;border:0;background:transparent;
+  color:var(--w-dk);font-family:var(--w-ui);font-size:12.5px;line-height:1;
+  cursor:pointer;display:flex;align-items:center;
+}
+#w98-menu .mlab u{text-underline-offset:2px}
+#w98-menu .m.open .mlab{background:var(--w-navy);color:#fff}
+#w98-menu .mdrop{
+  position:absolute;top:100%;left:0;z-index:70;min-width:186px;
+  background:var(--w-face);box-shadow:var(--w-raise);
+  padding:2px;display:none;
+}
+#w98-menu .m.open .mdrop{display:block}
+#w98-menu .mdrop button{
+  display:block;width:100%;text-align:left;border:0;background:transparent;
+  color:var(--w-dk);font-family:var(--w-ui);font-size:12.5px;
+  padding:5px 16px;cursor:pointer;white-space:nowrap;
+}
+#w98-menu .mdrop button:hover{background:var(--w-navy);color:#fff}
+#w98-menu .mdrop .sep{height:1px;margin:3px 2px;background:var(--w-sh);border-bottom:1px solid var(--w-hi)}
+
+/* the LCD banner — the existing #topbar, re-skinned rather than replaced, so
+   the brand and the profile/settings buttons keep working untouched */
+html[data-skin="win98"] #topbar{
+  position:sticky;top:calc(var(--w-title-h) + var(--w-menu-h));z-index:58;
+  height:var(--w-lcd-h);
+  background:var(--w-face);backdrop-filter:none;
+  border:0;padding:4px;gap:6px;
+}
+html[data-skin="win98"] #topbar::before{
+  content:'';position:absolute;inset:4px;box-shadow:var(--w-sink);
+  background:var(--w-dk);pointer-events:none;
+}
+html[data-skin="win98"] #topbar > *{position:relative;z-index:1}
+html[data-skin="win98"] .tb-left{padding-left:10px}
+html[data-skin="win98"] .brand{
+  font-family:var(--w-mono);font-size:19px;font-weight:800;letter-spacing:.04em;color:#fff;
+}
+html[data-skin="win98"] .brand .accent{color:var(--accent)}
+html[data-skin="win98"] .tb-right{gap:4px;padding-right:6px}
+html[data-skin="win98"] .icon-btn{
+  background:var(--w-face);box-shadow:var(--w-raise);color:var(--w-dk);
+  width:28px;height:26px;display:grid;place-items:center;padding:0;font-size:14px;
+}
+html[data-skin="win98"] .icon-btn:hover{background:var(--w-face);color:var(--w-dk)}
+html[data-skin="win98"] .icon-btn:active{box-shadow:var(--w-sink)}
+
+#w98-lcd{
+  text-align:right;font-family:var(--w-mono);line-height:1.15;padding-right:4px;
+  min-width:0;overflow:hidden;white-space:nowrap;
+}
+#w98-lcd .clock{
+  display:inline-block;padding:2px 8px;
+  border:1px solid var(--w-sh);background:#020602;
+  color:var(--w-lcd);font-size:16px;font-weight:700;letter-spacing:.08em;
+  text-shadow:0 0 6px rgba(0,255,65,.55);
+}
+#w98-lcd .clock .dow{color:var(--w-lcd);margin-right:10px}
+#w98-lcd .sets{
+  margin-top:3px;font-size:11px;letter-spacing:.1em;color:var(--dim);
+}
+#w98-lcd .sets.live{color:var(--w-amber)}
+
+/* minimised: the frame collapses to the title bar alone, so a phone screen
+   mid-set is all client area. The ▭ button toggles it. */
+html[data-skin="win98"][data-w98-min] #w98-menu,
+html[data-skin="win98"][data-w98-min] #topbar{display:none}
+
+/* maximised drops the reading-width cap on the client area */
+html[data-skin="win98"][data-w98-max] #view{max-width:none}
+
+/* ---------- 4. client area and panels ---------- */
+html[data-skin="win98"] #view{
+  background:var(--w-dk);
+  box-shadow:var(--w-sink);
+  padding:12px;
+  margin-top:4px;
+  /* the client area fills the window down to the taskbar, so a short page
+     doesn't leave the frame hanging in mid-air */
+  min-height:calc(100dvh - var(--w-title-h) - var(--w-menu-h) - var(--w-lcd-h) - var(--nav-h) - 22px);
+}
+/* A dark panel is its own client area — it has to look the same dropped into a
+   grey dialog as it does on the page. Anything the skin gives a dark background
+   restates the dark palette here, and anything nested inside then resolves
+   light again however deep it sits.
+
+   Without this a panel only inherited: white from body on the page, black from
+   the dialog face inside a dialog. That second case is what made the session
+   summary and the planner unreadable — a stat's unit survived because
+   .stat .v small sets its own colour, while the number beside it did not.
+
+   The list is every background:var(--w-dk) and #0b0b0b rule in this sheet, and
+   it has to stay that way: an element given a dark background below without a
+   line here goes dark-on-black inside a dialog. The ones that already set their
+   own colour (.seg, .chip, .leafchip, .ex-note, .bar, the fields) still need
+   the tokens back — .seg button reads var(--dim), .chip.gold reads var(--gold). */
+html[data-skin="win98"] :is(.card,.ex-card,.chartbox,.stat,.att,.vbtstrip,
+                            .hero,.bigtotal,.timerbar,.ci-tile,.lift3 .l,.totrow > div,
+                            .seg,.chip,.leafchip,.ex-note,.bar,
+                            input,select,textarea){
+  --txt:#ffffff; --dim:#c0c0c0; --dim2:#8a8a8a;
+  --accent:#ff2020; --accent2:#ff6b6b; --red:#ff2020;
+  --gold:#ffe000; --green:#00ff41; --blue:#4fc3ff; --purple:#c8a2ff;
+}
+/* .settable, .exline, .vartable, .picklist, .axrow and .summary-hero are
+   deliberately absent: they have no background of their own, so they should
+   follow whatever surface contains them — which, with the tokens above, they
+   now do without a rule. */
+html[data-skin="win98"] .card,
+html[data-skin="win98"] .ex-card,
+html[data-skin="win98"] .chartbox,
+html[data-skin="win98"] .stat,
+html[data-skin="win98"] .att,
+html[data-skin="win98"] .vbtstrip{
+  color:var(--txt);
+  background:var(--w-dk);
+  border:0;
+  box-shadow:var(--w-sink);
+  padding:12px;
+}
+html[data-skin="win98"] .card.flush{padding:0}
+html[data-skin="win98"] .stat,
+html[data-skin="win98"] .att{padding:9px 10px}
+html[data-skin="win98"] .hero,
+html[data-skin="win98"] .bigtotal,
+html[data-skin="win98"] .timerbar{
+  background:var(--w-dk);border:0;box-shadow:var(--w-sink);padding:12px;
+  color:var(--txt);
+}
+html[data-skin="win98"] .ci-tile,
+html[data-skin="win98"] .lift3 .l,
+html[data-skin="win98"] .totrow > div{color:var(--txt)}
+html[data-skin="win98"] .timerbar{
+  top:calc(var(--w-title-h) + var(--w-menu-h) + var(--w-lcd-h) + 4px);
+}
+html[data-skin="win98"][data-w98-min] .timerbar{top:calc(var(--w-title-h) + 4px)}
+/* a live workout needs the screen: the LCD banner repeats the clock and the
+   set count the pinned bar already shows, so it steps aside */
+html[data-skin="win98"][data-w98-work] #topbar{display:none}
+html[data-skin="win98"][data-w98-work]:not([data-w98-min]) .timerbar{top:calc(var(--w-title-h) + var(--w-menu-h) + 4px)}
+html[data-skin="win98"] .timerbar.compact{padding:8px 10px}
+
+/* An exercise gets its own title bar, the way a window does — but only the name
+   row. The equipment chip, the PR banner and the note belong to the client area
+   below it, not to the caption. */
+html[data-skin="win98"] .ex-head{
+  background:transparent;border:0;padding:0;margin:0 0 8px;
+}
+html[data-skin="win98"] .ex-head > .row:first-child{
+  background:linear-gradient(90deg,var(--w-navy),var(--w-navy2));
+  margin:-12px -12px 9px;padding:5px 6px 5px 10px;
+}
+html[data-skin="win98"] .ex-name{color:#fff;font-size:15px;font-weight:800}
+html[data-skin="win98"] .pr-banner{color:var(--dim)}
+
+/* the tiles and hairlines that were washes of white over a dark card have no
+   dark card to sit on any more — they become drawn lines */
+html[data-skin="win98"] .ci-tile,
+html[data-skin="win98"] .lift3 .l,
+html[data-skin="win98"] .totrow > div{
+  background:#0b0b0b;border:1px solid var(--w-sh);
+}
+html[data-skin="win98"] .plan-ex,
+html[data-skin="win98"] .exline,
+html[data-skin="win98"] .axrow,
+html[data-skin="win98"] .vartable td,
+html[data-skin="win98"] .goal,
+html[data-skin="win98"] .rank-row,
+html[data-skin="win98"] .ex-row,
+html[data-skin="win98"] .pickitem{border-bottom-color:var(--w-sh)}
+html[data-skin="win98"] .hr{background:var(--w-sh);box-shadow:0 1px 0 var(--w-hi)}
+
+/* ---------- 5. buttons ---------- */
+html[data-skin="win98"] .btn{
+  background:var(--w-face);color:var(--w-dk);
+  border:0;box-shadow:var(--w-raise);
+  font-family:var(--w-ui);font-weight:700;letter-spacing:.02em;
+}
+html[data-skin="win98"] .btn:hover{background:var(--w-face)}
+/* The base sheet presses buttons with transform:scale(.97). A 98 button presses
+   by swapping its bevel — but tap highlighting is off globally, so the bevel
+   swap has to carry the whole of the press feedback on its own. Padding is left
+   alone: .btn.big and .btn.sm set their own, and nudging it here would resize
+   them mid-tap. */
+html[data-skin="win98"] .btn:active{box-shadow:var(--w-sink);transform:none}
+html[data-skin="win98"] .btn.primary{background:var(--w-face);color:#990000}
+html[data-skin="win98"] .btn.primary:hover{background:var(--w-face)}
+html[data-skin="win98"] .btn.ghost{background:var(--w-face);color:var(--w-dk)}
+html[data-skin="win98"] .btn.danger{background:var(--w-face);color:#990000}
+html[data-skin="win98"] .btn.danger:hover{background:var(--w-face)}
+html[data-skin="win98"] .btn:disabled{opacity:1;color:var(--w-sh);text-shadow:1px 1px 0 var(--w-hi)}
+html[data-skin="win98"] #finishBtn{color:#990000;font-weight:800}
+
+/* ---------- 6. inputs ---------- */
+html[data-skin="win98"] input,
+html[data-skin="win98"] select,
+html[data-skin="win98"] textarea{
+  background:var(--w-dk);color:var(--w-lcd);
+  border:0;box-shadow:var(--w-sink);
+  font-family:var(--w-mono);
+}
+html[data-skin="win98"] input:focus,
+html[data-skin="win98"] textarea:focus{
+  box-shadow:var(--w-sink),inset 0 0 0 3px rgba(0,255,65,.16);
+  color:#fff;
+}
+html[data-skin="win98"] input::placeholder,
+html[data-skin="win98"] textarea::placeholder{color:#6b6b6b}
+/* the base sheet paints the select arrow with two gradients; repaint it light
+   so it reads on a black field. The `background` shorthand above reset the
+   geometry, so it is restated here — without it the gradients tile the whole
+   field grey with one big triangle in the middle. */
+html[data-skin="win98"] select{
+  background-image:linear-gradient(45deg,transparent 50%,var(--w-face) 50%),
+                   linear-gradient(135deg,var(--w-face) 50%,transparent 50%);
+  background-position:calc(100% - 16px) 50%,calc(100% - 11px) 50%;
+  background-size:5px 5px,5px 5px;background-repeat:no-repeat;
+}
+
+/* ---------- 7. the set table ----------
+   Column widths are NOT touched — the comment on them in the base sheet records
+   that they were measured against what each cell actually holds, and monospace
+   is narrower than the stack they were measured in, so this only gains room. */
+html[data-skin="win98"] .settable th{
+  color:var(--dim);border-bottom:1px solid var(--w-sh);
+}
+html[data-skin="win98"] .settable td{
+  border-top:1px solid #2a2a2a;
+}
+html[data-skin="win98"] .settable td input{font-weight:700;color:#fff}
+html[data-skin="win98"] .settable .c-prev{color:var(--dim2)}
+html[data-skin="win98"] .fbtn{background:var(--w-face);color:var(--w-dk);border:0;border-radius:0;box-shadow:var(--w-raise)}
+html[data-skin="win98"] .fbtn:active{box-shadow:var(--w-sink)}
+html[data-skin="win98"] tr.sel td{background:#101830}
+html[data-skin="win98"] .setno{
+  background:var(--w-face);color:var(--w-dk);border:0;box-shadow:var(--w-raise);font-weight:800;
+}
+html[data-skin="win98"] .setno.warm,html[data-skin="win98"] .setno.role-warmup{background:var(--w-gold);color:var(--w-dk);box-shadow:var(--w-raise)}
+html[data-skin="win98"] .setno.role-top{color:#c00000}
+html[data-skin="win98"] .setno.role-backoff{color:#000080}
+html[data-skin="win98"] .setno.role-amrap{color:#006000}
+html[data-skin="win98"] .setno.role-drop{background:transparent;box-shadow:none;color:var(--dim2);border:1px dashed var(--dim2)}
+html[data-skin="win98"] tr.done td input{background:#001a08;border:0;box-shadow:var(--w-sink);color:var(--w-lcd)}
+html[data-skin="win98"] tr.pr td input{background:#1a1600;border:0;box-shadow:var(--w-sink);color:var(--gold)}
+/* A 98 checkbox is a sunken white square that either holds a tick or doesn't —
+   the box never changes, only the mark. The ✓ glyph is always in the markup, so
+   the unticked state hides it rather than the box restyling itself. */
+html[data-skin="win98"] .chk{
+  background:#fff;color:transparent;border:0;box-shadow:var(--w-sink);
+}
+html[data-skin="win98"] .chk.on{background:#fff;color:var(--w-dk);font-weight:800}
+html[data-skin="win98"] .plbtn{background:var(--w-face);color:var(--w-dk);border:0;box-shadow:var(--w-raise)}
+html[data-skin="win98"] .delset{color:var(--dim)}
+html[data-skin="win98"] .delset:active{background:var(--w-face);color:#b00000}
+
+/* ---------- 8. selection: navy, everywhere something is "on" ---------- */
+html[data-skin="win98"] .seg{background:var(--w-dk);border:0;box-shadow:var(--w-sink);padding:2px;gap:2px}
+html[data-skin="win98"] .seg button{
+  color:var(--dim);font-family:var(--w-ui);font-weight:700;
+}
+html[data-skin="win98"] .seg button.on{background:var(--w-navy);color:#fff;box-shadow:var(--w-sink-thin)}
+html[data-skin="win98"] .rate button{background:var(--w-face);color:var(--w-dk);border:0;box-shadow:var(--w-raise)}
+html[data-skin="win98"] .rate button.on{background:var(--w-navy);color:#fff;box-shadow:var(--w-sink)}
+html[data-skin="win98"] .vartab{background:var(--w-face);color:var(--w-dk);border:0;box-shadow:var(--w-raise)}
+html[data-skin="win98"] .vartab .n{color:var(--w-dk)}
+html[data-skin="win98"] .vartab.on{background:var(--w-navy);box-shadow:var(--w-sink)}
+html[data-skin="win98"] .vartab.on,
+html[data-skin="win98"] .vartab.on .n,
+html[data-skin="win98"] .vartab.on .m{color:#fff}
+html[data-skin="win98"] .pickitem:hover{background:var(--w-navy);color:#fff}
+html[data-skin="win98"] .pickitem:hover .m{color:#cfd8ff}
+html[data-skin="win98"] .ex-row:hover{background:var(--w-navy)}
+html[data-skin="win98"] .iconrow .ic{background:var(--w-face);color:var(--w-dk);border:0;box-shadow:var(--w-raise)}
+html[data-skin="win98"] .iconrow .ic.on{background:var(--w-navy);color:#fff;box-shadow:var(--w-sink)}
+html[data-skin="win98"] .eqi{border-color:var(--w-sh);color:var(--dim2)}
+html[data-skin="win98"] .eqi.on{background:var(--w-gold);border-color:var(--w-dk);color:var(--w-dk)}
+html[data-skin="win98"] .eqi:active{background:var(--w-face);color:var(--w-dk)}
+html[data-skin="win98"] .axrow.on .rad{border-color:var(--w-lcd);background:radial-gradient(circle,var(--w-lcd) 0 5px,transparent 6px)}
+
+/* ---------- 9. chips, badges, washes ----------
+   Every translucent tint in the base sheet is a wash over a dark card. On black
+   panels they all but vanish, so each becomes a flat colour with a hard edge —
+   which is what 1998 would have done anyway. */
+html[data-skin="win98"] .chip{
+  background:var(--w-dk);border:1px solid var(--w-sh);color:var(--dim);
+  font-family:var(--w-mono);letter-spacing:.08em;padding:3px 8px;
+}
+html[data-skin="win98"] .chip.gold{background:var(--w-dk);border-color:var(--gold);color:var(--gold)}
+html[data-skin="win98"] .chip.green{background:var(--w-dk);border-color:var(--green);color:var(--green)}
+html[data-skin="win98"] .chip.blue{background:var(--w-dk);border-color:var(--blue);color:var(--blue)}
+html[data-skin="win98"] .chip.accent{background:var(--w-dk);border-color:var(--accent);color:var(--accent)}
+html[data-skin="win98"] .chip.red{background:var(--w-dk);border-color:var(--red);color:var(--red)}
+/* equipment + execution pill: the equipment half is the loud one */
+html[data-skin="win98"] .leafchip{background:var(--w-dk);border-color:var(--w-sh)}
+html[data-skin="win98"] .leafchip button:first-child{background:var(--w-dk);color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+html[data-skin="win98"] .leafchip button+button{border-left-color:var(--w-sh);color:var(--dim)}
+html[data-skin="win98"] .leafchip button:active{background:var(--w-navy);color:#fff}
+html[data-skin="win98"] .ex-note{
+  background:var(--w-dk);border:1px solid var(--blue);color:var(--blue);
+}
+html[data-skin="win98"] .vbtstrip{border:1px solid var(--purple);box-shadow:none;padding:7px 9px}
+html[data-skin="win98"] .att.o{border:1px solid var(--green);box-shadow:none}
+html[data-skin="win98"] .att.t{border:1px solid var(--gold);box-shadow:none}
+html[data-skin="win98"] .bar{
+  background:var(--w-dk);border:1px solid var(--w-sh);height:10px;
+}
+html[data-skin="win98"] .bar > i{background:var(--accent);border:0}
+html[data-skin="win98"] .bar.green > i,
+html[data-skin="win98"] .bar.done > i{background:var(--green)}
+html[data-skin="win98"] .bar.blue > i{background:var(--blue)}
+html[data-skin="win98"] .bar.gold > i{background:var(--gold)}
+
+/* ---------- 10. the taskbar ----------
+   Six keys with their function-key label above, drawn by CSS so the nav markup
+   never had to learn about the skin. */
+html[data-skin="win98"] #nav{
+  background:var(--w-face);backdrop-filter:none;
+  border:0;box-shadow:var(--w-raise);
+  padding:4px 4px env(safe-area-inset-bottom);
+  gap:3px;
+}
+html[data-skin="win98"] #nav button{
+  background:var(--w-face);box-shadow:var(--w-raise);
+  color:var(--w-dk);font-family:var(--w-ui);font-weight:700;font-size:9.5px;
+  letter-spacing:.06em;text-transform:uppercase;
+  gap:1px;padding:3px 1px;transition:none;
+}
+html[data-skin="win98"] #nav button::before{
+  content:'';
+  align-self:flex-start;margin-left:4px;
+  font-size:8.5px;font-weight:700;color:#404040;letter-spacing:0;
+}
+html[data-skin="win98"] #nav button:nth-child(1)::before{content:'F1'}
+html[data-skin="win98"] #nav button:nth-child(2)::before{content:'F2'}
+html[data-skin="win98"] #nav button:nth-child(3)::before{content:'F3'}
+html[data-skin="win98"] #nav button:nth-child(5)::before{content:'F4'}
+html[data-skin="win98"] #nav button:nth-child(6)::before{content:'F5'}
+html[data-skin="win98"] #nav button .ico{font-size:15px;color:var(--w-dk)}
+html[data-skin="win98"] #nav button.active{
+  background:var(--w-navy);color:#fff;box-shadow:var(--w-sink);
+}
+html[data-skin="win98"] #nav button.active::before{color:#b9c6ff}
+html[data-skin="win98"] #nav button.active .ico{color:#fff}
+html[data-skin="win98"] #nav button:active{transform:none;box-shadow:var(--w-sink)}
+
+/* ---------- 11. dialogs ---------- */
+html[data-skin="win98"] .modal-bg{background:rgba(0,0,0,.5);backdrop-filter:none;animation:none;padding:0}
+html[data-skin="win98"] .modal{
+  background:var(--w-face);border:0;box-shadow:var(--w-raise);
+  animation:none;padding:3px;
+}
+html[data-skin="win98"] .modal-head{
+  background:linear-gradient(90deg,var(--w-navy),var(--w-navy2));
+  border:0;padding:4px 4px 4px 8px;
+}
+html[data-skin="win98"] .modal-head h2{
+  color:#fff;font-family:var(--w-ui);font-size:13px;font-weight:700;
+  text-transform:none;letter-spacing:.02em;
+}
+html[data-skin="win98"] .modal-head .icon-btn{width:24px;height:22px;font-size:11px}
+html[data-skin="win98"] .modal-body{
+  background:var(--w-face);padding:14px;
+}
+/* A dialog is a grey face, and the page behind it is black — two surfaces, one
+   set of rules written against tokens. So rather than repaint each element that
+   lands on the grey, restate the palette for it here. The tokens inherit, so
+   all 45 rules in the base sheet that read one resolve for this surface on
+   their own, at any depth, in dialogs not yet written.
+
+   The accents matter as much as the greys: they were chosen to glow on black,
+   and on a #c0c0c0 face they have to come down or a gold PR figure is a smear.
+   Everything here clears 5.5:1 against the face. */
+html[data-skin="win98"] .modal-body,
+html[data-skin="win98"] .modal-foot{
+  --txt:#000000; --dim:#2b2b2b; --dim2:#4a4a4a;
+  --accent:#a00000; --accent2:#a00000; --red:#a00000;
+  --gold:#6b5200; --green:#005a1e; --blue:#00437a; --purple:#4b2a8a;
+  color:var(--txt);
+}
+html[data-skin="win98"] .modal-foot{
+  background:var(--w-face);border:0;box-shadow:inset 0 1px 0 var(--w-hi);
+}
+html[data-skin="win98"] .picklist{background:var(--w-face)}
+
+/* ---------- 12. calendar, charts, toasts ---------- */
+html[data-skin="win98"] .cal-day{
+  background:var(--w-face);color:var(--w-dk);border:0;box-shadow:var(--w-raise);
+  font-family:var(--w-mono);font-weight:700;transition:none;
+}
+html[data-skin="win98"] .cal-day:hover{border:0}
+html[data-skin="win98"] .cal-day.today{box-shadow:var(--w-raise),inset 0 0 0 2px var(--accent);color:#990000}
+html[data-skin="win98"] .cal-day.sel{background:var(--w-navy);color:#fff;box-shadow:var(--w-sink)}
+html[data-skin="win98"] .cal-day.out{opacity:.7}
+html[data-skin="win98"] .dot{border-radius:0 !important}
+html[data-skin="win98"] .chart .grid{shape-rendering:crispEdges;stroke:#2a2a2a}
+html[data-skin="win98"] .chart .ln{stroke-width:2;stroke-linejoin:miter;stroke-linecap:butt}
+html[data-skin="win98"] .chart .area{fill:none}
+html[data-skin="win98"] .chart .pt{stroke:var(--w-dk)}
+html[data-skin="win98"] .toast{
+  background:var(--w-face);color:var(--w-dk);border:0;box-shadow:var(--w-raise);
+  font-family:var(--w-ui);animation:none;
+}
+html[data-skin="win98"] .toast.gold{background:var(--w-face);color:#8a6d00}
+html[data-skin="win98"] .toast.green{background:var(--w-face);color:#006020}
+html[data-skin="win98"] .empty{color:var(--dim2)}
+html[data-skin="win98"] .summary-hero .t{font-family:var(--w-mono)}
+
+/* 13. phone widths: the frame has to cost as little as it can */
+@media(max-width:420px){
+  html[data-skin="win98"]{--w-title-h:26px;--w-menu-h:24px;--w-lcd-h:54px}
+  #w98-menu .mlab{padding:0 8px;font-size:12px}
+  #w98-lcd .clock{font-size:14px;padding:1px 6px}
+  #w98-lcd .clock .dow{display:none}
+  html[data-skin="win98"] .tb-left{padding-left:6px}
+  html[data-skin="win98"] .brand{font-size:17px}
+}
+@media(max-width:350px){
+  #w98-lcd{display:none}
+  html[data-skin="win98"] #view{padding:8px}
+}
