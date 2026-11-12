@@ -308,7 +308,7 @@ One commit each. After every one: the full baseline, `node --check` on every
 - [x] **8. `js/tools.js`.**
 - [x] **9. Slew stands alone** (next section), then **`js/vbt.js`**. Two
   commits. `vbt-sim`, `vbt-rir`, `vbt-validate` follow.
-- [ ] **10. `js/health.js`.** `build-routines` follows.
+- [x] **10. `js/health.js`.** `build-routines` follows.
 - [ ] **11. `js/coach.js`.** `build-coach-templates` follows.
 - [ ] **12. `js/workout.js`.**
 - [ ] **13. `js/ui.js`.** What is left of `app.js` is boot: rename it
