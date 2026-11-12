@@ -13,7 +13,41 @@
    smoke() seeds nothing. smoke({ seed: 'program' | 'migrated' | 'empty' })
    builds the state first. Returns { pass, fail, results }.
 */
+/* Since the module split the app's names are module exports, not globals.
+   ironlogModules() imports every module the page loaded (the browser hands
+   back the same instances the app is running, so this is the live app, not a
+   copy), found by following import lines from the page's entry script.
+   smokeScope() puts their exports behind one object, and the whole test body
+   runs inside `with` that object — so every bare name below still resolves,
+   reads stay live, and nothing in the app exists only for the test. */
+window.ironlogModules = async function ironlogModules() {
+  if (window.__ironlogSpaces) return window.__ironlogSpaces;
+  const entry = document.querySelector('script[type="module"][src]');
+  const seen = new Set(), spaces = [];
+  const visit = async url => {
+    if (seen.has(url)) return;
+    seen.add(url);
+    const text = await fetch(url).then(r => r.text());
+    for (const m of text.matchAll(/^import\s[^;]*?from\s+'([^']+)'/gm)) await visit(new URL(m[1], url).href);
+    spaces.push(await import(url));
+  };
+  if (entry) await visit(new URL(entry.getAttribute('src'), document.baseURI).href);
+  return (window.__ironlogSpaces = spaces);
+};
+window.smokeScope = async function smokeScope() {
+  const spaces = await window.ironlogModules();
+  const find = k => typeof k === 'string' ? spaces.find(ns => k in ns) : undefined;
+  const setter = k => k === 'S' ? 'setState' : 'set' + k.replace(/^_*/, '').replace(/^./, c => c.toUpperCase());
+  return new Proxy({}, {
+    has: (t, k) => !!find(k),
+    get: (t, k) => { const ns = find(k); return ns ? ns[k] : undefined; },
+    /* an import is read-only; a variable the test assigns has a setter in its module */
+    set: (t, k, v) => { const ns = find(setter(k)); if (!ns) throw new Error(`smoke: no ${setter(k)}() to assign ${k}`); ns[setter(k)](v); return true; },
+  });
+};
 window.smoke = async function smoke(opts) {
+  const __scope = await window.smokeScope();
+  with (__scope) { return (async function (opts) {
   const o = opts || {};
   const results = [];
   /* Let queued work run — deliberately not a wall-clock sleep.
@@ -914,5 +948,6 @@ window.smoke = async function smoke(opts) {
   console.log(`smoke: ${out.pass} passed, ${out.fail} failed`);
   fail.forEach(f => console.error('  FAIL', f.name, '—', f.note));
   return out;
+  })(opts); }
 };
 'smoke harness loaded';

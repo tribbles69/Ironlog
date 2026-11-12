@@ -4,7 +4,7 @@ Splitting `index.html` into native ES modules. Pure refactor: no behaviour
 change, no stored-data change, no build step. Branch `refactor/modules`, cut
 from main at `54ce89b` (0.96.5, `ironlog-v163`). Written 12 Nov 2026.
 
-**Status: plan only. No app code has moved. Waiting for Aaron's go-ahead**
+**Status: go-ahead given 12 Nov; moves under way, ticked below as they land.**
 (and his answers to the five questions at the end) before step 1.
 
 Line numbers below are `index.html` at `54ce89b`. They drift as code moves;
@@ -286,11 +286,11 @@ One commit each. After every one: the full baseline, `node --check` on every
 `js/*.js`, new files added to `ASSETS` in `sw.js`, cache version bumped
 (question 4), `module-split-plan.json` and this checklist updated.
 
-- [ ] **0. Tools first, no app change.** `check-version.cjs` learns the
+- [x] **0. Tools first, no app change.** `check-version.cjs` learns the
   `ASSETS` and import/export checks; `lint-scope.js` learns `js/*.js`;
   `module-map.cjs` learns to print the `import` and `export` lines for a
   module, so no list is typed by hand.
-- [ ] **1. The script becomes a module, whole.** Lines 1433–22199 move
+- [x] **1. The script becomes a module, whole.** Lines 1433–22199 move
   unchanged to `js/app.js`, loaded with `<script type="module">`, with one
   generated `export { … }` at the end for the names the smoke test needs.
   `smoke.js` gets its header. This is the step that proves strict mode,

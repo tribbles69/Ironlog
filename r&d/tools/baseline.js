@@ -24,23 +24,16 @@
    varies by a few clicks from run to run.
 
    The click-through finds things to click from the DOM alone. The only app
-   names it needs are looked up through app() below, which is the one place to
-   change when a name stops being a global.
+   names it needs are looked up through app() below, which finds them among the
+   page's module exports.
 */
 (() => {
-  /* App names. Today every one is a global of the page's single script.
-     After a module is split out, names are looked up in window.__ironlogModules
-     (a list of module paths set by the caller, or the default below). */
-  const MODULES = ['./js/core.js', './js/database.js', './js/exercises.js', './js/stats.js', './js/ui.js', './js/health.js',
-    './js/tools.js', './js/events.js', './js/workout.js', './js/vbt.js', './js/coach.js'];
-  let spaces = null;
+  /* App names: exports of the page's modules (smoke.js's ironlogModules), or
+     globals for anything still declared by an inline script. */
   async function app(name) {
-    try { const v = (0, eval)(`typeof ${name} === 'undefined' ? undefined : ${name}`); if (v !== undefined) return v; } catch (e) { /* not a global */ }
-    if (!spaces) {
-      spaces = [];
-      for (const m of (window.__ironlogModules || MODULES)) { try { spaces.push(await import(new URL(m, location.href).href)); } catch (e) { /* not split out yet */ } }
-    }
-    for (const ns of spaces) if (name in ns) return ns[name];
+    for (const ns of await window.ironlogModules()) if (name in ns) return ns[name];
+    const v = (0, eval)(`typeof ${name} === 'undefined' ? undefined : ${name}`);
+    if (v !== undefined) return v;
     throw new Error(`baseline: app name ${name} not found`);
   }
 
