@@ -298,7 +298,7 @@ One commit each. After every one: the full baseline, `node --check` on every
   If anything is going to behave differently, it shows here, before any
   untangling.
 - [x] **2. `program-manifest.json` + `js/data.js`** (question 1).
-- [ ] **3. `js/core.js`.** Needs nothing at load; everything needs it.
+- [x] **3. `js/core.js`.** Needs nothing at load; everything needs it.
 - [ ] **4. `js/database.js`.** Storage, sync, migrations in one move. First
   setters (`setState`, `setBootFailed`, `setInstallEvt`).
 - [ ] **5. `js/exercises.js`.** `build-catalogue`, `build-demos` and the demo
