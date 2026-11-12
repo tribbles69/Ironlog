@@ -77,7 +77,9 @@ const isFnLike = n => ts.isFunctionDeclaration(n) || ts.isFunctionExpression(n) 
 function parseUnit(u) {
   const sf = u.sf = ts.createSourceFile(u.name + '.js', u.text, ts.ScriptTarget.Latest, true, ts.ScriptKind.JS);
   u.stmts = [];
-  let prevEnd = 0;
+  /* A file's opening comment belongs to the file, not to its first statement. */
+  const opening = u.module ? (u.text.match(/^(\s*\/\*[\s\S]*?\*\/[ \t]*\n)/) || [''])[0] : '';
+  let prevEnd = opening.length;
   for (const node of sf.statements) {
     const s = { unit: u, node, names: [], declKind: '', kind: SK[node.kind] };
     s.generated = ts.isImportDeclaration(node) || ts.isExportDeclaration(node);
@@ -295,10 +297,13 @@ function sync() { let n = 0; while (syncOnce(true)) if (++n > 8) throw new Error
 
 function move(mod) {
   const assign = JSON.parse(fs.readFileSync(ASSIGN, 'utf8'));
+  /* the generated import block would otherwise ride along as the first statement's leading comment; sync writes it back */
+  const appFile = path.join(JS, 'app.js');
+  if (!fs.existsSync(appFile)) throw new Error('js/app.js not found');
+  fs.writeFileSync(appFile, stripImportBlock(fs.readFileSync(appFile, 'utf8')));
   const units = loadUnits().filter(u => u.module);
   analyse(units);
   const app = units.find(u => u.name === 'app');
-  if (!app) throw new Error('js/app.js not found');
   const target = path.join(JS, mod + '.js');
   const of = s => s.names.length ? assign.names[s.names[0]] : (assign.anon[s.hash] || {}).module;
   const take = app.stmts.filter(s => !s.generated && of(s) === mod);
