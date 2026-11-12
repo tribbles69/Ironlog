@@ -108,9 +108,17 @@ let E, CAT, cur = { id: null, file: null, saved: '' };
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 async function loadEngine() {
-  const html = await (await fetch('/index.html', { cache: 'no-store' })).text();
-  const s = html.indexOf(START), e = html.indexOf(END);
-  if (s < 0 || e < 0) throw new Error('demo block not found in index.html');
+  /* index.html until the module split, a file in js/ after it: take the first that has the block */
+  let html = '', s = -1, e = -1;
+  for (const f of ['/js/exercises.js', '/js/app.js', '/index.html']) {
+    const r = await fetch(f, { cache: 'no-store' });
+    if (!r.ok) continue;
+    /* a module's imports and `export` mean nothing to new Function */
+    html = (await r.text()).replace(/^import\s[^;]*?from\s+'[^']+';[ \t]*\n/gm, '').replace(/^export\s+(?=(async\s+)?function\b|const\b|let\b|var\b|class\b)/gm, '');
+    s = html.indexOf(START); e = html.indexOf(END);
+    if (s >= 0 && e >= 0) break;
+  }
+  if (s < 0 || e < 0) throw new Error('demo block not found in js/ or index.html');
   const src = html.slice(html.lastIndexOf('/*', s), e);
   E = new Function('esc', '$', 'S', 'save', 'EQ_TITLE', `${src}\nreturn { DEMO_PATTERNS, DEMO_MAP, DEMO_TEXT, DEMO_MUSCLES, demoSVG, demoBox, demoTimeline, demoAt, demoPose };`)(esc, () => null, { exNotes: {} }, () => {}, {});
 }

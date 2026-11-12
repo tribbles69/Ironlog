@@ -5,10 +5,7 @@
    "statements": 1,
    "exports": [],
    "imports": {},
-   "writtenFromOutside": {},
-   "sideEffectLines": [
-    23
-   ]
+   "assignedFromOutside": {}
   },
   "data": {
    "bytes": 324,
@@ -18,8 +15,7 @@
     "PROGRAM_NAMES"
    ],
    "imports": {},
-   "writtenFromOutside": {},
-   "sideEffectLines": []
+   "assignedFromOutside": {}
   },
   "database": {
    "bytes": 106449,
@@ -170,7 +166,7 @@
      "PROGRAM_NAMES"
     ]
    },
-   "writtenFromOutside": {
+   "assignedFromOutside": {
     "installEvt": [
      "ui"
     ],
@@ -180,13 +176,7 @@
     "bootFailed": [
      "main"
     ]
-   },
-   "sideEffectLines": [
-    1625,
-    1626,
-    2141,
-    2142
-   ]
+   }
   },
   "core": {
    "bytes": 8116,
@@ -233,10 +223,7 @@
      "S"
     ]
    },
-   "writtenFromOutside": {},
-   "sideEffectLines": [
-    2943
-   ]
+   "assignedFromOutside": {}
   },
   "exercises": {
    "bytes": 294967,
@@ -383,8 +370,7 @@
      "why"
     ]
    },
-   "writtenFromOutside": {},
-   "sideEffectLines": []
+   "assignedFromOutside": {}
   },
   "ui": {
    "bytes": 117542,
@@ -491,6 +477,7 @@
      "suggestedTargets",
      "toKg",
      "today",
+     "w",
      "wt"
     ],
     "stats": [
@@ -686,7 +673,7 @@
      "PROGRAM_MANIFEST"
     ]
    },
-   "writtenFromOutside": {
+   "assignedFromOutside": {
     "calSelected": [
      "workout"
     ],
@@ -699,11 +686,7 @@
     "whatsNewArmed": [
      "main"
     ]
-   },
-   "sideEffectLines": [
-    4702,
-    5608
-   ]
+   }
   },
   "stats": {
    "bytes": 55900,
@@ -812,6 +795,7 @@
      "rpeToRir",
      "today",
      "uid",
+     "w",
      "wt"
     ],
     "ui": [
@@ -838,10 +822,7 @@
      "isMainLift"
     ]
    },
-   "writtenFromOutside": {},
-   "sideEffectLines": [
-    4222
-   ]
+   "assignedFromOutside": {}
   },
   "health": {
    "bytes": 223589,
@@ -990,8 +971,7 @@
      "openCoach"
     ]
    },
-   "writtenFromOutside": {},
-   "sideEffectLines": []
+   "assignedFromOutside": {}
   },
   "tools": {
    "bytes": 34479,
@@ -1092,8 +1072,7 @@
      "toCm"
     ]
    },
-   "writtenFromOutside": {},
-   "sideEffectLines": []
+   "assignedFromOutside": {}
   },
   "workout": {
    "bytes": 214768,
@@ -1380,14 +1359,11 @@
      "PROGRAM_MANIFEST"
     ]
    },
-   "writtenFromOutside": {
+   "assignedFromOutside": {
     "tick": [
      "ui"
     ]
-   },
-   "sideEffectLines": [
-    7046
-   ]
+   }
   },
   "events": {
    "bytes": 71198,
@@ -1489,8 +1465,7 @@
      "warmupRamp"
     ]
    },
-   "writtenFromOutside": {},
-   "sideEffectLines": []
+   "assignedFromOutside": {}
   },
   "vbt": {
    "bytes": 88937,
@@ -1582,8 +1557,7 @@
      "activeBlock"
     ]
    },
-   "writtenFromOutside": {},
-   "sideEffectLines": []
+   "assignedFromOutside": {}
   },
   "coach": {
    "bytes": 162020,
@@ -1740,8 +1714,7 @@
      "PROGRAM_NAMES"
     ]
    },
-   "writtenFromOutside": {},
-   "sideEffectLines": []
+   "assignedFromOutside": {}
   },
   "main": {
    "bytes": 9945,
@@ -1797,19 +1770,7 @@
      "storeGet"
     ]
    },
-   "writtenFromOutside": {},
-   "sideEffectLines": [
-    22003,
-    22004,
-    22005,
-    22006,
-    22007,
-    22008,
-    22022,
-    22029,
-    22157,
-    22163
-   ]
+   "assignedFromOutside": {}
   }
  }
 }

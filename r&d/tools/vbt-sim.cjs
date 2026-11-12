@@ -23,9 +23,9 @@ const ctx = { console, Math, Number, Object, Array, JSON, Infinity, crypto: { ra
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(ROOT, 'slew-core.js'), 'utf8'), ctx);
-const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+const html = require('./app-source.cjs').source();   // index.html and js/*.js, as one classic script
 const src = html.match(/const VBT_HP_V[\s\S]*?\nfunction vbtSummary\(reps\) \{[\s\S]*?\n\}\n/);
-if (!src) { console.error('vbtIntegrate … vbtSummary not found in index.html'); process.exit(1); }
+if (!src) { console.error('vbtIntegrate … vbtSummary not found in index.html or js/'); process.exit(1); }
 vm.runInContext(src[0] + 'globalThis.vbtIntegrate = vbtIntegrate; globalThis.vbtDropBlips = vbtDropBlips; globalThis.VBT_MIN_ROM = VBT_MIN_ROM; globalThis.vbtTiltMotion = vbtTiltMotion;', ctx);
 const { Slew, vbtIntegrate, vbtDropBlips, VBT_MIN_ROM, vbtTiltMotion } = ctx;
 const arg = k => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : null; };
