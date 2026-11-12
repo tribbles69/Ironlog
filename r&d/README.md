@@ -10,6 +10,7 @@ Quote the folder name in the shell: `cd "r&d"`.
 | Folder | What's in it |
 | --- | --- |
 | `ROADMAP.md` | What's being built next, in order, and the standing rules. Start here. |
+| `BUGS.md` | Known non-critical bugs, logged as they're found and fixed together in batches. |
 | `specs/` | Feature specs, written before building. A spec wins over the roadmap summary. |
 | `notes/` | Audits, the parked backlog, anything written down for reference. |
 | `data/` | Source data that gets built into the app — `exercises.json` is inlined into `js/exercises.js` by `tools/build-catalogue.cjs`, `demos/` (exercise demo figures and text) by `tools/build-demos.cjs`. Edit here, not in `js/`. |

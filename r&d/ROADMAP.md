@@ -61,6 +61,8 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    comes before everything else, in page order. Then what's left of section
    **0** (01–03 shipped; 04c moved into 00). After those, carry on from
    **E3**.
+   **Bugs** aren't roadmap items: non-critical ones go in `r&d/BUGS.md` as
+   they're found and get cleared in a batch when Aaron asks ("fix the bugs").
 2. **Check the code before trusting a status here.** Some items were marked from
    memory of planning chats, not from the code. If something is already built,
    tick it, note the version, and move on.
