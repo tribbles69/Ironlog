@@ -21,7 +21,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const INDEX = path.join(ROOT, 'index.html');
+const { fileWith, rel } = require('./app-source.cjs');
 const DIR = path.join(ROOT, 'r&d/data/demos');
 const MOVES = path.join(DIR, 'movements');
 const CATALOGUE = path.join(ROOT, 'r&d/data/exercises.json');
@@ -130,17 +130,19 @@ function main() {
 
   const pats = {}, ptext = {};
   Object.entries(patterns).forEach(([k, p]) => { const { text, ...rest } = p; pats[k] = rest; if (text) ptext[k] = text; });
+  /* the three lines are in js/exercises.js since the module split; found by pattern, so they follow the code */
+  const INDEX = fileWith(/^(export )?const DEMO_PATTERNS = .*;$/m, 'the DEMO_PATTERNS line');
   let idx = fs.readFileSync(INDEX, 'utf8');
   const put = (name, value) => {
-    const re = new RegExp(`^const ${name} = .*;$`, 'm');
-    if (!re.test(idx)) throw new Error(`${name} line not found in index.html`);
-    idx = idx.replace(re, () => `const ${name} = ${JSON.stringify(value)};`);
+    const re = new RegExp(`^(export )?const ${name} = .*;$`, 'm');
+    if (!re.test(idx)) throw new Error(`${name} line not found in ${rel(INDEX)}`);
+    idx = idx.replace(re, (m, ex) => `${ex || ''}const ${name} = ${JSON.stringify(value)};`);
   };
   put('DEMO_PATTERNS', pats);
   put('DEMO_MAP', map);
   put('DEMO_TEXT', { pattern: ptext, movement: mtext });
   fs.writeFileSync(INDEX, idx);
-  console.log(`inlined ${Object.keys(pats).length} patterns and ${files.length} movements into index.html`);
+  console.log(`inlined ${Object.keys(pats).length} patterns and ${files.length} movements into ${rel(INDEX)}`);
 }
 
 module.exports = { fmt, KEYS, ENUMS };

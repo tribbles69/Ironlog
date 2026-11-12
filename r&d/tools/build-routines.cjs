@@ -13,7 +13,7 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const INDEX = path.join(ROOT, 'index.html');
+const { fileWith, rel } = require('./app-source.cjs');
 const DIR = path.join(ROOT, 'r&d/data/routines');
 
 const routines = fs.readdirSync(DIR).filter(f => f.endsWith('.json')).sort()
@@ -31,10 +31,11 @@ routines.forEach(r => {
   }));
 });
 
+/* the line is in js/health.js since the module split; found by pattern, so it follows the code */
+const re = /^(export )?const BUILTIN_ROUTINES = .*;$/m;
+const INDEX = fileWith(re, 'the BUILTIN_ROUTINES line');
 let idx = fs.readFileSync(INDEX, 'utf8');
-const re = /^const BUILTIN_ROUTINES = .*;$/m;
-if (!re.test(idx)) throw new Error('BUILTIN_ROUTINES line not found in index.html');
 const line = 'const BUILTIN_ROUTINES = ' + JSON.stringify(routines) + ';';
-idx = idx.replace(re, () => line);
+idx = idx.replace(re, (m, ex) => (ex || '') + line);
 fs.writeFileSync(INDEX, idx);
-console.log(`inlined ${routines.length} routine(s) (${(line.length / 1024).toFixed(1)} KB) into index.html`);
+console.log(`inlined ${routines.length} routine(s) (${(line.length / 1024).toFixed(1)} KB) into ${rel(INDEX)}`);

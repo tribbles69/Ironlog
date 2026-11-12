@@ -1,14 +1,31 @@
 /* Ironlog service worker.
    Bump VERSION whenever the app files change — that's what triggers the
    "Update ready" prompt on the next launch. */
-const VERSION = 'ironlog-v163';
+const VERSION = 'ironlog-v181';
 
 const ASSETS = [
   './',
   './index.html',
+  './css/app.css',
+  './css/skin98.css',
+  './js/main.js',   // the entry point. Every js/ file must be listed here: r&d/tools/check-version.cjs checks
+  './js/data.js',
+  './js/core.js',
+  './js/database.js',
+  './js/exercises.js',
+  './js/stats.js',
+  './js/events.js',
+  './js/tools.js',
+  './js/vbt.js',
+  './js/health.js',
+  './js/coach.js',
+  './js/workout.js',
+  './js/ui.js',
+  './slew-reps.js',   // Ironlog's rep detection and RIR estimate on top of slew-core.js (r&d/notes/slew-api.md)
   './CHANGELOG.md',
   './manifest.webmanifest',
   './program.json',
+  './program-manifest.json',   // what Settings shows for the shipped program; read at boot
   './slew-core.js',
   './slew-video.js',   // bar path from video (04a) — loaded on first use, cached so it works offline in the gym
   './icon-192.png',

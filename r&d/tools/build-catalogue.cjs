@@ -14,21 +14,21 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const INDEX = path.join(ROOT, 'index.html');
+const { fileWith, rel } = require('./app-source.cjs');
 const SRC = path.join(ROOT, 'r&d/data/exercises.json');
 
 const cat = JSON.parse(fs.readFileSync(SRC, 'utf8'));
 if (!Array.isArray(cat.movements) || !cat.movements.length) throw new Error('no movements in r&d/data/exercises.json');
 if (!cat.vocabularies) throw new Error('no vocabularies in r&d/data/exercises.json');
 
+/* the line is in js/exercises.js since the module split; found by pattern, so it follows the code */
+const re = /^(export )?const EXERCISE_CATALOGUE = .*;$/m;
+const INDEX = fileWith(re, 'the EXERCISE_CATALOGUE line');
 let idx = fs.readFileSync(INDEX, 'utf8');
-const nl = idx.includes('\r\n') ? '\r\n' : '\n';
-const re = /^const EXERCISE_CATALOGUE = .*;$/m;
 const line = 'const EXERCISE_CATALOGUE = ' + JSON.stringify(cat) + ';';
 
-if (!re.test(idx)) throw new Error('EXERCISE_CATALOGUE line not found in index.html');
-idx = idx.replace(re, () => line);
+idx = idx.replace(re, (m, ex) => (ex || '') + line);
 fs.writeFileSync(INDEX, idx);
 
-console.log(`inlined ${cat.movements.length} movements (${(line.length / 1024).toFixed(1)} KB) into index.html`);
+console.log(`inlined ${cat.movements.length} movements (${(line.length / 1024).toFixed(1)} KB) into ${rel(INDEX)}`);
 console.log('now bump APP_VERSION and sw.js VERSION');

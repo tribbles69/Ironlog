@@ -13,6 +13,11 @@
    expected and listed; the point is that the list should be short and every
    entry explainable.
 
+   Since the module split (r&d/notes/module-split.md) each js/*.js is checked
+   on its own: what it declares, what it imports, and the page's own globals.
+   A name another module declares but this one never imported is reported —
+   in a module that is a ReferenceError the first time the line runs.
+
    Usage:  node "r&d/tools/lint-scope.js"
 */
 const fs = require('fs');
@@ -25,7 +30,27 @@ const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
    analysing only the biggest one made globals declared in another block — like
    PROGRAM_MANIFEST — look undefined. */
 const blocks = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map(m => m[1]);
-const src = blocks.join('\n;\n');
+const inlineSrc = blocks.join('\n;\n');
+
+/* Each module is a scope of its own. Its import lines become the names it may
+   use from elsewhere; `export` in front of a declaration is dropped so the
+   declaration reads as it always did. */
+const units = [{ label: 'index.html', src: inlineSrc, imported: [] }];
+const JS = path.join(ROOT, 'js');
+const modFiles = (fs.existsSync(JS) ? fs.readdirSync(JS).filter(f => f.endsWith('.js')).sort().map(f => 'js/' + f) : [])
+  .concat(['slew-reps.js'].filter(f => fs.existsSync(path.join(ROOT, f))));   // the hand-written module beside the generated Slew bundles
+for (const f of modFiles) {
+  let text = fs.readFileSync(path.join(ROOT, f), 'utf8');
+  const imported = [];
+  text = text.replace(/^import\s*(?:\{([^}]*)\}|\*\s+as\s+([\w$]+)|([\w$]+))\s*from\s*'[^']+';?/gm, (m, list, ns, def) => {
+    if (list) list.split(',').map(x => x.trim().split(/\s+as\s+/).pop()).filter(Boolean).forEach(n => imported.push(n));
+    if (ns) imported.push(ns);
+    if (def) imported.push(def);
+    return m.replace(/[^\n]/g, ' ');   // keep the line count
+  });
+  text = text.replace(/^export\s+(?=(?:async\s+)?function\b|const\b|let\b|var\b|class\b)/gm, '');
+  units.push({ label: f, src: text, imported });
+}
 
 /* Scripts index.html loads by src share the same global scope, so their
    top-level declarations are declarations as far as this app is concerned.
@@ -33,7 +58,7 @@ const src = blocks.join('\n;\n');
    that cries wolf on a real global is one nobody reads. Only the names are
    taken; the generated body is not analysed. */
 const externalGlobals = new Set();
-for (const m of html.matchAll(/<script[^>]*\ssrc=["']([^"']+)["']/g)) {
+for (const m of html.matchAll(/<script(?![^>]*type=["']module["'])[^>]*\ssrc=["']([^"']+)["']/g)) {
   const f = path.join(ROOT, m[1]);
   if (!fs.existsSync(f)) continue;
   const text = fs.readFileSync(f, 'utf8');
@@ -106,11 +131,14 @@ function stripNonCode(s) {
   return out.join('');
 }
 
-const code = stripNonCode(src);
+const findings = [];
+let pageGlobals = new Set();   // what the inline classic scripts declare: visible to every module
+for (const unit of units) {
+const code = stripNonCode(unit.src);
 const lineOf = idx => code.slice(0, idx).split('\n').length;
 
-/* Top-level declarations are the app's globals. */
-const appGlobals = new Set();
+/* Top-level declarations are the app's globals (a module's: its own, what it imports, and the page's). */
+const appGlobals = new Set([...unit.imported, ...(unit.label === 'index.html' ? [] : pageGlobals)]);
 for (const m of code.matchAll(/^(?:async\s+)?function\s*\*?\s*([A-Za-z_$][\w$]*)/gm)) appGlobals.add(m[1]);
 /* Multi-declarator statements are common here — `let saveTimer = null,
    savePending = false;` declares two globals, and taking only the first is how
@@ -192,8 +220,9 @@ function declaredIn(body, params) {
   return d;
 }
 
+if (unit.label === 'index.html') pageGlobals = new Set(appGlobals);
+
 /* Walk top-level functions by brace matching. */
-const findings = [];
 const fnRe = /^(?:async\s+)?function\s+([A-Za-z_$][\w$]*)\s*\(([^)]*)\)\s*\{/gm;
 let m;
 while ((m = fnRe.exec(code))) {
@@ -212,15 +241,16 @@ while ((m = fnRe.exec(code))) {
     if (seen.has(id) || declared.has(id) || appGlobals.has(id) || externalGlobals.has(id) || BUILTINS.has(id)) continue;
     if (id === name) continue;
     seen.add(id);
-    findings.push({ fn: name, id, line: lineOf(m.index + idm.index) });
+    findings.push({ fn: name, id, line: lineOf(m.index + idm.index), file: unit.label });
   }
 }
+}
 
-if (!findings.length) { console.log('no undeclared identifiers found'); process.exit(0); }
+if (!findings.length) { console.log('no undeclared identifiers found' + (units.length > 1 ? ` (${units.length - 1} modules, each on its own)` : '')); process.exit(0); }
 const byFn = {};
 findings.forEach(f => (byFn[f.fn] = byFn[f.fn] || []).push(f));
 console.log(`${findings.length} undeclared identifier(s) across ${Object.keys(byFn).length} function(s):\n`);
 for (const [fn, list] of Object.entries(byFn)) {
-  console.log(`  ${fn}()  —  ${list.map(f => `${f.id} (script line ~${f.line})`).join(', ')}`);
+  console.log(`  ${fn}()  —  ${list.map(f => `${f.id} (${f.file === 'index.html' ? 'script line' : f.file + ' line'} ~${f.line})`).join(', ')}`);
 }
 process.exit(1);

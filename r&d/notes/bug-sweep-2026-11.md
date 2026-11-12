@@ -384,3 +384,48 @@ Also still true after 1.1: goals, meets and edits to planned sessions carry
 no "last changed" time, so a change to one of those on one phone doesn't
 replace the copy on another. Nothing is lost; the two phones just keep their
 own version.
+
+---
+
+## Found during the module split (12 Nov 2026, 0.96.5)
+
+Logged, not fixed: the split is a pure refactor (`r&d/notes/module-split.md`).
+Numbered on from the sweep above.
+
+### [ ] 4.8 Closing the coach straight after a message throws — Confirmed
+**Where:** `coBubble` (index.html ~16753).
+Each bubble asks for the next frame to scroll the sheet down, and that
+callback reads `CO.bg`. Closing the sheet sets `CO = null`, so if it closes
+inside that frame the callback throws `Cannot read properties of null
+(reading 'bg')`. Nothing is lost and nothing shows on screen; it is an
+uncaught error in the console. `coTyped` (~18121) has the same shape after
+its 300–600 ms "thinking" pause if the sheet is closed while it waits.
+**Reproduce:** open Coach, press a chip and Close in the same instant (the
+click-through in `r&d/tools/baseline.js` hits it about one run in three).
+**Suggested fix:** take `const co = CO` before the wait and return if it is
+gone.
+
+### [ ] 4.9 CSV round trip drops extra keys on the leaf of an exercise with no sets — Confirmed
+**Where:** `workoutsToCSV` / `csvToWorkouts` (index.html ~21711–21779).
+An exercise whose `leaf` has anything beyond the four standard keys is kept
+whole in `exercise_extra`. With sets, the four leaf columns are left empty
+for it and import restores the whole leaf. With **no sets**, the exercise
+goes out with its real leaf, so the four columns are filled as well, and on
+import those four overwrite the full leaf from the extra.
+No leaf the app writes today has a fifth key, so no real log is affected;
+the spec says exact, and this is the one shape that isn't.
+**Reproduce:** `csvToWorkouts(workoutsToCSV([{ id: 'x', date: '2026-08-14',
+exercises: [{ leaf: { movement: 'bench-press', equipment: 'barbell',
+execution: 'bilateral', attachment: 'none', extra: 'x' }, sets: [] }] }]))`
+→ the leaf comes back without `extra`.
+**Suggested fix:** in the no-sets branch pass the same `{ ...ex, leaf:
+leafPlain ? ex.leaf : null }` the sets branch does.
+
+### [ ] 4.10 `vbt-sim.cjs`, `vbt-rir.cjs` fail on a Windows checkout with CRLF line endings — Confirmed
+**Where:** the regex that lifts `vbtIntegrate … vbtSummary` out of
+`index.html` ends in `\n\}\n`. With `core.autocrlf=true` the file on disk
+has `\r\n`, the match fails, and the tool exits with "not found in
+index.html". Tools only; the app is unaffected.
+**Workaround used for the split:** `git config --local core.autocrlf false`
+in this checkout. **Suggested fix:** a `.gitattributes` with `* text=auto
+eol=lf`, or `\r?\n` in the two patterns.

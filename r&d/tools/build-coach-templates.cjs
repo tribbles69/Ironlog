@@ -17,10 +17,9 @@ const TPL = { patterns: P.patterns, rules: P.rules, needs: P.needs, goalOverride
   experienceOverrides: P.experienceOverrides, easyOn: P.easyOn,
   goals: G.goals, sets: G.sets, experience: G.experience, minutes: G.minutes, splits };
 
-const file = path.join(root, 'index.html');
-const html = fs.readFileSync(file, 'utf8');
 const line = `const COACH_TPL = ${JSON.stringify(TPL)};   // built by r&d/tools/build-coach-templates.cjs from r&d/data/templates — don't edit here`;
-const re = /^const COACH_TPL = .*$/m;
-if (!re.test(html)) { console.error('No "const COACH_TPL = " line in index.html'); process.exit(1); }
-fs.writeFileSync(file, html.replace(re, () => line));
+/* the line is in js/coach.js since the module split; found by pattern, so it follows the code */
+const re = /^(export )?const COACH_TPL = .*$/m;
+const file = require('./app-source.cjs').fileWith(re, 'the "const COACH_TPL = " line');
+fs.writeFileSync(file, fs.readFileSync(file, 'utf8').replace(re, (m, ex) => (ex || '') + line));
 console.log(`COACH_TPL: ${Object.keys(TPL.patterns).length} patterns, ${Object.keys(splits).length} splits, ${line.length} chars`);

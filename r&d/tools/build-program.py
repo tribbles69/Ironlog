@@ -11,7 +11,9 @@ RIR `t`; the app's autoregulation fills the load from history when a session
 starts, and the weight field shows last time's number until then.
 
 Run from the repo root:  python3 "r&d/tools/build-program.py"
-It writes program.json and prints the PROGRAM_MANIFEST line for index.html.
+It writes program.json and prints the manifest. Since the module split the
+manifest lives in program-manifest.json ("manifest"), not in index.html: put
+the printed object there.
 """
 import json, re, sys, datetime as dt
 from pathlib import Path

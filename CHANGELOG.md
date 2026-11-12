@@ -13,6 +13,11 @@ rather than guessed.
 
 ---
 
+## 0.97.0 — 12 Nov 2026
+- **Nothing you would notice.** The app used to be one very large file; it is now several smaller ones that load together. Everything should look and behave exactly as before, and your log is untouched.
+- The update itself is a slightly bigger download than usual, once, because every file is new.
+- If something does behave differently after this version, that is a bug worth reporting.
+
 ## 0.96.5 — 11 Nov 2026
 - **Changed: your places and your bar-speed calibration now sync through Google Drive.** Add or edit a gym — its kit, bars and plates — on one phone and it turns up on the other; delete it and it goes from both. The same goes for what Measure has learned about each lift. Where both phones changed the same one, the newer change wins.
 - Everything else in Settings — units, rest times, the plates at home and so on — still stays on the phone you set it on.

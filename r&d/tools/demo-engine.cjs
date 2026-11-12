@@ -14,14 +14,16 @@ const path = require('path');
 const vm = require('vm');
 
 const ROOT = path.resolve(__dirname, '..', '..');
-const INDEX = path.join(ROOT, 'index.html');
+const { fileWith, plain } = require('./app-source.cjs');
+/* index.html until the module split, js/exercises.js after it */
+const INDEX = fileWith(/EXERCISE DEMOS — r&d\/specs\/exercise-demo-spec\.md/, 'the exercise demo block');
 const START = 'EXERCISE DEMOS — r&d/specs/exercise-demo-spec.md';
 const END = "let _mvTab = 'info';";
 
 function engineSource(html) {
-  html = html || fs.readFileSync(INDEX, 'utf8');
+  html = plain(html || fs.readFileSync(INDEX, 'utf8'));   // a module's `export` and imports mean nothing in the sandbox
   const s = html.indexOf(START), e = html.indexOf(END);
-  if (s < 0 || e < 0 || e < s) throw new Error('exercise demo block not found in index.html');
+  if (s < 0 || e < 0 || e < s) throw new Error('exercise demo block not found');
   return html.slice(html.lastIndexOf('/*', s), e);
 }
 
