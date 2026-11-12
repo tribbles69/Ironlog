@@ -1,7 +1,7 @@
 /* Ironlog service worker.
    Bump VERSION whenever the app files change — that's what triggers the
    "Update ready" prompt on the next launch. */
-const VERSION = 'ironlog-v167';
+const VERSION = 'ironlog-v168';
 
 const ASSETS = [
   './',
@@ -10,6 +10,7 @@ const ASSETS = [
   './js/data.js',
   './js/core.js',
   './js/database.js',
+  './js/exercises.js',
   './CHANGELOG.md',
   './manifest.webmanifest',
   './program.json',
