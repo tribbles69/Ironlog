@@ -2283,8 +2283,8 @@ export function saveEdit(force) {
 
 /* ============================================================
    TRAINING PROGRAMS
-   A program ships as window.IRONLOG_PROGRAM (see program.js) and installs
-   its sessions as planned workouts. Ids are derived from the program id and
+   A program ships as program.json (its summary in program-manifest.json,
+   see js/data.js) and installs its sessions as planned workouts. Ids are derived from the program id and
    date so re-installing can never duplicate, and removing is exact.
    ============================================================ */
 /* Fetched on demand and cached for the session. theProgram() stays synchronous
