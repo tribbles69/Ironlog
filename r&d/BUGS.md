@@ -118,7 +118,7 @@ Fix: `.gitattributes` with `* text=auto eol=lf`, or `\r?\n` in the patterns.
   caliper/body-comp, BP and glucose bands, cardio zone control loop, fitting
   test scoring, core helpers. Formulas checked against sources: DOTS, IPF GL,
   Jackson–Pollock 3/7, Durnin–Womersley, Siri, Katch–McArdle, Casey Butt,
-  normalised FFMI, Tanaka, Karvonen. New: B-005 to B-007.
+  normalised FFMI, Tanaka, Karvonen. New: B-005 to B-009.
 
 ## Fixed
 
