@@ -1,6 +1,6 @@
-// Optional local server: `node "r&d/tools/serve.mjs"` then open http://localhost:5178
-// You can also just double-click index.html — this is only needed if your
-// browser restricts localStorage on file:// URLs.
+// Local server: `node "r&d/tools/serve.mjs"` then open http://localhost:5178
+// Needed to run the app from disk: since 0.97.0 it is ES modules (js/*.js), and
+// browsers will not load those from a double-clicked index.html (file://).
 import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';

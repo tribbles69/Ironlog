@@ -1,39 +1,106 @@
-# Module split — plan
+# Module split
 
-Splitting `index.html` into native ES modules. Pure refactor: no behaviour
-change, no stored-data change, no build step. Branch `refactor/modules`, cut
-from main at `54ce89b` (0.96.5, `ironlog-v163`). Written 12 Nov 2026.
+`index.html` was one 1.59 MB file. It is now a 5.9 kB shell that loads native
+ES modules from `js/`. Pure refactor: no behaviour change, no stored-data
+change, no build step. Branch `refactor/modules`, cut from main at `54ce89b`
+(0.96.5, `ironlog-v163`), 12 Nov 2026.
 
-**Status: go-ahead given 12 Nov; moves under way, ticked below as they land.**
-(and his answers to the five questions at the end) before step 1.
+**Status: done on the branch, in a PR, not merged.** Every step below is
+ticked. What is left is for a person: a look on a real phone (sensors, camera,
+bar path, the update prompt from an installed 0.96.5), and the merge.
 
-Line numbers below are `index.html` at `54ce89b`. They drift as code moves;
-the ranges that matter are kept in `module-split-plan.json` and should be
-updated in the same commit as each move.
+The first half of this file is how it ended. From "Baseline" down it is the
+plan as it was written before any code moved, kept because it explains why
+things are where they are; line numbers there are `index.html` at `54ce89b`.
 
-## How to pick this up
+## How it ended
 
-1. Read this file, then `r&d/notes/module-split-plan.json` (which lines go
-   to which module) and `module-split-map.json` (generated: every name each
-   module exports and imports).
-2. `git config --local core.autocrlf false` on Windows, then re-checkout.
-   `vbt-sim.cjs` does not find its functions in a CRLF copy (bug log 4.10).
-3. Run the baseline (below) before touching anything and check it matches.
-4. Do the next unticked move in "Order of the moves". One module per commit.
-   Rerun the baseline after each. Don't fix bugs; log them in
-   `bug-sweep-2026-11.md` (4.8–4.10 were found while writing this).
+| File | Bytes | gzip | What |
+|---|--:|--:|---|
+| `index.html` | 5,861 | 2,154 | head, the skin script that runs before first paint, body markup, one CSS rule |
+| `css/app.css` | 47,437 | 11,891 | base stylesheet |
+| `css/skin98.css` | 27,006 | 7,176 | Windows 98 skin |
+| `js/main.js` | 12,794 | 5,356 | boot. The entry point |
+| `js/core.js` | 11,255 | 4,633 | helpers everything uses |
+| `js/data.js` | 1,142 | 632 | reads `program-manifest.json` |
+| `js/database.js` | 127,463 | 42,601 | storage, sync, migrations, import and export |
+| `js/exercises.js` | 314,163 | 68,736 | library, leaf model, demos, modifiers |
+| `js/stats.js` | 65,695 | 21,869 | standards, PRs, weekly sets, muscle map, Stats |
+| `js/events.js` | 77,941 | 23,327 | meets, tests, blocks |
+| `js/tools.js` | 38,912 | 14,268 | Tools, report, calculators, AI key |
+| `js/vbt.js` | 91,199 | 31,292 | Measure, bar path, load-velocity profile |
+| `js/health.js` | 238,008 | 72,496 | health, mobility, fitting test, vitals, cardio, body comp |
+| `js/coach.js` | 170,524 | 54,642 | the coach |
+| `js/workout.js` | 241,592 | 74,312 | calendar, Train, programs, autoregulation, rest timer |
+| `js/ui.js` | 128,481 | 41,787 | toast, modal, charts, router, Home, Settings, 98 chrome |
+| `slew-reps.js` | 13,435 | 5,770 | rep detection and RIR estimate on Slew (new file, code moved from the app) |
+| `program-manifest.json` | 329 | | the shipped program's manifest (was an inline script) |
+| **Total of the above** | **1,613,237** | **482,942** | was `index.html` alone: 1,589,430 / 465,020 |
+| `slew-core.js`, `slew-video.js` | 28,845 / 17,853 | | unchanged, byte for byte |
+| `program.json` | 38,364 | | unchanged |
+| `sw.js` | 4,779 | | was 4,190: the precache list grew |
 
-The map is drawn by a tool, so it can be redrawn after any change:
+About 24 kB (1.5%) more in total: import blocks, `export` keywords, file
+headers and the preload hints. Compressed it is 18 kB more (3.9%), because
+sixteen files compress a little worse than one. A first visit makes about 20
+requests where it made a handful; after that everything comes from the service
+worker's cache as before.
 
-```
-NODE_PATH=../slew-v2/node_modules node "r&d/tools/module-map.cjs" --plan "r&d/notes/module-split-plan.json" --json "r&d/notes/module-split-map.json"
-node "r&d/tools/module-map.cjs" --outline        # every top-level statement, one per line
-node "r&d/tools/module-map.cjs" --deps toast     # who reads and writes one name
-```
+**What changed in the code.** Nothing was rewritten. Each move cut whole
+top-level statements out, in their existing order, and pasted them into the
+new file. The edits are:
 
-It needs the TypeScript parser, which this repo doesn't have; it borrows the
-one in `slew-v2/node_modules`. Its scope analysis is approximate (see the
-header). `lint-scope.js` remains the check that nothing is undeclared.
+- `export` in front of 489 declarations another file uses, plus the ones only
+  the smoke test reaches. Generated.
+- An import block at the top of each file. Generated.
+- Eight one-line setters, and the nine assignments that now call them:
+  `setState`, `setBootFailed`, `setInstallEvt` (database), `setPage`,
+  `setWhatsNewArmed`, `setCalSelected`, `setCardioWhyLast` (ui), `setTick`
+  (workout). An imported variable can't be assigned to.
+- `await loadBundledData();` in `bootApp`, for the program manifest.
+- One CSS rule stays inline in `index.html` (see step 14).
+
+**What did not go to plan.**
+
+- `slew-core.js` and `slew-video.js` were going to become modules. They did
+  not: the app checks `window.Slew` before offering Measure and loads the
+  video tracker on first use, so that a failed load costs one feature and not
+  the app. Making them imports would have changed that. They are untouched.
+  `r&d/notes/slew-api.md` has the contract.
+- The click-through's fingerprint is not as repeatable as first measured. On
+  the same build it gives one of two results: 278 clicks
+  (`d7184bd0505d7901`) or 276 (`7aee7caa81b76aec`) on an empty install, and
+  742 (`4fa1f3242605ca1d`) or 740 (`72f87cea28aef01d`) on the migrated seed.
+  The difference is two buttons in Settings that are there or not depending
+  on something outside the page's control; main does the same. Every step
+  matched one of the two for each seed, and all four were seen on main-equivalent
+  code. Not chased further.
+- The mover had two bugs, both caught by the checks before a commit: the
+  generated import block rode along with the first statement moved, and a
+  generated setter was left behind when its variable moved. Fixed in
+  `module-map.cjs`.
+- `build-program-wdc.py` now writes `program-manifest.json`. Python is not
+  installed on the machine this was done on, so that edit has not been run.
+
+**Decisions taken where the brief left a choice** (the questions at the end of
+this file; Aaron said go ahead without answering them one by one, so each took
+the recommendation given there):
+
+1. "Bundled program data" was read as the program manifest → `program-manifest.json`.
+2. The other generated data (exercise database, demos, coach templates,
+   routines, the `WHY` text: about 260 kB) stays in its module. Not done.
+3. Stylesheets moved out (step 14).
+4. One cache bump per commit (v164–v181), one app version at the end (0.97.0).
+5. Opening `index.html` from disk no longer works; it has to be served.
+6. Ironlog's rep detection sits beside the engine in `slew-reps.js`; not pushed upstream.
+
+**Rules for working in it now** are in `CLAUDE.md`. The short version: run
+`module-map.cjs --sync` after adding or moving a top-level name, never use
+another module's values at load time, and add every new file to `sw.js`.
+
+---
+
+# The plan, as written before the moves
 
 ## Baseline (main at 54ce89b, 12 Nov 2026)
 
@@ -315,10 +382,10 @@ One commit each. After every one: the full baseline, `node --check` on every
   `js/main.js`.
 - [x] **14. Stylesheets out** (`css/app.css`, `css/skin98.css`), if wanted
   (question 3). `index.html` is then about 5 kB.
-- [ ] **15. Docs.** `CLAUDE.md`, `r&d/README.md` and the roadmap's standing
+- [x] **15. Docs.** `CLAUDE.md`, `r&d/README.md` and the roadmap's standing
   rules say "the app is a single large `index.html`" and name the
   three-place version bump. Update them.
-- [ ] **16. PR** with file sizes before and after. Not merged.
+- [x] **16. PR** with file sizes before and after. Not merged.
 
 Leaves first, the most tangled last, so each move's import list is mostly
 things that have already settled. Each move is cut and paste of whole

@@ -69,13 +69,16 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    building.
 4. One feature per commit. Every shipped change bumps `version.json`, the
    `VERSION` / cache name in `sw.js`, or installed PWAs keep serving the old
-   shell, **and `APP_VERSION` in `index.html`**, or the app reports the old
+   shell, **and `APP_VERSION` in `js/core.js`**, or the app reports the old
    version and the update sheet never goes away (0.75.1–0.77.1 shipped
    without it) — **and adds an entry to the changelog** (see CLAUDE.md).
    Use `node "r&d/tools/bump.cjs" X.Y.Z` (does all three); then
    `node "r&d/tools/check-version.cjs"` checks they and the changelog agree.
-5. Before committing, syntax-check every `<script>` block — a template-literal
-   typo white-screens the single-file app:
+5. Before committing, syntax-check the code — a template-literal typo in any
+   module white-screens the whole app. Since 0.97.0 the app is `js/*.js`
+   (`r&d/notes/module-split.md`), and `node "r&d/tools/check-version.cjs"`
+   parses every module and checks every import resolves. The inline scripts
+   left in `index.html`:
    ```bash
    node -e "const fs=require('fs');const h=fs.readFileSync('index.html','utf8');[...h.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].forEach((m,i)=>{try{new Function(m[1]);console.log(i,'OK')}catch(e){console.log(i,'ERR',e.message)}})"
    ```
