@@ -12,7 +12,7 @@
 //   every precached file exists
 //   every `import { x } from './y.js'` names something y.js exports — a wrong
 //     one is not an error in one feature, it is a blank page
-//   every module parses
+//   every module parses, and has its <link rel="modulepreload"> in index.html
 // Run:  node "r&d/tools/check-version.cjs"
 const fs = require('fs'), path = require('path'), cp = require('child_process');
 const { fileWith, rel } = require('./app-source.cjs');
@@ -42,6 +42,9 @@ for (const f of loaded) if (!assets.has(f)) bad.push(`${f} is loaded by the app 
 if (mods.length) {
   const entry = (html.match(/<script type="module" src="([^"]+)"/) || [])[1];
   if (!entry) bad.push('index.html has no <script type="module" src=…>');
+  /* a module without a preload hint still loads, only later; one with a hint and no file is a console error on every launch */
+  const hinted = new Set([...html.matchAll(/<link rel="modulepreload" href="([^"]+)">/g)].map(m => m[1]));
+  if (hinted.size) { for (const f of mods) if (!hinted.has(f)) bad.push(`${f} has no <link rel="modulepreload"> in index.html`); for (const f of hinted) if (!mods.includes(f)) bad.push(`index.html preloads ${f}, which is not a module of the app`); }
   const exportsOf = {};
   for (const f of mods) {
     const t = fs.readFileSync(path.join(root, f), 'utf8');

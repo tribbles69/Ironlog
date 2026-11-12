@@ -22,7 +22,8 @@
                           turn line ranges into a name → module table, which
                           survives lines moving
      --move <module>      cut every statement assigned to <module> out of
-                          js/app.js into js/<module>.js, then --sync
+                          js/app.js into js/<module>.js, then --sync (how the
+                          split was done; js/app.js ended as js/main.js)
      --sync               regenerate, in every js/*.js: `export` on each
                           declaration another file (or the smoke test) uses,
                           setters for variables assigned from another file,

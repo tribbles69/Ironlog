@@ -1,12 +1,12 @@
 /* Ironlog service worker.
    Bump VERSION whenever the app files change — that's what triggers the
    "Update ready" prompt on the next launch. */
-const VERSION = 'ironlog-v178';
+const VERSION = 'ironlog-v179';
 
 const ASSETS = [
   './',
   './index.html',
-  './js/app.js',   // the app's code (module split, r&d/notes/module-split.md): every js/ file must be listed, check-version.cjs checks
+  './js/main.js',   // the entry point. Every js/ file must be listed here: r&d/tools/check-version.cjs checks
   './js/data.js',
   './js/core.js',
   './js/database.js',
