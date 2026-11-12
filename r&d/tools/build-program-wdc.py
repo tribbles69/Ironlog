@@ -17,7 +17,9 @@ Rules agreed in that chat:
     pulls up to the cap, then isometrics into the pins.
 
 Run from the repo root:  python3 "r&d/tools/build-program-wdc.py"
-Then paste the printed manifest over PROGRAM_MANIFEST in index.html.
+It writes program.json and the manifest in program-manifest.json (what
+Settings shows; js/data.js reads it at boot). The "names" already in that
+file are kept.
 """
 import json, os, datetime
 
@@ -195,4 +197,15 @@ with open(os.path.join(ROOT, 'program.json'), 'w') as f:
 
 manifest = {'id': program['id'], 'name': program['name'], 'subtitle': program['subtitle'],
             'sessions': len(workouts), 'meets': 0, 'weeks': WEEKS}
+# The manifest moved out of index.html in the module split. "names" (earlier
+# shipped programs, so their sessions can still be named and removed) is kept.
+mpath = os.path.join(ROOT, 'program-manifest.json')
+try:
+    with open(mpath, encoding='utf-8') as f:
+        names = json.load(f).get('names', {})
+except (OSError, ValueError):
+    names = {}
+with open(mpath, 'w', encoding='utf-8') as f:
+    json.dump({'manifest': manifest, 'names': names}, f, ensure_ascii=False, indent=1)
+    f.write('\n')
 print(json.dumps(manifest, ensure_ascii=False))
