@@ -304,7 +304,7 @@ One commit each. After every one: the full baseline, `node --check` on every
 - [x] **5. `js/exercises.js`.** `build-catalogue`, `build-demos` and the demo
   tools follow.
 - [x] **6. `js/stats.js`.**
-- [ ] **7. `js/events.js`.**
+- [x] **7. `js/events.js`.**
 - [ ] **8. `js/tools.js`.**
 - [ ] **9. Slew stands alone** (next section), then **`js/vbt.js`**. Two
   commits. `vbt-sim`, `vbt-rir`, `vbt-validate` follow.
