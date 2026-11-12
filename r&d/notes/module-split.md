@@ -310,7 +310,7 @@ One commit each. After every one: the full baseline, `node --check` on every
   commits. `vbt-sim`, `vbt-rir`, `vbt-validate` follow.
 - [x] **10. `js/health.js`.** `build-routines` follows.
 - [x] **11. `js/coach.js`.** `build-coach-templates` follows.
-- [ ] **12. `js/workout.js`.**
+- [x] **12. `js/workout.js`.**
 - [ ] **13. `js/ui.js`.** What is left of `app.js` is boot: rename it
   `js/main.js`.
 - [ ] **14. Stylesheets out** (`css/app.css`, `css/skin98.css`), if wanted

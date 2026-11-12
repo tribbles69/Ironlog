@@ -1,7 +1,7 @@
 /* Ironlog service worker.
    Bump VERSION whenever the app files change — that's what triggers the
    "Update ready" prompt on the next launch. */
-const VERSION = 'ironlog-v176';
+const VERSION = 'ironlog-v177';
 
 const ASSETS = [
   './',
@@ -17,6 +17,7 @@ const ASSETS = [
   './js/vbt.js',
   './js/health.js',
   './js/coach.js',
+  './js/workout.js',
   './slew-reps.js',   // Ironlog's rep detection and RIR estimate on top of slew-core.js (r&d/notes/slew-api.md)
   './CHANGELOG.md',
   './manifest.webmanifest',
