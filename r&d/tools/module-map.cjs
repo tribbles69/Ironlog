@@ -310,10 +310,16 @@ function move(mod) {
   analyse(units);
   const app = units.find(u => u.name === 'app');
   const target = unitFile(mod);
-  const of = s => s.names.length ? assign.names[s.names[0]] : (assign.anon[s.hash] || {}).module;
+  /* A generated setter is not in the table; it belongs with the variable it sets.
+     Left behind, the next sync would see its own assignment as one from another
+     module and rewrite it into a call to itself. */
+  const setterOf = Object.fromEntries(Object.keys(assign.names).map(n => [setterFor(n), n]));
+  const isSetter = s => s.declKind === 'function' && setterOf[s.names[0]] && !(s.names[0] in assign.names)
+    && new RegExp(`\\{\\s*return ${setterOf[s.names[0]].replace(/\$/g, '\\$')} = v;\\s*\\}`).test(app.text.slice(s.start, s.end));
+  const of = s => isSetter(s) ? assign.names[setterOf[s.names[0]]] : s.names.length ? assign.names[s.names[0]] : (assign.anon[s.hash] || {}).module;
   const take = app.stmts.filter(s => !s.generated && of(s) === mod);
   if (!take.length) throw new Error(`nothing in js/app.js is assigned to ${mod}`);
-  for (const s of take) for (const n of s.names) if (assign.names[n] !== mod) throw new Error(`${n} shares a statement with ${s.names[0]} but is assigned to ${assign.names[n]}`);
+  for (const s of take) if (!isSetter(s)) for (const n of s.names) if (assign.names[n] !== mod) throw new Error(`${n} shares a statement with ${s.names[0]} but is assigned to ${assign.names[n]}`);
   const moved = take.map(s => app.text.slice(s.segStart, s.segEnd)).join('');
   const rest = applyEdits(app.text, take.map(s => ({ start: s.segStart, end: s.segEnd, text: '' })));
   const head = fs.existsSync(target) ? fs.readFileSync(target, 'utf8') : `/* Ironlog — ${assign.titles[mod] || mod}. Split out of index.html (r&d/notes/module-split.md). */\n`;
