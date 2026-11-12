@@ -303,7 +303,7 @@ One commit each. After every one: the full baseline, `node --check` on every
   setters (`setState`, `setBootFailed`, `setInstallEvt`).
 - [x] **5. `js/exercises.js`.** `build-catalogue`, `build-demos` and the demo
   tools follow.
-- [ ] **6. `js/stats.js`.**
+- [x] **6. `js/stats.js`.**
 - [ ] **7. `js/events.js`.**
 - [ ] **8. `js/tools.js`.**
 - [ ] **9. Slew stands alone** (next section), then **`js/vbt.js`**. Two
