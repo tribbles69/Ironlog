@@ -49,6 +49,34 @@ IDs run on and are never reused. Severity:
 
 ## Open
 
+### B-005 · sev 2 · DOTS for women over 150 kg bodyweight is too high
+Found: 2026-11-12, 0.97.0, bug sweep
+Where: js/core.js `dots` — `clamp(bwKg, 40, 210)` for both sexes
+Reproduce: confirmed in the app — `dots(400, 180, 'female')` gives 318.8;
+with the official women's clamp it's 308.3. Gets worse with bodyweight
+(210 kg → 378.5). Feeds Stats, the profile, meet day, the coach and the
+points calculator.
+Fix: the women's formula is bounded 40–150 kg, men's 40–210. Clamp by sex.
+
+### B-006 · sev 3 · IPF age category goes by birthday, not calendar year
+Found: 2026-11-12, 0.97.0, bug sweep
+Where: js/core.js `ageCategory`, called with `ageFrom(dob)` in the profile
+(js/ui.js)
+Reproduce: confirmed — someone who's 23 now but turns 24 in December shows as
+Junior; IPF puts them in Open for the whole year. Same at every boundary
+(Sub-junior → Junior, Masters bands).
+Fix: compute the category from `currentYear − birthYear`, not exact age. Also
+check the 2026 IPF rulebook changes (age categories were amended March 2026).
+
+### B-007 · sev 3 · Caliper preview shows a body-fat % with no age entered
+Found: 2026-11-12, 0.97.0, bug sweep
+Where: js/health.js `openCaliper` → `caliperCalc` uses `t.age || 0`
+Reproduce: with no date of birth in the profile, open a new caliper test and
+fill the sites — the live result shows a figure worked out at age 0 (JP3,
+10/20/15 mm: 10.3% shown vs 13.6% at age 30). Save then refuses for lack of
+an age, so nothing wrong is stored, but the number on screen is wrong.
+Fix: when there's no age, show "Enter your age to see the result" instead.
+
 ### B-001 · sev 3 · Closing the coach straight after a message throws
 Found: 2026-11-12, 0.96.5, during the module split (sweep 4.8)
 Where: js/coach.js `coBubble`, `coTyped`
@@ -80,6 +108,17 @@ Fix: `.gitattributes` with `* text=auto eol=lf`, or `\r?\n` in the patterns.
 ## Needs Aaron
 
 (none)
+
+## Sweeps
+
+- **2026-11-12, 0.97.0** — checks and tools all pass except the known B-003;
+  smoke test 55/55 on empty and migrated installs; click-through of every
+  page (276 + 742 clicks), no new errors beyond B-001; CSV round trip shows
+  only B-002. Read line by line: events and meet day, calculators and AI key,
+  caliper/body-comp, BP and glucose bands, cardio zone control loop, fitting
+  test scoring, core helpers. Formulas checked against sources: DOTS, IPF GL,
+  Jackson–Pollock 3/7, Durnin–Womersley, Siri, Katch–McArdle, Casey Butt,
+  normalised FFMI, Tanaka, Karvonen. New: B-005 to B-007.
 
 ## Fixed
 
