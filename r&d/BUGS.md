@@ -77,6 +77,26 @@ fill the sites — the live result shows a figure worked out at age 0 (JP3,
 an age, so nothing wrong is stored, but the number on screen is wrong.
 Fix: when there's no age, show "Enter your age to see the result" instead.
 
+### B-008 · sev 3 · Meet placing: ties don't go to the lighter lifter
+Found: 2026-11-12, 0.97.0, bug sweep
+Where: js/events.js `predictPlacing`
+Reproduce: from the code — the comment says ties go to the lighter lifter, but
+`filter(l => l.total >= total)` always puts you below anyone on the same total,
+whatever either bodyweight. Only the hard-coded West Midlands 93 kg field uses
+it today, where Aaron would be the heavier lifter anyway, so the result happens
+to be right there.
+Fix: compare bodyweights on a tie (yours from `bodyweightKg()` or the meet's
+target), and give "You" a bodyweight on the ladder.
+
+### B-009 · sev 3 · "Moved X places" can say no change after two tests on one day
+Found: 2026-11-12, 0.97.0, bug sweep
+Where: js/events.js `meetCard` — `prevTotal = testedTotalAsOf(dates[1])`
+Reproduce: from the code — `dates` is one entry per tested session, so two test
+sessions on the same day make `dates[1]` today as well, and the "previous"
+total is the current one: always 0 places moved.
+Fix: take the latest test date strictly before the newest one
+(`dates.find(d => d < dates[0])`).
+
 ### B-001 · sev 3 · Closing the coach straight after a message throws
 Found: 2026-11-12, 0.96.5, during the module split (sweep 4.8)
 Where: js/coach.js `coBubble`, `coTyped`
