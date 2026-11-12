@@ -37,8 +37,10 @@ const inlineSrc = blocks.join('\n;\n');
    declaration reads as it always did. */
 const units = [{ label: 'index.html', src: inlineSrc, imported: [] }];
 const JS = path.join(ROOT, 'js');
-if (fs.existsSync(JS)) for (const f of fs.readdirSync(JS).filter(f => f.endsWith('.js')).sort()) {
-  let text = fs.readFileSync(path.join(JS, f), 'utf8');
+const modFiles = (fs.existsSync(JS) ? fs.readdirSync(JS).filter(f => f.endsWith('.js')).sort().map(f => 'js/' + f) : [])
+  .concat(['slew-reps.js'].filter(f => fs.existsSync(path.join(ROOT, f))));   // the hand-written module beside the generated Slew bundles
+for (const f of modFiles) {
+  let text = fs.readFileSync(path.join(ROOT, f), 'utf8');
   const imported = [];
   text = text.replace(/^import\s*(?:\{([^}]*)\}|\*\s+as\s+([\w$]+)|([\w$]+))\s*from\s*'[^']+';?/gm, (m, list, ns, def) => {
     if (list) list.split(',').map(x => x.trim().split(/\s+as\s+/).pop()).filter(Boolean).forEach(n => imported.push(n));
@@ -47,7 +49,7 @@ if (fs.existsSync(JS)) for (const f of fs.readdirSync(JS).filter(f => f.endsWith
     return m.replace(/[^\n]/g, ' ');   // keep the line count
   });
   text = text.replace(/^export\s+(?=(?:async\s+)?function\b|const\b|let\b|var\b|class\b)/gm, '');
-  units.push({ label: 'js/' + f, src: text, imported });
+  units.push({ label: f, src: text, imported });
 }
 
 /* Scripts index.html loads by src share the same global scope, so their

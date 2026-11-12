@@ -13,10 +13,9 @@ const FILE = process.argv[2] || path.join(ROOT, 'r&d/data/vbt/ironlog-vbt-raw-20
 const ctx = { console, Math, Number, Object, Array, JSON, Infinity, Date, crypto: { randomUUID: () => 'x' }, performance: { now: () => 0 }, window: { addEventListener() {}, removeEventListener() {} } };
 ctx.globalThis = ctx; vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(ROOT, 'slew-core.js'), 'utf8'), ctx);
-const html = require('./app-source.cjs').source();   // index.html and js/*.js, as one classic script
-const a = html.match(/const VBT_HP_V[\s\S]*?\nfunction vbtSummary\(reps\) \{[\s\S]*?\n\}\r?\n/);
-const b = html.match(/const VBT_RIR = [\s\S]*?\nfunction vbtRirText/);
-vm.runInContext('const nice = n => (Math.round(n * 10) / 10).toString(); const rpeToRir = r => r == null ? null : 10 - r;' + a[0] + b[0].replace(/\nfunction vbtRirText$/, '') + ';Object.assign(globalThis, { vbtIntegrate, vbtDropBlips, VBT_MIN_ROM, vbtTiltMotion, vbtEstimateSet });', ctx);
+/* Ironlog's layer on Slew is slew-reps.js: a module with no imports, run here as the classic script it would be without its `export`s. */
+const reps = require('./app-source.cjs').plain(fs.readFileSync(path.join(ROOT, 'slew-reps.js'), 'utf8'));
+vm.runInContext('const nice = n => (Math.round(n * 10) / 10).toString(); const rpeToRir = r => r == null ? null : 10 - r;' + reps + ';Object.assign(globalThis, { vbtIntegrate, vbtDropBlips, VBT_MIN_ROM, vbtTiltMotion, vbtEstimateSet });', ctx);
 const { Slew, vbtIntegrate, vbtDropBlips, VBT_MIN_ROM, vbtTiltMotion, vbtEstimateSet } = ctx;
 const d = JSON.parse(fs.readFileSync(FILE, 'utf8'));
 const f = e => !e ? '—' : Number.isFinite(e.rir) ? e.rir.toFixed(1) + (e.atLeast ? '+' : '') : 'none';

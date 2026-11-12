@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /* Measure's rep detection, old against new. Compares Slew.integrateMotion with
-   Ironlog's vbtIntegrate + vbtDropBlips (read out of index.html, so this tests
+   Ironlog's vbtIntegrate + vbtDropBlips (slew-reps.js itself, so this tests
    what ships) and fails if any set loses reps or gains phantom ones.
 
    Synthetic sets: smooth velocity profiles through the real MotionCapture,
@@ -23,10 +23,9 @@ const ctx = { console, Math, Number, Object, Array, JSON, Infinity, crypto: { ra
 ctx.globalThis = ctx;
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(ROOT, 'slew-core.js'), 'utf8'), ctx);
-const html = require('./app-source.cjs').source();   // index.html and js/*.js, as one classic script
-const src = html.match(/const VBT_HP_V[\s\S]*?\nfunction vbtSummary\(reps\) \{[\s\S]*?\n\}\n/);
-if (!src) { console.error('vbtIntegrate … vbtSummary not found in index.html or js/'); process.exit(1); }
-vm.runInContext(src[0] + 'globalThis.vbtIntegrate = vbtIntegrate; globalThis.vbtDropBlips = vbtDropBlips; globalThis.VBT_MIN_ROM = VBT_MIN_ROM; globalThis.vbtTiltMotion = vbtTiltMotion;', ctx);
+/* Ironlog's layer on Slew is slew-reps.js: a module with no imports, run here as the classic script it would be without its `export`s. */
+const src = [require('./app-source.cjs').plain(fs.readFileSync(path.join(ROOT, 'slew-reps.js'), 'utf8'))];
+vm.runInContext(src[0] + ';globalThis.vbtIntegrate = vbtIntegrate; globalThis.vbtDropBlips = vbtDropBlips; globalThis.VBT_MIN_ROM = VBT_MIN_ROM; globalThis.vbtTiltMotion = vbtTiltMotion;', ctx);
 const { Slew, vbtIntegrate, vbtDropBlips, VBT_MIN_ROM, vbtTiltMotion } = ctx;
 const arg = k => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + 1] : null; };
 

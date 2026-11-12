@@ -12,11 +12,13 @@ const path = require('path');
 
 const ROOT = path.resolve(__dirname, '..', '..');
 
-/* index.html first, then js/ in name order. */
+/* index.html first, then js/ in name order, then the root modules. */
 function appFiles() {
   const js = path.join(ROOT, 'js');
   const mods = fs.existsSync(js) ? fs.readdirSync(js).filter(f => f.endsWith('.js')).sort().map(f => path.join(js, f)) : [];
-  return [path.join(ROOT, 'index.html'), ...mods];
+  /* and the ones at the root, beside the generated Slew bundles */
+  const root = ['slew-reps.js'].map(f => path.join(ROOT, f)).filter(f => fs.existsSync(f));
+  return [path.join(ROOT, 'index.html'), ...mods, ...root];
 }
 const rel = f => path.relative(ROOT, f).split(path.sep).join('/');
 

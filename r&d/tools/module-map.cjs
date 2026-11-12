@@ -38,6 +38,10 @@ try { ts = require('typescript'); } catch (e) {
 const ROOT = path.resolve(__dirname, '..', '..');
 const JS = path.join(ROOT, 'js');
 const ASSIGN = path.join(ROOT, 'r&d/notes/module-split-assign.json');
+/* Modules that live at the repo root, beside the generated Slew bundles, rather than in js/. */
+const ROOT_MODULES = ['slew-reps'];
+const unitFile = name => path.join(ROOT_MODULES.includes(name) ? ROOT : JS, name + '.js');
+const specifier = (from, to) => { const r = path.relative(path.dirname(from), to).split(path.sep).join('/'); return r.startsWith('.') ? r : './' + r; };
 const arg = (k, n = 1) => { const i = process.argv.indexOf(k); return i > 0 ? process.argv[i + n] : null; };
 const has = k => process.argv.includes(k);
 const SK = ts.SyntaxKind;
@@ -57,6 +61,7 @@ function loadUnits() {
   if (fs.existsSync(JS)) for (const f of fs.readdirSync(JS).filter(f => f.endsWith('.js')).sort()) {
     units.push({ name: f.replace(/\.js$/, ''), file: path.join(JS, f), text: fs.readFileSync(path.join(JS, f), 'utf8'), module: true });
   }
+  for (const n of ROOT_MODULES) if (fs.existsSync(unitFile(n))) units.push({ name: n, file: unitFile(n), text: fs.readFileSync(unitFile(n), 'utf8'), module: true });
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   let bi = 0;
   for (const m of html.matchAll(/<script(?![^>]*\ssrc=)[^>]*>([\s\S]*?)<\/script>/g)) {
@@ -228,7 +233,7 @@ function importBlock(u, decl) {
     let cur = 'import {', body = [];
     for (const n of names) { if ((cur + ' ' + n + ',').length > 118) { body.push(cur); cur = ' '; } cur += ' ' + n + ','; }
     body.push(cur.replace(/,$/, ''));
-    lines.push(body.join('\n') + ` } from './${m}.js';`);
+    lines.push(body.join('\n') + ` } from '${specifier(u.file, unitFile(m))}';`);
   }
   lines.push(IMPORT_TAIL);
   return lines.join('\n') + '\n';
@@ -304,7 +309,7 @@ function move(mod) {
   const units = loadUnits().filter(u => u.module);
   analyse(units);
   const app = units.find(u => u.name === 'app');
-  const target = path.join(JS, mod + '.js');
+  const target = unitFile(mod);
   const of = s => s.names.length ? assign.names[s.names[0]] : (assign.anon[s.hash] || {}).module;
   const take = app.stmts.filter(s => !s.generated && of(s) === mod);
   if (!take.length) throw new Error(`nothing in js/app.js is assigned to ${mod}`);
@@ -315,7 +320,7 @@ function move(mod) {
   fs.writeFileSync(target, head + moved.replace(/^\n+/, '\n'));
   fs.writeFileSync(app.file, rest);
   const n = sync();
-  console.log(`moved ${take.length} statements (${(moved.length / 1024).toFixed(0)} kB) to js/${mod}.js; sync took ${n} pass(es)`);
+  console.log(`moved ${take.length} statements (${(moved.length / 1024).toFixed(0)} kB) to ${path.relative(ROOT, target).split(path.sep).join('/')}; sync took ${n} pass(es)`);
 }
 
 /* ---------- reports ---------- */

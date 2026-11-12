@@ -32,9 +32,11 @@ if (log !== vj.version) bad.push(`CHANGELOG.md top entry ${log} ≠ version.json
 const assets = new Set([...rd('sw.js').match(/const ASSETS = \[([\s\S]*?)\];/)[1].matchAll(/'\.\/([^']*)'/g)].map(m => m[1]));
 for (const a of assets) if (a && !fs.existsSync(path.join(root, a))) bad.push(`sw.js precaches ${a}, which does not exist`);
 const jsDir = path.join(root, 'js');
-const mods = fs.existsSync(jsDir) ? fs.readdirSync(jsDir).filter(f => f.endsWith('.js')).sort() : [];
+/* js/*.js, and the hand-written module that sits at the root beside the generated Slew bundles */
+const mods = (fs.existsSync(jsDir) ? fs.readdirSync(jsDir).filter(f => f.endsWith('.js')).sort().map(f => 'js/' + f) : [])
+  .concat(['slew-reps.js'].filter(f => fs.existsSync(path.join(root, f))));
 const html = rd('index.html');
-const loaded = new Set(mods.map(f => 'js/' + f));
+const loaded = new Set(mods);
 for (const m of html.matchAll(/<(?:script|link)\b[^>]*?\b(?:src|href)="([^"#?:]+\.(?:js|css|json))"/g)) loaded.add(m[1]);
 for (const f of loaded) if (!assets.has(f)) bad.push(`${f} is loaded by the app but not precached in sw.js`);
 if (mods.length) {
@@ -42,7 +44,7 @@ if (mods.length) {
   if (!entry) bad.push('index.html has no <script type="module" src=…>');
   const exportsOf = {};
   for (const f of mods) {
-    const t = fs.readFileSync(path.join(jsDir, f), 'utf8');
+    const t = fs.readFileSync(path.join(root, f), 'utf8');
     const ex = exportsOf[f] = new Set();
     for (const m of t.matchAll(/^export\s+(?:async\s+)?function\s*\*?\s*([A-Za-z_$][\w$]*)/gm)) ex.add(m[1]);
     for (const m of t.matchAll(/^export\s+class\s+([A-Za-z_$][\w$]*)/gm)) ex.add(m[1]);
@@ -55,18 +57,21 @@ if (mods.length) {
     }
     for (const m of t.matchAll(/^export\s*\{([^}]*)\}/gm)) m[1].split(',').map(s => s.trim().split(/\s+as\s+/).pop()).filter(Boolean).forEach(n => ex.add(n));
   }
+  /* The engine side stands alone: nothing at the root may import from the app. */
+  for (const f of mods.filter(f => !f.startsWith('js/'))) if (/^import\s/m.test(fs.readFileSync(path.join(root, f), 'utf8'))) bad.push(`${f} has an import — the Slew side takes nothing from Ironlog`);
+  for (const f of ['slew-core.js', 'slew-video.js']) if (/^\s*import\s|\brequire\(/m.test(rd(f))) bad.push(`${f} imports something — it is a closed bundle`);
   for (const f of mods) {
-    const file = path.join(jsDir, f);
+    const file = path.join(root, f);
     const t = fs.readFileSync(file, 'utf8');
     for (const m of t.matchAll(/^import\s*(?:\{([^}]*)\}|\*\s+as\s+[\w$]+|[\w$]+)\s*from\s*'([^']+)'/gm)) {
-      const target = path.posix.normalize('js/' + m[2]);
-      if (!fs.existsSync(path.join(root, target))) { bad.push(`js/${f} imports ${m[2]}, which does not exist`); continue; }
-      if (!assets.has(target)) bad.push(`${target} is imported by js/${f} but not precached in sw.js`);
-      const ex = exportsOf[path.basename(target)];
-      if (m[1] && ex && target.startsWith('js/')) for (const n of m[1].split(',').map(s => s.trim().split(/\s+as\s+/)[0]).filter(Boolean)) if (!ex.has(n)) bad.push(`js/${f} imports ${n} from ${m[2]}, which does not export it`);
+      const target = path.posix.normalize(path.posix.join(path.posix.dirname(f), m[2]));
+      if (!fs.existsSync(path.join(root, target))) { bad.push(`${f} imports ${m[2]}, which does not exist`); continue; }
+      if (!assets.has(target)) bad.push(`${target} is imported by ${f} but not precached in sw.js`);
+      const ex = exportsOf[target];
+      if (m[1] && ex) for (const n of m[1].split(',').map(s => s.trim().split(/\s+as\s+/)[0]).filter(Boolean)) if (!ex.has(n)) bad.push(`${f} imports ${n} from ${m[2]}, which does not export it`);
     }
     try { cp.execFileSync(process.execPath, ['--check', file], { stdio: 'pipe' }); }
-    catch (e) { bad.push(`js/${f} does not parse:\n    ${String(e.stderr).split('\n').slice(0, 5).join('\n    ')}`); }
+    catch (e) { bad.push(`${f} does not parse:\n    ${String(e.stderr).split('\n').slice(0, 5).join('\n    ')}`); }
   }
 }
 if (bad.length) { console.error('Mismatch:\n  ' + bad.join('\n  ')); process.exit(1); }
