@@ -146,6 +146,7 @@
       "positions": ["flexors", "extensors"],
       "cue": "Arm out in front. Flexors: pull the fingers back. Extensors: push the fingers down. Both sides.",
       "endRange": true,
+      "swap": "wrist-circles-curls",
       "inRoutine": "morning-stretch"
     },
     {
@@ -212,6 +213,7 @@
       "position": "floor",
       "cue": "Shin forward across the body, hips sink toward the floor, hands support. If too intense, do a lying glute stretch instead.",
       "endRange": true,
+      "swap": "ninety-ninety-switches",
       "inRoutine": "morning-stretch"
     },
     {
@@ -238,6 +240,7 @@
       "position": "bodyweight",
       "cue": "Shoulder-width, toes slightly out, as deep as possible. Hold a doorframe or pole if needed. Elbows press knees out.",
       "endRange": true,
+      "swap": "goblet-squat-hold",
       "inRoutine": "morning-stretch"
     },
     {
@@ -264,6 +267,7 @@
       "position": "standing",
       "cue": "Feet together, hang. Each exhale, straighten the legs a little more.",
       "endRange": true,
+      "swap": "slow-rdl-stretch",
       "inRoutine": "morning-stretch"
     },
     {
@@ -304,6 +308,7 @@
       "position": "floor",
       "cue": "Face down, pull one foot toward the glute. Hips stay down.",
       "endRange": true,
+      "swap": "active-prone-knee-bend",
       "inRoutine": "morning-stretch"
     },
     {
@@ -344,6 +349,43 @@
       "position": "seated",
       "cue": "Circle each ankle slowly both ways, then spread the toes wide and relax them.",
       "inRoutine": "morning-stretch"
+    },
+    {
+      "id": "active-prone-knee-bend",
+      "name": "Active Prone Knee Bend",
+      "region": "quads",
+      "style": "active",
+      "targets": ["hamstrings", "quads"],
+      "joints": ["knees"],
+      "hold": 5,
+      "reps": 8,
+      "perSide": true,
+      "position": "floor",
+      "cue": "Face down. Curl the heel toward the glute with the hamstrings only — no pulling with the hand. Squeeze 5 s at the top, lower slowly."
+    },
+    {
+      "id": "goblet-squat-hold",
+      "name": "Goblet Squat Hold",
+      "region": "hips",
+      "style": "loaded",
+      "targets": ["hips", "adductors", "ankles"],
+      "joints": ["hips", "knees", "ankles"],
+      "hold": 20,
+      "sets": 3,
+      "position": "standing",
+      "cue": "Light kettlebell or dumbbell at the chest. Sit to the bottom, brace, elbows inside the knees."
+    },
+    {
+      "id": "wrist-circles-curls",
+      "name": "Wrist Circles and Light Curls",
+      "region": "wrists",
+      "style": "loaded",
+      "targets": ["wrist", "forearms"],
+      "joints": ["wrists"],
+      "reps": 10,
+      "perSide": true,
+      "position": "seated or standing",
+      "cue": "Slow full circles, 5 each way, then light wrist curls and reverse curls through the whole range."
     },
     {
       "id": "upper-trap-stretch",

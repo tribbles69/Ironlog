@@ -70,6 +70,7 @@ export const DEFAULT_STATE = {
   measures: [],   // {id,date,cm:{site:cm},custom:{name:cm},mt} — E4 body measurements
   calipers: [],   // {id,date,method:'jp3'|'jp7'|'dw4',sex,age,mm:{site:[readings]},mt} — E4; results derived when shown
   mobTests: [],   // {id,date,test,side:'L'|'R'|null,v,mt} — E5 mobility and balance tests (MOB_TESTS)
+  routines: [],   // {id,name,items:[{id,dose?}],mt} — the lifter's own mobility routines, made from MOBILITY_LIBRARY
   bp: [],         // {id,date,time,sys,dia,pulse?,arm?,note?,mt} — D16 blood pressure, mmHg
   glucose: [],    // {id,date,time,mmol,ctx,note?,mt} — D16 blood glucose, always stored in mmol/L
   fitTests: [],   // {id,date,mode:'home'|'full',bw,sex,age,home,power,ladder:{pattern:{variation,sets:[{kg,r,rpe}]}},tol,grip,engine,mt} — E12
@@ -284,7 +285,7 @@ const SYNC_FILE = 'Ironlog backup.json', SYNC_FORMAT = 'ironlog-sync', SYNC_V = 
 // collection -> how a record is keyed
 const SYNC_SETS = {
   workouts: x => x.id, misses: x => x.id, goals: x => x.id, meets: x => x.id, imports: x => x.id,
-  checkins: x => x.date, measures: x => x.id, calipers: x => x.id, mobTests: x => x.id, bp: x => x.id, glucose: x => x.id, fitTests: x => x.id,
+  checkins: x => x.date, measures: x => x.id, calipers: x => x.id, mobTests: x => x.id, routines: x => x.id, bp: x => x.id, glucose: x => x.id, fitTests: x => x.id,
   customEx: x => (typeof x === 'string' ? x : JSON.stringify(x)), programs: x => String(x),
   /* The lifter's own exercises. Left out until 0.90.7, so a phone restored
      from Drive had the sessions but not the names (bug sweep 1.6). */

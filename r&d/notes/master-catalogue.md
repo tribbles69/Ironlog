@@ -51,8 +51,8 @@ existing schema, and what was left out on purpose.
   Full Body Stretch items under their routine ids, plus 76 from §20 and the
   mobility drills of §19), with style, region, joints, default dose and an
   `endRange` flag plus an active `swap` for passive end-range work. Checked by
-  `tools/validate-mobility.cjs`. Not in the app yet — a routine builder or a
-  library browser in the Mobility player would use it.
+  `tools/validate-mobility.cjs`, inlined by `tools/build-mobility.cjs`. Used by
+  the Stretch library and custom routines (`specs/mobility-spec.md` §3).
 
 ## Not done, on purpose
 
