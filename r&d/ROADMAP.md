@@ -880,7 +880,7 @@ Update the spec first — its "Other machines" note is where this was parked.
   required.
 - Real-gym check per machine goes on the A4 list.
 
-### [x] E5. Mobility training — moved up 2026-10-31 (Aaron); routines shipped 0.60.0, tests and balance test 0.61.0 (spec `r&d/specs/mobility-spec.md`; five hypermobility swaps proposed and on by default — **Aaron: check them**; "loaded-stretch drills as lifting sets" and more saved routines still to come)
+### [x] E5. Mobility training — moved up 2026-10-31 (Aaron); routines shipped 0.60.0, tests and balance test 0.61.0 (spec `r&d/specs/mobility-spec.md`; five hypermobility swaps proposed and on by default — **Aaron: check them**; "loaded-stretch drills as lifting sets" and more saved routines still to come; the stretch and mobility library `r&d/data/mobility.json` — 101 items — landed with 0.98.0 with a library browser and custom routines — spec §3)
 Write `r&d/specs/mobility-spec.md` before building.
 - Routines start from **Train → Mobility**; tests and their charts live on
   **Health** (D12, D13).
@@ -1149,6 +1149,27 @@ per setup) is the evidence. Then write a spec (`r&d/specs/calm-spec.md`).
 ### [ ] E16. Art and audio pass — moved to **00-D2** (2026-11-11)
 
 ---
+
+### [x] E17. Untangle the modules (Aaron, 2026-11-13) — **done, 0.98.1–0.98.3**
+After the module split, almost every file imported every other one in a
+circle. Make the layers real, so a file can be read, edited and bug-checked
+with only what is below it. Pure refactors: no behaviour change, checked each
+time with `module-map --check`, smoke and `baseline.js` on both seeds against
+main. What moved, and the numbers: `r&d/notes/module-split.md` → Untangle.
+- [x] **Phase 1 (0.98.1):** `state.js` and `kit.js` split out; `core.js`
+  imports only `state.js`; nothing but `main.js` imports `ui.js`.
+- [x] **Phase 2 (0.98.2):** `js/loading.js` — plates, bars, ramps, places and
+  kit out of `workout.js`.
+- [x] **Phase 3 (0.98.2):** the exercise screens to `js/movement.js`; muscle
+  shares, side text, priority and main lifts into `exercises.js`, which now
+  imports only `core` and `state`.
+- [x] **Phase 4 (0.98.2):** `js/io.js` (load, migrations, import, export) and
+  `js/sync.js` (the Drive sync job) out of `database.js`, which now imports
+  only `state`, `core` and `kit`.
+- [x] **Phase 5 (0.98.3):** `training.js`, `picker.js`, `ai.js`, `report.js`,
+  `migrate.js`, `rest.js`. The cycle is the four screens that open each other
+  (workout, health, coach, movement), left on purpose; CLAUDE.md has the
+  layer list new code must keep to.
 
 ## Parked
 See **`r&d/notes/backlog.md`** — sleep/recovery strip on sessions,

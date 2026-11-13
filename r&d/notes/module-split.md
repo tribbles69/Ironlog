@@ -13,6 +13,117 @@ The first half of this file is how it ended. From "Baseline" down it is the
 plan as it was written before any code moved, kept because it explains why
 things are where they are; line numbers there are `index.html` at `54ce89b`.
 
+## Untangle (0.98.1, 13 Nov 2026)
+
+The split left one knot: every file but `data.js` and `main.js` sat in a
+single import cycle, `core.js` included (it read `S` from `database.js`), and
+every feature imported `ui.js` for `toast`, `modal` and `render`, while `ui.js`
+imported every feature. Phase 1 of ROADMAP E17 cut the layers out of it.
+Pure moves, no behaviour change; `module-map.cjs --sync` wrote every import.
+
+- **`js/state.js`** (new): `DEFAULT_STATE`, `S`, `setState` — out of
+  `database.js`. Imports nothing. `database.js`'s three `S = …` became
+  `setState(…)`.
+- **`js/kit.js`** (new): from `ui.js` — `selectOnFocus`, `a11yPass` and its
+  observer, `toast`, the modal stack, `confirmDlg`, `bar`, `chart`,
+  `chartMulti`, `SERIES_COLORS`; the router state (`page`, `calCursor`,
+  `calSelected`, `analytics*`, with setters), `go`, `calSwitch`; debug mode's
+  `debugOn`, `why`, `trace`, `traceText`, `openWhy`, `copyText`,
+  `cardioWhyLast`; the What's-new flags; `DISCLAIMER` and `FAQ`.
+  `render()` and `applySkin()` are hooks (`shell`) that `ui.js` fills in at
+  load with `renderPage` and `drawSkin`. `WHY` is a registry in the kit that
+  `ui.js` fills with its explainers.
+- **`js/core.js`** now imports only `state.js`, and took the pure helpers
+  that lived in features: `addDaysISO`, `LB_PER_KG`, `fmtSec`, `parseTime`,
+  `fmtM`, `capLabel`, `median`, `lenU`, `dlen`, `toCm`, `checkinFor`, `setLine`.
+
+| | before | after |
+|---|---|---|
+| modules in the big cycle | 11 (everything but `data`, `main`) | 9 (the features) |
+| `state`, `core`, `kit`, `ui` | in the cycle | each its own layer |
+| files importing `ui.js` | 11 | 1 (`main.js`) |
+
+Checked: `check-version`, `lint-scope`, `module-map --check`, smoke 56/56,
+and `baseline.js` on both seeds against main — the same CSV fingerprints and
+the same click signatures (both the 276- and 278-click empty runs occur on
+main too; which one you get depends on bug 4.8, the coach closing mid-frame).
+
+### Phases 2–4 (0.98.2)
+
+Same rules, same checks. Four new files, and four more layers out of the knot.
+
+- **`js/loading.js`** (phase 2) — from `workout.js`: warm-up ramps, plates,
+  bars, collars, inventory, `loadFor` / `roundLoadFor`, places and kit, and
+  the Plates, Ramp and Places sheets.
+- **`js/movement.js`** (phase 3) — from `exercises.js`: the movement page,
+  the equipment / role / modifier pickers, pain and fatigue notes, the PR-pool
+  notice, Check exercise data. Into `exercises.js`: `EX_MUSCLE` (from
+  `stats.js`), `sidesText` (from `workout.js`), `priorityKeys`, `shortLift`
+  (from `events.js`), `isMainLift`, `HEAVY_BARS` (from `workout.js`).
+  `exercises.js` now imports only `core` and `state`.
+- **`js/io.js`** and **`js/sync.js`** (phase 4) — from `database.js`: boot
+  `load`, clear and erase, the data migrations, every import, both exports and
+  import undo (`io.js`, kept in database.js's original order because some of
+  its constants are read at load); the Drive sync job, the summary file and the
+  sync line (`sync.js`). `database.js` keeps storage, `save` / `flush`, the
+  Drive calls and `mergeSync`, and imports only `state`, `core` and `kit`.
+
+| | 0.98.0 | 0.98.1 | 0.98.2 |
+|---|---|---|---|
+| files in the big cycle | 11 of 13 | 9 of 15 | 9 of 19 |
+| layers outside it | — | state, core, kit | + database, exercises, stats, loading |
+| `workout.js` lines | 4,335 | 4,335 | 3,776 |
+| `exercises.js` lines | 1,942 | 1,942 | 1,487 |
+| `database.js` lines | 2,282 | 2,220 | 505 |
+
+Checked: `check-version`, `lint-scope`, `module-map --check`, smoke 56/56,
+`baseline.js` both seeds — CSV fingerprints identical to main, click
+signatures the same as main's (276 / `7aee7caa81b76aec` empty, 757 /
+`7df8355869e4dafd` migrated). Not covered by either test: a real Drive sync
+round trip — `driveSync` moved verbatim, but check it on the phone.
+
+### Phase 5 (0.98.3)
+
+Same rules, same checks. Six new files; the cycle is down to the four screens.
+
+- **`js/training.js`** — from `workout.js`: misses, last session and previous
+  set, the bar-speed numbers a set carries, session totals and muscles,
+  programs and backfill, rep ranges, per-side sets and the imbalance card,
+  tempo, autoregulation, rest defaults, `shapeKind`. From `vbt.js`: the
+  load-velocity day (`lvDay`, `lvFit`, `mvtFor`, `slewLiftFor`, `LV_SLACK`…)
+  and `vbtRirText`. From `events.js`: `EVENT_TYPES`, `BLOCK_KINDS`,
+  `activeBlock`. From `health.js`: the body-composition maths (`CAL_METHODS`,
+  `caliperCalc`, `measSeries`, `DW_BANDS`, `weightNear`). From `coach.js`:
+  `programName`. From `movement.js`: `prPoolMoves`. Also the share-card
+  palette `CARD`.
+- **`js/picker.js`** — `pickExercise`, from `workout.js`.
+- **`js/ai.js`** and **`js/report.js`** — the AI half and the report half of
+  `tools.js`.
+- **`js/migrate.js`** — the data migrations and `healCustomMovements`, from
+  `io.js`, so `sync.js` and `io.js` no longer import each other.
+- **`js/rest.js`** — the rest timer, from `workout.js`.
+- Smaller moves: video-clip recording and `saveBlob` into `kit.js`;
+  `dropFood` into `core.js`; `customMovementFor`, `ensureCustomMovement`,
+  `modsFromNote`, `leafForName` into `exercises.js`; Check exercise data into
+  `io.js`.
+
+| | 0.98.0 | 0.98.3 |
+|---|---|---|
+| js files | 13 | 26 |
+| files in the cycle | 11 | 4 (`workout`, `health`, `coach`, `movement`) |
+| largest file | `workout.js` 4,335 | `health.js` 3,444 (`workout.js` 2,882) |
+
+Checked: `check-version`, `lint-scope`, `module-map --check`, no module
+assigns another module's variable, smoke 56/56, `baseline.js` both seeds —
+CSV fingerprints identical to main, click signatures main's own (276 /
+`7aee7caa81b76aec` empty, 759 / `5dfe044c4c9f28a1` migrated).
+
+**What is left, on purpose:** the four screens open each other — Train opens
+the coach and the movement page, the coach installs programs and opens Health,
+Health starts sessions. Breaking that would take hooks like the kit's `shell`
+for every cross-screen call, more indirection than it is worth. CLAUDE.md
+lists the layers; keep new code to them.
+
 ## How it ended
 
 | File | Bytes | gzip | What |

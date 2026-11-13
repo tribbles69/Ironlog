@@ -13,6 +13,25 @@ rather than guessed.
 
 ---
 
+## 0.98.3 — 13 Nov 2026
+- **Nothing you would notice.** The last of the behind-the-scenes tidy-up: the training maths, the exercise picker, the AI connection, the report, the rest timer and the data fixes each have their own file now. Everything should look and behave exactly as before; your log is untouched.
+
+## 0.98.2 — 13 Nov 2026
+- **Nothing you would notice.** More of the behind-the-scenes tidy-up: storage, import and export, Drive sync, the exercise library and the plate maths each moved into their own layer. Everything should look and behave exactly as before; your log is untouched.
+- Worth one check: let Google Drive sync run once (Settings → Sync now) and make sure it says it synced.
+
+## 0.98.1 — 13 Nov 2026
+- **Nothing you would notice.** Behind the scenes the app's files were rearranged into tidier layers, so each part can be worked on without touching the rest. Everything should look and behave exactly as before; your log is untouched.
+- If something does behave differently after this version, that is a bug worth reporting.
+
+## 0.98.0 — 13 Nov 2026
+- **New: about 150 more exercises to pick from.** Olympic lifts (snatch, clean, jerk and their power, hang and block versions), plyometrics and throws, calisthenics holds and skills, more strongman events (Viking and silver dollar deadlifts, Viking press, circus dumbbell, tyre flip, power stairs, Hercules hold and more), neck training, grip, rehab and prehab work, and extra conditioning like jump rope, battle ropes and bag work.
+- **New equipment to choose:** cambered bar, Swiss/football bar, medicine ball, rings, circus dumbbell, Viking press, tyre, neck harness, and "other implement" for odd strongman kit.
+- **Changed: trap bar high and low handles are now separate lifts, each with its own PRs.** Pick the handles from the chip on the exercise. Everything you logged on the trap bar before is marked high handles; switch any low-handle sessions over from that chip.
+- **New: a stretch library and your own mobility routines.** Train → Mobility now has a 📚 Stretch library of about a hundred stretches and drills (search, filter by area and style, hide passive end-range ones) and ＋ New routine to build your own — pick from the library, put them in order, change the hold or reps. Your routines run in the same guided player as Full Body Stretch, with the same swaps and Go easy on joints, and the ✎ next to one edits or deletes it. They sync between phones.
+- **Changed: search finds exercises by their other names too** — "Klokov", "Anderson squat" or "Meadows row" now turn up the right lift.
+- Nothing already logged changes. Imports now read "Keg Toss" and "Truck Pull" as their own events, and "Suitcase Carry" as a one-handed carry.
+
 ## 0.97.0 — 12 Nov 2026
 - **Nothing you would notice.** The app used to be one very large file; it is now several smaller ones that load together. Everything should look and behave exactly as before, and your log is untouched.
 - The update itself is a slightly bigger download than usual, once, because every file is new.

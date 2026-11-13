@@ -100,3 +100,44 @@ table, `MOB_TESTS`:
   start and stop, the leg switches after each counted attempt, and every
   counted attempt is saved straight away. Today's best per leg is shown.
   Screen kept awake.
+
+## 3. Library and custom routines (0.98.0)
+
+### Data
+`r&d/data/mobility.json` — the stretch and mobility library, the mobility
+counterpart of `exercises.json`; inlined into `js/health.js` as
+`MOBILITY_LIBRARY` by `r&d/tools/build-mobility.cjs`, checked by
+`r&d/tools/validate-mobility.cjs`. 104 items: the 25 Full Body Stretch items
+under their routine ids (`inRoutine`), their five swaps as items, and the rest
+of the master research (§20, the mobility drills of §19).
+
+- **Item:** `id` (permanent), `name`, `region`, `style` (`static`, `active`,
+  `dynamic`, `pnf`, `loaded`, `release`), `targets[]`, `joints[]` (the Go easy
+  on list, `MOB_JOINTS`), the routine dose fields, `position`, `cue`,
+  `aliases[]`, `endRange: true` for passive end-range work, and `swap` — the id
+  of an active or loaded alternative in the library.
+
+### Custom routines
+`S.routines: [{ id: 'r-…', name, items: [{ id, dose? }], mt }]`, synced by
+Drive like the other collections. Items are library ids in order; `dose` is
+set only when the lifter changed it (`hold`, `reps`, `sets`, `perSide` —
+it replaces the library's dose). A routine is **resolved against the library
+each time it opens** (`resolveCustom`): one zone, the estimate summed from the
+doses, and each `endRange` item's library swap turned into a player swap, on
+by default (the hypermobility rule; *Original* switches it per item, and that
+choice is shared with every routine because it keys on the item id). Its
+sessions are ordinary mobility sessions; deleting a routine leaves the days
+it logged.
+
+### Where it shows
+- **Train → Mobility** is now always a list: every routine (built-in, then
+  yours with ✎), **＋ New routine** and **📚 Stretch library**.
+- **Library:** search (name, aliases, targets), Area and Style chips, *Hide
+  passive end-range*. Rows show dose, area, style, an end-range tag, whether a
+  protected joint makes it swap or skip, and a *How* fold.
+- **Editor:** name, the stretches in order (↑ ↓ ✕), a *Dose* fold per item, *＋
+  Add from the library* (the library in pick mode: ＋ / ✓ per row, Done hands
+  the picks back, new ones at the end), Save, Delete (two taps). Closing with
+  unsaved changes asks first.
+- **Home** shows the routine done most recently, not always the built-in one.
+

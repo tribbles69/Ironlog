@@ -529,6 +529,46 @@ window.smoke = async function smoke(opts) {
     return `${mobTotal(r)} items`;
   });
 
+  /* Stretch library and custom routines (0.98.0): the library browses and
+     filters, a routine made from it saves, opens in the player, ticks into
+     the log with a changed dose, edits, and deletes leaving the day logged. */
+  await step('flow: stretch library and custom routine', async () => {
+    close();
+    const lib = MOBILITY_LIBRARY.items || [];
+    if (lib.length < 50) throw new Error('library not inlined');
+    openMobilityPicker(); await wait(60);
+    if (!document.querySelector('#mobLib') || !document.querySelector('#mobNew')) throw new Error('picker buttons');
+    close(); openMobLibrary(); await wait(60);
+    if (document.querySelectorAll('.mobrow').length !== lib.length) throw new Error('library rows');
+    document.querySelector('[data-mlr="hips"]').click(); await wait(30);
+    const hips = lib.filter(x => x.region === 'hips').length;
+    if (document.querySelectorAll('.mobrow').length !== hips) throw new Error('region filter');
+    close();
+    const before = (S.routines || []).length, d = today();
+    S.routines = [...(S.routines || []), { id: 'r-smoke', name: 'Smoke stretch', items: [{ id: 'couch-stretch', dose: { hold: 45, perSide: true } }, { id: 'pancake' }, { id: 'open-book' }], mt: Date.now() }];
+    const r = mobRoutine('r-smoke');
+    if (!r || r.zones[0].items.length !== 3 || r.zones[0].items[0].hold !== 45) throw new Error('resolve');
+    if (!r.zones[0].items[1].swap) throw new Error('end-range item lost its swap');
+    openMobility('r-smoke'); await wait(60);
+    if (document.querySelectorAll('.mobrow').length !== 3) throw new Error('player rows');
+    close();
+    mobTick('r-smoke', 'couch-stretch', true, d);
+    if (!mobSession('r-smoke', d)) throw new Error('tick not logged');
+    openRoutineEditor('r-smoke'); await wait(60);
+    if (document.querySelectorAll('#reItems .mobrow').length !== 3) throw new Error('editor rows');
+    document.querySelector('[data-redn="0"]').click(); await wait(20);
+    document.querySelector('#reSave').click(); await wait(60);
+    if (S.routines.find(c => c.id === 'r-smoke').items[1].id !== 'couch-stretch') throw new Error('reorder not saved');
+    close();
+    openRoutineEditor('r-smoke'); await wait(40);
+    document.querySelector('#reDel').click(); document.querySelector('#reDel').click(); await wait(40);
+    if ((S.routines || []).length !== before) throw new Error('delete');
+    if (!mobSession('r-smoke', d)) throw new Error('delete took the logged day');
+    mobTick('r-smoke', 'couch-stretch', false, d);
+    close();
+    return `${lib.length} library items, ${hips} hips`;
+  });
+
   /* Blood pressure and glucose (D16): bands, units and the Health cards. */
   await step('flow: blood pressure and glucose', async () => {
     close();
