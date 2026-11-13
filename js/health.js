@@ -667,8 +667,8 @@ export const FIT = {
   /* The variation's 1RM against the barbell lift its standard is for (§8a).
      Kept in one table so they can be tuned. */
   variations: [
-    { id: 'trap_high', pattern: 'hinge', name: 'Trap bar deadlift, high handles', key: 'deadlift/trap_bar/bilateral/none', factor: 1.15, basis: 'sourced', note: 'ECU study: high-handle hex bar 1RM ~15% above conventional' },
-    { id: 'trap_low', pattern: 'hinge', name: 'Trap bar deadlift, low handles', key: 'deadlift/trap_bar/bilateral/none', factor: 1, basis: 'estimated', note: 'unknown — needs data' },
+    { id: 'trap_high', pattern: 'hinge', name: 'Trap bar deadlift, high handles', key: 'deadlift/trap_bar/bilateral/high_handles', factor: 1.15, basis: 'sourced', note: 'ECU study: high-handle hex bar 1RM ~15% above conventional' },
+    { id: 'trap_low', pattern: 'hinge', name: 'Trap bar deadlift, low handles', key: 'deadlift/trap_bar/bilateral/low_handles', factor: 1, basis: 'estimated', note: 'unknown — needs data' },
     { id: 'deadlift', pattern: 'hinge', name: 'Deadlift, barbell', key: 'deadlift/barbell/bilateral/none', factor: 1, basis: 'standard', note: 'the standard is for this lift' },
     { id: 'smith_squat', pattern: 'squat', name: 'Smith machine squat', key: 'back-squat/smith/bilateral/none', factor: 1, basis: 'estimated', note: 'studies find the Smith 1RM higher, size unclear — tune' },
     { id: 'back_squat', pattern: 'squat', name: 'Back squat, barbell', key: 'back-squat/barbell/bilateral/none', factor: 1, basis: 'standard', note: 'the standard is for this lift' },

@@ -39,16 +39,26 @@ existing schema, and what was left out on purpose.
   keg load) and **Truck Pull** (was on sled drag). **Suitcase Carry** now pins the
   unilateral farmers carry leaf.
 - Exercise search in the picker also matches aliases.
+- **Trap bar handles (Aaron, 13 Nov 2026):** high and low handles are the
+  attachment axis on a trap bar (`attachmentKind` `trap_handle`,
+  `attachmentApplies.trap_bar`), so they are separate leaves with separate PRs,
+  on deadlift, rack pull, RDL, shrug, deadlift hold and jump squat. Default is
+  high. Migration `trap-handles-0.98.0` marks every earlier trap bar leaf high
+  handles ("my personal PRs are high handle"), and re-runs on Drive merge and
+  CSV import. The fitting test's trap_high / trap_low variations point at the
+  two leaves.
+- **Mobility library:** `data/mobility.json`, 101 stretches and drills (the 25
+  Full Body Stretch items under their routine ids, plus 76 from §20 and the
+  mobility drills of §19), with style, region, joints, default dose and an
+  `endRange` flag plus an active `swap` for passive end-range work. Checked by
+  `tools/validate-mobility.cjs`. Not in the app yet — a routine builder or a
+  library browser in the Mobility player would use it.
 
 ## Not done, on purpose
 
-- **Mobility and stretching (§20)** — those live in the Mobility routines
-  (`data/routines/`), not the lift catalogue. Separate pass.
 - **Progression levels** (front lever tuck → full, planche, etc.) — one movement
   each for now, level in the note. Needs a `level` axis or modifier before PRs
   can be kept per level.
-- **Trap bar high vs low handles** — not split. A `splitsPR: true` modifier would
-  move existing PRs into a new pool, so it needs Aaron's say first.
 - **Complexes** (e.g. power clean + front squat) — the research says store them as
   ordered lists of movements; that is a logging feature, not catalogue data.
 - **Long-tail named variants** (Kroc row, cyclist squat, Spoto, Larsen…) stay as

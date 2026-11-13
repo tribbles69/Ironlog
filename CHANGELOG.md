@@ -16,6 +16,7 @@ rather than guessed.
 ## 0.98.0 — 13 Nov 2026
 - **New: about 150 more exercises to pick from.** Olympic lifts (snatch, clean, jerk and their power, hang and block versions), plyometrics and throws, calisthenics holds and skills, more strongman events (Viking and silver dollar deadlifts, Viking press, circus dumbbell, tyre flip, power stairs, Hercules hold and more), neck training, grip, rehab and prehab work, and extra conditioning like jump rope, battle ropes and bag work.
 - **New equipment to choose:** cambered bar, Swiss/football bar, medicine ball, rings, circus dumbbell, Viking press, tyre, neck harness, and "other implement" for odd strongman kit.
+- **Changed: trap bar high and low handles are now separate lifts, each with its own PRs.** Pick the handles from the chip on the exercise. Everything you logged on the trap bar before is marked high handles; switch any low-handle sessions over from that chip.
 - **Changed: search finds exercises by their other names too** — "Klokov", "Anderson squat" or "Meadows row" now turn up the right lift.
 - Nothing already logged changes. Imports now read "Keg Toss" and "Truck Pull" as their own events, and "Suitcase Carry" as a one-handed carry.
 

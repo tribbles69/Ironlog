@@ -878,7 +878,7 @@ Update the spec first — its "Other machines" note is where this was parked.
   required.
 - Real-gym check per machine goes on the A4 list.
 
-### [x] E5. Mobility training — moved up 2026-10-31 (Aaron); routines shipped 0.60.0, tests and balance test 0.61.0 (spec `r&d/specs/mobility-spec.md`; five hypermobility swaps proposed and on by default — **Aaron: check them**; "loaded-stretch drills as lifting sets" and more saved routines still to come)
+### [x] E5. Mobility training — moved up 2026-10-31 (Aaron); routines shipped 0.60.0, tests and balance test 0.61.0 (spec `r&d/specs/mobility-spec.md`; five hypermobility swaps proposed and on by default — **Aaron: check them**; "loaded-stretch drills as lifting sets" and more saved routines still to come; the stretch and mobility library `r&d/data/mobility.json` — 101 items — landed with 0.98.0, but nothing in the app reads it yet: a routine builder / library browser is the next step)
 Write `r&d/specs/mobility-spec.md` before building.
 - Routines start from **Train → Mobility**; tests and their charts live on
   **Health** (D12, D13).

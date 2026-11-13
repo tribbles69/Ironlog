@@ -84,7 +84,9 @@
       "lat_bar",
       "single_handle",
       "ankle_strap",
-      "dual_handle"
+      "dual_handle",
+      "high_handles",
+      "low_handles"
     ],
     "setType": ["warmup", "working", "top", "backoff", "amrap", "drop"],
     "modifier": [
@@ -270,10 +272,12 @@
       "wide_bar": "handle",
       "lat_bar": "handle",
       "straight_bar": "bar",
-      "ez_bar": "bar"
+      "ez_bar": "bar",
+      "high_handles": "trap_handle",
+      "low_handles": "trap_handle"
     },
-    "attachmentApplies": { "cable": "any", "barbell": "bar", "_default": "none" },
-    "attachmentNote": "attachments lists what a movement CAN take. What it may take on a given leaf is attachmentApplies[equipment]: \"any\" = every listed attachment, \"bar\" = only attachmentKind \"bar\" (a real weighted bar), \"none\" = attachment is always \"none\". Equipment absent from attachmentApplies uses _default. This is why attachment is the fourth axis of the leaf and not a movement-level field."
+    "attachmentApplies": { "cable": "any", "barbell": "bar", "trap_bar": "trap_handle", "_default": "none" },
+    "attachmentNote": "attachments lists what a movement CAN take. What it may take on a given leaf is attachmentApplies[equipment]: \"any\" = every listed attachment of kind \"handle\" or \"bar\", \"none\" = attachment is always \"none\", and any other value names the one attachmentKind allowed (\"bar\" = a real weighted bar on a barbell; \"trap_handle\" = the high or low handles of a trap bar, which are different lifts with their own PRs). Equipment absent from attachmentApplies uses _default. This is why attachment is the fourth axis of the leaf and not a movement-level field."
   },
   "movements": [
     {
@@ -831,7 +835,9 @@
         { "name": "Block Pull" },
         { "name": "Partial Deadlift" }
       ],
-      "verified": false
+      "verified": false,
+      "attachments": ["high_handles", "low_handles"],
+      "defaultAttachment": "high_handles"
     },
     {
       "id": "reverse-hyperextension",
@@ -887,7 +893,9 @@
         { "name": "Trap Bar Shrug", "equipment": "trap_bar" },
         { "name": "Smith Shrug", "equipment": "smith" }
       ],
-      "verified": true
+      "verified": true,
+      "attachments": ["high_handles", "low_handles"],
+      "defaultAttachment": "high_handles"
     },
     {
       "id": "single-arm-row",
@@ -1755,9 +1763,15 @@
         { "name": "Trap Bar Deadlift", "equipment": "trap_bar" },
         { "name": "Conventional Deadlift" },
         { "name": "Deficit Deadlift" },
-        { "name": "Axle Deadlift", "equipment": "axle" }
+        { "name": "Axle Deadlift", "equipment": "axle" },
+        { "name": "High Handle Trap Bar Deadlift", "equipment": "trap_bar", "attachment": "high_handles" },
+        { "name": "Low Handle Trap Bar Deadlift", "equipment": "trap_bar", "attachment": "low_handles" },
+        { "name": "High Handle Hex Bar Deadlift", "equipment": "trap_bar", "attachment": "high_handles" },
+        { "name": "Low Handle Hex Bar Deadlift", "equipment": "trap_bar", "attachment": "low_handles" }
       ],
-      "verified": true
+      "verified": true,
+      "attachments": ["high_handles", "low_handles"],
+      "defaultAttachment": "high_handles"
     },
     {
       "id": "donkey-calf-raise",
@@ -2134,7 +2148,9 @@
         { "name": "Trap Bar RDL", "equipment": "trap_bar" },
         { "name": "RDL" }
       ],
-      "verified": true
+      "verified": true,
+      "attachments": ["high_handles", "low_handles"],
+      "defaultAttachment": "high_handles"
     },
     {
       "id": "side-lunge",
@@ -3071,7 +3087,9 @@
         { "name": "Axle Hold" }
       ],
       "verified": false,
-      "metric": "time"
+      "metric": "time",
+      "attachments": ["high_handles", "low_handles"],
+      "defaultAttachment": "high_handles"
     },
     {
       "id": "suitcase-deadlift",
@@ -4694,7 +4712,9 @@
         { "name": "Trap Bar Jump", "equipment": "trap_bar" },
         { "name": "Loaded Jump Squat" }
       ],
-      "verified": false
+      "verified": false,
+      "attachments": ["high_handles", "low_handles"],
+      "defaultAttachment": "high_handles"
     },
     {
       "id": "countermovement-jump",

@@ -12,7 +12,7 @@ Quote the folder name in the shell: `cd "r&d"`.
 | `ROADMAP.md` | What's being built next, in order, and the standing rules. Start here. |
 | `specs/` | Feature specs, written before building. A spec wins over the roadmap summary. |
 | `notes/` | Audits, the parked backlog, anything written down for reference. |
-| `data/` | Source data that gets built into the app — `exercises.json` is inlined into `js/exercises.js` by `tools/build-catalogue.cjs`, `demos/` (exercise demo figures and text) by `tools/build-demos.cjs`. Edit here, not in `js/`. |
+| `data/` | Source data that gets built into the app — `exercises.json` is inlined into `js/exercises.js` by `tools/build-catalogue.cjs`, `demos/` (exercise demo figures and text) by `tools/build-demos.cjs`. `mobility.json` is the stretch and mobility library (not in the app yet; routines in `routines/` are). Edit here, not in `js/`. |
 | `tools/` | Build and check scripts, run from the repo root (see below). |
 | `food-handover/` | Food logging left the app in 0.25.0: the food parser function, the food tables and their build tool, kept for the separate food app. Not loaded by Ironlog. |
 | `skins/` | Muscle map skin paint guide (`paint-guide.png`, `.ora`) and the authoring notes. The shipped skin is `/skins/template.png`. |
@@ -30,6 +30,7 @@ All run from the repo root.
 | `node "r&d/tools/lint-scope.js"` | Finds undeclared identifiers, each module checked on its own (so a missing import shows) |
 | `NODE_PATH=../slew-v2/node_modules node "r&d/tools/module-map.cjs"` | The map of the modules: who imports what, and what runs at load. `--sync` regenerates every file's import block, `export`s and setters; `--check` says if they are out of step; `--deps <name>` lists who reads and writes one name. Needs the TypeScript parser, borrowed from `slew-v2` |
 | `node "r&d/tools/validate-exercises.js"` | Checks `data/exercises.json` against the program and the phase 1 spec |
+| `node "r&d/tools/validate-mobility.cjs"` | Checks `data/mobility.json` (the stretch and mobility library) and that every built-in routine item is in it |
 | `node "r&d/tools/build-catalogue.cjs"` | Inlines `data/exercises.json` into `js/exercises.js` |
 | `node "r&d/tools/build-demos.cjs"` | Validates `data/demos/` and inlines the exercise demos into `js/exercises.js` (`--check` validates only) |
 | `node "r&d/tools/demo-check.cjs" --98 --png` | Poses every demo with every equipment, flags broken ones, writes a contact sheet |
