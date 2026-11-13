@@ -167,8 +167,9 @@ are **not** base features — they wait for after 1.0.
 
 **Bugs:** a nightly scheduled task (02:37 UK) reviews three modules in
 rotation plus anything changed that day, runs the checks, and logs what it
-finds in `r&d/BUGS.md` on one open PR. It never fixes or merges, except a
-severity 1 fix on its own PR.
+finds in `r&d/BUGS.md` on one open PR (Sonnet, to spare the weekly usage).
+It never fixes or merges anything — a severity 1 bug is flagged at the top
+of the morning message and in the PR title, and left for Aaron.
 
 **When it is 1.0**
 1. Aaron says the base features are done.
