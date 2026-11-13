@@ -76,7 +76,7 @@ export function dots(totalKg, bwKg, sex) {
   const c = sex === 'female'
     ? [-57.96288, 13.6175032, -0.1126655495, 0.0005158568, -0.0000010706]
     : [-307.75076, 24.0900756, -0.1918759221, 0.0007391293, -0.000001093];
-  const x = clamp(bwKg, 40, 210);
+  const x = clamp(bwKg, 40, sex === 'female' ? 150 : 210);   // the women's formula is bounded at 150 kg (B-005)
   const denom = c[0] + c[1] * x + c[2] * x ** 2 + c[3] * x ** 3 + c[4] * x ** 4;
   if (denom <= 0) return 0;
   return totalKg * (500 / denom);
@@ -118,6 +118,14 @@ export function ageFrom(dob) {
 
 /* IPF divisions. Named for the federation because they are not universal —
    other federations draw the lines elsewhere. */
+/* IPF categories run by calendar year: you're a Junior for all of the year you
+   turn 19 through the year you turn 23, whatever your birthday (B-006). */
+export function yearAge(dob) {
+  if (!dob) return null;
+  const d = parseISO(dob);
+  if (!d || isNaN(d)) return null;
+  return new Date().getFullYear() - d.getFullYear();
+}
 export function ageCategory(age) {
   if (age == null) return null;
   if (age < 14) return null;
@@ -171,7 +179,7 @@ export function suggestedTargets() {
   return { bmr, tdee, kcal, p, c, f };
 }
 
-export const APP_VERSION = '0.99.0';
+export const APP_VERSION = '0.99.1';
 
 /* ---------------- sound, haptics, wake lock ----------------
    Shared by the hold timer and the rest timer, and meant for the cardio session

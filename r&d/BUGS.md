@@ -49,74 +49,7 @@ IDs run on and are never reused. Severity:
 
 ## Open
 
-### B-005 · sev 2 · DOTS for women over 150 kg bodyweight is too high
-Found: 2026-11-12, 0.97.0, bug sweep
-Where: js/core.js `dots` — `clamp(bwKg, 40, 210)` for both sexes
-Reproduce: confirmed in the app — `dots(400, 180, 'female')` gives 318.8;
-with the official women's clamp it's 308.3. Gets worse with bodyweight
-(210 kg → 378.5). Feeds Stats, the profile, meet day, the coach and the
-points calculator.
-Fix: the women's formula is bounded 40–150 kg, men's 40–210. Clamp by sex.
-
-### B-006 · sev 3 · IPF age category goes by birthday, not calendar year
-Found: 2026-11-12, 0.97.0, bug sweep
-Where: js/core.js `ageCategory`, called with `ageFrom(dob)` in the profile
-(js/ui.js)
-Reproduce: confirmed — someone who's 23 now but turns 24 in December shows as
-Junior; IPF puts them in Open for the whole year. Same at every boundary
-(Sub-junior → Junior, Masters bands).
-Fix: compute the category from `currentYear − birthYear`, not exact age. Also
-check the 2026 IPF rulebook changes (age categories were amended March 2026).
-
-### B-007 · sev 3 · Caliper preview shows a body-fat % with no age entered
-Found: 2026-11-12, 0.97.0, bug sweep
-Where: js/health.js `openCaliper` → `caliperCalc` uses `t.age || 0`
-Reproduce: with no date of birth in the profile, open a new caliper test and
-fill the sites — the live result shows a figure worked out at age 0 (JP3,
-10/20/15 mm: 10.3% shown vs 13.6% at age 30). Save then refuses for lack of
-an age, so nothing wrong is stored, but the number on screen is wrong.
-Fix: when there's no age, show "Enter your age to see the result" instead.
-
-### B-008 · sev 3 · Meet placing: ties don't go to the lighter lifter
-Found: 2026-11-12, 0.97.0, bug sweep
-Where: js/events.js `predictPlacing`
-Reproduce: from the code — the comment says ties go to the lighter lifter, but
-`filter(l => l.total >= total)` always puts you below anyone on the same total,
-whatever either bodyweight. Only the hard-coded West Midlands 93 kg field uses
-it today, where Aaron would be the heavier lifter anyway, so the result happens
-to be right there.
-Fix: compare bodyweights on a tie (yours from `bodyweightKg()` or the meet's
-target), and give "You" a bodyweight on the ladder.
-
-### B-009 · sev 3 · "Moved X places" can say no change after two tests on one day
-Found: 2026-11-12, 0.97.0, bug sweep
-Where: js/events.js `meetCard` — `prevTotal = testedTotalAsOf(dates[1])`
-Reproduce: from the code — `dates` is one entry per tested session, so two test
-sessions on the same day make `dates[1]` today as well, and the "previous"
-total is the current one: always 0 places moved.
-Fix: take the latest test date strictly before the newest one
-(`dates.find(d => d < dates[0])`).
-
-### B-002 · sev 3 · CSV round trip drops extra leaf keys on an exercise with no sets
-Found: 2026-11-12, 0.96.5, during the module split (sweep 4.9)
-Where: js/io.js `workoutsToCSV` / `csvToWorkouts` (moved from database.js in 0.98.3)
-Reproduce: see `r&d/notes/bug-sweep-2026-11.md` 4.9. No real log affected today.
-Fix: in the no-sets branch pass `{ ...ex, leaf: leafPlain ? ex.leaf : null }`
-as the sets branch does.
-
-### B-003 · sev 4 · Exercise validator has seven checks for the old 77-week program
-Found: 2026-11-11, 0.90.0 (sweep 4.7)
-Where: r&d/tools/validate-exercises.js
-Reproduce: `node "r&d/tools/validate-exercises.js"` — seven checks fail against
-the WDC program that ships now.
-Fix: rewrite them for the current program, or delete them.
-
-### B-004 · sev 4 · VBT sim tools fail on a Windows CRLF checkout
-Found: 2026-11-12, 0.96.5 (sweep 4.10)
-Where: r&d/tools/vbt-sim.cjs, vbt-rir.cjs — regex ends `\n\}\n`
-Reproduce: checkout with `core.autocrlf=true`, run either tool → "not found".
-Also check they still find the code now it's in `js/vbt.js`, not `index.html`.
-Fix: `.gitattributes` with `* text=auto eol=lf`, or `\r?\n` in the patterns.
+(none)
 
 ## Needs Aaron
 
@@ -145,6 +78,14 @@ Fix: `.gitattributes` with `* text=auto eol=lf`, or `\r?\n` in the patterns.
 
 Most recent first: `- B-000 · title — 0.00.0`
 
+- B-009 · "Moved X places" can say no change after two tests on one day — 0.99.1
+- B-008 · Meet placing: ties don't go to the lighter lifter — 0.99.1
+- B-007 · Caliper preview shows a body-fat % with no age entered — 0.99.1
+- B-006 · IPF age category goes by birthday, not calendar year — 0.99.1
+- B-005 · DOTS for women over 150 kg bodyweight is too high — 0.99.1
+- B-004 · VBT sim tools fail on a Windows CRLF checkout — 0.99.1
+- B-003 · Exercise validator has seven checks for the old 77-week program — 0.99.1
+- B-002 · CSV round trip drops extra leaf keys on an exercise with no sets — 0.99.1
 - B-021 · Thousands separator read as a decimal — 0.99.0
 - B-020 · Time fields accept 1:75 — 0.99.0
 - B-019 · Coach plate answer assumes a 20 kg bar — 0.99.0

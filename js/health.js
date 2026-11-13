@@ -2940,7 +2940,8 @@ function openCaliper(id) {
       const out = () => {
         const r = caliperCalc(t0), o = $('#clOut', bg);
         if (!o) return;
-        o.innerHTML = !r || !r.complete ? '<span class="sub">Fill every site to see the result.</span>'
+        o.innerHTML = !(t0.age > 0) ? '<span class="sub">Enter your age to see the result.</span>'   // B-007: the equations need it
+          : !r || !r.complete ? '<span class="sub">Fill every site to see the result.</span>'
           : `<b>${r.bf.toFixed(1)}%</b> body fat · <span class="mono">${Math.round(r.sum * 10) / 10} mm</span> sum · density ${r.bd.toFixed(4)}
             ${r.leanKg ? `<div class="sub">Lean ${wt(r.leanKg)} · fat ${wt(r.fatKg)} (at ${wt(r.wKg)})</div>` : '<div class="sub">No weigh-in within 3 days — lean and fat mass need one.</div>'}
             ${r.odd ? '<div class="sub" style="color:var(--gold)">Outside 3–50% — check the readings.</div>' : ''}

@@ -1253,7 +1253,7 @@ export function workoutsToCSV(list) {
         exSplit.extra = Object.keys(x).length ? JSON.stringify(x) : '';
       }
       const sets = ex.sets || [];
-      if (!sets.length) return put(ei === 0, ex, ei, exSplit, null, -1);
+      if (!sets.length) return put(ei === 0, { ...ex, leaf: leafPlain ? ex.leaf : null }, ei, exSplit, null, -1);   // same as with sets (B-002)
       sets.forEach((s, si) => put(ei === 0 && si === 0, { ...ex, leaf: leafPlain ? ex.leaf : null }, ei, exSplit, s, si, csvSplit(s, CSV_SET)));
     });
   });

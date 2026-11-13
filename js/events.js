@@ -123,15 +123,17 @@ const half = n => Math.round(n * 2) / 2;
    missed, and nerves cost kilos. The haircut is a blunt instrument but a
    truthful one — better than comparing a good gym day against competition
    results as though they were the same thing. */
-function predictPlacing(field, gymTotal, applyHaircut = true) {
+function predictPlacing(field, gymTotal, applyHaircut = true, myBw = null) {
   if (!field || !gymTotal) return null;
   const total = applyHaircut ? half(gymTotal * (platformPct() / 100)) : half(gymTotal);
-  const sorted = [...field.lifters].sort((a, b) => b.total - a.total);
-  // ties go to the lighter lifter, and at 93kg he's at the top of the class
-  const above = sorted.filter(l => l.total >= total);
+  const sorted = [...field.lifters].sort((a, b) => b.total - a.total || a.bw - b.bw);
+  /* Ties go to the lighter lifter (B-008). Without your bodyweight, assume
+     you lose the tie — the cautious answer. */
+  const beats = l => l.total > total || (l.total === total && (myBw == null || l.bw <= myBw));
+  const above = sorted.filter(beats);
   const place = above.length + 1;
   const rows = sorted.map((l, i) => ({ ...l, place: i < above.length ? i + 1 : i + 2 }));
-  rows.splice(above.length, 0, { name: 'You', bw: null, total, place, me: true });
+  rows.splice(above.length, 0, { name: 'You', bw: myBw, total, place, me: true });
   const nxt = sorted[above.length - 1];
   return {
     total, place, fieldSize: sorted.length + 1, ladder: rows,
@@ -400,14 +402,18 @@ function meetCard(m, ps) {
     ${(() => {
       const field = fieldForMeet(m);
       if (!field) return '';
-      const now = predictPlacing(field, curTotalOwn);
+      const myBw = bodyweightKg() || null;
+      const now = predictPlacing(field, curTotalOwn, true, myBw);
       if (!now) return '';
-      const goal = goalTotal ? predictPlacing(field, goalTotal) : null;
+      const goal = goalTotal ? predictPlacing(field, goalTotal, true, myBw) : null;
 
-      // delta against the placing your previous test produced
+      /* delta against the placing your previous test produced — the latest
+         test day before the newest, not just the next session (two tests on
+         one day made this always 0, B-009) */
       const dates = testLog().map(t => t.date);
-      const prevTotal = dates[1] ? testedTotalAsOf(dates[1]) : null;
-      const prev = prevTotal ? predictPlacing(field, prevTotal) : null;
+      const prevDate = dates.find(d => d < dates[0]);
+      const prevTotal = prevDate ? testedTotalAsOf(prevDate) : null;
+      const prev = prevTotal ? predictPlacing(field, prevTotal, true, myBw) : null;
       const moved = prev ? prev.place - now.place : 0;
 
       const myIdx = now.ladder.findIndex(r => r.me);

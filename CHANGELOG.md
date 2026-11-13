@@ -13,6 +13,15 @@ rather than guessed.
 
 ---
 
+## 0.99.1 — 13 Nov 2026
+- **DOTS for women over 150 kg bodyweight** now uses the official cap, so the score isn't inflated (Stats, profile, meet day, coach and the points calculator).
+- **IPF age category goes by calendar year,** as the IPF does: you're in a category for the whole year you reach that age, not from your birthday.
+- **Caliper test asks for your age** before showing a body-fat figure, instead of showing one worked out at age 0.
+- **Meet placing:** on an equal total, the lighter lifter now places higher, using your latest bodyweight.
+- **"Moved X places"** compares against your previous test day, so two tests on one day no longer show "no change".
+- CSV export keeps every detail of an exercise that has no sets yet.
+- Behind the scenes: the exercise checker matches the current WDC programme, and the VBT test tools work on a Windows checkout.
+
 ## 0.99.0 — 13 Nov 2026
 - **Volume adds up properly.** Dumbbell and other per-side lifts now count both sides everywhere: the workout summary, the share card, the stats pages and the movement page all show the same number. Past sessions are recounted when you look at them.
 - **Change handles or equipment on a past session.** Edit a finished workout and tap the chips under an exercise's name (e.g. Trap Bar · High Handles) to switch it. This is the way to move old low-handle trap bar entries over, as the 0.98.0 note meant.
