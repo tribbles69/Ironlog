@@ -26,7 +26,16 @@
       "sled",
       "conan_wheel",
       "gripper",
-      "extension_band"
+      "extension_band",
+      "cambered_bar",
+      "swiss_bar",
+      "medicine_ball",
+      "rings",
+      "circus_dumbbell",
+      "viking_press",
+      "tyre",
+      "neck_harness",
+      "implement"
     ],
     "execution": ["bilateral", "alternating", "unilateral"],
     "load": {
@@ -49,7 +58,20 @@
       ],
       "note": "A bilateral dumbbell bench with two 40 kg dumbbells is logged as 40, not 80. singleImplement:true marks movements where both hands share one implement (goblet squat, pullover, Russian twist), which are total. A movement may override with loadOverride. Volume must account for this: a per_side set of 20 kg x 10 is 400 kg, not 200."
     },
-    "category": ["shoulders", "chest", "arms", "back", "legs", "core", "cardio", "strongman"],
+    "category": [
+      "shoulders",
+      "chest",
+      "arms",
+      "back",
+      "legs",
+      "core",
+      "cardio",
+      "strongman",
+      "olympic",
+      "plyometrics",
+      "calisthenics",
+      "neck"
+    ],
     "type": ["strength", "cardio"],
     "metric": ["reps_weight", "time", "distance", "time_distance", "carry", "race"],
     "attachment": [
@@ -269,7 +291,11 @@
         { "name": "Barbell Curl", "equipment": "barbell" },
         { "name": "Biceps Curl" },
         { "name": "Curl" },
-        { "name": "Dumbbell Curl", "equipment": "dumbbells" }
+        { "name": "Dumbbell Curl", "equipment": "dumbbells" },
+        { "name": "Bayesian Curl", "equipment": "cable" },
+        { "name": "Cheat Curl" },
+        { "name": "21s" },
+        { "name": "EZ Bar Curl", "attachment": "ez_bar" }
       ],
       "verified": true,
       "attachments": ["straight_bar", "ez_bar", "rope", "single_handle"],
@@ -413,7 +439,8 @@
       "secondary": ["brachialis"],
       "aliases": [
         { "name": "Preacher Curl" },
-        { "name": "EZ Preacher Curl", "attachment": "ez_bar" }
+        { "name": "EZ Preacher Curl", "attachment": "ez_bar" },
+        { "name": "Scott Curl" }
       ],
       "verified": false,
       "attachments": ["ez_bar", "straight_bar"],
@@ -641,7 +668,9 @@
         { "name": "Barbell Row", "equipment": "barbell" },
         { "name": "Bent Over Row" },
         { "name": "BOR" },
-        { "name": "Pendlay Row" }
+        { "name": "Pendlay Row" },
+        { "name": "Yates Row" },
+        { "name": "Underhand Row" }
       ],
       "verified": false
     },
@@ -659,7 +688,8 @@
       "aliases": [
         { "name": "Chest Supported Row" },
         { "name": "Seal Row" },
-        { "name": "T-Bar Row" }
+        { "name": "T-Bar Row" },
+        { "name": "Helms Row" }
       ],
       "verified": false
     },
@@ -686,7 +716,7 @@
       "name": "Good Morning",
       "category": "back",
       "type": "strength",
-      "equipment": ["barbell", "smith", "resistance_band", "safety_squat_bar"],
+      "equipment": ["barbell", "smith", "resistance_band", "safety_squat_bar", "cambered_bar"],
       "defaultEquipment": "barbell",
       "execution": ["bilateral"],
       "defaultExecution": "bilateral",
@@ -694,7 +724,9 @@
       "secondary": ["glutes"],
       "aliases": [
         { "name": "Good Morning" },
-        { "name": "SSB Good Morning", "equipment": "safety_squat_bar" }
+        { "name": "SSB Good Morning", "equipment": "safety_squat_bar" },
+        { "name": "Seated Good Morning" },
+        { "name": "Cambered Bar Good Morning", "equipment": "cambered_bar" }
       ],
       "verified": false
     },
@@ -703,7 +735,7 @@
       "name": "Inverted Row",
       "category": "back",
       "type": "strength",
-      "equipment": ["bodyweight", "plate"],
+      "equipment": ["bodyweight", "plate", "rings"],
       "defaultEquipment": "bodyweight",
       "execution": ["bilateral"],
       "defaultExecution": "bilateral",
@@ -712,7 +744,10 @@
       "aliases": [
         { "name": "Inverted Row" },
         { "name": "Bodyweight Row", "equipment": "bodyweight" },
-        { "name": "Australian Pull Up" }
+        { "name": "Australian Pull Up" },
+        { "name": "Ring Row", "equipment": "rings" },
+        { "name": "TRX Row", "equipment": "rings" },
+        { "name": "Australian Row" }
       ],
       "verified": false
     },
@@ -740,7 +775,7 @@
       "name": "Pull Up",
       "category": "back",
       "type": "strength",
-      "equipment": ["bodyweight", "plate", "machine", "resistance_band"],
+      "equipment": ["bodyweight", "plate", "machine", "resistance_band", "rings"],
       "defaultEquipment": "bodyweight",
       "execution": ["bilateral"],
       "defaultExecution": "bilateral",
@@ -751,7 +786,12 @@
         { "name": "Pullup" },
         { "name": "Wide Grip Pull Up" },
         { "name": "Weighted Pull Up" },
-        { "name": "Assisted Pull Up" }
+        { "name": "Assisted Pull Up" },
+        { "name": "Neutral Grip Pull Up" },
+        { "name": "Towel Pull Up" },
+        { "name": "Chest to Bar Pull Up" },
+        { "name": "Kipping Pull Up" },
+        { "name": "Ring Pull Up", "equipment": "rings" }
       ],
       "verified": false
     },
@@ -815,7 +855,7 @@
       "name": "Seated Row",
       "category": "back",
       "type": "strength",
-      "equipment": ["cable", "machine", "plate_loaded_machine"],
+      "equipment": ["cable", "machine", "plate_loaded_machine", "resistance_band"],
       "defaultEquipment": "cable",
       "execution": ["bilateral", "alternating", "unilateral"],
       "defaultExecution": "bilateral",
@@ -824,7 +864,8 @@
       "aliases": [
         { "name": "Seated Cable Row", "equipment": "cable" },
         { "name": "Cable Row", "equipment": "cable" },
-        { "name": "Seated Row" }
+        { "name": "Seated Row" },
+        { "name": "Band Row", "equipment": "resistance_band" }
       ],
       "verified": true,
       "attachments": ["v_handle", "wide_bar", "straight_bar", "rope", "single_handle"],
@@ -883,7 +924,9 @@
       "secondary": ["triceps", "core"],
       "aliases": [
         { "name": "Straight Arm Pulldown" },
-        { "name": "Lat Pushdown" }
+        { "name": "Lat Pushdown" },
+        { "name": "Cable Pullover" },
+        { "name": "Lat Prayer" }
       ],
       "verified": false,
       "attachments": ["straight_bar", "rope", "lat_bar"],
@@ -1089,7 +1132,16 @@
       "name": "Bench Press",
       "category": "chest",
       "type": "strength",
-      "equipment": ["barbell", "dumbbells", "smith", "machine", "plate_loaded_machine"],
+      "equipment": [
+        "barbell",
+        "dumbbells",
+        "smith",
+        "machine",
+        "plate_loaded_machine",
+        "swiss_bar",
+        "cambered_bar",
+        "axle"
+      ],
       "defaultEquipment": "barbell",
       "execution": ["bilateral", "alternating", "unilateral"],
       "defaultExecution": "bilateral",
@@ -1103,7 +1155,14 @@
         { "name": "Flat Bench" },
         { "name": "Pause Bench" },
         { "name": "Spoto Press" },
-        { "name": "Dumbbell Bench", "equipment": "dumbbells" }
+        { "name": "Dumbbell Bench", "equipment": "dumbbells" },
+        { "name": "Swiss Bar Bench", "equipment": "swiss_bar" },
+        { "name": "Football Bar Bench", "equipment": "swiss_bar" },
+        { "name": "Multi Grip Bench", "equipment": "swiss_bar" },
+        { "name": "Cambered Bar Bench", "equipment": "cambered_bar" },
+        { "name": "Axle Bench", "equipment": "axle" },
+        { "name": "Competition Bench" },
+        { "name": "Touch and Go Bench" }
       ],
       "verified": true
     },
@@ -1112,7 +1171,7 @@
       "name": "Chest Dip",
       "category": "chest",
       "type": "strength",
-      "equipment": ["bodyweight", "machine", "plate"],
+      "equipment": ["bodyweight", "machine", "plate", "rings"],
       "defaultEquipment": "bodyweight",
       "execution": ["bilateral"],
       "defaultExecution": "bilateral",
@@ -1121,7 +1180,10 @@
       "aliases": [
         { "name": "Chest Dip" },
         { "name": "Dip" },
-        { "name": "Weighted Dip" }
+        { "name": "Weighted Dip" },
+        { "name": "Ring Dip", "equipment": "rings" },
+        { "name": "Straight Bar Dip" },
+        { "name": "Korean Dip" }
       ],
       "verified": false
     },
@@ -1130,7 +1192,7 @@
       "name": "Chest Fly",
       "category": "chest",
       "type": "strength",
-      "equipment": ["dumbbells", "cable", "machine", "resistance_band"],
+      "equipment": ["dumbbells", "cable", "machine", "resistance_band", "rings"],
       "defaultEquipment": "dumbbells",
       "execution": ["bilateral", "alternating", "unilateral"],
       "defaultExecution": "bilateral",
@@ -1142,7 +1204,8 @@
         { "name": "Cable Crossover", "equipment": "cable" },
         { "name": "Dumbbell Fly", "equipment": "dumbbells" },
         { "name": "Low to High Cable Fly", "equipment": "cable" },
-        { "name": "High to Low Cable Fly", "equipment": "cable" }
+        { "name": "High to Low Cable Fly", "equipment": "cable" },
+        { "name": "Ring Fly", "equipment": "rings" }
       ],
       "verified": false,
       "attachments": ["single_handle", "dual_handle"],
@@ -1276,7 +1339,7 @@
       "name": "Push Up",
       "category": "chest",
       "type": "strength",
-      "equipment": ["bodyweight", "plate", "resistance_band"],
+      "equipment": ["bodyweight", "plate", "resistance_band", "rings"],
       "defaultEquipment": "bodyweight",
       "execution": ["bilateral"],
       "defaultExecution": "bilateral",
@@ -1285,7 +1348,12 @@
       "aliases": [
         { "name": "Push Up" },
         { "name": "Pushup" },
-        { "name": "Press Up" }
+        { "name": "Press Up" },
+        { "name": "Ring Push Up", "equipment": "rings" },
+        { "name": "Weighted Push Up", "equipment": "plate" },
+        { "name": "Diamond Push Up" },
+        { "name": "Knee Push Up" },
+        { "name": "Hand Release Push Up" }
       ],
       "verified": false
     },
@@ -1345,7 +1413,7 @@
       "aliases": [
         { "name": "Farmers Carry" },
         { "name": "Farmers Walk" },
-        { "name": "Suitcase Carry" },
+        { "name": "Suitcase Carry", "execution": "unilateral" },
         { "name": "Loaded Carry" },
         { "name": "Farmers Handles", "equipment": "farmers_handles" },
         { "name": "Strongman Farmers", "equipment": "farmers_handles" }
@@ -1366,7 +1434,9 @@
       "secondary": ["obliques"],
       "aliases": [
         { "name": "Hanging Knee Raise" },
-        { "name": "Knee Raise" }
+        { "name": "Knee Raise" },
+        { "name": "Captain's Chair Knee Raise" },
+        { "name": "Captains Chair" }
       ],
       "verified": true
     },
@@ -1384,7 +1454,8 @@
       "aliases": [
         { "name": "Hanging Leg Raise" },
         { "name": "Straight Leg Raise" },
-        { "name": "Toes To Bar" }
+        { "name": "Toes To Bar" },
+        { "name": "Knees to Elbows" }
       ],
       "verified": false
     },
@@ -1420,7 +1491,9 @@
       "secondary": ["front deltoids", "glutes"],
       "aliases": [
         { "name": "Plank" },
-        { "name": "Front Plank" }
+        { "name": "Front Plank" },
+        { "name": "RKC Plank" },
+        { "name": "High Plank" }
       ],
       "metric": "time",
       "verified": false
@@ -1491,7 +1564,9 @@
         { "name": "Sit Up" },
         { "name": "Situp" },
         { "name": "Decline Sit Up" },
-        { "name": "Weighted Sit Up" }
+        { "name": "Weighted Sit Up" },
+        { "name": "GHD Sit Up" },
+        { "name": "Butterfly Sit Up" }
       ],
       "verified": false,
       "singleImplement": true
@@ -1540,7 +1615,7 @@
       "name": "Back Squat",
       "category": "legs",
       "type": "strength",
-      "equipment": ["barbell", "smith", "safety_squat_bar", "belt_squat"],
+      "equipment": ["barbell", "smith", "safety_squat_bar", "belt_squat", "cambered_bar"],
       "defaultEquipment": "barbell",
       "execution": ["bilateral"],
       "defaultExecution": "bilateral",
@@ -1557,7 +1632,11 @@
         { "name": "SSB Squat", "equipment": "safety_squat_bar" },
         { "name": "Safety Squat Bar Squat", "equipment": "safety_squat_bar" },
         { "name": "Belt Squat", "equipment": "belt_squat" },
-        { "name": "Belt Squat Machine", "equipment": "belt_squat" }
+        { "name": "Belt Squat Machine", "equipment": "belt_squat" },
+        { "name": "Smith Squat", "equipment": "smith" },
+        { "name": "Hatfield Squat", "equipment": "safety_squat_bar" },
+        { "name": "Cambered Bar Squat", "equipment": "cambered_bar" },
+        { "name": "Competition Squat" }
       ],
       "verified": true
     },
@@ -1632,7 +1711,8 @@
         { "name": "Calf Raise" },
         { "name": "Calf Extension" },
         { "name": "Sled Press Calf Raise", "equipment": "plate_loaded_machine" },
-        { "name": "Leg Press Calf Raise", "equipment": "plate_loaded_machine" }
+        { "name": "Leg Press Calf Raise", "equipment": "plate_loaded_machine" },
+        { "name": "Single Leg Calf Raise" }
       ],
       "verified": true
     },
@@ -1708,7 +1788,10 @@
       "primary": ["quadriceps"],
       "secondary": ["glutes", "core", "upper back"],
       "aliases": [
-        { "name": "Front Squat" }
+        { "name": "Front Squat" },
+        { "name": "Cross Arm Front Squat" },
+        { "name": "Clean Grip Front Squat" },
+        { "name": "Double Kettlebell Front Squat", "equipment": "kettlebell" }
       ],
       "verified": false
     },
@@ -2119,7 +2202,9 @@
       "aliases": [
         { "name": "Step Up" },
         { "name": "Box Step Up" },
-        { "name": "Lateral Step Up" }
+        { "name": "Lateral Step Up" },
+        { "name": "Petersen Step Up" },
+        { "name": "Crossover Step Up" }
       ],
       "verified": false
     },
@@ -2187,7 +2272,9 @@
       "secondary": ["triceps", "traps"],
       "aliases": [
         { "name": "Behind The Neck Press" },
-        { "name": "BTN Press" }
+        { "name": "BTN Press" },
+        { "name": "Klokov Press" },
+        { "name": "Snatch Grip Behind The Neck Press" }
       ],
       "verified": false
     },
@@ -2263,7 +2350,8 @@
         { "name": "DB Lat Raise", "equipment": "dumbbells" },
         { "name": "Cable Lat Raise", "equipment": "cable" },
         { "name": "Side Raise" },
-        { "name": "Lat Raise" }
+        { "name": "Lat Raise" },
+        { "name": "Lean Away Lateral Raise" }
       ],
       "verified": true,
       "attachments": ["single_handle"],
@@ -2281,7 +2369,7 @@
       "name": "Overhead Press",
       "category": "shoulders",
       "type": "strength",
-      "equipment": ["barbell", "dumbbells", "smith", "machine", "axle"],
+      "equipment": ["barbell", "dumbbells", "smith", "machine", "axle", "kettlebell", "swiss_bar"],
       "defaultEquipment": "barbell",
       "execution": ["bilateral", "alternating", "unilateral"],
       "defaultExecution": "bilateral",
@@ -2295,7 +2383,11 @@
         { "name": "OHP" },
         { "name": "Dumbbell Shoulder Press", "equipment": "dumbbells" },
         { "name": "Axle Press", "equipment": "axle" },
-        { "name": "Axle Clean and Press", "equipment": "axle" }
+        { "name": "Axle Clean and Press", "equipment": "axle" },
+        { "name": "Kettlebell Press", "equipment": "kettlebell" },
+        { "name": "Bottoms Up Press", "equipment": "kettlebell" },
+        { "name": "Swiss Bar Press", "equipment": "swiss_bar" },
+        { "name": "Machine Shoulder Press", "equipment": "machine" }
       ],
       "verified": true
     },
@@ -2404,7 +2496,10 @@
       "primary": ["rear deltoids", "lower traps"],
       "secondary": ["rotator cuff"],
       "aliases": [
-        { "name": "Y Raise" }
+        { "name": "Y Raise" },
+        { "name": "YTW Raise" },
+        { "name": "Prone Y Raise" },
+        { "name": "Scaption" }
       ],
       "verified": false,
       "attachments": ["single_handle"],
@@ -2478,8 +2573,7 @@
       "secondary": ["calves", "upper back"],
       "aliases": [
         { "name": "Sled Drag" },
-        { "name": "Sled Pull" },
-        { "name": "Truck Pull" }
+        { "name": "Sled Pull" }
       ],
       "metric": "carry",
       "verified": false
@@ -2537,7 +2631,9 @@
         { "name": "Atlas Stone" },
         { "name": "Atlas Stones" },
         { "name": "Stone Load" },
-        { "name": "Stone to Shoulder" }
+        { "name": "Stone to Shoulder" },
+        { "name": "Stone Over Bar" },
+        { "name": "Lap Stone" }
       ],
       "verified": false
     },
@@ -2553,8 +2649,7 @@
       "primary": ["glutes", "spinal erectors"],
       "secondary": ["upper back", "biceps"],
       "aliases": [
-        { "name": "Keg Load" },
-        { "name": "Keg Toss" }
+        { "name": "Keg Load" }
       ],
       "verified": false
     },
@@ -2628,6 +2723,2709 @@
         { "name": "Strongman Medley" }
       ],
       "metric": "race",
+      "verified": false
+    },
+    {
+      "id": "pin-squat",
+      "name": "Pin Squat",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["barbell", "smith", "safety_squat_bar"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes"],
+      "secondary": ["adductors", "spinal erectors"],
+      "aliases": [
+        { "name": "Anderson Squat" },
+        { "name": "Squat From Pins" },
+        { "name": "Dead Stop Squat" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "overhead-squat",
+      "name": "Overhead Squat",
+      "category": "olympic",
+      "type": "strength",
+      "equipment": ["barbell", "dumbbells", "kettlebell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes"],
+      "secondary": ["deltoids", "core", "upper back"],
+      "aliases": [
+        { "name": "OHS" },
+        { "name": "Snatch Grip Overhead Squat" },
+        { "name": "Single Arm Overhead Squat", "execution": "unilateral" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "zercher-squat",
+      "name": "Zercher Squat",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["barbell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes"],
+      "secondary": ["upper back", "biceps", "core"],
+      "aliases": [],
+      "verified": false
+    },
+    {
+      "id": "air-squat",
+      "name": "Air Squat",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Bodyweight Squat" },
+        { "name": "Prisoner Squat" },
+        { "name": "Hindu Squat" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "wall-sit",
+      "name": "Wall Sit",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["bodyweight", "plate"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps"],
+      "secondary": ["glutes"],
+      "aliases": [
+        { "name": "Wall Squat Hold" }
+      ],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "sumo-squat",
+      "name": "Sumo Squat",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["dumbbells", "kettlebell", "barbell"],
+      "defaultEquipment": "dumbbells",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["adductors", "glutes", "quadriceps"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Plie Squat" },
+        { "name": "Plié Squat" }
+      ],
+      "verified": false,
+      "singleImplement": true
+    },
+    {
+      "id": "landmine-squat",
+      "name": "Landmine Squat",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["barbell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes"],
+      "secondary": ["core"],
+      "aliases": [],
+      "verified": false
+    },
+    {
+      "id": "v-squat",
+      "name": "V-Squat",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["plate_loaded_machine", "machine"],
+      "defaultEquipment": "plate_loaded_machine",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes"],
+      "secondary": [],
+      "aliases": [
+        { "name": "V Squat" },
+        { "name": "Power Squat Machine" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "spanish-squat",
+      "name": "Spanish Squat",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["resistance_band"],
+      "defaultEquipment": "resistance_band",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Banded Spanish Squat" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "jefferson-squat",
+      "name": "Jefferson Squat",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["barbell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes", "adductors"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Straddle Lift" },
+        { "name": "Straddle Squat" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "thruster",
+      "name": "Thruster",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["barbell", "dumbbells", "kettlebell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes", "front deltoids"],
+      "secondary": ["triceps", "core"],
+      "aliases": [
+        { "name": "Squat Press" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "single-leg-rdl",
+      "name": "Single-Leg RDL",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["dumbbells", "kettlebell", "barbell", "cable"],
+      "defaultEquipment": "dumbbells",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["hamstrings", "glutes"],
+      "secondary": ["gluteus medius", "core"],
+      "aliases": [
+        { "name": "Single Leg RDL" },
+        { "name": "Single Leg Romanian Deadlift" },
+        { "name": "SL RDL" },
+        { "name": "B-Stance RDL" },
+        { "name": "Kickstand RDL" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "kettlebell-swing",
+      "name": "Kettlebell Swing",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["kettlebell", "dumbbells"],
+      "defaultEquipment": "kettlebell",
+      "execution": ["bilateral", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "hamstrings"],
+      "secondary": ["core", "spinal erectors"],
+      "aliases": [
+        { "name": "KB Swing" },
+        { "name": "Russian Swing" },
+        { "name": "American Swing" },
+        { "name": "Single Arm Kettlebell Swing", "execution": "unilateral" }
+      ],
+      "verified": false,
+      "singleImplement": true
+    },
+    {
+      "id": "cable-pull-through",
+      "name": "Cable Pull-Through",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["cable", "resistance_band"],
+      "defaultEquipment": "cable",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "hamstrings"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Pull Through" },
+        { "name": "Cable Pull Through" }
+      ],
+      "verified": false,
+      "attachments": ["rope"],
+      "defaultAttachment": "rope"
+    },
+    {
+      "id": "jefferson-curl",
+      "name": "Jefferson Curl",
+      "category": "back",
+      "type": "strength",
+      "equipment": ["barbell", "kettlebell", "dumbbells", "bodyweight"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["spinal erectors", "hamstrings"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Loaded Spinal Flexion" }
+      ],
+      "verified": false,
+      "singleImplement": true
+    },
+    {
+      "id": "snatch-grip-deadlift",
+      "name": "Snatch-Grip Deadlift",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["barbell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "hamstrings", "upper back"],
+      "secondary": ["spinal erectors", "traps", "grip"],
+      "aliases": [
+        { "name": "Snatch Grip Deadlift" },
+        { "name": "Wide Grip Deadlift" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "silver-dollar-deadlift",
+      "name": "Silver Dollar Deadlift",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["barbell", "axle"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "spinal erectors"],
+      "secondary": ["traps", "grip", "hamstrings"],
+      "aliases": [
+        { "name": "18 Inch Deadlift" },
+        { "name": "18\" Deadlift" },
+        { "name": "Hummer Tyre Deadlift" },
+        { "name": "Hummer Tire Deadlift" }
+      ],
+      "verified": false,
+      "note": "Elevated partial from about 18 inches (WDC standard: 18 in blocks)."
+    },
+    {
+      "id": "viking-deadlift",
+      "name": "Viking Deadlift",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["axle", "barbell"],
+      "defaultEquipment": "axle",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "spinal erectors"],
+      "secondary": ["traps", "grip", "hamstrings"],
+      "aliases": [
+        { "name": "21 Inch Deadlift" },
+        { "name": "21\" Deadlift" },
+        { "name": "Viking Axle Deadlift" }
+      ],
+      "verified": false,
+      "note": "Elevated axle pull from 21 inches (WDC standard height). Straps allowed."
+    },
+    {
+      "id": "car-deadlift",
+      "name": "Car Deadlift",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["implement"],
+      "defaultEquipment": "implement",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes", "spinal erectors"],
+      "secondary": ["traps", "grip"],
+      "aliases": [],
+      "verified": false
+    },
+    {
+      "id": "deadlift-hold",
+      "name": "Deadlift Hold",
+      "category": "arms",
+      "type": "strength",
+      "equipment": ["barbell", "axle", "trap_bar", "farmers_handles"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["grip", "forearms"],
+      "secondary": ["traps", "upper back"],
+      "aliases": [
+        { "name": "Double Overhand Hold" },
+        { "name": "Bar Hold" },
+        { "name": "Axle Hold" }
+      ],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "suitcase-deadlift",
+      "name": "Suitcase Deadlift",
+      "category": "core",
+      "type": "strength",
+      "equipment": ["dumbbells", "kettlebell", "trap_bar", "barbell"],
+      "defaultEquipment": "dumbbells",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["glutes", "obliques", "grip"],
+      "secondary": ["quadriceps", "quadratus lumborum"],
+      "aliases": [
+        { "name": "Single Arm Deadlift" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "curtsy-lunge",
+      "name": "Curtsy Lunge",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["bodyweight", "dumbbells", "kettlebell"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral", "alternating"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "gluteus medius", "quadriceps"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Curtsey Lunge" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "step-down",
+      "name": "Step-Down",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["bodyweight", "dumbbells", "kettlebell"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["quadriceps"],
+      "secondary": ["glutes"],
+      "aliases": [
+        { "name": "Step Down" },
+        { "name": "Eccentric Step Down" },
+        { "name": "Poliquin Step Down" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "shrimp-squat",
+      "name": "Shrimp Squat",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["bodyweight", "dumbbells", "kettlebell"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["quadriceps", "glutes"],
+      "secondary": [],
+      "aliases": [],
+      "verified": false
+    },
+    {
+      "id": "skater-squat",
+      "name": "Skater Squat",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["bodyweight", "dumbbells", "kettlebell"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["quadriceps", "glutes"],
+      "secondary": [],
+      "aliases": [],
+      "verified": false
+    },
+    {
+      "id": "floor-press",
+      "name": "Floor Press",
+      "category": "chest",
+      "type": "strength",
+      "equipment": ["barbell", "dumbbells", "kettlebell", "swiss_bar"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral", "alternating", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["triceps", "pectorals"],
+      "secondary": ["front deltoids"],
+      "aliases": [
+        { "name": "Barbell Floor Press" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "board-press",
+      "name": "Board Press",
+      "category": "chest",
+      "type": "strength",
+      "equipment": ["barbell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["triceps", "pectorals"],
+      "secondary": ["front deltoids"],
+      "aliases": [
+        { "name": "2 Board Press" },
+        { "name": "3 Board Press" },
+        { "name": "Bench Board Press" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "jm-press",
+      "name": "JM Press",
+      "category": "arms",
+      "type": "strength",
+      "equipment": ["barbell", "smith"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["triceps"],
+      "secondary": ["pectorals"],
+      "aliases": [
+        { "name": "J.M. Press" }
+      ],
+      "verified": false,
+      "attachments": ["straight_bar", "ez_bar"],
+      "defaultAttachment": "straight_bar"
+    },
+    {
+      "id": "svend-press",
+      "name": "Svend Press",
+      "category": "chest",
+      "type": "strength",
+      "equipment": ["plate", "dumbbells"],
+      "defaultEquipment": "plate",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["pectorals"],
+      "secondary": ["front deltoids"],
+      "aliases": [
+        { "name": "Plate Press" },
+        { "name": "Plate Squeeze Press" }
+      ],
+      "verified": false,
+      "singleImplement": true
+    },
+    {
+      "id": "squeeze-press",
+      "name": "Squeeze Press",
+      "category": "chest",
+      "type": "strength",
+      "equipment": ["dumbbells"],
+      "defaultEquipment": "dumbbells",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["pectorals"],
+      "secondary": ["triceps"],
+      "aliases": [
+        { "name": "DB Squeeze Press" },
+        { "name": "Crush Press" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "one-arm-push-up",
+      "name": "One-Arm Push-Up",
+      "category": "calisthenics",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["pectorals", "triceps", "core"],
+      "secondary": ["front deltoids"],
+      "aliases": [
+        { "name": "One Arm Push Up" },
+        { "name": "Archer Push Up" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "z-press",
+      "name": "Z Press",
+      "category": "shoulders",
+      "type": "strength",
+      "equipment": ["barbell", "dumbbells", "kettlebell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["front deltoids", "triceps"],
+      "secondary": ["core", "upper back"],
+      "aliases": [
+        { "name": "Z-Press" },
+        { "name": "Floor Seated Press" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "handstand-push-up",
+      "name": "Handstand Push-Up",
+      "category": "calisthenics",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["front deltoids", "triceps"],
+      "secondary": ["upper back", "core"],
+      "aliases": [
+        { "name": "HSPU" },
+        { "name": "Handstand Push Up" },
+        { "name": "Wall Handstand Push Up" },
+        { "name": "Strict HSPU" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "pike-push-up",
+      "name": "Pike Push-Up",
+      "category": "calisthenics",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["front deltoids", "triceps"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Pike Push Up" },
+        { "name": "Elevated Pike Push Up" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "bradford-press",
+      "name": "Bradford Press",
+      "category": "shoulders",
+      "type": "strength",
+      "equipment": ["barbell", "dumbbells"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["front deltoids", "side deltoids"],
+      "secondary": ["triceps"],
+      "aliases": [
+        { "name": "Rocky Press" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "cuban-press",
+      "name": "Cuban Press",
+      "category": "shoulders",
+      "type": "strength",
+      "equipment": ["dumbbells", "barbell"],
+      "defaultEquipment": "dumbbells",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["rotator cuff", "side deltoids"],
+      "secondary": ["traps"],
+      "aliases": [
+        { "name": "DB Cuban Press" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "viking-press",
+      "name": "Viking Press",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["viking_press", "barbell"],
+      "defaultEquipment": "viking_press",
+      "execution": ["bilateral", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["front deltoids", "triceps"],
+      "secondary": ["upper chest", "traps"],
+      "aliases": [
+        { "name": "Viking Press Machine" },
+        { "name": "Landmine Viking Press" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "circus-dumbbell-press",
+      "name": "Circus Dumbbell",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["circus_dumbbell", "dumbbells"],
+      "defaultEquipment": "circus_dumbbell",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["front deltoids", "triceps"],
+      "secondary": ["core", "traps"],
+      "aliases": [
+        { "name": "Circus Dumbbell Press" },
+        { "name": "Circus DB" },
+        { "name": "Circus Bell" },
+        { "name": "Circus Dumbbell Clean and Press" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "landmine-row",
+      "name": "Landmine Row",
+      "category": "back",
+      "type": "strength",
+      "equipment": ["barbell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["mid-back", "lats"],
+      "secondary": ["biceps", "rear deltoids"],
+      "aliases": [
+        { "name": "Landmine T-Bar Row" },
+        { "name": "Meadows Row", "execution": "unilateral" }
+      ],
+      "verified": false,
+      "attachments": ["v_handle", "single_handle"],
+      "defaultAttachment": "v_handle"
+    },
+    {
+      "id": "renegade-row",
+      "name": "Renegade Row",
+      "category": "back",
+      "type": "strength",
+      "equipment": ["dumbbells", "kettlebell"],
+      "defaultEquipment": "dumbbells",
+      "execution": ["alternating", "unilateral"],
+      "defaultExecution": "alternating",
+      "primary": ["lats", "mid-back", "core"],
+      "secondary": ["triceps"],
+      "aliases": [
+        { "name": "Plank Row" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "gorilla-row",
+      "name": "Gorilla Row",
+      "category": "back",
+      "type": "strength",
+      "equipment": ["kettlebell", "dumbbells"],
+      "defaultEquipment": "kettlebell",
+      "execution": ["alternating", "unilateral"],
+      "defaultExecution": "alternating",
+      "primary": ["lats", "mid-back"],
+      "secondary": ["biceps"],
+      "aliases": [],
+      "verified": false
+    },
+    {
+      "id": "rope-climb",
+      "name": "Rope Climb",
+      "category": "calisthenics",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["lats", "biceps", "grip"],
+      "secondary": ["core"],
+      "aliases": [
+        { "name": "Legless Rope Climb" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "muscle-up",
+      "name": "Muscle-Up",
+      "category": "calisthenics",
+      "type": "strength",
+      "equipment": ["bodyweight", "rings"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["lats", "triceps", "pectorals"],
+      "secondary": ["biceps", "core"],
+      "aliases": [
+        { "name": "Muscle Up" },
+        { "name": "Bar Muscle Up" },
+        { "name": "Ring Muscle Up", "equipment": "rings" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "scapular-pull-up",
+      "name": "Scapular Pull-Up",
+      "category": "back",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["lower traps", "lats"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Scap Pull Up" },
+        { "name": "Scapular Pull Up" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "snatch",
+      "name": "Snatch",
+      "category": "olympic",
+      "type": "strength",
+      "equipment": ["barbell", "dumbbells", "kettlebell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral", "alternating", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "quadriceps", "traps"],
+      "secondary": ["hamstrings", "deltoids", "core"],
+      "aliases": [
+        { "name": "Squat Snatch" },
+        { "name": "Full Snatch" },
+        { "name": "Dumbbell Snatch", "equipment": "dumbbells" },
+        { "name": "Kettlebell Snatch", "equipment": "kettlebell" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "power-snatch",
+      "name": "Power Snatch",
+      "category": "olympic",
+      "type": "strength",
+      "equipment": ["barbell", "dumbbells", "kettlebell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral", "alternating", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "quadriceps", "traps"],
+      "secondary": ["hamstrings", "deltoids"],
+      "aliases": [],
+      "verified": false
+    },
+    {
+      "id": "hang-snatch",
+      "name": "Hang Snatch",
+      "category": "olympic",
+      "type": "strength",
+      "equipment": ["barbell", "dumbbells"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral", "alternating", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "traps", "quadriceps"],
+      "secondary": ["hamstrings", "deltoids"],
+      "aliases": [
+        { "name": "High Hang Snatch" },
+        { "name": "Hip Snatch" },
+        { "name": "Mid Thigh Snatch" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "hang-power-snatch",
+      "name": "Hang Power Snatch",
+      "category": "olympic",
+      "type": "strength",
+      "equipment": ["barbell", "dumbbells"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral", "alternating", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "traps"],
+      "secondary": ["hamstrings", "deltoids"],
+      "aliases": [],
+      "verified": false
+    },
+    {
+      "id": "block-snatch",
+      "name": "Block Snatch",
+      "category": "olympic",
+      "type": "strength",
+      "equipment": ["barbell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "traps", "quadriceps"],
+      "secondary": ["deltoids"],
+      "aliases": [
+        { "name": "Snatch From Blocks" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "clean",
+      "name": "Clean",
+      "category": "olympic",
+      "type": "strength",
+      "equipment": ["barbell", "dumbbells", "kettlebell", "medicine_ball"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral", "alternating", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "quadriceps", "traps"],
+      "secondary": ["hamstrings", "upper back"],
+      "aliases": [
+        { "name": "Squat Clean" },
+        { "name": "Full Clean" },
+        { "name": "Medicine Ball Clean", "equipment": "medicine_ball" },
+        { "name": "Kettlebell Clean", "equipment": "kettlebell" },
+        { "name": "Dumbbell Clean", "equipment": "dumbbells" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "power-clean",
+      "name": "Power Clean",
+      "category": "olympic",
+      "type": "strength",
+      "equipment": ["barbell", "dumbbells", "kettlebell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral", "alternating", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "quadriceps", "traps"],
+      "secondary": ["hamstrings", "upper back"],
+      "aliases": [],
+      "verified": false
+    },
+    {
+      "id": "hang-clean",
+      "name": "Hang Clean",
+      "category": "olympic",
+      "type": "strength",
+      "equipment": ["barbell", "dumbbells", "kettlebell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral", "alternating", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "traps", "quadriceps"],
+      "secondary": ["hamstrings", "upper back"],
+      "aliases": [
+        { "name": "High Hang Clean" },
+        { "name": "Hip Clean" },
+        { "name": "Mid Thigh Clean" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "hang-power-clean",
+      "name": "Hang Power Clean",
+      "category": "olympic",
+      "type": "strength",
+      "equipment": ["barbell", "dumbbells", "kettlebell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral", "alternating", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "traps"],
+      "secondary": ["hamstrings", "upper back"],
+      "aliases": [
+        { "name": "HPC" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "block-clean",
+      "name": "Block Clean",
+      "category": "olympic",
+      "type": "strength",
+      "equipment": ["barbell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "traps", "quadriceps"],
+      "secondary": ["upper back"],
+      "aliases": [
+        { "name": "Clean From Blocks" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "split-jerk",
+      "name": "Split Jerk",
+      "category": "olympic",
+      "type": "strength",
+      "equipment": ["barbell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["front deltoids", "triceps", "quadriceps"],
+      "secondary": ["glutes", "core"],
+      "aliases": [
+        { "name": "Jerk" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "push-jerk",
+      "name": "Push Jerk",
+      "category": "olympic",
+      "type": "strength",
+      "equipment": ["barbell", "dumbbells", "kettlebell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["front deltoids", "triceps", "quadriceps"],
+      "secondary": ["glutes", "core"],
+      "aliases": [
+        { "name": "Power Jerk" },
+        { "name": "Kettlebell Jerk", "equipment": "kettlebell" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "clean-and-jerk",
+      "name": "Clean and Jerk",
+      "category": "olympic",
+      "type": "strength",
+      "equipment": ["barbell", "dumbbells", "kettlebell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "quadriceps", "front deltoids"],
+      "secondary": ["traps", "triceps", "hamstrings"],
+      "aliases": [
+        { "name": "Clean & Jerk" },
+        { "name": "C&J" },
+        { "name": "Long Cycle", "equipment": "kettlebell" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "clean-and-press",
+      "name": "Clean and Press",
+      "category": "shoulders",
+      "type": "strength",
+      "equipment": ["barbell", "dumbbells", "kettlebell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral", "alternating", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["front deltoids", "glutes", "traps"],
+      "secondary": ["triceps", "hamstrings"],
+      "aliases": [
+        { "name": "Clean & Press" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "clean-pull",
+      "name": "Clean Pull",
+      "category": "olympic",
+      "type": "strength",
+      "equipment": ["barbell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "hamstrings", "traps"],
+      "secondary": ["spinal erectors", "grip"],
+      "aliases": [
+        { "name": "Halting Clean Pull" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "snatch-pull",
+      "name": "Snatch Pull",
+      "category": "olympic",
+      "type": "strength",
+      "equipment": ["barbell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "hamstrings", "traps"],
+      "secondary": ["upper back", "grip"],
+      "aliases": [
+        { "name": "Halting Snatch Pull" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "high-pull",
+      "name": "High Pull",
+      "category": "olympic",
+      "type": "strength",
+      "equipment": ["barbell", "kettlebell", "dumbbells"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["traps", "side deltoids", "glutes"],
+      "secondary": ["hamstrings", "upper back"],
+      "aliases": [
+        { "name": "Clean High Pull" },
+        { "name": "Snatch High Pull" },
+        { "name": "Kettlebell High Pull", "equipment": "kettlebell" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "snatch-balance",
+      "name": "Snatch Balance",
+      "category": "olympic",
+      "type": "strength",
+      "equipment": ["barbell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "deltoids"],
+      "secondary": ["triceps", "core"],
+      "aliases": [
+        { "name": "Drop Snatch" },
+        { "name": "Heaving Snatch Balance" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "sots-press",
+      "name": "Sots Press",
+      "category": "olympic",
+      "type": "strength",
+      "equipment": ["barbell", "kettlebell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["deltoids", "triceps"],
+      "secondary": ["upper back", "core"],
+      "aliases": [],
+      "verified": false
+    },
+    {
+      "id": "muscle-snatch",
+      "name": "Muscle Snatch",
+      "category": "olympic",
+      "type": "strength",
+      "equipment": ["barbell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["traps", "deltoids"],
+      "secondary": ["rotator cuff", "upper back"],
+      "aliases": [],
+      "verified": false
+    },
+    {
+      "id": "frame-carry",
+      "name": "Frame Carry",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["implement"],
+      "defaultEquipment": "implement",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["grip", "traps", "core"],
+      "secondary": ["forearms", "glutes"],
+      "aliases": [
+        { "name": "Timber Carry" },
+        { "name": "Frame Walk" }
+      ],
+      "verified": false,
+      "metric": "carry"
+    },
+    {
+      "id": "keg-toss",
+      "name": "Keg Toss",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["keg", "sandbag"],
+      "defaultEquipment": "keg",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "hamstrings"],
+      "secondary": ["spinal erectors", "front deltoids"],
+      "aliases": [
+        { "name": "Sandbag Toss", "equipment": "sandbag" },
+        { "name": "Keg Over Bar" },
+        { "name": "Keg Toss" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "husafell-carry",
+      "name": "Husafell Stone Carry",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["stone", "sandbag"],
+      "defaultEquipment": "stone",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["upper back", "core", "quadriceps"],
+      "secondary": ["glutes", "biceps"],
+      "aliases": [
+        { "name": "Husafell Stone" },
+        { "name": "Húsafell Stone" },
+        { "name": "Husafell Carry" },
+        { "name": "Stone Carry" }
+      ],
+      "verified": false,
+      "metric": "carry"
+    },
+    {
+      "id": "vehicle-pull",
+      "name": "Vehicle Pull",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["implement", "sled"],
+      "defaultEquipment": "implement",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes"],
+      "secondary": ["hamstrings", "calves", "grip"],
+      "aliases": [
+        { "name": "Car Pull" },
+        { "name": "Plane Pull" },
+        { "name": "Harness Pull" },
+        { "name": "Truck Pull" }
+      ],
+      "verified": false,
+      "metric": "carry"
+    },
+    {
+      "id": "arm-over-arm-pull",
+      "name": "Arm Over Arm Pull",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["implement", "sled"],
+      "defaultEquipment": "implement",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["lats", "biceps", "grip"],
+      "secondary": ["upper back", "core"],
+      "aliases": [
+        { "name": "Hand Over Hand Pull" },
+        { "name": "Rope Pull" },
+        { "name": "Seated Truck Pull" }
+      ],
+      "verified": false,
+      "metric": "carry"
+    },
+    {
+      "id": "tyre-flip",
+      "name": "Tyre Flip",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["tyre"],
+      "defaultEquipment": "tyre",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "quadriceps", "spinal erectors"],
+      "secondary": ["triceps", "pectorals"],
+      "aliases": [
+        { "name": "Tire Flip" },
+        { "name": "Tractor Tyre Flip" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "power-stairs",
+      "name": "Power Stairs",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["implement"],
+      "defaultEquipment": "implement",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "quadriceps"],
+      "secondary": ["hamstrings", "grip", "traps"],
+      "aliases": [
+        { "name": "Power Stair" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "hercules-hold",
+      "name": "Hercules Hold",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["implement"],
+      "defaultEquipment": "implement",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["grip", "lats", "traps"],
+      "secondary": ["core"],
+      "aliases": [
+        { "name": "Pillars of Hercules" }
+      ],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "front-hold",
+      "name": "Front Hold",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["implement", "plate"],
+      "defaultEquipment": "implement",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["front deltoids"],
+      "secondary": ["core", "traps"],
+      "aliases": [
+        { "name": "Shield Hold" },
+        { "name": "Sword Hold" },
+        { "name": "Plate Front Hold" }
+      ],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "duck-walk",
+      "name": "Duck Walk",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["implement", "kettlebell"],
+      "defaultEquipment": "implement",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes"],
+      "secondary": ["grip", "core"],
+      "aliases": [],
+      "verified": false,
+      "metric": "carry"
+    },
+    {
+      "id": "weight-over-bar",
+      "name": "Weight Over Bar",
+      "category": "strongman",
+      "type": "strength",
+      "equipment": ["implement", "kettlebell"],
+      "defaultEquipment": "implement",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["glutes", "hamstrings", "front deltoids"],
+      "secondary": ["core"],
+      "aliases": [
+        { "name": "WOB" },
+        { "name": "56 lb Weight Over Bar" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "rolling-thunder",
+      "name": "Rolling Thunder",
+      "category": "arms",
+      "type": "strength",
+      "equipment": ["implement"],
+      "defaultEquipment": "implement",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["grip", "forearms"],
+      "secondary": ["traps"],
+      "aliases": [
+        { "name": "Rotating Handle Deadlift" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "front-rack-carry",
+      "name": "Front Rack Carry",
+      "category": "core",
+      "type": "strength",
+      "equipment": ["kettlebell", "dumbbells", "barbell"],
+      "defaultEquipment": "kettlebell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["core", "upper back"],
+      "secondary": ["quadriceps"],
+      "aliases": [
+        { "name": "Rack Carry" },
+        { "name": "Rack Walk" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "overhead-carry",
+      "name": "Overhead Carry",
+      "category": "core",
+      "type": "strength",
+      "equipment": ["kettlebell", "dumbbells", "plate", "barbell"],
+      "defaultEquipment": "kettlebell",
+      "execution": ["bilateral", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["deltoids", "core"],
+      "secondary": ["traps", "triceps"],
+      "aliases": [
+        { "name": "Waiter's Walk" },
+        { "name": "Waiters Walk" },
+        { "name": "Overhead Walk" }
+      ],
+      "verified": false,
+      "metric": "carry"
+    },
+    {
+      "id": "zercher-carry",
+      "name": "Zercher Carry",
+      "category": "core",
+      "type": "strength",
+      "equipment": ["barbell", "sandbag"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["core", "upper back", "biceps"],
+      "secondary": ["quadriceps"],
+      "aliases": [],
+      "verified": false,
+      "metric": "carry"
+    },
+    {
+      "id": "band-pull-apart",
+      "name": "Band Pull-Apart",
+      "category": "shoulders",
+      "type": "strength",
+      "equipment": ["resistance_band", "cable"],
+      "defaultEquipment": "resistance_band",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["rear deltoids", "mid-back"],
+      "secondary": ["rotator cuff"],
+      "aliases": [
+        { "name": "Band Pull Apart" },
+        { "name": "Pull Apart" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "tate-press",
+      "name": "Tate Press",
+      "category": "arms",
+      "type": "strength",
+      "equipment": ["dumbbells"],
+      "defaultEquipment": "dumbbells",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["triceps"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Elbows Out Extension" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "wrist-roller",
+      "name": "Wrist Roller",
+      "category": "arms",
+      "type": "strength",
+      "equipment": ["plate", "implement"],
+      "defaultEquipment": "plate",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["forearms", "grip"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Forearm Roller" }
+      ],
+      "verified": false,
+      "singleImplement": true
+    },
+    {
+      "id": "leverage-bar",
+      "name": "Leverage Bar",
+      "category": "arms",
+      "type": "strength",
+      "equipment": ["dumbbells", "implement"],
+      "defaultEquipment": "dumbbells",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["forearms"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Sledgehammer Levering" },
+        { "name": "Radial Deviation" },
+        { "name": "Ulnar Deviation" },
+        { "name": "Leverage Bar Lift" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "forearm-rotation",
+      "name": "Pronation / Supination",
+      "category": "arms",
+      "type": "strength",
+      "equipment": ["dumbbells", "implement", "resistance_band"],
+      "defaultEquipment": "dumbbells",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["forearms"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Pronation" },
+        { "name": "Supination" },
+        { "name": "Forearm Rotation" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "reverse-nordic",
+      "name": "Reverse Nordic",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["bodyweight", "resistance_band"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps"],
+      "secondary": ["hip flexors"],
+      "aliases": [
+        { "name": "Reverse Nordic Curl" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "terminal-knee-extension",
+      "name": "Terminal Knee Extension",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["resistance_band", "cable"],
+      "defaultEquipment": "resistance_band",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["quadriceps"],
+      "secondary": [],
+      "aliases": [
+        { "name": "TKE" },
+        { "name": "Banded TKE" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "sliding-leg-curl",
+      "name": "Sliding Leg Curl",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["hamstrings"],
+      "secondary": ["glutes"],
+      "aliases": [
+        { "name": "Slider Leg Curl" },
+        { "name": "Stability Ball Leg Curl" },
+        { "name": "Swiss Ball Leg Curl" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "frog-pump",
+      "name": "Frog Pump",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["bodyweight", "dumbbells", "plate"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Frog Pumps" }
+      ],
+      "verified": false,
+      "singleImplement": true
+    },
+    {
+      "id": "clamshell",
+      "name": "Clamshell",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["resistance_band", "bodyweight"],
+      "defaultEquipment": "resistance_band",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["gluteus medius"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Clam Shell" },
+        { "name": "Banded Clamshell" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "fire-hydrant",
+      "name": "Fire Hydrant",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["bodyweight", "resistance_band"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["gluteus medius", "glutes"],
+      "secondary": [],
+      "aliases": [],
+      "verified": false
+    },
+    {
+      "id": "lateral-band-walk",
+      "name": "Lateral Band Walk",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["resistance_band"],
+      "defaultEquipment": "resistance_band",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["gluteus medius", "glutes"],
+      "secondary": ["tensor fasciae latae"],
+      "aliases": [
+        { "name": "Monster Walk" },
+        { "name": "Banded Side Walk" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "copenhagen-plank",
+      "name": "Copenhagen Plank",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["bodyweight", "plate"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["adductors"],
+      "secondary": ["obliques"],
+      "aliases": [
+        { "name": "Copenhagen Adduction" },
+        { "name": "Copenhagen Side Plank" }
+      ],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "hollow-hold",
+      "name": "Hollow Body Hold",
+      "category": "core",
+      "type": "strength",
+      "equipment": ["bodyweight", "plate"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["rectus abdominis"],
+      "secondary": ["hip flexors"],
+      "aliases": [
+        { "name": "Hollow Hold" },
+        { "name": "Hollow Rock" },
+        { "name": "Hollow Body" }
+      ],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "dead-bug",
+      "name": "Dead Bug",
+      "category": "core",
+      "type": "strength",
+      "equipment": ["bodyweight", "resistance_band", "dumbbells", "kettlebell"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral", "alternating"],
+      "defaultExecution": "bilateral",
+      "primary": ["rectus abdominis", "core"],
+      "secondary": ["hip flexors"],
+      "aliases": [
+        { "name": "Deadbug" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "bird-dog",
+      "name": "Bird Dog",
+      "category": "core",
+      "type": "strength",
+      "equipment": ["bodyweight", "resistance_band"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["alternating", "unilateral"],
+      "defaultExecution": "alternating",
+      "primary": ["core", "spinal erectors"],
+      "secondary": ["glutes"],
+      "aliases": [
+        { "name": "Birddog" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "reverse-crunch",
+      "name": "Reverse Crunch",
+      "category": "core",
+      "type": "strength",
+      "equipment": ["bodyweight", "cable", "resistance_band"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["lower abdominals"],
+      "secondary": ["hip flexors"],
+      "aliases": [],
+      "verified": false
+    },
+    {
+      "id": "v-up",
+      "name": "V-Up",
+      "category": "core",
+      "type": "strength",
+      "equipment": ["bodyweight", "plate", "dumbbells"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["rectus abdominis"],
+      "secondary": ["hip flexors"],
+      "aliases": [
+        { "name": "V Up" },
+        { "name": "Jack Knife" },
+        { "name": "Jackknife Sit Up" }
+      ],
+      "verified": false,
+      "singleImplement": true
+    },
+    {
+      "id": "dragon-flag",
+      "name": "Dragon Flag",
+      "category": "core",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["rectus abdominis", "core"],
+      "secondary": ["lats"],
+      "aliases": [
+        { "name": "Dragon Flags" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "landmine-rotation",
+      "name": "Landmine Rotation",
+      "category": "core",
+      "type": "strength",
+      "equipment": ["barbell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["obliques", "core"],
+      "secondary": ["front deltoids"],
+      "aliases": [
+        { "name": "Landmine 180" },
+        { "name": "Landmine Twist" },
+        { "name": "Power Twist" }
+      ],
+      "verified": false,
+      "singleImplement": true
+    },
+    {
+      "id": "kettlebell-windmill",
+      "name": "Windmill",
+      "category": "core",
+      "type": "strength",
+      "equipment": ["kettlebell", "dumbbells", "bodyweight"],
+      "defaultEquipment": "kettlebell",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["obliques", "core"],
+      "secondary": ["gluteus medius", "deltoids"],
+      "aliases": [
+        { "name": "Kettlebell Windmill" },
+        { "name": "KB Windmill" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "l-sit",
+      "name": "L-Sit",
+      "category": "calisthenics",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["hip flexors", "rectus abdominis"],
+      "secondary": ["triceps"],
+      "aliases": [
+        { "name": "L Sit" },
+        { "name": "Tuck L-Sit" },
+        { "name": "V-Sit" },
+        { "name": "Straddle L-Sit" }
+      ],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "turkish-get-up",
+      "name": "Turkish Get-Up",
+      "category": "core",
+      "type": "strength",
+      "equipment": ["kettlebell", "dumbbells", "bodyweight"],
+      "defaultEquipment": "kettlebell",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["core", "deltoids"],
+      "secondary": ["glutes", "triceps"],
+      "aliases": [
+        { "name": "TGU" },
+        { "name": "Turkish Get Up" },
+        { "name": "Get Up" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "bear-crawl",
+      "name": "Bear Crawl",
+      "category": "core",
+      "type": "strength",
+      "equipment": ["bodyweight", "sled"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["core", "front deltoids"],
+      "secondary": ["quadriceps"],
+      "aliases": [],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "mcgill-curl-up",
+      "name": "McGill Curl-Up",
+      "category": "core",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["rectus abdominis"],
+      "secondary": [],
+      "aliases": [
+        { "name": "McGill Curl Up" },
+        { "name": "Modified Curl Up" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "front-lever",
+      "name": "Front Lever",
+      "category": "calisthenics",
+      "type": "strength",
+      "equipment": ["bodyweight", "rings"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["lats", "core"],
+      "secondary": ["rear deltoids", "triceps"],
+      "aliases": [
+        { "name": "Tuck Front Lever" },
+        { "name": "Advanced Tuck Front Lever" },
+        { "name": "Straddle Front Lever" },
+        { "name": "Front Lever Raise" }
+      ],
+      "verified": false,
+      "metric": "time",
+      "note": "Progression level (tuck, advanced tuck, one-leg, straddle, half-lay, full) goes in the note until levels get their own field."
+    },
+    {
+      "id": "back-lever",
+      "name": "Back Lever",
+      "category": "calisthenics",
+      "type": "strength",
+      "equipment": ["bodyweight", "rings"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["lats", "biceps", "pectorals"],
+      "secondary": ["core"],
+      "aliases": [
+        { "name": "Tuck Back Lever" },
+        { "name": "Straddle Back Lever" },
+        { "name": "German Hang" },
+        { "name": "Skin the Cat" }
+      ],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "planche",
+      "name": "Planche",
+      "category": "calisthenics",
+      "type": "strength",
+      "equipment": ["bodyweight", "rings"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["front deltoids", "pectorals"],
+      "secondary": ["core", "triceps"],
+      "aliases": [
+        { "name": "Planche Lean" },
+        { "name": "Frog Stand" },
+        { "name": "Tuck Planche" },
+        { "name": "Straddle Planche" }
+      ],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "human-flag",
+      "name": "Human Flag",
+      "category": "calisthenics",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["lats", "obliques"],
+      "secondary": ["deltoids"],
+      "aliases": [
+        { "name": "Tuck Flag" },
+        { "name": "Straddle Flag" }
+      ],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "handstand",
+      "name": "Handstand",
+      "category": "calisthenics",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["deltoids"],
+      "secondary": ["core", "triceps"],
+      "aliases": [
+        { "name": "Handstand Hold" },
+        { "name": "Wall Handstand" },
+        { "name": "Freestanding Handstand" }
+      ],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "ring-support-hold",
+      "name": "Ring Support Hold",
+      "category": "calisthenics",
+      "type": "strength",
+      "equipment": ["rings"],
+      "defaultEquipment": "rings",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["triceps", "pectorals"],
+      "secondary": ["core"],
+      "aliases": [
+        { "name": "Support Hold" },
+        { "name": "RTO Support" }
+      ],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "box-jump",
+      "name": "Box Jump",
+      "category": "plyometrics",
+      "type": "strength",
+      "equipment": ["bodyweight", "dumbbells"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes"],
+      "secondary": ["calves", "hamstrings"],
+      "aliases": [
+        { "name": "Box Jumps" },
+        { "name": "Seated Box Jump" },
+        { "name": "Single Leg Box Jump", "execution": "unilateral" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "box-jump-over",
+      "name": "Box Jump-Over",
+      "category": "plyometrics",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes"],
+      "secondary": ["calves"],
+      "aliases": [
+        { "name": "Box Jump Over" },
+        { "name": "Box Step Over" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "broad-jump",
+      "name": "Broad Jump",
+      "category": "plyometrics",
+      "type": "strength",
+      "equipment": ["bodyweight", "dumbbells"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "quadriceps"],
+      "secondary": ["hamstrings", "calves"],
+      "aliases": [
+        { "name": "Standing Long Jump" },
+        { "name": "Standing Broad Jump" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "depth-jump",
+      "name": "Depth Jump",
+      "category": "plyometrics",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes", "calves"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Drop Jump" },
+        { "name": "Depth Jump to Box" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "squat-jump",
+      "name": "Jump Squat",
+      "category": "plyometrics",
+      "type": "strength",
+      "equipment": ["bodyweight", "trap_bar", "dumbbells", "barbell"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes"],
+      "secondary": ["calves"],
+      "aliases": [
+        { "name": "Squat Jump" },
+        { "name": "Trap Bar Jump", "equipment": "trap_bar" },
+        { "name": "Loaded Jump Squat" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "countermovement-jump",
+      "name": "Vertical Jump",
+      "category": "plyometrics",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes", "calves"],
+      "secondary": [],
+      "aliases": [
+        { "name": "CMJ" },
+        { "name": "Countermovement Jump" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "tuck-jump",
+      "name": "Tuck Jump",
+      "category": "plyometrics",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes"],
+      "secondary": ["hip flexors", "calves"],
+      "aliases": [
+        { "name": "Tuck Jumps" },
+        { "name": "Pike Jump" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "pogo-hop",
+      "name": "Pogo Hops",
+      "category": "plyometrics",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["calves"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Pogo Jumps" },
+        { "name": "Ankle Hops" },
+        { "name": "Line Hops" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "hurdle-hop",
+      "name": "Hurdle Hops",
+      "category": "plyometrics",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "calves"],
+      "secondary": ["glutes"],
+      "aliases": [
+        { "name": "Hurdle Jumps" },
+        { "name": "Lateral Hurdle Hops" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "bounding",
+      "name": "Bounding",
+      "category": "plyometrics",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["alternating", "bilateral"],
+      "defaultExecution": "alternating",
+      "primary": ["glutes", "quadriceps"],
+      "secondary": ["calves", "hamstrings"],
+      "aliases": [
+        { "name": "Bounds" },
+        { "name": "Alternate Leg Bound" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "lateral-bound",
+      "name": "Lateral Bound",
+      "category": "plyometrics",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "gluteus medius", "quadriceps"],
+      "secondary": ["calves"],
+      "aliases": [
+        { "name": "Skater Jump" },
+        { "name": "Skater Jumps" },
+        { "name": "Skater Hops" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "split-squat-jump",
+      "name": "Jumping Lunge",
+      "category": "plyometrics",
+      "type": "strength",
+      "equipment": ["bodyweight", "dumbbells"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes"],
+      "secondary": ["calves"],
+      "aliases": [
+        { "name": "Split Squat Jump" },
+        { "name": "Split Jump" },
+        { "name": "Scissor Jump" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "plyo-push-up",
+      "name": "Plyo Push-Up",
+      "category": "plyometrics",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["pectorals", "triceps"],
+      "secondary": ["front deltoids"],
+      "aliases": [
+        { "name": "Clap Push Up" },
+        { "name": "Plyometric Push Up" },
+        { "name": "Depth Push Up" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "med-ball-chest-pass",
+      "name": "Medicine Ball Chest Pass",
+      "category": "plyometrics",
+      "type": "strength",
+      "equipment": ["medicine_ball"],
+      "defaultEquipment": "medicine_ball",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["pectorals", "triceps"],
+      "secondary": ["front deltoids"],
+      "aliases": [
+        { "name": "Chest Pass" },
+        { "name": "MB Chest Pass" },
+        { "name": "Med Ball Chest Throw" }
+      ],
+      "verified": false,
+      "singleImplement": true
+    },
+    {
+      "id": "med-ball-overhead-throw",
+      "name": "Overhead Back Toss",
+      "category": "plyometrics",
+      "type": "strength",
+      "equipment": ["medicine_ball", "kettlebell"],
+      "defaultEquipment": "medicine_ball",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "hamstrings"],
+      "secondary": ["deltoids", "spinal erectors"],
+      "aliases": [
+        { "name": "Backward Overhead Throw" },
+        { "name": "Overhead Backward Throw" },
+        { "name": "MB Back Toss" }
+      ],
+      "verified": false,
+      "singleImplement": true
+    },
+    {
+      "id": "med-ball-scoop-toss",
+      "name": "Rotational Scoop Toss",
+      "category": "plyometrics",
+      "type": "strength",
+      "equipment": ["medicine_ball"],
+      "defaultEquipment": "medicine_ball",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["obliques", "glutes"],
+      "secondary": ["core"],
+      "aliases": [
+        { "name": "Scoop Toss" },
+        { "name": "MB Rotational Throw" },
+        { "name": "Med Ball Side Toss" }
+      ],
+      "verified": false,
+      "singleImplement": true
+    },
+    {
+      "id": "med-ball-slam",
+      "name": "Ball Slam",
+      "category": "plyometrics",
+      "type": "strength",
+      "equipment": ["medicine_ball"],
+      "defaultEquipment": "medicine_ball",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["lats", "core"],
+      "secondary": ["triceps", "glutes"],
+      "aliases": [
+        { "name": "Med Ball Slam" },
+        { "name": "Slam Ball" },
+        { "name": "MB Slam" }
+      ],
+      "verified": false,
+      "singleImplement": true
+    },
+    {
+      "id": "wall-ball",
+      "name": "Wall Ball",
+      "category": "plyometrics",
+      "type": "strength",
+      "equipment": ["medicine_ball"],
+      "defaultEquipment": "medicine_ball",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "glutes", "front deltoids"],
+      "secondary": ["triceps", "core"],
+      "aliases": [
+        { "name": "Wall Ball Shot" },
+        { "name": "Wall Balls" }
+      ],
+      "verified": false,
+      "singleImplement": true
+    },
+    {
+      "id": "jump-rope",
+      "name": "Jump Rope",
+      "category": "cardio",
+      "type": "cardio",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["calves"],
+      "secondary": ["forearms"],
+      "aliases": [
+        { "name": "Skipping Rope" },
+        { "name": "Double Unders" },
+        { "name": "Double-Unders" },
+        { "name": "Single Unders" }
+      ],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "swimming",
+      "name": "Swimming",
+      "category": "cardio",
+      "type": "cardio",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["lats", "core"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Swim" },
+        { "name": "Lane Swim" }
+      ],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "battle-ropes",
+      "name": "Battle Ropes",
+      "category": "cardio",
+      "type": "cardio",
+      "equipment": ["implement"],
+      "defaultEquipment": "implement",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["deltoids", "forearms"],
+      "secondary": ["core"],
+      "aliases": [
+        { "name": "Battle Rope" },
+        { "name": "Battling Ropes" },
+        { "name": "Rope Waves" }
+      ],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "heavy-bag",
+      "name": "Heavy Bag",
+      "category": "cardio",
+      "type": "cardio",
+      "equipment": ["implement"],
+      "defaultEquipment": "implement",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["deltoids", "core"],
+      "secondary": ["triceps"],
+      "aliases": [
+        { "name": "Bag Work" },
+        { "name": "Punch Bag" },
+        { "name": "Boxing Bag" }
+      ],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "shadowboxing",
+      "name": "Shadowboxing",
+      "category": "cardio",
+      "type": "cardio",
+      "equipment": ["bodyweight", "dumbbells"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["deltoids", "core"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Shadow Boxing" }
+      ],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "burpee",
+      "name": "Burpee",
+      "category": "cardio",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["quadriceps", "pectorals", "core"],
+      "secondary": ["triceps"],
+      "aliases": [
+        { "name": "Burpees" },
+        { "name": "Burpee Pull Up" },
+        { "name": "Bar Facing Burpee" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "jumping-jack",
+      "name": "Jumping Jacks",
+      "category": "cardio",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["calves", "deltoids"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Jumping Jack" },
+        { "name": "Star Jumps" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "mountain-climber",
+      "name": "Mountain Climbers",
+      "category": "cardio",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["core", "hip flexors"],
+      "secondary": ["front deltoids"],
+      "aliases": [
+        { "name": "Mountain Climber" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "sledgehammer-strike",
+      "name": "Sledgehammer Strikes",
+      "category": "cardio",
+      "type": "strength",
+      "equipment": ["implement"],
+      "defaultEquipment": "implement",
+      "execution": ["bilateral", "alternating"],
+      "defaultExecution": "bilateral",
+      "primary": ["obliques", "lats"],
+      "secondary": ["forearms"],
+      "aliases": [
+        { "name": "Tyre Strikes" },
+        { "name": "Tire Strikes" },
+        { "name": "Sledgehammer Swings" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "sumo-deadlift-high-pull",
+      "name": "Sumo Deadlift High Pull",
+      "category": "olympic",
+      "type": "strength",
+      "equipment": ["barbell", "kettlebell"],
+      "defaultEquipment": "barbell",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["traps", "glutes", "side deltoids"],
+      "secondary": ["hamstrings", "quadriceps"],
+      "aliases": [
+        { "name": "SDHP" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "devil-press",
+      "name": "Devil Press",
+      "category": "shoulders",
+      "type": "strength",
+      "equipment": ["dumbbells", "kettlebell"],
+      "defaultEquipment": "dumbbells",
+      "execution": ["bilateral", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["glutes", "front deltoids", "pectorals"],
+      "secondary": ["hamstrings", "triceps"],
+      "aliases": [
+        { "name": "Devils Press" },
+        { "name": "Devil's Press" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "man-maker",
+      "name": "Man Maker",
+      "category": "shoulders",
+      "type": "strength",
+      "equipment": ["dumbbells", "kettlebell"],
+      "defaultEquipment": "dumbbells",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["front deltoids", "pectorals", "mid-back"],
+      "secondary": ["quadriceps", "triceps"],
+      "aliases": [
+        { "name": "Man Makers" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "plate-pinch",
+      "name": "Plate Pinch",
+      "category": "arms",
+      "type": "strength",
+      "equipment": ["plate", "implement"],
+      "defaultEquipment": "plate",
+      "execution": ["bilateral", "unilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["grip", "forearms"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Pinch Grip" },
+        { "name": "Pinch Block" },
+        { "name": "Plate Pinch Hold" },
+        { "name": "Blob Lift" },
+        { "name": "Hub Lift" }
+      ],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "sand-bucket",
+      "name": "Sand Bucket",
+      "category": "arms",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["forearms", "grip"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Rice Bucket" },
+        { "name": "Bucket Training" }
+      ],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "neck-flexion",
+      "name": "Neck Flexion",
+      "category": "neck",
+      "type": "strength",
+      "equipment": ["neck_harness", "plate", "cable", "resistance_band", "machine"],
+      "defaultEquipment": "neck_harness",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["neck"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Neck Curl" },
+        { "name": "Lying Neck Flexion" }
+      ],
+      "verified": false,
+      "singleImplement": true
+    },
+    {
+      "id": "neck-extension",
+      "name": "Neck Extension",
+      "category": "neck",
+      "type": "strength",
+      "equipment": ["neck_harness", "plate", "cable", "resistance_band", "machine"],
+      "defaultEquipment": "neck_harness",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["neck"],
+      "secondary": ["traps"],
+      "aliases": [
+        { "name": "Neck Harness Extension" },
+        { "name": "Prone Neck Extension" }
+      ],
+      "verified": false,
+      "singleImplement": true
+    },
+    {
+      "id": "lateral-neck-flexion",
+      "name": "Lateral Neck Flexion",
+      "category": "neck",
+      "type": "strength",
+      "equipment": ["neck_harness", "plate", "cable", "resistance_band", "machine"],
+      "defaultEquipment": "neck_harness",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["neck"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Side Neck Flexion" },
+        { "name": "Neck Side Raise" }
+      ],
+      "verified": false,
+      "singleImplement": true
+    },
+    {
+      "id": "neck-rotation-resisted",
+      "name": "Resisted Neck Rotation",
+      "category": "neck",
+      "type": "strength",
+      "equipment": ["resistance_band", "cable", "machine"],
+      "defaultEquipment": "resistance_band",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["neck"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Banded Neck Rotation" },
+        { "name": "Iron Neck Rotation" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "neck-isometric",
+      "name": "Neck Isometric",
+      "category": "neck",
+      "type": "strength",
+      "equipment": ["bodyweight", "resistance_band", "machine"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["neck"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Neck Isometrics" },
+        { "name": "Iron Neck" },
+        { "name": "Neck Hold" }
+      ],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "neck-bridge",
+      "name": "Neck Bridge",
+      "category": "neck",
+      "type": "strength",
+      "equipment": ["bodyweight", "plate"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["neck"],
+      "secondary": ["traps", "spinal erectors"],
+      "aliases": [
+        { "name": "Wrestler's Bridge" },
+        { "name": "Wrestlers Bridge" },
+        { "name": "Front Bridge" }
+      ],
+      "verified": false,
+      "metric": "time"
+    },
+    {
+      "id": "chin-tuck",
+      "name": "Chin Tuck",
+      "category": "neck",
+      "type": "strength",
+      "equipment": ["bodyweight", "resistance_band"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["neck"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Chin Tucks" },
+        { "name": "Deep Neck Flexor" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "internal-rotation",
+      "name": "Internal Rotation",
+      "category": "shoulders",
+      "type": "strength",
+      "equipment": ["cable", "resistance_band", "dumbbells"],
+      "defaultEquipment": "cable",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["rotator cuff"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Cable Internal Rotation" },
+        { "name": "Shoulder Internal Rotation" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "wall-slide",
+      "name": "Wall Slide",
+      "category": "shoulders",
+      "type": "strength",
+      "equipment": ["bodyweight", "resistance_band"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["lower traps", "rotator cuff"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Wall Slides" },
+        { "name": "Serratus Wall Slide" },
+        { "name": "Wall Angel" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "push-up-plus",
+      "name": "Push-Up Plus",
+      "category": "chest",
+      "type": "strength",
+      "equipment": ["bodyweight"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["bilateral"],
+      "defaultExecution": "bilateral",
+      "primary": ["core"],
+      "secondary": ["front deltoids"],
+      "aliases": [
+        { "name": "Push Up Plus" },
+        { "name": "Scapular Push Up" },
+        { "name": "Scap Push Up" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "hip-airplane",
+      "name": "Hip Airplane",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["bodyweight", "dumbbells"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["gluteus medius", "glutes"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Hip Airplanes" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "supine-leg-raise",
+      "name": "Supine Straight Leg Raise",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["bodyweight", "resistance_band", "plate"],
+      "defaultEquipment": "bodyweight",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["hip flexors", "quadriceps"],
+      "secondary": [],
+      "aliases": [
+        { "name": "SLR" },
+        { "name": "Lying Straight Leg Raise" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "wrist-eccentric",
+      "name": "Eccentric Wrist Extension",
+      "category": "arms",
+      "type": "strength",
+      "equipment": ["dumbbells", "resistance_band"],
+      "defaultEquipment": "dumbbells",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["forearms"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Tyler Twist" },
+        { "name": "FlexBar Twist" },
+        { "name": "Eccentric Wrist Flexion" }
+      ],
+      "verified": false
+    },
+    {
+      "id": "ankle-band-work",
+      "name": "Banded Ankle Work",
+      "category": "legs",
+      "type": "strength",
+      "equipment": ["resistance_band"],
+      "defaultEquipment": "resistance_band",
+      "execution": ["unilateral"],
+      "defaultExecution": "unilateral",
+      "primary": ["calves", "tibialis anterior"],
+      "secondary": [],
+      "aliases": [
+        { "name": "Banded Inversion" },
+        { "name": "Banded Eversion" },
+        { "name": "Banded Dorsiflexion" }
+      ],
       "verified": false
     }
   ]

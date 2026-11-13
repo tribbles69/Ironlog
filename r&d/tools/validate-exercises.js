@@ -163,12 +163,13 @@ ok(weighted === 0, `no planned weights (${weighted} of ${sets} sets carry one)`)
 ok(badT === 0, `every set has a whole-number target RIR (${badT} without)`);
 ok(zeroRep === 0, 'no zero-rep sets — AMRAPs are a set type now');
 ok(amraps > 0 && amrapWithReps === 0, `AMRAP sets have no rep count (${amraps} AMRAPs)`);
-// 104 in phase 1, + 12 strongman movements in B1 (r&d/specs/strongman-spec.md), + 3 in D2 (Larsen, TruSquat, pendulum)
-ok(M.length === 119, 'catalogue movements = 119 (104 + 12 strongman + 3 strength library)');
-ok(M.filter(m => m.attachments).length === 29, 'movements with attachments = 29');
-// 10 in phase 1; farmers carry and sled push became metric:carry in B1
-ok(M.filter(m => m.metric === 'time').length === 8, 'movements with metric:time = 8 (10 less farmers + sled push, now carry)');
-ok(M.filter(m => m.singleImplement).length === 9, 'movements with singleImplement = 9 (tibialis raise joined in 0.96.0)');
+// 104 in phase 1, + 12 strongman movements in B1 (r&d/specs/strongman-spec.md), + 3 in D2 (Larsen, TruSquat, pendulum),
+// grip, cardio and landmine additions to 127, then + 156 from the master exercise catalogue (r&d/notes/master-catalogue.md)
+ok(M.length === 283, 'catalogue movements = 283 (127 + 156 master catalogue)');
+ok(M.filter(m => m.attachments).length === 32, 'movements with attachments = 32 (+3 master catalogue)');
+// 10 in phase 1; farmers carry and sled push became metric:carry in B1; holds and conditioning since
+ok(M.filter(m => m.metric === 'time').length === 35, 'movements with metric:time = 35');
+ok(M.filter(m => m.singleImplement).length === 25, 'movements with singleImplement = 25 (+16 master catalogue)');
 ok(M.filter(m => m.verified === true).length === 32, 'verified:true = 32');
 ok(names.every(n => resolve(n).m.verified === true), 'all program names map to verified:true movements');
 // adaptation modifiers (C5) are a provisional list, not drawn from the program notes
