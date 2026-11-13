@@ -13,6 +13,46 @@ The first half of this file is how it ended. From "Baseline" down it is the
 plan as it was written before any code moved, kept because it explains why
 things are where they are; line numbers there are `index.html` at `54ce89b`.
 
+## Untangle (0.98.1, 13 Nov 2026)
+
+The split left one knot: every file but `data.js` and `main.js` sat in a
+single import cycle, `core.js` included (it read `S` from `database.js`), and
+every feature imported `ui.js` for `toast`, `modal` and `render`, while `ui.js`
+imported every feature. Phase 1 of ROADMAP E17 cut the layers out of it.
+Pure moves, no behaviour change; `module-map.cjs --sync` wrote every import.
+
+- **`js/state.js`** (new): `DEFAULT_STATE`, `S`, `setState` — out of
+  `database.js`. Imports nothing. `database.js`'s three `S = …` became
+  `setState(…)`.
+- **`js/kit.js`** (new): from `ui.js` — `selectOnFocus`, `a11yPass` and its
+  observer, `toast`, the modal stack, `confirmDlg`, `bar`, `chart`,
+  `chartMulti`, `SERIES_COLORS`; the router state (`page`, `calCursor`,
+  `calSelected`, `analytics*`, with setters), `go`, `calSwitch`; debug mode's
+  `debugOn`, `why`, `trace`, `traceText`, `openWhy`, `copyText`,
+  `cardioWhyLast`; the What's-new flags; `DISCLAIMER` and `FAQ`.
+  `render()` and `applySkin()` are hooks (`shell`) that `ui.js` fills in at
+  load with `renderPage` and `drawSkin`. `WHY` is a registry in the kit that
+  `ui.js` fills with its explainers.
+- **`js/core.js`** now imports only `state.js`, and took the pure helpers
+  that lived in features: `addDaysISO`, `LB_PER_KG`, `fmtSec`, `parseTime`,
+  `fmtM`, `capLabel`, `median`, `lenU`, `dlen`, `toCm`, `checkinFor`, `setLine`.
+
+| | before | after |
+|---|---|---|
+| modules in the big cycle | 11 (everything but `data`, `main`) | 9 (the features) |
+| `state`, `core`, `kit`, `ui` | in the cycle | each its own layer |
+| files importing `ui.js` | 11 | 1 (`main.js`) |
+
+Checked: `check-version`, `lint-scope`, `module-map --check`, smoke 56/56,
+and `baseline.js` on both seeds against main — the same CSV fingerprints and
+the same click signatures (both the 276- and 278-click empty runs occur on
+main too; which one you get depends on bug 4.8, the coach closing mid-frame).
+
+**Left (E17 phases 2–4):** a `loading.js` for plates, bars, places and kit out
+of `workout.js`; the set-shape and tempo helpers out of `workout.js` into
+`exercises.js`; import, export and migrations out of `database.js` so storage
+and sync stop depending on half the features.
+
 ## How it ended
 
 | File | Bytes | gzip | What |

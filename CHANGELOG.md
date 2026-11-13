@@ -13,6 +13,10 @@ rather than guessed.
 
 ---
 
+## 0.98.1 — 13 Nov 2026
+- **Nothing you would notice.** Behind the scenes the app's files were rearranged into tidier layers, so each part can be worked on without touching the rest. Everything should look and behave exactly as before; your log is untouched.
+- If something does behave differently after this version, that is a bug worth reporting.
+
 ## 0.98.0 — 13 Nov 2026
 - **New: about 150 more exercises to pick from.** Olympic lifts (snatch, clean, jerk and their power, hang and block versions), plyometrics and throws, calisthenics holds and skills, more strongman events (Viking and silver dollar deadlifts, Viking press, circus dumbbell, tyre flip, power stairs, Hercules hold and more), neck training, grip, rehab and prehab work, and extra conditioning like jump rope, battle ropes and bag work.
 - **New equipment to choose:** cambered bar, Swiss/football bar, medicine ball, rings, circus dumbbell, Viking press, tyre, neck harness, and "other implement" for odd strongman kit.
