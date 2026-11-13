@@ -2,6 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<!-- Content-Security-Policy: the browser refuses to load scripts or send data anywhere but
+     these. A missed esc() then can't leak the log or the AI key. The sha256 is the skin
+     script below — check-version.cjs fails if they drift. r&d/notes/security-audit-2026-11.md -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-sblqGi+jvKLMGzAN5MNXbPBtHiw58XA2WkPE0RBiaZw=' https://accounts.google.com/gsi/client; connect-src 'self' https://api.anthropic.com https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob:; media-src 'self' data: blob:; worker-src 'self' blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
 <meta name="theme-color" content="#0d0f14">
 <meta name="color-scheme" content="dark">
