@@ -6,6 +6,12 @@ standing rules (RIR shown / RPE stored, kg, local-first, version bumps in
 three, `r&d/tools/check-version.cjs` verifies — and the syntax check before
 committing).
 
+**Bugs:** non-critical bugs you find — on a sweep or while building something
+else — go in **`r&d/BUGS.md`**, not fixed mid-feature. Critical ones (data
+loss, app won't open, a core flow blocked) get fixed straight away. When Aaron
+says "fix the bugs" / "clear the bug list", work that file top down. Its own
+header has the rules.
+
 **Every version bump also adds an entry to the top of `CHANGELOG.md`** (repo root — the app shows it as What's new), in
 the same commit: version, date, and a few plain-English bullets on what a user
 would notice (new, changed, fixed). No code detail — that goes in the commit
