@@ -48,10 +48,45 @@ and `baseline.js` on both seeds against main — the same CSV fingerprints and
 the same click signatures (both the 276- and 278-click empty runs occur on
 main too; which one you get depends on bug 4.8, the coach closing mid-frame).
 
-**Left (E17 phases 2–4):** a `loading.js` for plates, bars, places and kit out
-of `workout.js`; the set-shape and tempo helpers out of `workout.js` into
-`exercises.js`; import, export and migrations out of `database.js` so storage
-and sync stop depending on half the features.
+### Phases 2–4 (0.98.2)
+
+Same rules, same checks. Four new files, and four more layers out of the knot.
+
+- **`js/loading.js`** (phase 2) — from `workout.js`: warm-up ramps, plates,
+  bars, collars, inventory, `loadFor` / `roundLoadFor`, places and kit, and
+  the Plates, Ramp and Places sheets.
+- **`js/movement.js`** (phase 3) — from `exercises.js`: the movement page,
+  the equipment / role / modifier pickers, pain and fatigue notes, the PR-pool
+  notice, Check exercise data. Into `exercises.js`: `EX_MUSCLE` (from
+  `stats.js`), `sidesText` (from `workout.js`), `priorityKeys`, `shortLift`
+  (from `events.js`), `isMainLift`, `HEAVY_BARS` (from `workout.js`).
+  `exercises.js` now imports only `core` and `state`.
+- **`js/io.js`** and **`js/sync.js`** (phase 4) — from `database.js`: boot
+  `load`, clear and erase, the data migrations, every import, both exports and
+  import undo (`io.js`, kept in database.js's original order because some of
+  its constants are read at load); the Drive sync job, the summary file and the
+  sync line (`sync.js`). `database.js` keeps storage, `save` / `flush`, the
+  Drive calls and `mergeSync`, and imports only `state`, `core` and `kit`.
+
+| | 0.98.0 | 0.98.1 | 0.98.2 |
+|---|---|---|---|
+| files in the big cycle | 11 of 13 | 9 of 15 | 9 of 19 |
+| layers outside it | — | state, core, kit | + database, exercises, stats, loading |
+| `workout.js` lines | 4,335 | 4,335 | 3,776 |
+| `exercises.js` lines | 1,942 | 1,942 | 1,487 |
+| `database.js` lines | 2,282 | 2,220 | 505 |
+
+Checked: `check-version`, `lint-scope`, `module-map --check`, smoke 56/56,
+`baseline.js` both seeds — CSV fingerprints identical to main, click
+signatures the same as main's (276 / `7aee7caa81b76aec` empty, 757 /
+`7df8355869e4dafd` migrated). Not covered by either test: a real Drive sync
+round trip — `driveSync` moved verbatim, but check it on the phone.
+
+**Still in the knot (E17 phase 5):** the nine features. The obvious next cuts
+are autoregulation and session maths (`autoE1`, `targetRirFor`, `stallFor`,
+`sessionTotals`, `vbtEst`…) out of `workout.js` into a `training.js` that the
+coach, bar speed, tools and sync can use; `EVENT_TYPES` down to a low layer;
+and `pickExercise` into `movement.js`.
 
 ## How it ended
 

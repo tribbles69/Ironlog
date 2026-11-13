@@ -4,20 +4,20 @@ import { $, U, addDaysISO, ageFrom, bodyweightKg, checkinFor, clamp, daysBetween
   fmtSec, median, nice, parseISO, relDay, roundBar, rpeToRir, setLine, toKg, today, uid, wt } from './core.js';
 import { PROGRAM_MANIFEST, PROGRAM_NAMES } from './data.js';
 import { save } from './database.js';
-import { BLOCK_KINDS, activeBlock, priorityKeys, priorityStats, shortLift } from './events.js';
+import { BLOCK_KINDS, activeBlock, priorityStats } from './events.js';
 import { EQ_TITLE, catalogue, completeLeaf, displayName, exKey, exName, isWorking, keyLeaf, leafKey, leafMuscles,
-  leafName, movementById, prText, resolveName, variantLabel } from './exercises.js';
+  leafName, movementById, prText, priorityKeys, resolveName, shortLift, variantLabel } from './exercises.js';
 import { BUILTIN_ROUTINES, MOB_JOINTS, fitResults, fitTestsSorted, fitVariation, mobDone, mobSettings, mobTestGap,
   mobTestLatest, mobTotal, openCardioSetup, openCheckin, openFitResults, openFitTest, openMobility } from './health.js';
 import { FAQ, a11yPass, closeAllModals, closeModal, confirmDlg, copyText, debugOn, go, modal, render, toast, why } from './kit.js';
+import { PLACE_PRESETS, inventory, kitHas, loadFor, loadPlates, openPlates, openRamp, places, roundLoadFor } from './loading.js';
 import { S } from './state.js';
 import { MUSCLES, allRanks, allStats, bestSingleInfo, bust, fatigueMap, fatigueSummary, goalCurrent, mainLiftKeys,
   openerPct, prsFor, rankFor, statsFor } from './stats.js';
 import { aiCall, aiKey, aiStatus, aiWhy } from './tools.js';
 import { rirFromSensor } from './vbt.js';
-import { PLACE_PRESETS, autoE1, historyE1, installProgram, inventory, kitHas, lastSession, loadFor, loadPlates,
-  missLabel, openPlates, openRamp, places, rangeVerdict, removeProgram, roundLoadFor, sessionMuscles, sessionTotals,
-  stallFor, targetRirFor, vbtEst, verdictWords } from './workout.js';
+import { autoE1, historyE1, installProgram, lastSession, missLabel, rangeVerdict, removeProgram, sessionMuscles,
+  sessionTotals, stallFor, targetRirFor, vbtEst, verdictWords } from './workout.js';
 /* end imports */
 
 /* ---------------- coach: chat, memory and the plan builder (D9 parts 0–1) ----------------

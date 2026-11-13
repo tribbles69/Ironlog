@@ -3,14 +3,12 @@
 import { $, U, bodyweightKg, checkinFor, clamp, daysBetween, dw, e1rm, esc, fmtDate, iso, nice, parseISO, relDay,
   roundBar, rpeToRir, today, uid, w, wt } from './core.js';
 import { save, storeGet, storePut } from './database.js';
-import { priorityKeys, shortLift } from './events.js';
 import { EQ_ICON, EQ_LABEL, completeLeaf, displayName, exFull, exInfo, exKey, exMuscles, exName, inRepsPool, isBefore,
-  isDrop, isPRSet, isWarm, isWorking, keyLeaf, keyNameHtml, leafKey, leafMuscles, leafName, movementById, setVolume,
-  shapePRs, variantLabel } from './exercises.js';
+  isDrop, isMainLift, isPRSet, isWarm, isWorking, keyLeaf, keyNameHtml, leafKey, leafMuscles, leafName, movementById,
+  priorityKeys, setVolume, shapePRs, shortLift, variantLabel } from './exercises.js';
 import { SERIES_COLORS, analyticsQuery, analyticsSort, analyticsTab, bar, chartMulti, closeModal, debugOn, modal,
   openWhy, render, toast, why } from './kit.js';
 import { S } from './state.js';
-import { isMainLift } from './workout.js';
 /* end imports */
 
 /* ---------------- strength standards ----------------
@@ -80,67 +78,6 @@ export const MUSCLES = {
   biceps: 'Biceps', forearms: 'Forearms', abs: 'Abs', calves: 'Calves',
 };
 
-/* Share of the work each movement asks of each muscle. Rough by nature —
-   it's a way of pointing at what's lagging, not an EMG study. */
-export const EX_MUSCLE = {
-  'Back Squat':           { quads: .40, glutes: .25, erectors: .15, hams: .12, abs: .08 },
-  'High Bar Squat':       { quads: .45, glutes: .22, erectors: .13, hams: .12, abs: .08 },
-  'Low Bar Squat':        { quads: .33, glutes: .28, erectors: .18, hams: .13, abs: .08 },
-  'Front Squat':          { quads: .50, glutes: .18, erectors: .14, abs: .12, hams: .06 },
-  'Pause Squat':          { quads: .42, glutes: .24, erectors: .15, hams: .11, abs: .08 },
-  'Box Squat':            { quads: .34, glutes: .30, erectors: .16, hams: .12, abs: .08 },
-  'Safety Bar Squat':     { quads: .42, glutes: .22, erectors: .18, hams: .10, abs: .08 },
-  'Bulgarian Split Squat':{ quads: .42, glutes: .35, hams: .15, abs: .08 },
-  'Leg Press':            { quads: .55, glutes: .28, hams: .17 },
-  'Hack Squat':           { quads: .62, glutes: .22, hams: .16 },
-  'TruSquat':             { quads: .55, glutes: .33, hams: .12 },
-  'Pendulum Squat':       { quads: .66, glutes: .27, hams: .07 },
-  'Leg Extension':        { quads: 1.0 },
-  'Bench Press':          { chest: .48, triceps: .28, fdelts: .24 },
-  'Pause Bench':          { chest: .50, triceps: .27, fdelts: .23 },
-  'Close Grip Bench':     { triceps: .48, chest: .32, fdelts: .20 },
-  'Incline Bench':        { chest: .38, fdelts: .36, triceps: .26 },
-  'Spoto Press':          { chest: .50, triceps: .26, fdelts: .24 },
-  'Larsen Press':         { chest: .48, triceps: .28, fdelts: .24 },
-  'Dumbbell Bench':       { chest: .50, triceps: .24, fdelts: .26 },
-  'Overhead Press':       { fdelts: .45, triceps: .28, sdelts: .17, abs: .10 },
-  'Dumbbell Shoulder Press':{ fdelts: .42, sdelts: .26, triceps: .32 },
-  'Deadlift':             { erectors: .28, glutes: .24, hams: .22, traps: .13, forearms: .13 },
-  'Conventional Deadlift':{ erectors: .28, glutes: .24, hams: .22, traps: .13, forearms: .13 },
-  'Sumo Deadlift':        { glutes: .30, quads: .22, erectors: .20, hams: .16, forearms: .12 },
-  'Romanian Deadlift':    { hams: .45, glutes: .28, erectors: .17, forearms: .10 },
-  'Stiff Leg Deadlift':   { hams: .48, glutes: .25, erectors: .17, forearms: .10 },
-  'Deficit Deadlift':     { erectors: .28, hams: .26, glutes: .22, quads: .12, forearms: .12 },
-  'Rack Pull':            { traps: .30, erectors: .28, glutes: .18, forearms: .16, hams: .08 },
-  'Block Pull':           { erectors: .28, traps: .24, glutes: .22, hams: .14, forearms: .12 },
-  'Good Morning':         { hams: .42, erectors: .38, glutes: .20 },
-  'Hip Thrust':           { glutes: .62, hams: .26, quads: .12 },
-  'Back Extension':       { erectors: .50, glutes: .30, hams: .20 },
-  'Leg Curl':             { hams: 1.0 },
-  'Barbell Row':          { lats: .35, upperback: .32, biceps: .18, erectors: .15 },
-  'Pendlay Row':          { upperback: .38, lats: .32, biceps: .17, erectors: .13 },
-  'Dumbbell Row':         { lats: .40, upperback: .32, biceps: .28 },
-  'Lat Pulldown':         { lats: .58, biceps: .26, upperback: .16 },
-  'Pull Up':              { lats: .55, biceps: .25, upperback: .20 },
-  'Chin Up':              { lats: .45, biceps: .38, upperback: .17 },
-  'Cable Row':            { lats: .38, upperback: .38, biceps: .24 },
-  'Face Pull':            { upperback: .60, sdelts: .40 },
-  'Shrug':                { traps: .80, forearms: .20 },
-  'Barbell Curl':         { biceps: .78, forearms: .22 },
-  'Dumbbell Curl':        { biceps: .78, forearms: .22 },
-  'Hammer Curl':          { biceps: .60, forearms: .40 },
-  'Skullcrusher':         { triceps: 1.0 },
-  'Tricep Pushdown':      { triceps: 1.0 },
-  'Dips':                 { triceps: .45, chest: .38, fdelts: .17 },
-  'Lateral Raise':        { sdelts: 1.0 },
-  'Calf Raise':           { calves: 1.0 },
-  'Tibialis Raise':       { calves: 1.0 },   // front of the shin; the map's lower leg is "calves"
-  'Landmine Press':       { fdelts: .42, chest: .22, triceps: .22, abs: .08, sdelts: .06 },
-  'Ab Wheel':             { abs: .85, lats: .15 },
-  'Plank':                { abs: 1.0 },
-  'Hanging Leg Raise':    { abs: .82, forearms: .18 },
-  'Farmers Walk':         { forearms: .45, traps: .35, abs: .20 },
-};
 
 function stdFor(name) {
   const s = STD[name];

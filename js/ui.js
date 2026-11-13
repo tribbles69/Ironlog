@@ -5,36 +5,40 @@ import { $, ACTIVITY, APP_VERSION, Awake, Cue, NUTRITION_GOAL, U, ageCategory, a
   bodyweightSource, checkinFor, clamp, daysBetween, dots, dw, e1Rir, e1rm, esc, fmtDate, fmtSec, nice, parseISO,
   parseTime, rirToRpe, rpeToRir, setLine, suggestedTargets, toKg, today, w, wt } from './core.js';
 import { PROGRAM_MANIFEST } from './data.js';
-import { BACKUP_SNOOZE, CSV_FORMAT, aboutCard, backupCard, driveSync, exportCSV, exportJSON, flush, importIronlogCSV,
-  importJSONFile, importUndoInfo, installEvt, liftoffImported, logCounts, logCountsLine, openClearData, openEraseAll,
-  openLiftoffImport, openRemoveImport, persist, pickImportFile, refreshStorageLine, refreshSyncLine, relTime, save,
-  setInstallEvt, storageLine, storageStatus, syncLine, syncMeta, undoImport } from './database.js';
+import { BACKUP_SNOOZE, aboutCard, backupCard, flush, installEvt, persist, refreshStorageLine, save, setInstallEvt,
+  storageLine, storageStatus, syncMeta } from './database.js';
 import { DEFAULT_EVENT_TYPE, EVENT_TYPES, activeBlock, eventType, glPoints, openAddEvent, openBlocks, openMeet,
-  openMeetDay, openPriority, openTestLog, platformPct, priorityKeys, priorityStats, runInLine, viewMeets } from './events.js';
+  openMeetDay, openPriority, openTestLog, platformPct, priorityStats, runInLine, viewMeets } from './events.js';
 import { allExercises, exFull, exInfo, exKey, exMuscles, exName, exNameHtml, exOptionsHtml, isPRSet, keyLeaf, keyPR,
-  keyVariantLabel, leafMuscles, leafName, maybePoolNotice, modLabel, openExDetail, openExerciseCheck } from './exercises.js';
+  keyVariantLabel, leafMuscles, leafName, modLabel, priorityKeys } from './exercises.js';
 import { CAL_METHODS, CARDIO, DW_BANDS, FIT, caliperCalc, cardioDecide, cardioHasZone, cardioIv, cardioLoop,
   cardioMachine, cardioNorm, cardioPrimary, fitOther, fitResults, fitStrength, knobVal, mean, mobTestDef, mobTestGap,
   mobTestSeries, mobTestText, mobilityHomeLine, openCardioSetup, openCheckin, openFitTest, openGoal,
   openIntervalSetup, openMobility, openMobilityPicker, viewHealth, warmPlan, weightNear, wireBody, wireCardio,
   wireFit, wireMobTests, wireVitals } from './health.js';
+import { CSV_FORMAT, exportCSV, exportJSON, importIronlogCSV, importJSONFile, importUndoInfo, liftoffImported,
+  logCounts, logCountsLine, openClearData, openEraseAll, openLiftoffImport, openRemoveImport, pickImportFile,
+  undoImport } from './io.js';
 import { DISCLAIMER, FAQ, NAV_TAB, WHY, a11yPass, analyticsTab, applySkin, calCursor, calSelected, cardioWhyLast,
   closeAllModals, closeModal, confirmDlg, debugOn, go, modal, modalStack, page, render, setAnalyticsQuery,
   setAnalyticsSort, setAnalyticsTab, setCalCursor, setCalSelected, setCardioWhyLast, setPage, setWhatsNewArmed,
   setWhatsNewBusy, shell, toast, trace, whatsNewArmed, whatsNewBusy } from './kit.js';
+import { BAR_PRESETS, barRow, mainBars, mainPlates, openPlaces, places } from './loading.js';
+import { maybePoolNotice, openExDetail, openExerciseCheck } from './movement.js';
 import { S } from './state.js';
 import { BIG_MUSCLES, MUSCLES, RECOVERY, RECOVERY_WORDS, STD, TIERS, avg, beatsBest, bestSetOf, bust, fatigueMap,
   goalRow, hardSetRows, last7, muscleTau, openVolMuscle, openerPct, prsFor, rankFor, setEffort, setSummary, setsTxt,
   srcChip, statsFor, streak, totalVolume, viewAnalytics, volStatus, volTarget, weeklySets, wireMuscleMap, woTime } from './stats.js';
+import { driveSync, refreshSyncLine, relTime, syncLine } from './sync.js';
 import { aiCall, aiCap, aiKey, aiUsageHtml, aiWhy, hasFoodData, openFoodExport, openTool, openTools, setAiKey,
   wireAiUsage } from './tools.js';
 import { BP, LV_SLACK, MVT_PRIOR_WEIGHT, bpGapText, lvDay, lvFit, mvtFor, poseSettingsHtml, slewLiftFor,
   wirePoseSettings } from './vbt.js';
-import { BAR_PRESETS, VBT_RAW_MAX, autoBlock, backfillCountText, backfillPlanned, barRow, elapsed, exportVbtRaw,
-  fixedStepKit, liveTotals, mainBars, mainPlates, missBtn, newBlank, oldPrograms, openEditWorkout, openMissed,
-  openPlaces, openPlanner, openProgram, places, plannedInWindow, programInstalled, rangeNextLoad, rangeVerdict,
-  removeProgram, repeatWorkout, restIv, restLoop, setTick, startPlanned, targetRirFor, tick, undoMiss, vbtEst,
-  vbtRawList, viewCalendar, viewCompleted, viewWorkout, wireActive } from './workout.js';
+import { VBT_RAW_MAX, autoBlock, backfillCountText, backfillPlanned, elapsed, exportVbtRaw, fixedStepKit, liveTotals,
+  missBtn, newBlank, oldPrograms, openEditWorkout, openMissed, openPlanner, openProgram, plannedInWindow,
+  programInstalled, rangeNextLoad, rangeVerdict, removeProgram, repeatWorkout, restIv, restLoop, setTick,
+  startPlanned, targetRirFor, tick, undoMiss, vbtEst, vbtRawList, viewCalendar, viewCompleted, viewWorkout,
+  wireActive } from './workout.js';
 /* end imports */
 
 /* ---------------- updates ----------------

@@ -1148,7 +1148,7 @@ per setup) is the evidence. Then write a spec (`r&d/specs/calm-spec.md`).
 
 ---
 
-### [ ] E17. Untangle the modules (Aaron, 2026-11-13) — **phase 1 shipped 0.98.1**
+### [ ] E17. Untangle the modules (Aaron, 2026-11-13) — **phases 1–4 shipped 0.98.1–0.98.2**; phase 5 left
 After the module split, almost every file imported every other one in a
 circle. Make the layers real, so a file can be read, edited and bug-checked
 with only what is below it. Pure refactors: no behaviour change, checked each
@@ -1156,17 +1156,19 @@ time with `module-map --check`, smoke and `baseline.js` on both seeds against
 main. What moved, and the numbers: `r&d/notes/module-split.md` → Untangle.
 - [x] **Phase 1 (0.98.1):** `state.js` and `kit.js` split out; `core.js`
   imports only `state.js`; nothing but `main.js` imports `ui.js`.
-- [ ] **Phase 2:** `js/loading.js` — plates, bars, collars, inventory, places
-  and kit (`barFor`, `collarPair`, `inventory`, `loadableNear`, `plateLine`,
-  `warmupRamp`, `roundLoadFor`, `loadFor`, `kitHas`, `places`, `placeName`)
-  out of `workout.js`. Events, tools, vbt and coach need these and little else
-  from workout.
-- [ ] **Phase 3:** set shapes and tempo (`shapeKind`, `sidesText`,
-  `parseTempo`, `tempoParts`, `TEMPO_*`…) from `workout.js` into
-  `exercises.js`, and `exercises.js`'s reads of `stats.js` reversed or moved,
-  so the exercise library sits below the features that use it.
-- [ ] **Phase 4:** import, export and migrations out of `database.js` into
-  their own file, so storage and Drive sync depend on `state` alone.
+- [x] **Phase 2 (0.98.2):** `js/loading.js` — plates, bars, ramps, places and
+  kit out of `workout.js`.
+- [x] **Phase 3 (0.98.2):** the exercise screens to `js/movement.js`; muscle
+  shares, side text, priority and main lifts into `exercises.js`, which now
+  imports only `core` and `state`.
+- [x] **Phase 4 (0.98.2):** `js/io.js` (load, migrations, import, export) and
+  `js/sync.js` (the Drive sync job) out of `database.js`, which now imports
+  only `state`, `core` and `kit`.
+- [ ] **Phase 5:** the nine features still import each other. Next cuts:
+  autoregulation and session maths (`autoE1`, `targetRirFor`, `stallFor`,
+  `sessionTotals`, `vbtEst`…) into a `js/training.js`; `EVENT_TYPES` down a
+  layer; `pickExercise` into `movement.js`. Details in
+  `r&d/notes/module-split.md` → Untangle.
 
 ## Parked
 See **`r&d/notes/backlog.md`** — sleep/recovery strip on sessions,

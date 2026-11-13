@@ -6,10 +6,11 @@ import { activeBlock } from './events.js';
 import { exFull, exKey, exName, isPRSet, isWarm } from './exercises.js';
 import { clipMime, clipRecorder, clipVideoEl } from './health.js';
 import { SERIES_COLORS, a11yPass, closeAllModals, closeModal, confirmDlg, modal, render, toast, why } from './kit.js';
+import { loadFor, roundLoadFor } from './loading.js';
 import { VBT_MIN_ROM, vbtDropBlips, vbtEstimateSet, vbtIntegrate, vbtSummary, vbtTiltMotion } from '../slew-reps.js';
 import { S } from './state.js';
 import { bust, statsFor } from './stats.js';
-import { autoE1, loadFor, roundLoadFor, setRefText, targetRirFor, vbtEst, vbtMissed, vbtRawKeep } from './workout.js';
+import { autoE1, setRefText, targetRirFor, vbtEst, vbtMissed, vbtRawKeep } from './workout.js';
 /* end imports */
 
 /* ---------------- profile ----------------

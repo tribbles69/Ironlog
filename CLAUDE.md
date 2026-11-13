@@ -29,9 +29,13 @@ imports the rest:
 | `js/state.js` | `S`, the whole log, and `DEFAULT_STATE`. Imports nothing. `setState` is the only way to replace `S` |
 | `js/core.js` | helpers everything uses: `$`, dates, units, `e1rm`, `esc`, `APP_VERSION`, small formatters (`fmtSec`, `addDaysISO`, `checkinFor`…). Imports only `state.js` |
 | `js/kit.js` | the UI kit: toast, modal, `confirmDlg`, charts, the a11y pass, the router state (`page`, `go`, `render`), debug mode's `why`/`openWhy`, the FAQ. Imports only `core.js` and `state.js` |
-| `js/database.js` | storage, Drive sync, migrations, import and export — kept together |
-| `js/exercises.js` | exercise library, leaf model, demos, modifiers |
-| `js/workout.js` | calendar, Train, programs, autoregulation, rest timer |
+| `js/database.js` | storage (IndexedDB, localStorage), `save` / `flush`, backup cards, the Drive calls and `mergeSync`. Imports only `state`, `core`, `kit` |
+| `js/io.js` | the log in and out: boot `load`, clear / erase, data migrations, Liftoff / Strong / Hevy / CSV / JSON import and undo, CSV and JSON export |
+| `js/sync.js` | Drive sync, the job: `driveSync`, `autoSync`, the summary file, the Settings sync line |
+| `js/exercises.js` | exercise library, leaf model, set model, muscle shares, demos, modifiers, priority and main lifts. Imports only `state`, `core` |
+| `js/movement.js` | the exercise screens: movement page, equipment / role / modifier pickers, pain and fatigue notes, Check exercise data |
+| `js/loading.js` | plates, bars, collars, inventory, warm-up ramps, load rounding, places and their kit |
+| `js/workout.js` | calendar, Train, the live session, programs, autoregulation, rest timer, share cards, voice logging |
 | `js/stats.js` | standards, PRs, weekly sets, muscle map, the Stats page |
 | `js/health.js` | health, mobility, fitting test, vitals, cardio, body comp |
 | `js/events.js` | meets, tests, run-in blocks |
@@ -43,13 +47,17 @@ imports the rest:
 | `css/app.css`, `css/skin98.css` | the two stylesheets |
 | `slew-core.js`, `slew-video.js`, `slew-reps.js` | the bar-speed engine. Takes nothing from Ironlog: `r&d/notes/slew-api.md` |
 
-**Layers (0.98.1, `r&d/notes/module-split.md` → Untangle):** `state` → `core` →
-`kit` → features → `ui` → `main`. A file may import from the layers below it,
-never above: nothing imports `ui.js` but `main.js`, and `state`, `core` and
-`kit` import no feature. A feature that needs to redraw or change page uses the
-kit's `render()` / `go()`, which call into `ui.js` through `shell`. The
-features (workout, exercises, stats, events, health, coach, vbt, tools,
-database) still import each other in a circle — see ROADMAP E17.
+**Layers (0.98.2, `r&d/notes/module-split.md` → Untangle):**
+`state` → `core` → `kit` → `database` → `exercises` → `stats` → `loading` →
+the features → `ui` → `main`. A file imports only from layers below it, never
+above: nothing imports `ui.js` but `main.js`, and nothing from `state` up to
+`loading` imports a feature. A feature that needs to redraw or change page
+uses the kit's `render()` / `go()`, which call into `ui.js` through `shell`.
+The features (workout, movement, events, health, coach, vbt, tools, io,
+sync) still import each other — see ROADMAP E17. **When you add code, put it
+in the lowest layer that has everything it needs**; if a low layer would have
+to import a feature, the code belongs higher up.
+`r&d/tools/module-map.cjs --json` shows who imports what.
 
 Grep before editing; line numbers in specs drift, and specs written before
 0.97.0 say `index.html` where they mean one of these.
