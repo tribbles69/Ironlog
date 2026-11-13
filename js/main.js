@@ -13,9 +13,9 @@ import { openCoach } from './coach.js';
 import { $, APP_VERSION, esc, iso } from './core.js';
 import { loadBundledData } from './data.js';
 import { KEY, flush, idb, requestPersistence, save, saveTimer, setBootFailed, storageStatus, storeGet } from './database.js';
-import { freshInstall, healCustomMovements, load, migrateToV2, migrationDryRun, migrationDryRunText,
-  runDataMigrations } from './io.js';
+import { freshInstall, load, migrateToV2, migrationDryRun, migrationDryRunText } from './io.js';
 import { applySkin, closeModal, go, modalStack, page, setPage, setWhatsNewArmed, toast } from './kit.js';
+import { healCustomMovements, runDataMigrations } from './migrate.js';
 import { DEFAULT_STATE, S, setState } from './state.js';
 import { openTools } from './tools.js';
 import { checkForUpdate, maybeWhatsNew, openProfile, openSettings, openWelcome, updateAsked, welcomeDue } from './ui.js';

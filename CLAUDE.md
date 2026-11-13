@@ -35,29 +35,39 @@ imports the rest:
 | `js/exercises.js` | exercise library, leaf model, set model, muscle shares, demos, modifiers, priority and main lifts. Imports only `state`, `core` |
 | `js/movement.js` | the exercise screens: movement page, equipment / role / modifier pickers, pain and fatigue notes, Check exercise data |
 | `js/loading.js` | plates, bars, collars, inventory, warm-up ramps, load rounding, places and their kit |
+| `js/training.js` | logic from the log with no screen: autoregulation, rep ranges, per-side sets, tempo, misses, programs and backfill, session totals and muscles, load-velocity day, event types and blocks, body-composition maths |
+| `js/picker.js` | the exercise picker sheet |
+| `js/ai.js` | the AI key, models, cap and usage, `aiCall`, `claudeParse` |
+| `js/report.js` | the training report (text and HTML) |
+| `js/migrate.js` | the once-only data migrations and `runDataMigrations` |
+| `js/rest.js` | the rest timer |
 | `js/workout.js` | calendar, Train, the live session, programs, autoregulation, rest timer, share cards, voice logging |
 | `js/stats.js` | standards, PRs, weekly sets, muscle map, the Stats page |
 | `js/health.js` | health, mobility, fitting test, vitals, cardio, body comp |
 | `js/events.js` | meets, tests, run-in blocks |
 | `js/coach.js` | the coach |
 | `js/vbt.js` | bar speed: Measure, bar path, load-velocity profile |
-| `js/tools.js` | Tools sheet, report, calculators, AI key |
+| `js/tools.js` | the Tools sheet, calculators, printing and sharing the report, food export |
 | `js/ui.js` | the shell: draws the pages (Home, Settings, Profile, welcome, What's new), the `WHY` explainers, Windows 98 chrome. Only `main.js` imports it; it plugs `renderPage` and the skin into the kit's `shell` hooks |
 | `js/data.js` | bundled data (`program-manifest.json`) |
 | `css/app.css`, `css/skin98.css` | the two stylesheets |
 | `slew-core.js`, `slew-video.js`, `slew-reps.js` | the bar-speed engine. Takes nothing from Ironlog: `r&d/notes/slew-api.md` |
 
-**Layers (0.98.2, `r&d/notes/module-split.md` → Untangle):**
-`state` → `core` → `kit` → `database` → `exercises` → `stats` → `loading` →
-the features → `ui` → `main`. A file imports only from layers below it, never
-above: nothing imports `ui.js` but `main.js`, and nothing from `state` up to
-`loading` imports a feature. A feature that needs to redraw or change page
-uses the kit's `render()` / `go()`, which call into `ui.js` through `shell`.
-The features (workout, movement, events, health, coach, vbt, tools, io,
-sync) still import each other — see ROADMAP E17. **When you add code, put it
-in the lowest layer that has everything it needs**; if a low layer would have
-to import a feature, the code belongs higher up.
-`r&d/tools/module-map.cjs --json` shows who imports what.
+**Layers (0.98.3, `r&d/notes/module-split.md` → Untangle).** Lowest first;
+a file imports only from rows above it, never below:
+
+1. `state`, `data` — 2. `core` — 3. `exercises`, `kit` — 4. `database` —
+5. `stats`, `ai` — 6. `loading` — 7. `training`, `picker` —
+8. `events`, `vbt`, `report`, `rest`, `migrate` — 9. `sync`, `tools` — 10. `io` —
+11. the screens: `workout`, `health`, `coach`, `movement` — 12. `ui` — 13. `main`.
+
+The four screens open each other (Train ↔ coach ↔ Health ↔ the movement
+page), so they import each other; that is the one cycle left, on purpose.
+Nothing else may join it. A feature that needs to redraw or change page uses
+the kit's `render()` / `go()`, which reach `ui.js` through `shell`. **New code
+goes in the lowest layer that has everything it needs.** If a low file would
+have to import a higher one, the code belongs higher up, or the thing it needs
+belongs lower down. `r&d/tools/module-map.cjs --json` shows who imports what.
 
 Grep before editing; line numbers in specs drift, and specs written before
 0.97.0 say `index.html` where they mean one of these.

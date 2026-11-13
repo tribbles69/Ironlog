@@ -382,3 +382,43 @@ export const FAQ = [
   ['How do updates work?', 'The app checks for a new version when it opens and asks before updating. What\'s new lists the changes.'],
   ['Is this medical advice?', DISCLAIMER],
 ];
+
+/* ---------------- video clip recording (moved in from health.js, E17 phase 5) ---------------- */
+/* ---- daily one-second clip (roadmap 03): this device only ----
+   r&d/specs/progress-clip-spec.md. Every clip is re-recorded through one
+   canvas at one size, so a timelapse is just the clips played back to back
+   into that canvas while MediaRecorder captures it — real time, about a
+   second per clip, on the phone, no upload, no library. */
+export const CLIP = { w: 480, h: 640, fps: 30, bps: 1.5e6, ms: 1000, index: 'ironlog.clips' };
+export function clipMime() {
+  if (typeof MediaRecorder === 'undefined') return null;
+  return ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
+    .find(t => { try { return MediaRecorder.isTypeSupported(t); } catch (e) { return false; } }) || null;
+}
+/* Record `ms` of whatever the canvas shows. `draw` paints each frame. */
+export function clipRecorder(canvas, opts = {}) {
+  const mime = clipMime();
+  const rec = new MediaRecorder(canvas.captureStream(CLIP.fps), { mimeType: mime, videoBitsPerSecond: opts.bps || CLIP.bps });
+  const chunks = [];
+  rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
+  const done = new Promise(res => { rec.onstop = () => res(new Blob(chunks, { type: mime.split(';')[0] })); });
+  return { start: () => rec.start(), stop: () => { if (rec.state !== 'inactive') rec.stop(); return done; } };
+}
+export function clipVideoEl(src) {
+  const v = document.createElement('video');
+  v.muted = true; v.playsInline = true; v.preload = 'auto';
+  if (src) v.src = src;
+  return v;
+}
+
+/* ---------------- saving a file (moved in from tools.js) ---------------- */
+export function saveBlob(text, type, name) {
+  const blob = new Blob([text], { type });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}

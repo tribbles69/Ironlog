@@ -1485,3 +1485,35 @@ export function isMainLift(e) {
   return !!m && HEAVY_BARS.includes(e.leaf.equipment)
     && ((m.primary || []).length >= 2 || ['legs', 'back', 'chest'].includes(m.category));
 }
+
+/* ---------------- custom movements and note modifiers (moved in from io.js, E17 phase 5) ---------------- */
+/* A name nothing in the catalogue answers to becomes its own movement. That is
+   not a guess — it is declining to guess, which is what section 8 requires. */
+export function ensureCustomMovement(name) {
+  const cm = customMovementFor(name);
+  S.customMovements = S.customMovements || [];
+  if (!S.customMovements.some(m => m.id === cm.id)) { S.customMovements.push(cm); bustCatalogue(); }
+  return cm;
+}
+export function customMovementFor(name) {
+  const slug = String(name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'movement';
+  const V = catalogue().V;
+  return {
+    id: 'custom-' + slug, name: String(name), category: 'other', type: 'strength',
+    equipment: (V.equipment || []).slice(), defaultEquipment: 'barbell',
+    execution: (V.execution || []).slice(), defaultExecution: 'bilateral',
+    primary: [], secondary: [], aliases: [{ name: String(name) }],
+    verified: false, custom: true,
+  };
+}
+/* Modifiers are extracted from the note; the note itself is never rewritten. */
+export function modsFromNote(note) {
+  const V = catalogue().V, hay = ' ' + String(note || '').toLowerCase() + ' ';
+  return (V.modifier || []).filter(m => (m.detect || []).some(d => hay.includes(d))).map(m => m.id);
+}
+
+/* ---------------- a leaf for any name (moved in from io.js) ---------------- */
+export function leafForName(name) {
+  const r = resolveName(name);
+  return r ? r.leaf : completeLeaf(ensureCustomMovement(name), null);
+}

@@ -82,11 +82,47 @@ signatures the same as main's (276 / `7aee7caa81b76aec` empty, 757 /
 `7df8355869e4dafd` migrated). Not covered by either test: a real Drive sync
 round trip — `driveSync` moved verbatim, but check it on the phone.
 
-**Still in the knot (E17 phase 5):** the nine features. The obvious next cuts
-are autoregulation and session maths (`autoE1`, `targetRirFor`, `stallFor`,
-`sessionTotals`, `vbtEst`…) out of `workout.js` into a `training.js` that the
-coach, bar speed, tools and sync can use; `EVENT_TYPES` down to a low layer;
-and `pickExercise` into `movement.js`.
+### Phase 5 (0.98.3)
+
+Same rules, same checks. Six new files; the cycle is down to the four screens.
+
+- **`js/training.js`** — from `workout.js`: misses, last session and previous
+  set, the bar-speed numbers a set carries, session totals and muscles,
+  programs and backfill, rep ranges, per-side sets and the imbalance card,
+  tempo, autoregulation, rest defaults, `shapeKind`. From `vbt.js`: the
+  load-velocity day (`lvDay`, `lvFit`, `mvtFor`, `slewLiftFor`, `LV_SLACK`…)
+  and `vbtRirText`. From `events.js`: `EVENT_TYPES`, `BLOCK_KINDS`,
+  `activeBlock`. From `health.js`: the body-composition maths (`CAL_METHODS`,
+  `caliperCalc`, `measSeries`, `DW_BANDS`, `weightNear`). From `coach.js`:
+  `programName`. From `movement.js`: `prPoolMoves`. Also the share-card
+  palette `CARD`.
+- **`js/picker.js`** — `pickExercise`, from `workout.js`.
+- **`js/ai.js`** and **`js/report.js`** — the AI half and the report half of
+  `tools.js`.
+- **`js/migrate.js`** — the data migrations and `healCustomMovements`, from
+  `io.js`, so `sync.js` and `io.js` no longer import each other.
+- **`js/rest.js`** — the rest timer, from `workout.js`.
+- Smaller moves: video-clip recording and `saveBlob` into `kit.js`;
+  `dropFood` into `core.js`; `customMovementFor`, `ensureCustomMovement`,
+  `modsFromNote`, `leafForName` into `exercises.js`; Check exercise data into
+  `io.js`.
+
+| | 0.98.0 | 0.98.3 |
+|---|---|---|
+| js files | 13 | 26 |
+| files in the cycle | 11 | 4 (`workout`, `health`, `coach`, `movement`) |
+| largest file | `workout.js` 4,335 | `health.js` 3,444 (`workout.js` 2,882) |
+
+Checked: `check-version`, `lint-scope`, `module-map --check`, no module
+assigns another module's variable, smoke 56/56, `baseline.js` both seeds —
+CSV fingerprints identical to main, click signatures main's own (276 /
+`7aee7caa81b76aec` empty, 759 / `5dfe044c4c9f28a1` migrated).
+
+**What is left, on purpose:** the four screens open each other — Train opens
+the coach and the movement page, the coach installs programs and opens Health,
+Health starts sessions. Breaking that would take hooks like the kit's `shell`
+for every cross-screen call, more indirection than it is worth. CLAUDE.md
+lists the layers; keep new code to them.
 
 ## How it ended
 
