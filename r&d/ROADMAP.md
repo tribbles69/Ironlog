@@ -57,6 +57,10 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    00-D1 0.94.0–0.94.4; 00-D2 part done 0.95.0–0.95.1 (branch
    `design/assets-2026-11`, which holds all of it). **Next:** A4 items 21–26, then what's left of 00-D2, then section 0 and E3.
 
+   **Beta (2026-11-13, 0.99.1):** section **000** comes first — feature
+   freeze until 1.0; only bug fixes and phone checks. New ideas go in its
+   parked list.
+
    **Next up (2026-11-11, Aaron):** section **00** (bug fixes, then VBT, then design)
    comes before everything else, in page order. Then what's left of section
    **0** (01–03 shipped; 04c moved into 00). After those, carry on from
@@ -150,6 +154,39 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
       equipment for any movement 0.53.0 (B9). Leaf keys, `allExercises()`,
       `variantLabel()` and the axis picker are what everything since builds on.
 - ~~PR detection against history~~ — not a bug (Aaron's logging error, 2026-09-24).
+
+---
+
+## 000. 1.0 beta — feature freeze (Aaron, 2026-11-13)
+
+**From 0.99.1 Ironlog is in beta: no new features until 1.0.** Only bug fixes,
+data safety and the phone checks in A4. Everything else on this page waits,
+in the order it is in now, until 1.0 ships.
+
+**What is allowed in the beta**
+- Fixes for anything on `r&d/BUGS.md` (version 0.99.x).
+- Wording, layout and accessibility fixes to what exists.
+- A4 phone checks, and fixes for what they turn up.
+- Not allowed: new screens, new settings, new data fields, new calculations.
+  If a fix needs one of those, it is a feature — park it and ask Aaron.
+
+**Ideas during the beta** go in the list below, not into the code. They're
+picked up in order after 1.0.
+
+**When it is 1.0**
+1. Nothing at severity 2 open on `r&d/BUGS.md`.
+2. Three training sessions in a row logged with nothing new added to the
+   bug list (Aaron's sessions; the debrief is where they get noticed).
+3. One Google Drive sync, one JSON export and one CSV export checked on the
+   real log.
+4. The A4 items that touch logging (rest timer, Measure, sync) checked on the
+   phone.
+Then: `node "r&d/tools/bump.cjs" 1.0.0`, a changelog entry that says what 1.0
+means, and tick this section. Fixes after that are 1.0.1, 1.0.2; the next
+feature is 1.1.0.
+
+### Ideas parked for after 1.0
+(added during the beta; nothing here is agreed until Aaron picks it)
 
 ---
 
