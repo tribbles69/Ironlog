@@ -3,14 +3,15 @@
 import { $, ACTIVITY, APP_VERSION, LB_PER_KG, U, addDaysISO, ageFrom, bmrMifflin, bodyweightKg, daysBetween, dlen,
   dots, dw, e1rm, esc, fmtDate, fmtSec, lenU, nice, rirToRpe, rpeToRir, toCm, toKg, today, w, wt } from './core.js';
 import { save } from './database.js';
-import { glPoints, priorityKeys, priorityStats } from './events.js';
-import { exFull, feelWords, fullName, isWarm, keyLeaf, leafName, prText, setText } from './exercises.js';
+import { glPoints, priorityStats } from './events.js';
+import { exFull, feelWords, fullName, isWarm, keyLeaf, leafName, prText, priorityKeys, setText } from './exercises.js';
 import { caliperCalc, measSeries } from './health.js';
 import { closeModal, confirmDlg, modal, toast, why } from './kit.js';
+import { loadFor, openPlates, openRamp } from './loading.js';
 import { S } from './state.js';
 import { historyFor, mainLiftKeys, prsFor } from './stats.js';
 import { openBarPath, vbtRirText } from './vbt.js';
-import { loadFor, openPlates, openRamp, sessionTotals, vbtEst, vbtMissed } from './workout.js';
+import { sessionTotals, vbtEst, vbtMissed } from './workout.js';
 /* end imports */
 
 /* ============================================================

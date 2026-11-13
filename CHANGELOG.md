@@ -13,6 +13,10 @@ rather than guessed.
 
 ---
 
+## 0.98.2 — 13 Nov 2026
+- **Nothing you would notice.** More of the behind-the-scenes tidy-up: storage, import and export, Drive sync, the exercise library and the plate maths each moved into their own layer. Everything should look and behave exactly as before; your log is untouched.
+- Worth one check: let Google Drive sync run once (Settings → Sync now) and make sure it says it synced.
+
 ## 0.98.1 — 13 Nov 2026
 - **Nothing you would notice.** Behind the scenes the app's files were rearranged into tidier layers, so each part can be worked on without touching the rest. Everything should look and behave exactly as before; your log is untouched.
 - If something does behave differently after this version, that is a bug worth reporting.

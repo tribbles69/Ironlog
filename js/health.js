@@ -4,15 +4,15 @@ import { coBubble, coBuildAndShow, openCoach } from './coach.js';
 import { $, Awake, Cue, U, addDaysISO, ageFrom, bodyweightKg, checkinFor, clamp, daysBetween, dlen, dw, e1rm, esc,
   fmtDate, fmtSec, iso, lenU, nice, parseISO, relDay, rirToRpe, roundBar, rpeToRir, toCm, toKg, today, uid, wt } from './core.js';
 import { idb, save, storeGet } from './database.js';
-import { priorityKeys } from './events.js';
 import { allExercises, categoryOf, completeLeaf, displayName, exOptionsHtml, keyLeaf, leafName, movementById,
-  variantLabel } from './exercises.js';
+  priorityKeys, variantLabel } from './exercises.js';
 import { a11yPass, chart, chartMulti, closeAllModals, closeModal, confirmDlg, debugOn, go, modal, render,
   selectOnFocus, setCardioWhyLast, toast, why } from './kit.js';
+import { roundLoadFor } from './loading.js';
 import { S } from './state.js';
 import { STD, bust, goalCurrent, loadImage } from './stats.js';
 import { vbtAvailable } from './vbt.js';
-import { openShare, roundLoadFor, startWorkout } from './workout.js';
+import { openShare, startWorkout } from './workout.js';
 /* end imports */
 
 /* Health (D12, D13 — r&d/specs/health-page-spec.md): a summary row whose tiles
