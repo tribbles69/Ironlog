@@ -26,7 +26,9 @@ imports the rest:
 | File | What is in it |
 |---|---|
 | `js/main.js` | boot, the rescue screen, service-worker registration. The entry point |
-| `js/core.js` | helpers everything uses: `$`, dates, units, `e1rm`, `esc`, `APP_VERSION` |
+| `js/state.js` | `S`, the whole log, and `DEFAULT_STATE`. Imports nothing. `setState` is the only way to replace `S` |
+| `js/core.js` | helpers everything uses: `$`, dates, units, `e1rm`, `esc`, `APP_VERSION`, small formatters (`fmtSec`, `addDaysISO`, `checkinFor`…). Imports only `state.js` |
+| `js/kit.js` | the UI kit: toast, modal, `confirmDlg`, charts, the a11y pass, the router state (`page`, `go`, `render`), debug mode's `why`/`openWhy`, the FAQ. Imports only `core.js` and `state.js` |
 | `js/database.js` | storage, Drive sync, migrations, import and export — kept together |
 | `js/exercises.js` | exercise library, leaf model, demos, modifiers |
 | `js/workout.js` | calendar, Train, programs, autoregulation, rest timer |
@@ -36,10 +38,18 @@ imports the rest:
 | `js/coach.js` | the coach |
 | `js/vbt.js` | bar speed: Measure, bar path, load-velocity profile |
 | `js/tools.js` | Tools sheet, report, calculators, AI key |
-| `js/ui.js` | toast, modal, charts, router, Home, Settings, Windows 98 skin |
+| `js/ui.js` | the shell: draws the pages (Home, Settings, Profile, welcome, What's new), the `WHY` explainers, Windows 98 chrome. Only `main.js` imports it; it plugs `renderPage` and the skin into the kit's `shell` hooks |
 | `js/data.js` | bundled data (`program-manifest.json`) |
 | `css/app.css`, `css/skin98.css` | the two stylesheets |
 | `slew-core.js`, `slew-video.js`, `slew-reps.js` | the bar-speed engine. Takes nothing from Ironlog: `r&d/notes/slew-api.md` |
+
+**Layers (0.98.1, `r&d/notes/module-split.md` → Untangle):** `state` → `core` →
+`kit` → features → `ui` → `main`. A file may import from the layers below it,
+never above: nothing imports `ui.js` but `main.js`, and `state`, `core` and
+`kit` import no feature. A feature that needs to redraw or change page uses the
+kit's `render()` / `go()`, which call into `ui.js` through `shell`. The
+features (workout, exercises, stats, events, health, coach, vbt, tools,
+database) still import each other in a circle — see ROADMAP E17.
 
 Grep before editing; line numbers in specs drift, and specs written before
 0.97.0 say `index.html` where they mean one of these.
