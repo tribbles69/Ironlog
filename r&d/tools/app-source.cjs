@@ -33,7 +33,7 @@ function fileWith(re, what) {
    `export` in front of declarations. For tools that cut a block out and run
    it in a sandbox. */
 function plain(text) {
-  return text.replace(/^import\s[^;]*?from\s+'[^']+';[ \t]*\n/gm, '').replace(/^export\s+(?=(async\s+)?function\b|const\b|let\b|var\b|class\b)/gm, '');
+  return text.replace(/^import\s[^;]*?from\s+'[^']+';[ \t]*\r?\n/gm, '').replace(/^export\s+(?=(async\s+)?function\b|const\b|let\b|var\b|class\b)/gm, '');
 }
 function source() { return appFiles().map(f => plain(fs.readFileSync(f, 'utf8'))).join('\n'); }
 

@@ -4,7 +4,7 @@ import { aiCall, aiCap, aiKey, aiUsageHtml, aiWhy, setAiKey, wireAiUsage } from 
 import { CO_HIGH_SETS, CO_LOW_SETS, coDeloadScore, coachDigest, coachHomeCard, openCoach, openPlanImport } from './coach.js';
 import { $, ACTIVITY, APP_VERSION, Awake, Cue, NUTRITION_GOAL, U, ageCategory, ageFrom, bodyweightKg,
   bodyweightSource, checkinFor, clamp, daysBetween, dots, dw, e1Rir, e1rm, esc, fmtDate, fmtSec, nice, parseISO,
-  parseTime, rirToRpe, rpeToRir, setLine, suggestedTargets, toKg, today, w, wt } from './core.js';
+  parseTime, rirToRpe, rpeToRir, setLine, suggestedTargets, toKg, today, w, wt, yearAge } from './core.js';
 import { PROGRAM_MANIFEST } from './data.js';
 import { BACKUP_SNOOZE, aboutCard, backupCard, flush, installEvt, persist, refreshStorageLine, save, setInstallEvt,
   storageLine, storageStatus, syncMeta } from './database.js';
@@ -930,7 +930,7 @@ export function openProfile(snap) {
   const original = snap || Object.fromEntries(PROFILE_FIELDS.map(k => [k, st[k]]));
   const draw = () => {
     const age = ageFrom(st.dob);
-    const cat = ageCategory(age);
+    const cat = ageCategory(yearAge(st.dob));
     const bw = bodyweightSource();
     const t = suggestedTargets();
     const ps = priorityStats();
