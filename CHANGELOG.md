@@ -13,6 +13,19 @@ rather than guessed.
 
 ---
 
+## 0.99.0 — 13 Nov 2026
+- **Volume adds up properly.** Dumbbell and other per-side lifts now count both sides everywhere: the workout summary, the share card, the stats pages and the movement page all show the same number. Past sessions are recounted when you look at them.
+- **Change handles or equipment on a past session.** Edit a finished workout and tap the chips under an exercise's name (e.g. Trap Bar · High Handles) to switch it. This is the way to move old low-handle trap bar entries over, as the 0.98.0 note meant.
+- **Escape closes things properly.** Closing a sheet with Escape now stops its timers and tidies up, and the sync "Records missing on this phone" question no longer gets stuck.
+- **Cambered and Swiss bars** get bar weights in the plate loader and count as main lifts.
+- **"@8" in a note means RPE 8** (2 in reserve), not 8 in reserve.
+- **Fewer false warnings.** Heavy machine work and big strongman pulls no longer trip "beyond any recorded lift", and an ordinary dumbbell jump no longer looks like a lb typo.
+- **One PR toast per real PR.** A later, lighter set no longer pops up another PR.
+- **Rest timer stays with its exercise** when you move or delete exercises mid-session.
+- **Coach plate maths uses your bar** (and collars), not always a 20 kg one.
+- Time boxes reject typos like 1:75, and "1,000" is read as a thousand.
+- The coach no longer throws an error if you close it while it's still answering.
+
 ## 0.98.3 — 13 Nov 2026
 - **Nothing you would notice.** The last of the behind-the-scenes tidy-up: the training maths, the exercise picker, the AI connection, the report, the rest timer and the data fixes each have their own file now. Everything should look and behave exactly as before; your log is untouched.
 

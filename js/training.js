@@ -8,9 +8,9 @@
 import { U, clamp, daysBetween, e1rm, esc, fmtDate, inc, iso, median, nice, parseISO, rpeToRir, toKg, today, uid, wt } from './core.js';
 import { PROGRAM_MANIFEST, PROGRAM_NAMES } from './data.js';
 import { save } from './database.js';
-import { completeLeaf, customMovementFor, ensureCustomMovement, exFull, exKey, exMuscles, exName, inRepsPool, isDrop,
-  isIso, isMainLift, isPRSet, isTimed, isWarm, isWorking, keyLeaf, keyPR, kindOf, leafKey, leafMuscles, leafName,
-  modsFromNote, resolveName, setNumber, setVolume } from './exercises.js';
+import { completeLeaf, customMovementFor, ensureCustomMovement, entryVolume, exFull, exKey, exMuscles, exName,
+  inRepsPool, isDrop, isIso, isMainLift, isPRSet, isTimed, isWarm, isWorking, keyLeaf, keyPR, kindOf, leafKey,
+  leafMuscles, leafName, modsFromNote, resolveName, setNumber } from './exercises.js';
 import { toast } from './kit.js';
 import { loadFor, roundLoadFor } from './loading.js';
 import { S } from './state.js';
@@ -100,7 +100,7 @@ export function sessionTotals(wo) {
     reps: ws.reduce((n, o) => n + o.sets.reduce((a, s) => a + (s.r || 0), 0), 0),
     /* setVolume, not s.w * s.r: a carry or hold has no reps, and one undefined
        turned the whole report's volume into NaN, printed as "0kg". */
-    volume: ws.reduce((n, o) => n + o.sets.reduce((a, s) => a + (o.e.leaf ? setVolume(o.e.leaf, s) : (s.w || 0) * (s.r || 0)), 0), 0),
+    volume: ws.reduce((n, o) => n + o.sets.reduce((a, s) => a + entryVolume(o.e, s), 0), 0),
     mins: wo.summary && wo.summary.mins ? wo.summary.mins : 0,
     prs: prsFor(wo),
   };
@@ -354,7 +354,7 @@ export function backfillPlanned(days) {
     w.summary = {
       mins: 0, prs: [],
       volume: w.exercises.reduce((t, e) =>
-        t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + (s.w || 0) * (s.r || 0), 0), 0),
+        t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + entryVolume(e, s), 0), 0),
     };
   });
   save(); bust();
@@ -568,10 +568,19 @@ export function autoBlock(wo) {
   return !!(wo.prog && wo.block && !FIXED_BLOCK.test(wo.block));
 }
 /* Whole numbers only: "stop 1 shy", "RIR 2", "@2" in the program note, else 2. */
+/* A target RIR written in an exercise note: "stop 2 shy", "RIR 2", or RPE
+   notation ("@8", "RPE 8"), which is 10 − RPE in reserve (B-014). */
+export function noteRir(notes) {
+  const n = String(notes || '').toLowerCase();
+  let m = n.match(/stop (\d) shy/) || n.match(/rir\s*(\d)/);
+  if (m) return { rir: +m[1], text: m[0] };
+  m = n.match(/(?:@|rpe)\s*(\d{1,2}(?:\.\d)?)(?![\d%])/);
+  if (m && +m[1] >= 5 && +m[1] <= 10) return { rir: Math.round(10 - +m[1]), text: m[0] };
+  return null;
+}
 export function targetRirFor(e, blockRir) {
-  const n = String((e && e.notes) || '').toLowerCase();
-  const m = n.match(/stop (\d) shy/) || n.match(/rir\s*(\d)/) || n.match(/@\s*(\d)\b/);
-  return m ? +m[1] : blockRir != null ? blockRir : AUTO.defaultRir;   // the note, then the run-in block (C6), then 2
+  const m = noteRir(e && e.notes);
+  return m ? m.rir : blockRir != null ? blockRir : AUTO.defaultRir;   // the note, then the run-in block (C6), then 2
 }
 /* One session's estimate: median e1 of its RIR-logged working sets. A set with
    no RIR reads as RIR 0 and would drag the number down, so it doesn't count. */

@@ -49,108 +49,6 @@ IDs run on and are never reused. Severity:
 
 ## Open
 
-### B-010 · sev 2 · Session volume counts one side of a per-side lift
-Found: 2026-11-13, 0.98.3, module bug pass (workout, stats, training)
-Where: js/workout.js `finishWorkout` (summary.volume), `saveEdit`, summary
-breakdown and share card; js/stats.js `statsFor` (`volume`, per-session `vol`);
-js/training.js backfill; js/health.js cardio/fitting summary
-Reproduce: log a session with a dumbbell or other per-side lift (loadConventionFor
-→ per_side). One test session read 1130 on the summary, 1750 from `totalVolume`
-and 680 on the movement page, against 1360 counted per side. Every place that
-does `(s.w || 0) * (s.r || 0)` disagrees with `setVolume`.
-Fix: route them all through `setVolume(leaf, s)` (as training.js line ~103 already
-does) with the plain product only as the no-leaf fallback. Old summaries keep the
-stored figure unless recomputed — say so in the changelog or recompute on read.
-
-### B-011 · sev 2 · Escape and closeAllModals skip a modal's onClose
-Found: 2026-11-13, 0.98.3, module bug pass (kit, main, sync)
-Where: js/main.js Escape keydown handler; js/kit.js `closeAllModals`
-Reproduce: from the code. Escape calls `closeModal()` and closeAllModals just
-removes the nodes, so `onClose` never runs. Worst case: the sync "Records missing
-on this phone" modal resolves its promise in `onClose: () => pickIt(true)` — with
-Escape it never resolves and sync stays busy until reload. Also leaves the coach
-state (`CO`) set, and camera, balance and hold timers running.
-Fix: have closeModal/closeAllModals call the top modal's `onClose` once (guarded
-so a button that already resolved doesn't run it twice).
-
-### B-012 · sev 2 · No way to change equipment or handles on a logged entry
-Found: 2026-11-13, 0.98.3, module bug pass (workout edit screen)
-Where: js/migrate.js trap-handle note (line ~164); 0.98.0 changelog;
-js/workout.js edit screen
-Reproduce: the 0.98.0 migration note and changelog say to change low-handle trap
-bar entries "from the exercise's handle chip". That chip only exists in a live
-session; the edit screen for a finished workout has no leaf chips, so past entries
-can't be switched. My mistake in 0.98.0.
-Fix: add the equipment/attachment chips to the edit screen (same component as the
-live session), or reword the note to the workaround until then.
-
-### B-013 · sev 3 · Cambered bar and Swiss bar get no plate maths
-Found: 2026-11-13, 0.98.3, module bug pass (loading, exercises)
-Where: js/loading.js `BAR_EQUIPMENT`, `BAR_PRESETS`, `BAR_FOR`; js/exercises.js
-`HEAVY_BARS`
-Reproduce: from the code. `cambered_bar` and `swiss_bar` came in with 0.98.0 but
-none of these lists know them: no bar weight, no plate loader, never a main lift.
-Fix: add both (cambered ~20–25 kg, Swiss ~15–20 kg as presets) to all four lists.
-
-### B-014 · sev 3 · "@8" in a note is read as RIR 8
-Found: 2026-11-13, 0.98.3, module bug pass (training)
-Where: js/training.js `targetRirFor`
-Reproduce: a program note like "5×5 @8" (RPE notation) gives a target of RIR 8,
-so the next load comes out far too light.
-Fix: treat `@n` as RPE (`10 − n`), or drop the `@` pattern and keep "rir n" and
-"stop n shy".
-
-### B-015 · sev 3 · "Beyond any recorded lift" fires on real loads over 500 kg
-Found: 2026-11-13, 0.98.3, module bug pass (stats)
-Where: js/stats.js `PLAUS.maxKg` / plausibility check
-Reproduce: log a 520 kg leg press or a silver dollar / Viking deadlift (records
-580–670 kg) — the warning says it's beyond any recorded lift.
-Fix: per-movement ceiling (or a higher cap for machines and partials), and soften
-the wording.
-
-### B-016 · sev 3 · "Looks like a lb figure" on an ordinary dumbbell jump
-Found: 2026-11-13, 0.98.3, module bug pass (stats)
-Where: js/stats.js plausibility (lb heuristic, line ~796)
-Reproduce: best dumbbell press 30 kg, log 40 kg — warned it looks like lb.
-Any 30%+ jump at light loads trips it.
-Fix: only flag when the figure is near best × 2.2 (say 1.9–2.5×), not any
-big jump.
-
-### B-017 · sev 3 · Live PR toast repeats for a lighter later set
-Found: 2026-11-13, 0.98.3, module bug pass (workout)
-Where: js/workout.js `toggleSetDone` PR toast (line ~1866)
-Reproduce: from the code. The toast compares with history only, not with sets
-already done this session, so a second set that beats the old best but not the
-first set toasts "PR" again.
-Fix: include this session's done sets when working out the best to beat.
-
-### B-018 · sev 3 · Rest ±15 s lands on the wrong exercise after reordering
-Found: 2026-11-13, 0.98.3, module bug pass (rest, workout)
-Where: js/rest.js `adjustRest` (`S.active.rest.ei`); js/workout.js exercise
-up/down/delete
-Reproduce: start a rest, move that exercise up or delete one above it, press
-+15 — the new rest length is saved onto a different exercise.
-Fix: update `rest.ei` when exercises move or are deleted (or store the exercise id).
-
-### B-019 · sev 3 · Coach plate answer assumes a 20 kg bar
-Found: 2026-11-13, 0.98.3, module bug pass (coach)
-Where: js/coach.js `coAnsPlates`
-Reproduce: "plates for 140" always works it out on a 20 kg bar, ignoring the bar
-you've set up, collars, or a trap/SSB lift. The plate loader it links to is right.
-Fix: use `barFor` (and collars) for the lift in context, and name that bar.
-
-### B-020 · sev 4 · Time fields accept 1:75
-Found: 2026-11-13, 0.98.3, module bug pass (core, health)
-Where: js/core.js `parseTime`; js/health.js `parseKnob`
-Reproduce: type "1:75" — accepted as 2:15. Same for "2:99" in cardio setup.
-Fix: reject seconds/minutes ≥ 60 after the first part.
-
-### B-021 · sev 4 · Thousands separator read as a decimal
-Found: 2026-11-13, 0.98.3, module bug pass (io, coach)
-Where: js/io.js `impNum`; js/coach.js `coAnsConvert`
-Reproduce: "1,000 lb in kg" → 1 lb; an imported weight of "1,200" → 1.2, and "1,200.5" → 0.
-Fix: treat a comma followed by exactly three digits as a thousands separator.
-
 ### B-005 · sev 2 · DOTS for women over 150 kg bodyweight is too high
 Found: 2026-11-12, 0.97.0, bug sweep
 Where: js/core.js `dots` — `clamp(bwKg, 40, 210)` for both sexes
@@ -198,13 +96,6 @@ sessions on the same day make `dates[1]` today as well, and the "previous"
 total is the current one: always 0 places moved.
 Fix: take the latest test date strictly before the newest one
 (`dates.find(d => d < dates[0])`).
-
-### B-001 · sev 3 · Closing the coach straight after a message throws
-Found: 2026-11-12, 0.96.5, during the module split (sweep 4.8)
-Where: js/coach.js `coBubble`, `coTyped`
-Reproduce: open Coach, press a chip and Close in the same instant —
-`Cannot read properties of null (reading 'bg')` in the console. Nothing lost.
-Fix: take `const co = CO` before the frame/wait and return if it's gone.
 
 ### B-002 · sev 3 · CSV round trip drops extra leaf keys on an exercise with no sets
 Found: 2026-11-12, 0.96.5, during the module split (sweep 4.9)
@@ -254,5 +145,18 @@ Fix: `.gitattributes` with `* text=auto eol=lf`, or `\r?\n` in the patterns.
 
 Most recent first: `- B-000 · title — 0.00.0`
 
+- B-021 · Thousands separator read as a decimal — 0.99.0
+- B-020 · Time fields accept 1:75 — 0.99.0
+- B-019 · Coach plate answer assumes a 20 kg bar — 0.99.0
+- B-018 · Rest ±15 s lands on the wrong exercise after reordering — 0.99.0
+- B-017 · Live PR toast repeats for a lighter later set — 0.99.0
+- B-016 · "Looks like a lb figure" on an ordinary dumbbell jump — 0.99.0
+- B-015 · "Beyond any recorded lift" fires on real loads over 500 kg — 0.99.0
+- B-014 · "@8" in a note is read as RIR 8 — 0.99.0
+- B-013 · Cambered bar and Swiss bar get no plate maths — 0.99.0
+- B-012 · No way to change equipment or handles on a logged entry — 0.99.0
+- B-011 · Escape and closeAllModals skip a modal's onClose — 0.99.0
+- B-010 · Session volume counts one side of a per-side lift — 0.99.0
+- B-001 · Closing the coach straight after a message throws — 0.99.0
 - Everything from the November sweep up to 0.96.5 — see
   `r&d/notes/bug-sweep-2026-11.md`.

@@ -295,6 +295,10 @@ export function setVolume(leaf, s) {
   const reps = s.r || 0, w = s.w || 0;
   return w * reps * (loadConventionFor(leaf) === 'per_side' ? 2 : 1);
 }
+/* Volume of one set of a logged entry: setVolume when it has a leaf, the plain
+   product for an old entry without one. Every volume figure goes through this
+   so the summary, stats and share card agree (B-010). */
+export function entryVolume(e, s) { return e && e.leaf ? setVolume(e.leaf, s) : (s.w || 0) * (s.r || 0); }
 export function metricFor(leaf) { const m = movementById(leaf.movement); return (m && m.metric) || 'reps_weight'; }
 /* Ten movements are logged by duration, not reps (spec §6): planks, dead hangs,
    carries, the sled, and the cardio machines. A timed set records `sec` and
@@ -1473,7 +1477,7 @@ export function shortLift(n) {
    locking, the app being backgrounded and even a reload: whatever the clock
    says on return is right. The loop only paints and fires the alerts — it is
    never the clock. */
-const HEAVY_BARS = ['barbell', 'trap_bar', 'safety_squat_bar'];
+const HEAVY_BARS = ['barbell', 'trap_bar', 'safety_squat_bar', 'cambered_bar', 'swiss_bar'];
 /* No compound flag in the catalogue, so: a priority lift, or a heavy-bar
    movement that is either multi-muscle or a squat/pull/press pattern. A
    barbell curl is an accessory; a barbell row isn't. Holds rest like

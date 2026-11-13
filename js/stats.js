@@ -3,9 +3,9 @@
 import { $, U, bodyweightKg, checkinFor, clamp, daysBetween, dw, e1rm, esc, fmtDate, iso, nice, parseISO, relDay,
   roundBar, rpeToRir, today, uid, w, wt } from './core.js';
 import { save, storeGet, storePut } from './database.js';
-import { EQ_ICON, EQ_LABEL, completeLeaf, displayName, exFull, exInfo, exKey, exMuscles, exName, inRepsPool, isBefore,
-  isDrop, isMainLift, isPRSet, isWarm, isWorking, keyLeaf, keyNameHtml, leafKey, leafMuscles, leafName, movementById,
-  priorityKeys, setVolume, shapePRs, shortLift, variantLabel } from './exercises.js';
+import { EQ_ICON, EQ_LABEL, completeLeaf, displayName, entryVolume, exFull, exInfo, exKey, exMuscles, exName,
+  inRepsPool, isBefore, isDrop, isMainLift, isPRSet, isWarm, isWorking, keyLeaf, keyNameHtml, leafKey, leafMuscles,
+  leafName, movementById, priorityKeys, shapePRs, shortLift, variantLabel } from './exercises.js';
 import { SERIES_COLORS, analyticsQuery, analyticsSort, analyticsTab, bar, chartMulti, closeModal, debugOn, modal,
   openWhy, render, toast, why } from './kit.js';
 import { S } from './state.js';
@@ -637,7 +637,7 @@ export function historyFor(key, before) {
     // weight × reps only: capped sets, carries and races keep their own records
     wo.exercises.filter(e => exKey(e) === key && inRepsPool(e)).forEach(e => {
       e.sets.filter(s => s.done && isPRSet(s) && s.r > 0).forEach(s => {
-        out.push({ date: wo.date, w: s.w, r: s.r, rpe: s.rpe, e1: e1rm(s.w, s.r, s.rpe), workoutId: wo.id, est: wo.source === 'backfill' });
+        out.push({ date: wo.date, w: s.w, r: s.r, rpe: s.rpe, e1: e1rm(s.w, s.r, s.rpe), v: entryVolume(e, s), workoutId: wo.id, est: wo.source === 'backfill' });
       });
     });
   });
@@ -666,7 +666,7 @@ export function statsFor(key, before) {
     if (!byRep[s.r] || s.w > byRep[s.r].w) byRep[s.r] = s;
     if (!(s.w > 0) && (!bestBw || s.r > bestBw.r)) bestBw = s;   // bodyweight rep record
   });
-  h.forEach(s => { volume += s.w * s.r; });
+  h.forEach(s => { volume += s.v; });
   // per-session best e1RM series
   const series = sessions.map(d => {
     const ss = h.filter(s => s.date === d);
@@ -674,7 +674,7 @@ export function statsFor(key, before) {
       date: d,
       e1: Math.max(...ss.map(s => s.e1)),
       top: Math.max(...ss.map(s => s.w)),
-      vol: ss.reduce((a, s) => a + s.w * s.r, 0),
+      vol: ss.reduce((a, s) => a + s.v, 0),
       sets: ss.length,
     };
   });
@@ -775,7 +775,7 @@ function bestSingleKg(key) { return bestSingleInfo(key).kg; }
    then rather than against itself. */
 const PLAUS = {
   maxReps: 60,        // one set; past this it's a typo or a timed hold in the wrong field
-  maxKg: 500,         // beyond the heaviest competition lifts
+  maxKg: 700,         // free weights: past the heaviest partial and strongman pulls (B-015)
   overBest: 1.5,      // heavier than 1.5× your heaviest ever set of this movement
   overE1: 1.4,        // e1RM 40% past your best
   overElite: 1.5,     // no history: 1.5× the elite standard for your bodyweight
@@ -785,14 +785,21 @@ export function plausibility(key, w, r, rpe, before) {
   const name = leafName(key);
   const why = [];
   if (r > PLAUS.maxReps) why.push(`${r} reps in one set`);
-  if (w > PLAUS.maxKg) why.push(`${wt(w)} is beyond any recorded lift`);
+  /* Machines and sleds carry loads no free-weight lift does — a 1000 kg leg
+     press is real — so they have no absolute ceiling; the over-your-best
+     checks below still catch a typo. */
+  const lf = keyLeaf(key), eqp = lf && lf.equipment;
+  const machine = eqp === 'machine' || eqp === 'plate_loaded_machine' || eqp === 'sled';
+  if (!machine && w > PLAUS.maxKg) why.push(`${wt(w)} is heavier than the heaviest recorded lifts of this kind`);
   if (rpe != null && (rpe < 1 || rpe > 10)) why.push(`${rpeToRir(rpe)} RIR — that's outside the usual 0 to 9 range`);
   const st = statsFor(key, before);
   const loaded = st && st.bestW.w > 0;
   if (loaded && w > 0) {
     const best = st.bestW.w;
     const lbAsKg = w / 2.2046226218;
-    if (U() === 'kg' && w > best * 1.3 && lbAsKg >= best * 0.5 && lbAsKg <= best * 1.15) {
+    /* A lb figure typed into kg is about 2.2× the real one, so only a jump of
+       roughly that size reads as one — not any big jump at light loads (B-016). */
+    if (U() === 'kg' && lbAsKg >= best * 0.8 && lbAsKg <= best * 1.1) {
       why.push(`${wt(w)} looks like a lb figure — your heaviest ${name} is ${wt(best)}`);
     } else if (w > best * PLAUS.overBest) {
       why.push(`${wt(w)} is ${Math.round((w / best - 1) * 100)}% over your heaviest ${name} (${wt(best)})`);
@@ -928,7 +935,7 @@ export function setSummary(e) {
 
 /* Volume respects the load convention: a per-side set of 20 kg x 10 is 400 kg. */
 export function totalVolume(wo) {
-  return wo.exercises.reduce((a, e) => a + e.sets.filter(s => s.done && isWorking(s)).reduce((b, s) => b + setVolume(e.leaf, s), 0), 0);
+  return wo.exercises.reduce((a, e) => a + e.sets.filter(s => s.done && isWorking(s)).reduce((b, s) => b + entryVolume(e, s), 0), 0);
 }
 
 export function goalCurrent(g) {

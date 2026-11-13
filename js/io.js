@@ -591,7 +591,16 @@ function importFormat(headers, rows) {
   if (lc.includes('exercise name') && lc.includes('set order')) return 'strong';
   return 'csv';
 }
-const impNum = v => { const s = String(v == null ? '' : v).trim(); if (!s) return 0; const n = +(s.includes('.') ? s : s.replace(',', '.')); return Number.isFinite(n) ? n : 0; };
+/* "62,5" is a decimal comma; "1,200" and "1,200.5" have thousands
+   separators (B-021). A leading 0 ("0,500") stays a decimal. */
+const impNum = v => {
+  let s = String(v == null ? '' : v).trim();
+  if (!s) return 0;
+  if (/^[1-9]\d{0,2}(,\d{3})+(\.\d+)?$/.test(s)) s = s.replace(/,/g, '');
+  else if (!s.includes('.')) s = s.replace(',', '.');
+  const n = +s;
+  return Number.isFinite(n) ? n : 0;
+};
 /* A date cell to a day, and whether slashed dates could be either way round. */
 function importDay(s, dmy) {
   const t = String(s || '').trim();

@@ -30,6 +30,13 @@ export function openAxisPicker(ei, axis) {
   const a = S.active;
   const e = a && a.exercises[ei];
   if (!e) return;
+  openAxisPickerFor(e, axis, () => { save(); bust(); render(); });
+}
+/* The same picker for any entry: the live session above, or a finished
+   session's edit sheet (B-012), which keeps its changes in a draft until Save.
+   `changed` runs after each pick; `done` when the picker closes. */
+export function openAxisPickerFor(e, axis, changed, done) {
+  if (!e || !e.leaf) return;
   const m = movementById(e.leaf.movement);
   if (!m) return toast('This movement is not in the catalogue');
   const V = catalogue().V;
@@ -63,6 +70,7 @@ export function openAxisPicker(ei, axis) {
     title: exFull(e),
     body: draw(),
     foot: `<button class="btn primary wide" data-close>Done</button>`,
+    onClose: done,
     onOpen: bg => {
       const bind = () => {
         bg.querySelectorAll('[data-axtab]').forEach(b => b.onclick = () => { tab = b.dataset.axtab; redraw(); });
@@ -75,7 +83,7 @@ export function openAxisPicker(ei, axis) {
             const odd = tab === 'equipment' && !(m.equipment || []).includes(e.leaf.equipment);
             toast(`${exFull(e)} · ${loadConventionFor(e.leaf) === 'per_side' ? 'per side' : 'total'} load${odd ? ' · unusual combo' : ''}`, 'green');
           }
-          save(); bust(); redraw(); render();
+          redraw(); if (changed) changed();
         });
       };
       const redraw = () => { const b = $('.modal-body', bg); if (b) { b.innerHTML = draw(); bind(); } };

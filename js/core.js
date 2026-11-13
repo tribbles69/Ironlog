@@ -171,7 +171,7 @@ export function suggestedTargets() {
   return { bmr, tdee, kcal, p, c, f };
 }
 
-export const APP_VERSION = '0.98.3';
+export const APP_VERSION = '0.99.0';
 
 /* ---------------- sound, haptics, wake lock ----------------
    Shared by the hold timer and the rest timer, and meant for the cardio session
@@ -276,6 +276,7 @@ export function parseTime(str) {
   if (!/^\d+(:\d{1,2}){0,2}$/.test(t)) return null;
   const parts = t.split(':').map(Number);
   if (parts.some(n => !Number.isFinite(n))) return null;
+  if (parts.slice(1).some(n => n >= 60)) return null;   // "1:75" is a typo, not 2:15 (B-020)
   const sec = parts.reduce((a, n) => a * 60 + n, 0);
   return sec > 0 ? sec : null;
 }
