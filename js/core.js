@@ -171,7 +171,7 @@ export function suggestedTargets() {
   return { bmr, tdee, kcal, p, c, f };
 }
 
-export const APP_VERSION = '0.97.0';
+export const APP_VERSION = '0.98.0';
 
 /* ---------------- sound, haptics, wake lock ----------------
    Shared by the hold timer and the rest timer, and meant for the cardio session

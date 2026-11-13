@@ -261,7 +261,10 @@ export function pickExercise(cb) {
   const draw = (q) => {
     const all = allExercises();
     const ql = (q || '').toLowerCase();
-    const list = (ql ? all.filter(x => x.name.toLowerCase().includes(ql)) : all).slice()
+    /* aliases count as a match too ("Klokov" finds Behind The Neck Press) — search only, never identity */
+    const hits = x => x.name.toLowerCase().includes(ql)
+      || ((movementById(x.leaf.movement) || {}).aliases || []).some(a => a.name.toLowerCase().includes(ql));
+    const list = (ql ? all.filter(hits) : all).slice()
       .sort((x, y) => (movableHere(x.leaf) ? 0 : 1) - (movableHere(y.leaf) ? 0 : 1));   // stable: kit that isn't here sinks (D6)
     const groups = {};
     list.forEach(x => { const c = categoryOf(x.leaf); (groups[c] = groups[c] || []).push(x); });

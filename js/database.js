@@ -70,6 +70,7 @@ export const DEFAULT_STATE = {
   measures: [],   // {id,date,cm:{site:cm},custom:{name:cm},mt} — E4 body measurements
   calipers: [],   // {id,date,method:'jp3'|'jp7'|'dw4',sex,age,mm:{site:[readings]},mt} — E4; results derived when shown
   mobTests: [],   // {id,date,test,side:'L'|'R'|null,v,mt} — E5 mobility and balance tests (MOB_TESTS)
+  routines: [],   // {id,name,items:[{id,dose?}],mt} — the lifter's own mobility routines, made from MOBILITY_LIBRARY
   bp: [],         // {id,date,time,sys,dia,pulse?,arm?,note?,mt} — D16 blood pressure, mmHg
   glucose: [],    // {id,date,time,mmol,ctx,note?,mt} — D16 blood glucose, always stored in mmol/L
   fitTests: [],   // {id,date,mode:'home'|'full',bw,sex,age,home,power,ladder:{pattern:{variation,sets:[{kg,r,rpe}]}},tol,grip,engine,mt} — E12
@@ -284,7 +285,7 @@ const SYNC_FILE = 'Ironlog backup.json', SYNC_FORMAT = 'ironlog-sync', SYNC_V = 
 // collection -> how a record is keyed
 const SYNC_SETS = {
   workouts: x => x.id, misses: x => x.id, goals: x => x.id, meets: x => x.id, imports: x => x.id,
-  checkins: x => x.date, measures: x => x.id, calipers: x => x.id, mobTests: x => x.id, bp: x => x.id, glucose: x => x.id, fitTests: x => x.id,
+  checkins: x => x.date, measures: x => x.id, calipers: x => x.id, mobTests: x => x.id, routines: x => x.id, bp: x => x.id, glucose: x => x.id, fitTests: x => x.id,
   customEx: x => (typeof x === 'string' ? x : JSON.stringify(x)), programs: x => String(x),
   /* The lifter's own exercises. Left out until 0.90.7, so a phone restored
      from Drive had the sessions but not the names (bug sweep 1.6). */
@@ -556,7 +557,7 @@ export async function driveSync(interactive) {
     bustCatalogue(); healCustomMovements();   // custom exercises may have come in; ones a backup never carried are rebuilt from the sets
     /* a phone that hasn't updated yet can still send sets under an old custom
        id; they move over the same way (and only if there are any) */
-    await runDataMigrations(S, ['legacy-movements-0.96.0']);
+    await runDataMigrations(S, ['legacy-movements-0.96.0', 'trap-handles-0.98.0']);
     const fresh = !local.workouts.length && !local.checkins.length;
     if (remote && remote.data && remote.data.settings && fresh) {
       const keep = {}; SYNC_LOCAL_SETTINGS.forEach(k => { if (k in S.settings) keep[k] = S.settings[k]; });
@@ -1157,6 +1158,8 @@ export const normEx = n => n.toLowerCase().replace(/['’]/g, '').replace(/[^a-z
    name — a name loses the equipment on the way back in. */
 const IMPORT_AXES = [
   ['smith machine', { equipment: 'smith' }], ['smith', { equipment: 'smith' }],
+  ['high handles', { attachment: 'high_handles' }], ['high handle', { attachment: 'high_handles' }],
+  ['low handles', { attachment: 'low_handles' }], ['low handle', { attachment: 'low_handles' }],
   ['hex bar', { equipment: 'trap_bar' }], ['trap bar', { equipment: 'trap_bar' }],
   ['safety squat bar', { equipment: 'safety_squat_bar' }], ['ssb', { equipment: 'safety_squat_bar' }],
   ['ez bar', { equipment: 'barbell', attachment: 'ez_bar' }],
@@ -1878,6 +1881,7 @@ const DATA_MIGRATIONS = [
   { id: 'legacy-movements-0.96.0', run: st => repointLegacyMovements(st) },
   { id: 'rir-backfill-skipped-0.96.1', run: st => skipRirBackfills(st) },
   { id: 'relink-plan-sessions-0.96.4', run: st => relinkPlanSessions(st) },
+  { id: 'trap-handles-0.98.0', run: st => trapHandles(st) },
 ];
 export async function runDataMigrations(st, recheck = []) {
   if (!st.migrations || typeof st.migrations !== 'object' || Array.isArray(st.migrations)) st.migrations = {};
@@ -1958,6 +1962,46 @@ function relinkPlanSessions(st) {
   });
   r.changed = r.relinked;
   if (r.relinked) r.note = `${r.relinked} finished session${r.relinked === 1 ? '' : 's'} relinked to ${r.relinked === 1 ? 'its' : 'their'} program`;
+  return r;
+}
+/* 0.98.0: a trap bar's high and low handles became the attachment axis, so
+   they are separate lifts with separate PRs. Every trap bar set logged before
+   had no attachment; Aaron's call is that they were all high handles (his PRs
+   are). Each such leaf, and each leaf key written as a string anywhere in the
+   log (rest times, goals, priority lifts, bar-speed profiles, the coach),
+   moves to high handles. Only movements that now take handles are touched. */
+const TRAP_HANDLE_MOVES = () => new Set((EXERCISE_CATALOGUE.movements || [])
+  .filter(m => (m.attachments || []).includes('high_handles')).map(m => m.id));
+function trapHandles(st) {
+  const moves = TRAP_HANDLE_MOVES(), r = { changed: 0, leaves: 0, keys: 0 };
+  if (!moves.size) return r;
+  const fixStr = s => {
+    if (typeof s !== 'string') return s;
+    const cut = s.search(/[#|]/), head = cut < 0 ? s : s.slice(0, cut), tail = cut < 0 ? '' : s.slice(cut);
+    const p = head.split('/');
+    if (p.length !== 4 || !moves.has(p[0]) || p[1] !== 'trap_bar' || p[3] !== 'none') return s;
+    return `${p[0]}/trap_bar/${p[2]}/high_handles${tail}`;
+  };
+  const walk = (o, depth) => {
+    if (!o || typeof o !== 'object' || depth > 40) return;
+    if (Array.isArray(o)) {
+      o.forEach((v, i) => { if (typeof v === 'string') { const n = fixStr(v); if (n !== v) { o[i] = n; r.keys++; } } else walk(v, depth + 1); });
+      return;
+    }
+    if (typeof o.movement === 'string' && moves.has(o.movement) && o.equipment === 'trap_bar' && (!o.attachment || o.attachment === 'none')) {
+      o.attachment = 'high_handles'; r.leaves++;
+    }
+    Object.keys(o).forEach(k => {
+      const v = o[k];
+      if (typeof v === 'string') { if (k !== 'movement' && k !== 'legacyName') { const n = fixStr(v); if (n !== v) { o[k] = n; r.keys++; } } }
+      else walk(v, depth + 1);
+      const nk = fixStr(k);
+      if (nk !== k) { if (!(nk in o)) o[nk] = o[k]; delete o[k]; r.keys++; }
+    });
+  };
+  Object.keys(st).forEach(k => { if (k !== 'migrations') walk(st[k], 0); });
+  r.changed = r.leaves + r.keys;
+  if (r.leaves) r.note = `Trap bar high and low handles are now separate lifts — your ${r.leaves} earlier trap bar entr${r.leaves === 1 ? 'y is' : 'ies are'} marked high handles. Change any low-handle ones from the exercise's handle chip.`;
   return r;
 }
 function legacyMovementMap() {
@@ -2222,7 +2266,7 @@ export function importIronlogCSV(text) {
   const add = list.filter(w => !have.has(w.id));
   S.workouts.push(...add);
   healCustomMovements();   // the CSV carries the pointer to a custom exercise, not its name record
-  runDataMigrations(S, ['legacy-movements-0.96.0']).then(n => { if (n.length) { save(); render(); } });   // an older CSV can carry the old custom ids (3.10)
+  runDataMigrations(S, ['legacy-movements-0.96.0', 'trap-handles-0.98.0']).then(n => { if (n.length) { save(); render(); } });   // an older CSV can carry the old custom ids (3.10)
   save(); bust();
   return { added: add.length, skipped: list.length - add.length };
 }
