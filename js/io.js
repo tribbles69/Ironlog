@@ -1212,7 +1212,9 @@ function csvJoin(cells, extraJson, cols) {
   return o;
 }
 function csvCell(v) {
-  const s = v == null ? '' : String(v);
+  let s = v == null ? '' : String(v);
+  // A text cell starting = + - @ (or tab / CR) runs as a formula in Excel and Sheets: lead it with ' so it stays text
+  if (typeof v === 'string' && /^'*[=+\-@\t\r]/.test(s) && !/^-?\d+(\.\d+)?(e[+-]?\d+)?$/i.test(s)) s = "'" + s;
   const q = String.fromCharCode(34);   // a double quote (spelt out: the scope lint misreads one inside a regex)
   return s.includes(q) || /[,\r\n]/.test(s) || /^\s|\s$/.test(s) ? q + s.split(q).join(q + q) + q : s;
 }
@@ -1264,6 +1266,8 @@ export function workoutsToCSV(list) {
 export function csvToWorkouts(text) {
   const rows = parseCSV(text, true);
   if (!rows.length || rows[0].format !== CSV_FORMAT) throw new Error('not an Ironlog CSV');
+  // undo csvCell's formula guard: one leading ' comes off a cell that starts '= '+ '- '@
+  rows.forEach(r => Object.keys(r).forEach(k => { if (typeof r[k] === 'string' && /^'+[=+\-@\t\r]/.test(r[k])) r[k] = r[k].slice(1); }));
   const byId = new Map();
   rows.forEach(r => {
     let wo = byId.get(r.session_id);
