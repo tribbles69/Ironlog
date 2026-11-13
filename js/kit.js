@@ -97,9 +97,10 @@ export function modal({ title, body, foot, onOpen, wide, sticky, onClose }) {
   bg.addEventListener('click', e => {
     if ((e.target === bg && !sticky) || e.target.hasAttribute('data-close')) {
       if (bg._guard && !bg._guard()) return;   // a sheet with unsaved work asks first
-      closeModal(); if (onClose) onClose();
+      dismissModal();
     }
   });
+  bg._onClose = onClose;
   $('#modalRoot').appendChild(bg);
   modalStack.push(bg);
   if (onOpen) onOpen(bg);
@@ -116,7 +117,29 @@ export function closeModal() {
   const r = m._ret;
   if (r && document.body.contains(r) && typeof r.focus === 'function') { try { r.focus({ preventScroll: true }); } catch (e) { /* gone */ } }
 }
-export function closeAllModals() { modalStack.forEach(m => m.remove()); modalStack = []; }
+/* Dismissed rather than answered (✕, backdrop, Escape, or swept away by
+   closeAllModals): run the modal's onClose once, so timers stop and a promise
+   waiting on the answer still settles (B-011). A button that closes its own
+   modal with closeModal() has already handled the outcome. */
+function runOnClose(m) {
+  const f = m && m._onClose;
+  if (!f) return;
+  m._onClose = null;
+  try { f(); } catch (e) { console.error(e); }
+}
+export function dismissModal() {
+  const m = modalStack[modalStack.length - 1];
+  if (!m) return;
+  closeModal();
+  runOnClose(m);
+}
+/* quiet: a screen redrawing itself (the edit sheet) is not a dismissal. */
+export function closeAllModals(opts) {
+  const all = modalStack.slice().reverse();
+  all.forEach(m => m.remove());
+  modalStack = [];
+  if (!(opts && opts.quiet)) all.forEach(runOnClose);
+}
 
 export function confirmDlg(msg, onYes, yesLabel = 'Delete', onNo) {
   modal({

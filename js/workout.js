@@ -6,17 +6,17 @@ import { $, APP_VERSION, Awake, Cue, LB_PER_KG, U, addDaysISO, capLabel, checkin
   esc, fmtDate, fmtM, fmtSec, iso, nice, parseISO, parseTime, relDay, rirToRpe, rpeToRir, toKg, today, uid, w, wt } from './core.js';
 import { loadGis, persist, requestPersistence, save, syncMeta } from './database.js';
 import { eventType, runInLine } from './events.js';
-import { allExercises, displayName, exFull, exKey, exName, exNameHtml, feelChips, feelSuffix, feelWords, hasFeel,
-  holdBeats, holdLabel, holdRecords, inRepsPool, isDrop, isIso, isMainLift, isPRSet, isTimed, isWarm, isWorking,
-  keyLeaf, keyVariantLabel, kindOf, leafChip, leafKey, loadConventionFor, metricFor, modChips, modsHtml, prText,
-  prevText, raceKey, resolveName, roleSuffix, roleWord, seriesBetter, seriesOf, setListLabel, setLogged, setNoBtn,
-  setNumber, setText, shapeBeat, shapePRs, shapeRecords, sidesText } from './exercises.js';
+import { allExercises, displayName, entryVolume, exFull, exKey, exName, exNameHtml, feelChips, feelSuffix, feelWords,
+  hasFeel, holdBeats, holdLabel, holdRecords, inRepsPool, isDrop, isIso, isMainLift, isPRSet, isTimed, isWarm,
+  isWorking, keyLeaf, keyVariantLabel, kindOf, leafChip, leafKey, loadConventionFor, metricFor, modChips, modsHtml,
+  prText, prevText, raceKey, resolveName, roleSuffix, roleWord, seriesBetter, seriesOf, setListLabel, setLogged,
+  setNoBtn, setNumber, setText, shapeBeat, shapePRs, shapeRecords, sidesText } from './exercises.js';
 import { cardioBlock, cardioHasZone, cardioView, cardioZoneText, mobilityCard, openMobility } from './health.js';
 import { normEx } from './io.js';
 import { SERIES_COLORS, calCursor, calSelected, calSwitch, closeAllModals, closeModal, confirmDlg, debugOn, go, modal,
   page, render, saveBlob, selectOnFocus, setCalSelected, toast, why } from './kit.js';
 import { leafHere, openPlacePick, openPlates, openRamp, placeChip, placeSwap, placeWarn, places, swapForPlace } from './loading.js';
-import { openAxisPicker, openFeel, openModPicker, openRolePicker } from './movement.js';
+import { openAxisPicker, openAxisPickerFor, openFeel, openModPicker, openRolePicker } from './movement.js';
 import { pickExercise } from './picker.js';
 import { adjustRest, paintRest, restBarHtml, startRest, stopRest } from './rest.js';
 import { S } from './state.js';
@@ -191,7 +191,7 @@ function suggestName(date) {
   return ['Sunday session', 'Squat day', 'Bench day', 'Accessory day', 'Deadlift day', 'Upper day', 'Saturday session'][d];
 }
 function renderPlanner() {
-  closeAllModals();
+  closeAllModals({ quiet: true });
   const p = planDraft;
   modal({
     title: 'Plan workout',
@@ -947,7 +947,7 @@ export function finishWorkout(force) {
        finished sessions (bug sweep 1.8) */
     ...(a.off ? { off: true } : {}), ...(a.prog ? { prog: a.prog } : {}), ...(a.block ? { block: a.block } : {}), ...(a.place ? { place: a.place } : {}),
     exercises: logged, start: a.start, end: Date.now(), ...(hasFeel(a) ? { feel: a.feel } : {}),
-    summary: { mins, prs, volume: logged.reduce((t, e) => t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + (s.w || 0) * (s.r || 0), 0), 0) },
+    summary: { mins, prs, volume: logged.reduce((t, e) => t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + entryVolume(e, s), 0), 0) },
   };
 
   // if this came from a plan, replace the planned entry
@@ -1111,7 +1111,7 @@ export function fullCardCanvas(wo) {
     x.strokeStyle = CARD.line; x.lineWidth = 2;
     x.beginPath(); x.moveTo(P, y); x.lineTo(W - P, y); x.stroke();
     const working = sets.filter(s => isWorking(s));
-    const vol = working.reduce((a, s) => a + (s.w || 0) * (s.r || 0), 0);
+    const vol = working.reduce((a, s) => a + entryVolume(e, s), 0);
     const scored = inRepsPool(e) ? working.filter(s => isPRSet(s) && s.r > 0) : [];
     const prSet = prKeys.has(exKey(e)) && scored.length ? bestSetOf(scored) : null;   // the one set prsFor scored
     const reps = working.reduce((a, s) => a + (s.r || 0), 0);
@@ -1401,7 +1401,7 @@ export function showSummary(wo) {
         <div class="t">${wo.summary.mins} min</div>
       </div>
       <div class="stats grid3" style="margin-bottom:13px">
-        <div class="stat"><div class="k">Volume</div><div class="v">${w(wo.summary.volume, 0)}</div></div>
+        <div class="stat"><div class="k">Volume</div><div class="v">${w(totalVolume(wo), 0)}</div></div>
         <div class="stat"><div class="k">Sets</div><div class="v">${sets}</div></div>
         <div class="stat"><div class="k">Reps</div><div class="v">${reps}</div></div>
       </div>
@@ -1431,7 +1431,7 @@ export function showSummary(wo) {
       const ws = e.sets.filter(s => isWorking(s));
       const warm = e.sets.filter(s => isWarm(s));
       const timed = isTimed(e), kind = kindOf(e), plain = kind === 'reps' || kind === 'time';
-      const v = ws.reduce((a, s) => a + (s.w || 0) * (s.r || 0), 0);
+      const v = ws.reduce((a, s) => a + entryVolume(e, s), 0);
       // a timed entry's headline is total time held, and its best set the longest one
       const totSec = ws.reduce((a, s) => a + (s.sec || 0), 0);
       const top = !ws.length ? null
@@ -1523,7 +1523,7 @@ export function openEditWorkout(id) {
 }
 
 function renderEditWorkout() {
-  closeAllModals();
+  closeAllModals({ quiet: true });
   const d = editDraft;
   const key = k => k.split('.').map(Number);
   const exCard = (e, ei) => `<div class="ex-card" style="margin-bottom:9px">
@@ -1533,7 +1533,7 @@ function renderEditWorkout() {
       <button class="btn xs ghost" data-eex-up="${ei}" title="Move up">↑</button>
       <button class="btn xs ghost" data-eex-down="${ei}" title="Move down">↓</button>
       <button class="btn xs danger" data-eex-rm="${ei}" title="Remove exercise">✕</button>
-    </div>${modChips(e, `data-emods="${ei}"`)}</div>
+    </div>${e.leaf ? leafChip(e.leaf, ei).replace(/data-axis=/g, 'data-eaxis=') : ''}${modChips(e, `data-emods="${ei}"`)}</div>
     <table class="settable">
       <thead><tr><th class="c-set">Set</th><th class="c-del"></th>${shapeKind(e) ? shapeHead(e, true) : isIso(e)
       ? `<th class="c-kg">${U()}</th><th class="c-reps">Time</th><th class="c-rpe">RIR</th>`
@@ -1640,6 +1640,12 @@ function renderEditWorkout() {
           ...(last.m > 0 ? { m: last.m } : {}), ...(last.n > 0 ? { n: last.n } : {}) });
         re();
       });
+      bg.querySelectorAll('[data-eaxis]').forEach(b => b.onclick = () => {
+        grab();
+        const [ei, ax] = b.dataset.eaxis.split('.');
+        const ex = d.exercises[+ei];
+        openAxisPickerFor(ex, ax, null, renderEditWorkout);
+      });
       bg.querySelectorAll('[data-emods]').forEach(b => b.onclick = () => {
         grab();
         openModPicker(d.exercises[+b.dataset.emods], renderEditWorkout);
@@ -1705,7 +1711,7 @@ export function saveEdit(force) {
     ...orig, name: d.name, date: d.date, exercises: logged, edited: Date.now(), off: d.off || undefined, feel: hasFeel(d) ? d.feel : undefined,
     summary: {
       ...(orig.summary || {}),
-      volume: logged.reduce((t, e) => t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + (s.w || 0) * (s.r || 0), 0), 0),
+      volume: logged.reduce((t, e) => t + e.sets.filter(s => isWorking(s)).reduce((x, s) => x + entryVolume(e, s), 0), 0),
       prs: [],
     },
   };
@@ -1817,6 +1823,17 @@ export async function openProgram() {
 /* Ticking a set in the live session. Top level rather than inside wireActive
    because the hold timer ticks its set too, and one path means the PR toast
    and the checks can't drift between them. */
+/* The sets already ticked this session in the same pool as `s` (any entry of
+   that lift), so a PR toast beats today's earlier sets as well as history
+   (B-017). */
+function sessionPeers(a, ex, s) {
+  const k = exKey(ex);
+  return a.exercises.filter(e => exKey(e) === k).flatMap(e => e.sets).filter(o => o !== s && o.done && isPRSet(o));
+}
+function beatsSession(peers, w, r, rpe) {
+  if (!(w > 0)) return peers.filter(o => !(o.w > 0)).every(o => r > (o.r || 0));
+  return peers.filter(o => o.w > 0 && o.r > 0).every(o => e1rm(w, r, rpe) > e1rm(o.w, o.r, o.rpe));
+}
 function toggleSetDone(ei, si) {
   const a = S.active;
   const ex = a && a.exercises[ei];
@@ -1841,7 +1858,7 @@ function toggleSetDone(ei, si) {
     if (R && kind === 'series') {
       if (s.r > 0) {
         const st = statsFor(key);
-        if (st && beatsBest(st, s.w, 1, s.rpe)) toast(`★ PR — ${exFull(ex)} ${s.w > 0 ? wt(s.w) : 'bodyweight'}`, 'gold');
+        if (st && beatsBest(st, s.w, 1, s.rpe) && beatsSession(sessionPeers(a, ex, s), s.w, 1, s.rpe)) toast(`★ PR — ${exFull(ex)} ${s.w > 0 ? wt(s.w) : 'bodyweight'}`, 'gold');
       }
     } else if (R) {
       const what = shapeBeat(kind, R, s);
@@ -1856,13 +1873,14 @@ function toggleSetDone(ei, si) {
     // PR check against history captured before flipping the flag
     const st = statsFor(exKey(ex));
     const recs = timed ? holdRecords(exKey(ex)) : null;
+    const peers = sessionPeers(a, ex, s);
     s.done = true;
     Cue.logged();
     if (timed) {
-      if (isPRSet(s) && (!recs.n || holdBeats(recs, s.w, s.sec))) {
+      if (isPRSet(s) && (!recs.n ? !peers.length : holdBeats(recs, s.w, s.sec))) {
         toast(recs.n ? `★ Best hold — ${exFull(ex)} ${holdLabel(s)}` : `★ First ${exFull(ex)} logged`, 'gold');
       }
-    } else if (isPRSet(s) && (!st || beatsBest(st, s.w, s.r, s.rpe))) {
+    } else if (isPRSet(s) && (!st ? !peers.length : beatsBest(st, s.w, s.r, s.rpe) && beatsSession(peers, s.w, s.r, s.rpe))) {
       toast(st ? `★ PR — ${exFull(ex)} ${s.w > 0 ? `${wt(s.w)}×${s.r}` : `${s.r} reps`}` : `★ First ${exFull(ex)} logged`, 'gold');
     }
     const moved = autoAdjust(ex, s);
@@ -2389,9 +2407,14 @@ export function wireActive(v) {
           else { ex.series = true; ex.sets.forEach(s => { if (!s.done) { s.r = 1; s.rpe = null; delete s.miss; } }); }
           save(); bust(); closeModal(); render();
         };
-        $('#exUp', bg).onclick = () => { fastReset(); if (ei > 0) { const [x] = a.exercises.splice(ei, 1); a.exercises.splice(ei - 1, 0, x); save(); closeModal(); render(); } };
-        $('#exDown', bg).onclick = () => { fastReset(); if (ei < a.exercises.length - 1) { const [x] = a.exercises.splice(ei, 1); a.exercises.splice(ei + 1, 0, x); save(); closeModal(); render(); } };
-        $('#exDel', bg).onclick = () => { fastReset(); a.exercises.splice(ei, 1); save(); closeModal(); render(); };
+        /* The rest timer points at its exercise by position: keep it on the
+           same exercise when the list moves (B-018). */
+        const restAt = () => (a.rest && a.rest.ei != null ? a.exercises[a.rest.ei] : null);
+        const restTo = x => { if (a.rest && x) { const i = a.exercises.indexOf(x); if (i >= 0) a.rest.ei = i; else delete a.rest.ei; } };
+        const swap = to => { const r = restAt(); const [x] = a.exercises.splice(ei, 1); a.exercises.splice(to, 0, x); restTo(r); save(); closeModal(); render(); };
+        $('#exUp', bg).onclick = () => { fastReset(); if (ei > 0) swap(ei - 1); };
+        $('#exDown', bg).onclick = () => { fastReset(); if (ei < a.exercises.length - 1) swap(ei + 1); };
+        $('#exDel', bg).onclick = () => { fastReset(); const r = restAt(); a.exercises.splice(ei, 1); restTo(r); save(); closeModal(); render(); };
         $('#exOk', bg).onclick = () => {
           ex.notes = $('#exNote', bg).value.trim();
           const by = S.settings.restBy = S.settings.restBy || {};

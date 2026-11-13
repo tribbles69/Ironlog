@@ -4,8 +4,8 @@ import { coBubble, coBuildAndShow, openCoach } from './coach.js';
 import { $, Awake, Cue, U, addDaysISO, ageFrom, bodyweightKg, checkinFor, clamp, daysBetween, dlen, dw, e1rm, esc,
   fmtDate, fmtSec, iso, lenU, nice, parseISO, relDay, rirToRpe, roundBar, rpeToRir, toCm, toKg, today, uid, wt } from './core.js';
 import { idb, save, storeGet } from './database.js';
-import { allExercises, categoryOf, completeLeaf, displayName, exOptionsHtml, keyLeaf, leafName, movementById,
-  priorityKeys, variantLabel } from './exercises.js';
+import { allExercises, categoryOf, completeLeaf, displayName, entryVolume, exOptionsHtml, keyLeaf, leafName,
+  movementById, priorityKeys, variantLabel } from './exercises.js';
 import { CLIP, a11yPass, chart, chartMulti, clipMime, clipRecorder, clipVideoEl, closeAllModals, closeModal,
   confirmDlg, debugOn, go, modal, render, selectOnFocus, setCardioWhyLast, toast, why } from './kit.js';
 import { roundLoadFor } from './loading.js';
@@ -1347,7 +1347,7 @@ export function fitSave(D) {
     if (exercises.length) S.workouts.push({
       id: uid(), date: t.date, name: 'Fitting test', status: 'completed', source: 'logged', fitTest: t.id, notes: '',
       exercises, start: null, end: Date.now(),
-      summary: { mins: 0, prs: [], volume: exercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + (s.w || 0) * (s.r || 0), 0), 0) },
+      summary: { mins: 0, prs: [], volume: exercises.reduce((a, e) => a + e.sets.reduce((b, s) => b + entryVolume(e, s), 0), 0) },
     });
   }
   S.fitDraft = null;
@@ -2052,6 +2052,7 @@ function parseKnob(K, raw) {
   if (!s) return null;
   if (K.mmss) {
     const m = s.match(/^(\d+):(\d{1,2})$/);
+    if (m && +m[2] >= 60) return null;   // B-020
     const v = m ? +m[1] * 60 + +m[2] : parseFloat(s) * 60;
     return v > 0 ? v : null;
   }
@@ -2561,6 +2562,7 @@ export function openIntervalSetup() {
       const secOf = (id, k) => {
         const s = String($(id, bg).value || '').trim();
         const m = s.match(/^(\d+):(\d{1,2})$/);
+        if (m && +m[2] >= 60) return null;   // B-020
         const v = m ? +m[1] * 60 + +m[2] : s === '' ? 0 : parseFloat(s);
         return Number.isFinite(v) ? Math.round(clamp(v, ...IV_LIMITS[k])) : null;
       };

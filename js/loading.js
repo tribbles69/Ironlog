@@ -130,11 +130,12 @@ const DEFAULT_PLATES = [
 /* Bars carry the equipment they're for, so a trap-bar deadlift loads from the
    trap bar and a log press from the log without asking. Presets are starting
    points — real bars vary, so each one is editable in Settings. */
-const BAR_EQUIPMENT = ['barbell', 'safety_squat_bar', 'trap_bar', 'axle', 'log'];
+const BAR_EQUIPMENT = ['barbell', 'safety_squat_bar', 'trap_bar', 'axle', 'log', 'cambered_bar', 'swiss_bar'];
 export const BAR_PRESETS = [
   { name: 'Barbell', kg: 20, eq: 'barbell' }, { name: "Women's bar", kg: 15, eq: '' },
   { name: 'Deadlift bar', kg: 20, eq: '' }, { name: 'Safety squat bar', kg: 30, eq: 'safety_squat_bar' },
   { name: 'Trap bar', kg: 25, eq: 'trap_bar' }, { name: 'Axle', kg: 20, eq: 'axle' }, { name: 'Log', kg: 50, eq: 'log' },
+  { name: 'Cambered bar', kg: 25, eq: 'cambered_bar' }, { name: 'Swiss bar', kg: 18, eq: 'swiss_bar' },
 ];
 /* The bar for a lift: one tagged with its equipment, else the preset for that
    equipment (flagged, so the sheet can say it's a guess), else the usual bar. */
@@ -166,7 +167,7 @@ export function plateLine(kg, barKg, inv) {
   return r.perSide.flatMap(p => Array(p.count).fill(String(dw(p.kg, 2)))).join(' + ') + ' a side';
 }
 /* One editable bar row in Settings. */
-const BAR_FOR = [['', 'For: —'], ['barbell', 'Barbell'], ['safety_squat_bar', 'SSB'], ['trap_bar', 'Trap'], ['axle', 'Axle'], ['log', 'Log']];
+const BAR_FOR = [['', 'For: —'], ['barbell', 'Barbell'], ['safety_squat_bar', 'SSB'], ['trap_bar', 'Trap'], ['axle', 'Axle'], ['log', 'Log'], ['cambered_bar', 'Cambered'], ['swiss_bar', 'Swiss']];
 export function barRow(k, b) {
   return `<div class="row" style="gap:6px;margin-bottom:6px">
     <input class="grow" data-bn="${k}" value="${esc(b.name || '')}" placeholder="name" aria-label="Bar name" style="min-width:0">

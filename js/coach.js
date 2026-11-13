@@ -10,7 +10,8 @@ import { EQ_TITLE, catalogue, completeLeaf, displayName, exKey, exName, isWorkin
 import { BUILTIN_ROUTINES, MOB_JOINTS, fitResults, fitTestsSorted, fitVariation, mobDone, mobSettings, mobTestGap,
   mobTestLatest, mobTotal, openCardioSetup, openCheckin, openFitResults, openFitTest, openMobility } from './health.js';
 import { FAQ, a11yPass, closeAllModals, closeModal, confirmDlg, copyText, debugOn, go, modal, render, toast, why } from './kit.js';
-import { PLACE_PRESETS, inventory, kitHas, loadFor, loadPlates, openPlates, openRamp, places, roundLoadFor } from './loading.js';
+import { PLACE_PRESETS, barFor, collarPair, inventory, kitHas, loadFor, loadPlates, openPlates, openRamp, places,
+  roundLoadFor } from './loading.js';
 import { S } from './state.js';
 import { MUSCLES, allRanks, allStats, bestSingleInfo, bust, fatigueMap, fatigueSummary, goalCurrent, mainLiftKeys,
   openerPct, prsFor, rankFor, statsFor } from './stats.js';
@@ -309,11 +310,12 @@ export function coBubble(who, html) {
   const el = document.createElement('div');
   el.className = `co-b ${who === 'me' ? 'me' : 'coach'}`;
   el.innerHTML = html;
-  const log = $('#coLog', CO.bg);
+  const bg = CO.bg, log = $('#coLog', bg);
   log.appendChild(el);
-  requestAnimationFrame(() => { const b = $('.modal-body', CO.bg); if (b) b.scrollTop = b.scrollHeight; });
+  // the sheet can close before the next frame (B-001): hold our own reference
+  requestAnimationFrame(() => { const b = $('.modal-body', bg); if (b) b.scrollTop = b.scrollHeight; });
 }
-function coAnswer(html) { const a = $('#coAns', CO.bg); a.innerHTML = html; a11yPass(a); }
+function coAnswer(html) { if (!CO) return; const a = $('#coAns', CO.bg); a.innerHTML = html; a11yPass(a); }
 function coChips(opts, on, row) {
   return `<div class="${row ? 'co-row' : 'row wrap'}" style="gap:6px">${opts.map(([v, l]) => `<button class="chip co-chip${on && on.includes(String(v)) ? ' on' : ''}" data-cov="${esc(String(v))}" aria-pressed="${!!(on && on.includes(String(v)))}">${esc(l)}</button>`).join('')}</div>`;
 }
@@ -354,6 +356,7 @@ function coGreet() {
   coMenu();
 }
 function coMenu() {
+  if (!CO) return;   // the sheet closed while an answer was on its way (B-001)
   const C = S.coach, D = coachDigest();
   coAnswer(`<div class="co-lab">Ask</div>${coChips(coAskChips(D), null, true)}
     <div class="co-lab">Plan</div>${coChips([...(C.plan ? [['see', 'See my plan']] : []), ['new', C.plan ? 'New plan' : 'Build my plan'], ['import', 'Bring in my own plan'], ['answers', 'Change my answers'], ['test', 'Fitting test'], ['settings', 'Coach settings']], null, true)}
@@ -375,7 +378,12 @@ function coMenuPick(v, label) {
   if (v === 'go') { closeAllModals(); return go('workout'); }
   if (v === 'checkin') { closeAllModals(); return openCheckin(today()); }
   if (v.startsWith('ramp:')) { const [, k, kg] = v.split(':'); return openRamp(k, +kg || 0); }
-  if (v.startsWith('plates:')) { const kg = +v.split(':')[1] || 0; if (/Open the plate loader/.test(label)) return openPlates(kg); return coAnswerTopic('plates', String(nice(dw(kg)))); }
+  if (v.startsWith('plates:')) {
+    const [, k, key] = v.split(':'), kg = +k || 0;
+    if (/Open the plate loader/.test(label)) return openPlates(kg, null, key ? keyLeaf(key) : null);
+    if (key && CO) CO.ctx = { ...(CO.ctx || {}), lift: key };
+    return coAnswerTopic('plates', String(nice(dw(kg))));
+  }
   if (v.startsWith('sugg:')) { const [, kind, ...rest] = v.split(':'); return coOfferChange(kind, rest.join(':') || undefined); }
   if (v.startsWith('fitres:')) return openFitResults(v.slice(7));
   if (v === 'cardio') { closeAllModals(); return openCardioSetup(); }
@@ -635,10 +643,12 @@ async function coTailor(plan) {
     res = coTailorCheck(plan, planParse(r.text));
   } catch (e) {
     dots.remove();
+    if (!CO) return;
     coBubble('coach', esc(e.nokey || e.capped || e.net || e.status ? aiWhy(e) : 'Claude\'s reply didn\'t make sense, so I\'ve kept the plan as it is.'));
     return coPreviewChips(plan);
   }
   dots.remove();
+  if (!CO) return;
   coTailorShow(plan, res);
 }
 function coTailorShow(plan, res) {
@@ -1193,7 +1203,7 @@ function coAnsWeightFor(D, key, text) {
   if (!r) return { html: `No ${esc(leafName(key))} logged yet — start light, do a set of ${reps}, log the RIR and I'll work it out from there.` };
   return { html: `<b>${esc(leafName(key))}</b>: about <b>${wt(r.kg)}</b> for ${reps} at RIR ${rir}${plan.date && !want ? ` (what ${relDay(plan.date).toLowerCase()}'s session asks)` : ''}.<br>If the first set moves faster than expected, add 2.5 kg; if it grinds, drop 5%.`,
     because: `Your working e1RM for ${leafName(key)} is ${wt(r.e1)} (last three sessions, newest weighted most). ${reps} reps plus ${rir} in reserve is worth ${reps + rir}, so the load is ${wt(r.e1)} ÷ (1 + ${reps + rir}/30), rounded to what loads.`,
-    act: [[`warmup:${key}`, 'Warm-up for it'], [`plates:${r.kg}`, `Plates for ${nice(dw(r.kg))}`]] };
+    act: [[`warmup:${key}`, 'Warm-up for it'], [`plates:${r.kg}:${key}`, `Plates for ${nice(dw(r.kg))}`]] };
 }
 function coAnsWarmup(D, key) {
   if (!key) return coLiftPick('warmup', D);
@@ -1201,13 +1211,20 @@ function coAnsWarmup(D, key) {
   return { html: `Warm-up for <b>${esc(leafName(key))}</b>${r ? ` up to ${wt(r.kg)}` : ''}: three sets at most: the bar for 8–10, then about 60% × 5 and 80% × 3 (fewer reps for a heavy single) — rest a minute or two between. The ramp builds it to your plates.`,
     act: [[`ramp:${key}:${r ? r.kg : 0}`, 'Show my warm-up ramp']] };
 }
-function coAnsPlates(text) {
+/* Worked out on the bar you'd actually use: the lift in context's own bar
+   (trap, SSB…) or your usual one, collars included (B-019). */
+function coAnsPlates(text, key) {
   const n = coNum(text);
   if (!n) return { html: 'Plates for what weight? Try "plates for 140".' };
-  const kg = toKg(n), res = loadPlates(kg, 20, inventory());
-  if (res.impossible) return { html: `${wt(kg)} is under the 20 kg bar.` };
-  return { html: `${wt(kg)} on a 20 kg bar: each side ${res.perSide.length ? res.perSide.map(p => `${p.count > 1 ? p.count + ' × ' : ''}${nice(p.kg)}`).join(' + ') : 'nothing — just the bar'}${!res.exact && res.achieved ? ` (closest with your plates: ${wt(res.achieved)})` : ''}.`,
-    act: [[`plates:${kg}`, 'Open the plate loader']] };
+  const leaf = key && key.includes('/') ? keyLeaf(key) : null;
+  const kg = toKg(n), act = [[`plates:${kg}:${leaf ? key : ''}`, 'Open the plate loader']];
+  if (leaf && leaf.equipment === 'smith') return { html: `For a Smith machine the carriage counts — the plate loader works it out.`, act };
+  const bar = barFor(leaf), collars = collarPair(), barKg = bar.kg + collars;
+  const on = `the ${esc(bar.name || 'bar')} (${wt(barKg)}${collars > 0 ? ' with collars' : ''})`;
+  const res = loadPlates(kg, barKg, inventory());
+  if (res.impossible) return { html: `${wt(kg)} is under ${on}.`, act };
+  return { html: `${wt(kg)} on ${on}: each side ${res.perSide.length ? res.perSide.map(p => `${p.count > 1 ? p.count + ' × ' : ''}${nice(dw(p.kg, 2))}`).join(' + ') : 'nothing — just the bar'}${!res.exact && res.achieved ? ` (closest with your plates: ${wt(res.achieved)})` : ''}.`,
+    act };
 }
 function coAnsMax(D, key) {
   if (!key) return coLiftPick('max', D);
@@ -1229,9 +1246,9 @@ function coAnsCount(D) {
   return { html: `Sessions: ${n(7)} this week, ${n(30)} in 30 days, ${n(365)} in a year. You've trained ${D.streak} week${D.streak === 1 ? '' : 's'} in a row.${D.streak >= 4 ? ' Consistency is the whole game — nice.' : ''}` };
 }
 export function coAnsConvert(text) {
-  const m = String(text).toLowerCase().match(/(\d+(?:[.,]\d+)?)\s*(lb|lbs|pounds?|kg|kgs|kilos?)/);
+  const m = String(text).toLowerCase().match(/(\d{1,3}(?:,\d{3})+(?:\.\d+)?|\d+(?:[.,]\d+)?)\s*(lb|lbs|pounds?|kg|kgs|kilos?)/);
   if (!m) return { html: 'Try "100 lb in kg".' };
-  const v = +m[1].replace(',', '.'), toLb = /^k/.test(m[2]);
+  const v = /,\d{3}(\D|$)/.test(m[1]) && !/^0/.test(m[1]) ? +m[1].replace(/,/g, '') : +m[1].replace(',', '.'), toLb = /^k/.test(m[2]);
   return { html: toLb ? `${nice(v)} kg = ${nice(v * 2.2046226218)} lb.` : `${nice(v)} lb = ${nice(v / 2.2046226218)} kg.` };
 }
 function coAnsRirRpe(text) {
@@ -1577,7 +1594,7 @@ export function coAnswerTopic(topic, arg) {
   else if (topic === 'weightfor') r = coAnsWeightFor(D, arg && arg.includes('/') ? arg : (CO && CO.ctx && CO.ctx.lift), CO && CO.lastText);
   else if (topic === 'warmup') r = coAnsWarmup(D, arg && arg.includes('/') ? arg : (CO && CO.ctx && CO.ctx.lift));
   else if (topic === 'max') r = coAnsMax(D, arg && arg.includes('/') ? arg : (CO && CO.ctx && CO.ctx.lift));
-  else if (topic === 'plates') r = coAnsPlates(arg);
+  else if (topic === 'plates') r = coAnsPlates(arg, CO && CO.ctx && CO.ctx.lift);
   else if (topic === 'prs') r = coAnsPrs();
   else if (topic === 'count') r = coAnsCount(D);
   else if (topic === 'convert') r = coAnsConvert(arg);
@@ -1681,6 +1698,7 @@ async function coTyped(text) {
     const dots = $('#coLog', CO.bg).lastElementChild;
     await new Promise(r => setTimeout(r, 300 + Math.random() * 300));
     dots.remove();
+    if (!CO) return;   // closed while "typing" (B-001)
     return coAnswerTopic(m.topic, m.arg);
   }
   if (aiStatus() !== 'on') {

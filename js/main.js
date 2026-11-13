@@ -14,7 +14,7 @@ import { $, APP_VERSION, esc, iso } from './core.js';
 import { loadBundledData } from './data.js';
 import { KEY, flush, idb, requestPersistence, save, saveTimer, setBootFailed, storageStatus, storeGet } from './database.js';
 import { freshInstall, load, migrateToV2, migrationDryRun, migrationDryRunText } from './io.js';
-import { applySkin, closeModal, go, modalStack, page, setPage, setWhatsNewArmed, toast } from './kit.js';
+import { applySkin, dismissModal, go, modalStack, page, setPage, setWhatsNewArmed, toast } from './kit.js';
 import { healCustomMovements, runDataMigrations } from './migrate.js';
 import { DEFAULT_STATE, S, setState } from './state.js';
 import { openTools } from './tools.js';
@@ -33,7 +33,7 @@ document.addEventListener('keydown', e => {
   if (e.key !== 'Escape' || !modalStack.length) return;
   const top = modalStack[modalStack.length - 1];
   if (top._guard && !top._guard()) return;
-  closeModal();
+  dismissModal();
 });
 
 /* Fields let go of focus when you're done with them (roadmap A5, Blast #49).

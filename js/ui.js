@@ -33,9 +33,9 @@ import { BIG_MUSCLES, MUSCLES, RECOVERY, RECOVERY_WORDS, STD, TIERS, avg, beatsB
 import { driveSync, refreshSyncLine, relTime, syncLine } from './sync.js';
 import { hasFoodData, openFoodExport, openTool, openTools } from './tools.js';
 import { CAL_METHODS, DEFAULT_EVENT_TYPE, DW_BANDS, EVENT_TYPES, LV_SLACK, MVT_PRIOR_WEIGHT, VBT_RAW_MAX, activeBlock,
-  autoBlock, backfillCountText, backfillPlanned, caliperCalc, fixedStepKit, lvDay, lvFit, mean, mvtFor, oldPrograms,
-  plannedInWindow, programInstalled, programName, rangeNextLoad, rangeVerdict, removeProgram, slewLiftFor,
-  targetRirFor, vbtEst, vbtRawList, weightNear } from './training.js';
+  autoBlock, backfillCountText, backfillPlanned, caliperCalc, fixedStepKit, lvDay, lvFit, mean, mvtFor, noteRir,
+  oldPrograms, plannedInWindow, programInstalled, programName, rangeNextLoad, rangeVerdict, removeProgram,
+  slewLiftFor, targetRirFor, vbtEst, vbtRawList, weightNear } from './training.js';
 import { BP, bpGapText, poseSettingsHtml, wirePoseSettings } from './vbt.js';
 import { elapsed, exportVbtRaw, liveTotals, missBtn, newBlank, openEditWorkout, openMissed, openPlanner, openProgram,
   repeatWorkout, setTick, startPlanned, tick, undoMiss, viewCalendar, viewCompleted, viewWorkout, wireActive } from './workout.js';
@@ -496,9 +496,8 @@ function eventCountdown() {
 const rirText = rpe => rpe == null ? 'no RIR logged' : `RIR ${nice(rpeToRir(rpe))} (RPE ${nice(rpe)})`;
 /* Where targetRirFor's answer came from: the note, the block, or the default. */
 function targetRirSource(e, blockRir) {
-  const n = String((e && e.notes) || '').toLowerCase();
-  const m = n.match(/stop (\d) shy/) || n.match(/rir\s*(\d)/) || n.match(/@\s*(\d)\b/);
-  return m ? `the exercise note ("${m[0]}")` : blockRir != null ? 'the training block' : 'the default';
+  const m = noteRir(e && e.notes);
+  return m ? `the exercise note ("${m.text}")` : blockRir != null ? 'the training block' : 'the default';
 }
 
 Object.assign(WHY, {

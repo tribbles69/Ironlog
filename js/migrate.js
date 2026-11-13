@@ -161,7 +161,7 @@ function trapHandles(st) {
   };
   Object.keys(st).forEach(k => { if (k !== 'migrations') walk(st[k], 0); });
   r.changed = r.leaves + r.keys;
-  if (r.leaves) r.note = `Trap bar high and low handles are now separate lifts — your ${r.leaves} earlier trap bar entr${r.leaves === 1 ? 'y is' : 'ies are'} marked high handles. Change any low-handle ones from the exercise's handle chip.`;
+  if (r.leaves) r.note = `Trap bar high and low handles are now separate lifts — your ${r.leaves} earlier trap bar entr${r.leaves === 1 ? 'y is' : 'ies are'} marked high handles. To change a low-handle one, edit that session and tap the handle chip under the exercise name.`;
   return r;
 }
 function legacyMovementMap() {
