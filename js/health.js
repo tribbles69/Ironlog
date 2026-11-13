@@ -6,11 +6,12 @@ import { $, Awake, Cue, U, addDaysISO, ageFrom, bodyweightKg, checkinFor, clamp,
 import { idb, save, storeGet } from './database.js';
 import { allExercises, categoryOf, completeLeaf, displayName, exOptionsHtml, keyLeaf, leafName, movementById,
   priorityKeys, variantLabel } from './exercises.js';
-import { a11yPass, chart, chartMulti, closeAllModals, closeModal, confirmDlg, debugOn, go, modal, render,
-  selectOnFocus, setCardioWhyLast, toast, why } from './kit.js';
+import { CLIP, a11yPass, chart, chartMulti, clipMime, clipRecorder, clipVideoEl, closeAllModals, closeModal,
+  confirmDlg, debugOn, go, modal, render, selectOnFocus, setCardioWhyLast, toast, why } from './kit.js';
 import { roundLoadFor } from './loading.js';
 import { S } from './state.js';
 import { STD, bust, goalCurrent, loadImage } from './stats.js';
+import { CAL_METHODS, caliperCalc, mean, measSeries } from './training.js';
 import { vbtAvailable } from './vbt.js';
 import { openShare, startWorkout } from './workout.js';
 /* end imports */
@@ -2769,55 +2770,6 @@ const CAL_SITES = {
   subscapular: ['Subscapular', 'Diagonal fold just below the lower tip of the shoulder blade'],
   biceps: ['Biceps', 'Vertical fold on the front of the upper arm, midway between shoulder and elbow'],
 };
-/* Durnin & Womersley (1974), [c, m] by age band. */
-export const DW_BANDS = {
-  male: [[17, 1.1620, 0.0630], [20, 1.1631, 0.0632], [30, 1.1422, 0.0544], [40, 1.1620, 0.0700], [50, 1.1715, 0.0779]],
-  female: [[17, 1.1549, 0.0678], [20, 1.1599, 0.0717], [30, 1.1423, 0.0632], [40, 1.1333, 0.0612], [50, 1.1339, 0.0645]],
-};
-export const CAL_METHODS = {
-  jp3: { name: 'Jackson–Pollock 3-site', short: 'JP3',
-    sites: sex => sex === 'female' ? ['triceps', 'suprailiac', 'thigh'] : ['chest', 'abdomen', 'thigh'],
-    bd: (s, age, sex) => sex === 'female'
-      ? 1.0994921 - 0.0009929 * s + 0.0000023 * s * s - 0.0001392 * age
-      : 1.10938 - 0.0008267 * s + 0.0000016 * s * s - 0.0002574 * age },
-  jp7: { name: 'Jackson–Pollock 7-site', short: 'JP7',
-    sites: () => ['chest', 'midaxillary', 'triceps', 'subscapular', 'abdomen', 'suprailiac', 'thigh'],
-    bd: (s, age, sex) => sex === 'female'
-      ? 1.097 - 0.00046971 * s + 0.00000056 * s * s - 0.00012828 * age
-      : 1.112 - 0.00043499 * s + 0.00000055 * s * s - 0.00028826 * age },
-  dw4: { name: 'Durnin–Womersley 4-site', short: 'DW4',
-    sites: () => ['biceps', 'triceps', 'subscapular', 'suprailiac'],
-    bd: (s, age, sex) => {
-      const bands = DW_BANDS[sex === 'female' ? 'female' : 'male'];
-      const b = bands.filter(x => age >= x[0]).pop() || bands[0];
-      return b[1] - b[2] * Math.log10(s);
-    } },
-};
-const siri = bd => 495 / bd - 450;
-export const mean = a => a.reduce((x, y) => x + y, 0) / a.length;
-/* The nearest check-in weight within three days of a date, or null. */
-export function weightNear(date) {
-  let best = null;
-  S.checkins.forEach(c => {
-    if (!(c.weight > 0)) return;
-    const d = Math.abs(daysBetween(c.date, date));
-    if (d <= 3 && (!best || d < best.d)) best = { d, kg: c.weight };
-  });
-  return best ? best.kg : null;
-}
-export function caliperCalc(t) {
-  const M = CAL_METHODS[t.method];
-  if (!M) return null;
-  const sites = M.sites(t.sex);
-  const means = sites.map(s => { const r = ((t.mm || {})[s] || []).filter(x => x > 0); return r.length ? mean(r) : null; });
-  if (means.some(x => x == null)) return { sites, means, complete: false };
-  const sum = means.reduce((a, b) => a + b, 0);
-  const bd = M.bd(sum, t.age || 0, t.sex);
-  const bf = siri(bd);
-  const w = weightNear(t.date);
-  return { sites, means, complete: true, sum, bd, bf, odd: !(bf >= 3 && bf <= 50), young: t.method === 'dw4' && t.age < 17,
-    wKg: w, fatKg: w ? w * bf / 100 : null, leanKg: w ? w * (1 - bf / 100) : null };
-}
 
 const MEAS_SITES = [['neck', 'Neck'], ['chest', 'Chest'], ['waist', 'Waist'], ['hips', 'Hips'],
   ['arm', 'Upper arm', true], ['forearm', 'Forearm', true], ['thigh', 'Thigh', true], ['calf', 'Calf', true]];
@@ -2826,15 +2778,6 @@ function measLabel(k) {
   if (k.startsWith('x:')) return k.slice(2);
   const [base, side] = k.split('_'), s = MEAS_SITES.find(x => x[0] === base);
   return (s ? s[1] : base) + (side ? (side === 'l' ? ' (L)' : ' (R)') : '');
-}
-/* Every site's series: standard keys, then custom ones as "x:name". */
-export function measSeries() {
-  const out = {};
-  [...S.measures].sort((a, b) => a.date < b.date ? -1 : 1).forEach(m => {
-    Object.entries(m.cm || {}).forEach(([k, v]) => { if (v > 0) (out[k] = out[k] || []).push({ date: m.date, v, id: m.id }); });
-    Object.entries(m.custom || {}).forEach(([k, v]) => { if (v > 0) (out['x:' + k] = out['x:' + k] || []).push({ date: m.date, v, id: m.id }); });
-  });
-  return out;
 }
 /* 7-day rolling mean of the weigh-ins ending each weigh-in day. */
 function bwSeries() {
@@ -3164,17 +3107,6 @@ async function openPhotoView(p) {
     },
   });
 }
-/* ---- daily one-second clip (roadmap 03): this device only ----
-   r&d/specs/progress-clip-spec.md. Every clip is re-recorded through one
-   canvas at one size, so a timelapse is just the clips played back to back
-   into that canvas while MediaRecorder captures it — real time, about a
-   second per clip, on the phone, no upload, no library. */
-const CLIP = { w: 480, h: 640, fps: 30, bps: 1.5e6, ms: 1000, index: 'ironlog.clips' };
-export function clipMime() {
-  if (typeof MediaRecorder === 'undefined') return null;
-  return ['video/mp4;codecs=avc1.42E01E', 'video/mp4', 'video/webm;codecs=vp9', 'video/webm;codecs=vp8', 'video/webm']
-    .find(t => { try { return MediaRecorder.isTypeSupported(t); } catch (e) { return false; } }) || null;
-}
 const clipCan = () => !!(clipMime() && 'captureStream' in HTMLCanvasElement.prototype);
 async function clipIndex() {
   const raw = await storeGet(CLIP.index);
@@ -3204,21 +3136,6 @@ function drawCover(x, src, sw, sh) {
   if (!(sw > 0 && sh > 0)) return;
   const k = Math.max(CLIP.w / sw, CLIP.h / sh), dw0 = sw * k, dh0 = sh * k;
   x.drawImage(src, (CLIP.w - dw0) / 2, (CLIP.h - dh0) / 2, dw0, dh0);
-}
-/* Record `ms` of whatever the canvas shows. `draw` paints each frame. */
-export function clipRecorder(canvas, opts = {}) {
-  const mime = clipMime();
-  const rec = new MediaRecorder(canvas.captureStream(CLIP.fps), { mimeType: mime, videoBitsPerSecond: opts.bps || CLIP.bps });
-  const chunks = [];
-  rec.ondataavailable = e => { if (e.data && e.data.size) chunks.push(e.data); };
-  const done = new Promise(res => { rec.onstop = () => res(new Blob(chunks, { type: mime.split(';')[0] })); });
-  return { start: () => rec.start(), stop: () => { if (rec.state !== 'inactive') rec.stop(); return done; } };
-}
-export function clipVideoEl(src) {
-  const v = document.createElement('video');
-  v.muted = true; v.playsInline = true; v.preload = 'auto';
-  if (src) v.src = src;
-  return v;
 }
 /* A still from the latest clip, for the ghost overlay. */
 async function lastClipFrame(beforeDate) {

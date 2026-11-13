@@ -171,7 +171,7 @@ export function suggestedTargets() {
   return { bmr, tdee, kcal, p, c, f };
 }
 
-export const APP_VERSION = '0.98.2';
+export const APP_VERSION = '0.98.3';
 
 /* ---------------- sound, haptics, wake lock ----------------
    Shared by the hold timer and the rest timer, and meant for the cardio session
@@ -291,3 +291,9 @@ export const dlen = cm => U() === 'lb' ? cm / 2.54 : cm;
 export const toCm = v => U() === 'lb' ? v * 2.54 : v;
 export function checkinFor(date) { return S.checkins.find(c => c.date === date); }
 export const setLine = s => `${wt(s.w)} × ${s.r}${s.rpe != null ? ` @ RIR ${nice(rpeToRir(s.rpe))}` : ''}`;
+
+/* ---------------- the old food log (moved in from tools.js) ---------------- */
+export function dropFood(st) {
+  delete st.foods;
+  ['kcalTarget', 'proteinTarget', 'carbTarget', 'fatTarget', 'foodExportedAt'].forEach(k => { delete st.settings[k]; });
+}

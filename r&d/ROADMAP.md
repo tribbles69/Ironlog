@@ -1148,7 +1148,7 @@ per setup) is the evidence. Then write a spec (`r&d/specs/calm-spec.md`).
 
 ---
 
-### [ ] E17. Untangle the modules (Aaron, 2026-11-13) — **phases 1–4 shipped 0.98.1–0.98.2**; phase 5 left
+### [x] E17. Untangle the modules (Aaron, 2026-11-13) — **done, 0.98.1–0.98.3**
 After the module split, almost every file imported every other one in a
 circle. Make the layers real, so a file can be read, edited and bug-checked
 with only what is below it. Pure refactors: no behaviour change, checked each
@@ -1164,11 +1164,10 @@ main. What moved, and the numbers: `r&d/notes/module-split.md` → Untangle.
 - [x] **Phase 4 (0.98.2):** `js/io.js` (load, migrations, import, export) and
   `js/sync.js` (the Drive sync job) out of `database.js`, which now imports
   only `state`, `core` and `kit`.
-- [ ] **Phase 5:** the nine features still import each other. Next cuts:
-  autoregulation and session maths (`autoE1`, `targetRirFor`, `stallFor`,
-  `sessionTotals`, `vbtEst`…) into a `js/training.js`; `EVENT_TYPES` down a
-  layer; `pickExercise` into `movement.js`. Details in
-  `r&d/notes/module-split.md` → Untangle.
+- [x] **Phase 5 (0.98.3):** `training.js`, `picker.js`, `ai.js`, `report.js`,
+  `migrate.js`, `rest.js`. The cycle is the four screens that open each other
+  (workout, health, coach, movement), left on purpose; CLAUDE.md has the
+  layer list new code must keep to.
 
 ## Parked
 See **`r&d/notes/backlog.md`** — sleep/recovery strip on sessions,
