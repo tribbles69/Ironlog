@@ -166,7 +166,7 @@ export function syncLine() {
       : `<div class="sub" style="margin-bottom:8px">Keeps a copy of your log in your own Google Drive and merges it between phones. Ironlog can only see the one file it makes there — nothing else in your Drive — and nothing goes to any Ironlog server.</div>
         <button class="btn sm primary wide" id="stSyncNow" style="margin-bottom:8px">Connect Google Drive</button>`}
     ${cid ? `<label class="row" style="gap:8px;align-items:center;margin-bottom:8px"><input type="checkbox" id="stSyncKey" ${m.includeKey ? 'checked' : ''} style="width:auto">
-      <span class="sub">Include my AI key in the backup</span></label>` : ''}
+      <span class="sub">Include my AI key in the backup <span style="opacity:.8">— saved as plain text in the Drive file, so anything that can read your Drive can read it. Leave off unless you want the key on your other phone.</span></span></label>` : ''}
     ${m.connected ? `<label class="row" style="gap:8px;align-items:center;margin-bottom:8px"><input type="checkbox" id="stSyncFinish" ${m.autoFinish !== false ? 'checked' : ''} style="width:auto">
       <span class="sub">Back up when I tap Done after a session (Google may flash its sign-in)</span></label>` : ''}
     <details style="margin-bottom:6px"><summary class="sub">Advanced: Google client ID</summary>
