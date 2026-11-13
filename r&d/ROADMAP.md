@@ -186,7 +186,26 @@ means, and tick this section. Fixes after that are 1.0.1, 1.0.2; the next
 feature is 1.1.0.
 
 ### Ideas parked for after 1.0
-(added during the beta; nothing here is agreed until Aaron picks it)
+(added during the beta; Aaron added all of P1–P8 on 2026-11-13, in this
+order. Each needs a short spec before building.)
+
+- [ ] **P1. Send a lift to the strength records site.** A record attempt in
+  Ironlog packages video, weight, bodyweight, date and division as a
+  submission for Aaron's records registry (`areas: strength-records-site`).
+- [ ] **P2. Record-attempt planner** for the WDC trap bar and Viking deadlift
+  records: attempts from bar speed and recent singles, gap to the record.
+  Builds on C2's attempt plan.
+- [ ] **P3. Native wrapper** — this is E3 (Capacitor, Health Connect in and
+  out, Wear OS rest countdown and set ticking).
+- [ ] **P4. Supersets and circuits** — out of `r&d/notes/backlog.md`: one rest
+  timer across paired exercises, PRs for every exercise in the group
+  (Blast #87, A5).
+- [ ] **P5. Logn's calm rests and cool-down** — this is E15.
+- [ ] **P6. Dark mode, Metro and Ceefax themes** — this is E10.
+- [ ] **P7. Hands-free set logging:** say "180 for 3, 2 in the tank" between
+  sets; local parsing first, AI only as the fallback.
+- [ ] **P8. Coach view:** a read-only page built from the Drive backup that a
+  coach or training partner can open. Must stay inside the no-server rule.
 
 ---
 
