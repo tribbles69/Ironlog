@@ -49,7 +49,35 @@ IDs run on and are never reused. Severity:
 
 ## Open
 
-(none)
+### B-022 · sev 3 · Cancel on a confirm that has an `onNo` also closes the sheet beneath it
+Found: 2026-11-14, 0.99.1, nightly sweep
+Where: js/kit.js `confirmDlg` (with `modal`'s backdrop handler)
+Reproduce: open any sheet, then `confirmDlg('x', () => {}, 'Yes', () => {})` on top of it and tap Cancel. The Cancel button has both its own handler (`closeModal(); onNo()`) and `data-close`, so the click bubbles to the modal's handler, which calls `dismissModal()` and pops the next sheet down too, running its `onClose`. Probe: with a welcome sheet, an "Under" sheet and the confirm open (stack 3), Cancel leaves a stack of 1 and Under's `onClose` ran. Without `onNo` it is fine (stack 2). Today only the on-device speech-model prompt in workout.js passes `onNo`, and nothing sits under it, so nobody has hit it yet.
+Fix: when `onNo` is given, leave `data-close` off the Cancel button (or stop the click propagating in its handler). Better still, let `onNo` be the modal's `onClose` and drop the extra handler.
+
+### B-023 · sev 3 · Profile edits stick when the sheet is closed with ✕, the backdrop or Escape
+Found: 2026-11-14, 0.99.1, nightly sweep
+Where: js/ui.js `openProfile`
+Reproduce: open Profile, change Sex or Date of birth (each change writes straight into `S.settings` so the derived figures redraw), then close with ✕ instead of Cancel. Probe: sex male to female and dob set, closed with ✕, `S.settings` still says female and 1990-05-05, and the next `save()` for any reason writes them to storage. The comment on the sheet says the values are put back on cancel, but only the Cancel button does it.
+Fix: pass `onClose` to the sheet to restore `original` (the 0.99.0 kit now runs `onClose` on ✕, backdrop and Escape). `re()` uses `closeModal()`, which does not run it, so the redraw won't undo anything. Save must skip the restore.
+
+### B-024 · sev 3 · A note like "@1" or "@2" is no longer read as target RIR, and the comment still says it is
+Found: 2026-11-14, 0.99.1, nightly sweep
+Where: js/training.js `noteRir`, `targetRirFor`
+Reproduce: `noteRir('@2')` returns null and `noteRir('@1')` is null; before 0.99.0 both were RIR 2 and 1. A note "@1" now falls back to the block or default RIR 2, so autoregulation aims at the wrong effort. The comment above (`"@2" in the program note`) is still left over the new function. Also `noteRir('RPE 8.5')` gives RIR 2 where the header says whole numbers only (10 − 8.5 = 1.5), and `noteRir('3x5 @ 8 reps')` reads as RPE 8.
+Fix: decide what "@N" means. If it is RIR for N under 5 and RPE from 5 up, say so in the comment and keep the old behaviour for 0–4. Delete the stale line. Round half-RPE explicitly or ignore it.
+
+### B-025 · sev 3 · The "Best hold" toast repeats for a shorter hold later in the same session
+Found: 2026-11-14, 0.99.1, nightly sweep
+Where: js/workout.js `toggleSetDone` (timed branch)
+Reproduce: from the code. 0.99.0 (B-017) made the rep-set PR toast also compare against sets ticked earlier today (`beatsSession`), but the timed branch only does it when there is no history: `!recs.n ? !peers.length : holdBeats(recs, ...)`. With a 50 s history best, a 60 s hold gives "★ Best hold", and a 55 s hold in the same session gives it again.
+Fix: also require the hold to beat the earlier same-pool holds today (same weight, longer `sec`), the way `beatsSession` does for reps.
+
+### B-026 · sev 3 · Welcome: switching units after Back leaves the old number, saved in the new unit
+Found: 2026-11-14, 0.99.1, nightly sweep
+Where: js/ui.js `openWelcome` step 2
+Reproduce: Welcome, About you, type 80 (kg), Next, Back (the box is refilled with 80 from the saved kilos), tap Pounds, Next. Probe: the box still shows 80, `S.settings.bodyweight` ends up 36.29 kg (80 read as lb), units "lb". Bodyweight feeds DOTS, calories and standards.
+Fix: when the unit toggles, convert the number in the box (`nice(dw(...))` after setting units), or clear it.
 
 ## Needs Aaron
 
@@ -57,6 +85,20 @@ IDs run on and are never reused. Severity:
 
 ## Sweeps
 
+- **2026-11-14, 0.99.1 (nightly)** — rotation stopped at **main** (core, kit,
+  loading, training, stats, io, sync, rest, workout, coach, health were done on
+  11-13; tonight movement, ui, main, so tomorrow wraps to **state**). Also read
+  the whole 0.98.3 to 0.99.1 diff for every js file changed since the last
+  sweep (the B-001 to B-021 fixes) and the callers of the new `dismissModal`,
+  `closeAllModals({quiet})`, `entryVolume`, `noteRir`, `yearAge` and
+  `openAxisPickerFor`. Checks: check-version, lint-scope, validate-exercises,
+  validate-mobility all pass; module-map --check passes (needs TypeScript 5 —
+  the 7.x that `npm install typescript` pulls now has no `ScriptTarget` and
+  the tool throws; installed 5.6.3 in a scratch folder); smoke 56/56 with no
+  page errors; each of the five pages opens with no page errors. One
+  automated click-everything loop had the headless renderer crash once; it did
+  not repeat per click or per page, so not logged. Probes behind B-022, B-023,
+  B-024 and B-026 are in their entries. New: B-022 to B-026.
 - **2026-11-13, 0.98.3** — module by module after the E17 split: core, kit,
   loading, training, stats, io, sync, rest, workout, coach, health read for
   logic; module-map --check, lint-scope, eslint, check-version and validators
