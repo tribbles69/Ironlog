@@ -79,12 +79,35 @@ Where: js/ui.js `openWelcome` step 2
 Reproduce: Welcome, About you, type 80 (kg), Next, Back (the box is refilled with 80 from the saved kilos), tap Pounds, Next. Probe: the box still shows 80, `S.settings.bodyweight` ends up 36.29 kg (80 read as lb), units "lb". Bodyweight feeds DOTS, calories and standards.
 Fix: when the unit toggles, convert the number in the box (`nice(dw(...))` after setting units), or clear it.
 
+### B-033 · sev 3 · Home's "last 7 days" tiles cover eight days
+Found: 2026-11-15, 0.99.1, nightly sweep
+Where: js/stats.js `last7`; js/ui.js `viewHome` (`bw7`, `sessions7`)
+Reproduce: add a check-in dated 7 days ago (sleep 4 h) and one today (sleep 8 h). `last7()` returns both (probe: `["2026-11-08","2026-11-15"]`), so "Sleep avg · last 7 days" shows 6 h, not 8 h. A session or weight dated 7 days ago is likewise counted in "Sessions · last 7 days" and the "/ 7d" bodyweight change. Today plus the previous 7 days is 8 days; `coach.js` and the BP card use `< 7` / `<= 6`.
+Fix: use `daysBetween(...) <= 6` in `last7` and in the two `viewHome` filters (or relabel). Check nothing else leans on `last7`'s eight days.
+
+### B-034 · sev 3 · Profile accepts a negative bodyweight
+Found: 2026-11-15, 0.99.1, nightly sweep
+Where: js/ui.js `openProfile` `collect` (`st.bodyweight = raw === '' ? 0 : toKg(+raw)`)
+Reproduce: Profile, type -70 in Bodyweight and tab out. `S.settings.bodyweight` becomes -70 (probe). Height is clamped 0 to 260; bodyweight has no clamp, so the fallback feeds DOTS and the calorie maths a negative number.
+Fix: clamp to a sensible range (for example 0 to 400 kg) the way height is.
+
 ## Needs Aaron
 
 (none)
 
 ## Sweeps
 
+- **2026-11-15, 0.99.1 (nightly)** — rotation wraps: main was last night's
+  stop, so tonight **state** and **kit** read for logic (nothing new in either;
+  `chartMulti` draws a flipped axis if every value is the same negative
+  number, but no real series is negative). Also re-read movement and ui
+  (Home, update check, What's new, Profile) and main's boot and rescue path;
+  B-029 reproduced independently by pressing Escape on the Profile sheet.
+  Stopped at: kit (first 200 lines in depth), so tomorrow carries on with the
+  rest of kit, then exercises, database. Checks: check-version, lint-scope,
+  validate-exercises, validate-mobility and module-map --check (TypeScript 5)
+  pass; smoke 56/56, no page errors (headless Chromium). Click-through of
+  every page not run tonight. New: B-033, B-034.
 - **2026-11-14, 0.99.1 (nightly)** — rotation stopped at **main** (core, kit,
   loading, training, stats, io, sync, rest, workout, coach, health were done on
   11-13; tonight movement, ui, main, so tomorrow wraps to **state**). Also read
