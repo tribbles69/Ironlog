@@ -49,13 +49,40 @@ IDs run on and are never reused. Severity:
 
 ## Open
 
-(none)
+### B-022 · sev 3 · Home's "last 7 days" tiles cover eight days
+Found: 2026-11-15, 0.99.1, nightly sweep
+Where: js/stats.js `last7`; js/ui.js `viewHome` (`bw7`, `sessions7`)
+Reproduce: add a check-in dated 7 days ago (sleep 4 h) and one today (sleep 8 h). `last7()` returns both (probe: `["2026-11-08","2026-11-15"]`), so "Sleep avg · last 7 days" shows 6 h, not 8 h. A session or weight 7 days ago is likewise counted in "Sessions · last 7 days" and the "/ 7d" bodyweight change. Today plus the previous 7 days is 8 days. `coach.js` and the BP card use `< 7` / `<= 6`.
+Fix: use `daysBetween(...) <= 6` in `last7` and in the two `viewHome` filters (or relabel). Check nothing else leans on `last7`'s eight days.
+
+### B-023 · sev 2 · Profile edits stick when the sheet is dismissed with Escape or a backdrop tap
+Found: 2026-11-15, 0.99.1, nightly sweep
+Where: js/ui.js `openProfile` (`collect`, `re`, `pfCancel`)
+Reproduce: Profile, change Sex to Female (the sheet redraws via `re`), press Escape. The sheet closes and `S.settings.sex` is still "female" (probe: before `male`, after Escape `female`). Only the Cancel button restores `original`; Save never ran, but the next `save()` from anywhere writes the edit, so DOTS, category and calorie targets change without the user choosing Save.
+Fix: give the modal an `onClose` that restores `original` unless Save was pressed (mind `re()`, which closes and reopens the sheet on every change).
+
+### B-024 · sev 3 · Profile accepts a negative bodyweight
+Found: 2026-11-15, 0.99.1, nightly sweep
+Where: js/ui.js `openProfile` `collect` (`st.bodyweight = raw === '' ? 0 : toKg(+raw)`)
+Reproduce: Profile, type -70 in Bodyweight and tab out. `S.settings.bodyweight` becomes -70 (probe). Height is clamped 0 to 260; bodyweight has no clamp. The fallback is then treated as a real value by DOTS and the calorie maths.
+Fix: clamp to a sensible range (for example 0 to 400 kg) the way height is.
 
 ## Needs Aaron
 
 (none)
 
 ## Sweeps
+
+- **2026-11-15, 0.99.1 (nightly)** — rotation continued after health and coach:
+  read movement, main and ui (Home, update check, What's new, Profile) for
+  logic; no js/ file has changed on main since the 2026-11-13 sweep other than
+  the 0.99.0/0.99.1 fix commits, whose touched areas in these modules were
+  re-read. Stopped at: ui (middle of ui.js, Settings and skin chrome not read
+  line by line). Tomorrow: finish ui, then main is done, wrap round to core,
+  state, kit. Checks: check-version, lint-scope, validate-exercises,
+  validate-mobility and module-map --check (typescript 5, scratch install) all
+  pass; smoke 56/56 with no page errors (headless Chromium). Click-through of
+  every page not run tonight. New: B-022 to B-024.
 
 - **2026-11-13, 0.98.3** — module by module after the E17 split: core, kit,
   loading, training, stats, io, sync, rest, workout, coach, health read for
