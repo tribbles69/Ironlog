@@ -49,6 +49,24 @@ IDs run on and are never reused. Severity:
 
 ## Open
 
+### B-035 · sev 2 · A save that fell back to localStorage is ignored on the next open
+Found: 2026-11-16, 0.99.1, nightly sweep
+Where: js/database.js `storePut` and `storeGet`
+Reproduce: from the code. `storePut` writes localStorage only when the IndexedDB write throws (quota, a blocked or transiently failing DB). `storeGet` then reads IndexedDB first and returns it whenever it holds anything (`if (v != null) return v`), so on the next launch, with IndexedDB answering again, the older IndexedDB log wins and the sessions saved to localStorage in between are dropped; the next save overwrites IndexedDB for good. The stale localStorage copy is also never cleared after a later successful IndexedDB write.
+Fix: stamp each saved log with a write time (or `S.savedAt`) and have `storeGet` take the newer of the two; after a successful IndexedDB put, remove the localStorage copy.
+
+### B-036 · sev 3 · `idb()` reports a write as done before the transaction commits
+Found: 2026-11-16, 0.99.1, nightly sweep
+Where: js/database.js `idb`
+Reproduce: from the code. The promise resolves on the request's `onsuccess`; there is no `tx.oncomplete`. A transaction that aborts after that (quota exceeded at commit, the tab being killed) rejects a promise that has already resolved, so `storePut` sets `STORAGE_OK = true` and skips the localStorage fallback and the "Storage is not responding" toast.
+Fix: for `readwrite`, resolve on `tx.oncomplete` (with the request result) and keep `onabort` rejecting.
+
+### B-037 · sev 3 · Modifier picker's Cancel still keeps the adopted tempo
+Found: 2026-11-16, 0.99.1, nightly sweep
+Where: js/movement.js `openModPicker` (calls `adoptTempo(e)` from js/training.js before the sheet opens)
+Reproduce: from the code. On an exercise with a typed modifier such as `x:3-0-1 tempo` (or tempo text in its notes) and no `e.tempo`, open Modifiers and tap Cancel. `adoptTempo` has already set `e.tempo` and removed the `x:` tag from `e.mods` on the live entry, and the next `save()` writes that, so Cancel did not cancel.
+Fix: run `adoptTempo` on a copy, or fold the adopted values into the local `sel` / `tp` only, and write to `e` in `#mdOk`.
+
 ### B-028 · sev 3 · Cancel on a confirm that has an `onNo` also closes the sheet beneath it
 Found: 2026-11-14, 0.99.1, nightly sweep
 Where: js/kit.js `confirmDlg` (with `modal`'s backdrop handler)
@@ -97,6 +115,17 @@ Fix: clamp to a sensible range (for example 0 to 400 kg) the way height is.
 
 ## Sweeps
 
+- **2026-11-16, 0.99.1 (nightly)** — rotation: kit's remainder, exercises and
+  database were due; tonight **database** (storage section) was read in
+  depth, plus movement again (modifier picker). Stopped at: database line 140,
+  so tomorrow carries on with the rest of database, then exercises, stats.
+  Also re-read the 0.99.1 diff (DOTS clamp, `yearAge`, meet tie-break and
+  placing delta); probes in the page gave the intended numbers (Junior at the
+  year you turn 19 to 23, women's DOTS flat above 150 kg). Checks:
+  check-version, lint-scope, validate-exercises, validate-mobility and
+  module-map --check (TypeScript 5) pass; smoke 56/56, no page errors. The
+  click-through of every page timed out in this run and was not completed.
+  New: B-035 to B-037.
 - **2026-11-15, 0.99.1 (nightly)** — rotation wraps: main was last night's
   stop, so tonight **state** and **kit** read for logic (nothing new in either;
   `chartMulti` draws a flipped axis if every value is the same negative
