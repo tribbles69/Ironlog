@@ -17,7 +17,8 @@ B-058.
 | 6 | Scoring and standards | DOTS and IPF GL match to the last digit. No Wilks in the app. The standards table has no source and half of it is unreachable | B-040, B-053 |
 | 7 | Body composition and cardio | Every caliper equation, Siri, Mifflin, Katch–McArdle, Butt, FFMI, Tanaka and Karvonen match | B-041, B-052, B-057 |
 
-Seven sev 2, twelve sev 3, two questions for Aaron.
+Seven sev 2, thirteen sev 3, one question for Aaron (B-057). B-058 was a
+question and was answered the same day: limit the RIR that counts toward a PR.
 
 ## How it was checked
 
@@ -199,7 +200,7 @@ plan, the bar-speed day estimate averaged in at half weight.
 | lb user, 225 × 5 twice | no PR on the repeat | none |
 | 30 × 12 → 30 × 15 → 30 × 20 | two PRs | **none** (B-039) |
 | 30 × 10 @ RIR 2 → 30 × 12 @ RIR 2 | PR | **none** (B-039) |
-| 100 × 5 @ RIR 0 → 90 × 5 @ RIR 5 | arguable | PR, 120.0 over 116.7 (B-058, for Aaron) |
+| 100 × 5 @ RIR 0 → 90 × 5 @ RIR 5 | arguable | PR, 120.0 over 116.7 (B-058; Aaron decided to limit RIR for PRs) |
 | Two sessions one day, finish times 10:00 and 18:00, same 110 × 5 | first only | first only |
 | The same, both imported with no times | first only | **both** (known: the comment on `isBefore` says so) |
 | One session, Back Squat entered twice (110 × 5, 105 × 5) | one row | **two rows** (B-045) |

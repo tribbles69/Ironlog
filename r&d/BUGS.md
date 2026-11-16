@@ -160,6 +160,12 @@ Where: js/loading.js `loadFor`, js/core.js `e1Rir`
 Reproduce: from the code. `loadFor(140, 5, 6)` is 102.44, and `e1rm(102.44, 5, RIR 6)` reads back 136.59, not 140. Only reached by a target RIR of 6 or more ("stop 6 shy" in a note).
 Fix: pass the reserve through the same cap in `loadFor`.
 
+### B-058 · sev 3 · A lighter, easier set can be a PR
+Found: 2026-11-16, 0.99.3, maths audit
+Where: js/stats.js `beatsBest`, `historyFor` / `statsFor` (`best` by e1RM), js/workout.js `beatsSession` — RIR counts in full on both sides
+Reproduce: from the code. History 100 × 5 @ RIR 0 (e1RM 116.7); then 90 × 5 logged at RIR 5 (e1RM 120.0) is starred as a PR.
+Fix: Aaron's call, 2026-11-16: limit how much RIR counts toward a PR. For records only (the best set, `beatsBest`, the in-session check, rankings), count at most N reps in reserve; autoregulation and the Tools calculator keep the full figure. N still to be set (2 or 3). With N = 3 the example reads 114.0 and is no PR; with N = 2, 111.0. The same cap has to apply to the history side, or old high-RIR sets keep their inflated bests.
+
 ### B-056 · sev 3 · PR #86 (not merged): the projection's date range is narrower than it reads
 Found: 2026-11-16, branch `e16-honest-ledger` @ a4c0d30, maths audit
 Where: index.html on that branch, `projectGoal`, `projLine`
@@ -173,12 +179,6 @@ Found: 2026-11-16, 0.99.3, maths audit
 Where: js/health.js `HR_ZONES`, `zoneBpm`
 Reproduce: from the code. Max 187 (Tanaka at 30): "Zone 2 · easy" is 112–131 with no resting HR and 136–149 with a resting HR of 60. The same 60–70% is applied to max HR in one case and to heart-rate reserve in the other, and those are different intensities: 136–149 is 73–80% of max. ACSM's table puts 64–76% of max level with 40–59% of reserve (moderate), and 60–89% of reserve as vigorous.
 Fix: question for Aaron — which Zone 2 is meant? Either keep 60–70% of max and use 40–59%-style reserve bands when a resting HR is known, or keep the Karvonen 60–70% and raise the %-of-max bands to match. Both are in common use; the app shouldn't switch between them on an optional field.
-
-### B-058 · sev 3 · A lighter, easier set can be a PR
-Found: 2026-11-16, 0.99.3, maths audit
-Where: js/stats.js `beatsBest` (RIR counts on both sides, by design)
-Reproduce: from the code. History 100 × 5 @ RIR 0 (e1RM 116.7); then 90 × 5 logged at RIR 5 (e1RM 120.0) is starred as a PR. Past RIR 5 the reserve is capped, but up to 5 a self-reported number alone can set a record.
-Fix: question for Aaron — keep it (the estimate is the record), or require a PR to also beat the best at that weight or rep count, or count at most RIR 2–3 toward a PR while planning keeps the full figure.
 
 ### B-026 · sev 2 · Ironlog shares its storage with every other site on tribbles69.github.io
 Found: 2026-11-13, 0.99.1, security and privacy check
@@ -202,8 +202,8 @@ Fix: question for Aaron — make the repo private (Pages from a private repo nee
   sources: DOTS, IPF GL, Jackson–Pollock 3 and 7, Durnin–Womersley, Siri,
   Mifflin-St Jeor, Katch–McArdle, Butt, normalised FFMI, Tanaka, Karvonen,
   the balance norms, the load-velocity fit and the projection's least squares.
-  No Wilks in the app. New: B-038 to B-058 (seven sev 2, twelve sev 3, two
-  for Aaron). Nothing fixed. Detail: `r&d/notes/maths-audit-2026-11.md`.
+  No Wilks in the app. New: B-038 to B-058 (seven sev 2, thirteen sev 3, one
+  for Aaron; B-058 decided the same day). Nothing fixed. Detail: `r&d/notes/maths-audit-2026-11.md`.
 - **2026-11-16, 0.99.1 (nightly)** — rotation: kit's remainder, exercises and
   database were due; tonight **database** (storage section) was read in
   depth, plus movement again (modifier picker). Stopped at: database line 140,
