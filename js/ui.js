@@ -209,7 +209,12 @@ export function openWelcome(step = 1) {
       const segs = (sel, attr, set) => bg.querySelectorAll(`${sel} button`).forEach(b => b.onclick = () => {
         bg.querySelectorAll(`${sel} button`).forEach(x => x.classList.toggle('on', x === b)); set(b.dataset[attr]);
       });
-      segs('#wlUnits', 'u', u => { S.settings.units = u; $('#wlBwU', bg).textContent = u; });
+      segs('#wlUnits', 'u', u => {
+        // the number in the box goes with the unit (B-032): read it in the old unit, show it in the new one
+        const box = $('#wlBw', bg), v = +box.value, kg = v > 0 ? toKg(v) : 0;
+        S.settings.units = u; $('#wlBwU', bg).textContent = u;
+        if (kg) box.value = nice(dw(kg));
+      });
       segs('#wlSex', 's', s => { S.settings.sex = s; });
       const keep = () => { const v = +$('#wlBw', bg).value; if (v > 0) S.settings.bodyweight = toKg(v); save(); };
       $('#wlBack', bg).onclick = () => { keep(); closeModal(); openWelcome(1); };
