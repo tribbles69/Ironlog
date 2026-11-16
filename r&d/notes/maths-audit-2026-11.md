@@ -19,6 +19,8 @@ B-058.
 
 Seven sev 2, thirteen sev 3, one question for Aaron (B-057). B-058 was a
 question and was answered the same day: limit the RIR that counts toward a PR.
+Fixed in 0.99.4 — records read `e1pr`, which counts at most 2 reps in reserve;
+autoregulation still reads `e1rm`.
 
 ## How it was checked
 

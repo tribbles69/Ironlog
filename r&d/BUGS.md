@@ -49,7 +49,7 @@ IDs run on and are never reused. Severity:
 
 ## Open
 
-Entries B-038 to B-058 are from the maths audit of 2026-11-16; the probes and
+Entries B-038 to B-057 are from the maths audit of 2026-11-16; the probes and
 sources behind each are in `r&d/notes/maths-audit-2026-11.md`.
 
 ### B-038 · sev 2 · Autoregulation can't move a set once reps + RIR reach 12
@@ -160,12 +160,6 @@ Where: js/loading.js `loadFor`, js/core.js `e1Rir`
 Reproduce: from the code. `loadFor(140, 5, 6)` is 102.44, and `e1rm(102.44, 5, RIR 6)` reads back 136.59, not 140. Only reached by a target RIR of 6 or more ("stop 6 shy" in a note).
 Fix: pass the reserve through the same cap in `loadFor`.
 
-### B-058 · sev 3 · A lighter, easier set can be a PR
-Found: 2026-11-16, 0.99.3, maths audit
-Where: js/stats.js `beatsBest`, `historyFor` / `statsFor` (`best` by e1RM), js/workout.js `beatsSession` — RIR counts in full on both sides
-Reproduce: from the code. History 100 × 5 @ RIR 0 (e1RM 116.7); then 90 × 5 logged at RIR 5 (e1RM 120.0) is starred as a PR.
-Fix: Aaron's call, 2026-11-16: limit how much RIR counts toward a PR. For records only (the best set, `beatsBest`, the in-session check, rankings), count at most N reps in reserve; autoregulation and the Tools calculator keep the full figure. N still to be set (2 or 3). With N = 3 the example reads 114.0 and is no PR; with N = 2, 111.0. The same cap has to apply to the history side, or old high-RIR sets keep their inflated bests.
-
 ### B-056 · sev 3 · PR #86 (not merged): the projection's date range is narrower than it reads
 Found: 2026-11-16, branch `e16-honest-ledger` @ a4c0d30, maths audit
 Where: index.html on that branch, `projectGoal`, `projLine`
@@ -272,6 +266,7 @@ Fix: question for Aaron — make the repo private (Pages from a private repo nee
 
 Most recent first: `- B-000 · title — 0.00.0`
 
+- B-058 · A lighter, easier set can be a PR — 0.99.4 (records count at most 2 RIR: `e1pr`)
 - B-037 · Modifier picker's Cancel still keeps the adopted tempo — 0.99.3
 - B-036 · `idb()` reports a write as done before the transaction commits — 0.99.3
 - B-035 · A save that fell back to localStorage is ignored on the next open — 0.99.3
