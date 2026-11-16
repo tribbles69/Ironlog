@@ -69,6 +69,17 @@ export function e1rm(kg, reps, rpe) {
   if (eff <= 1) return kg;
   return kg * (1 + Math.min(eff, 12) / 30);
 }
+/* The e1RM a RECORD counts (B-058): the same estimate with at most PR_RIR
+   reps in reserve. A reserve is the lifter's own guess, so 90 × 5 called
+   RIR 5 used to out-score 100 × 5 to the limit and take the PR. Everything
+   that is a record reads this — the best set, the PR star, rankings, the
+   history series. Planning (autoregulation, the Tools calculator) keeps
+   e1rm() and the whole reserve. */
+export const PR_RIR = 2;
+export function e1pr(kg, reps, rpe) {
+  const counted = rpe == null || rpe === '' || !Number.isFinite(+rpe) || +rpe > 10;   // e1rm() reads these as no reserve
+  return e1rm(kg, reps, counted ? rpe : Math.max(+rpe, 10 - PR_RIR));
+}
 
 // DOTS
 export function dots(totalKg, bwKg, sex) {
@@ -179,7 +190,7 @@ export function suggestedTargets() {
   return { bmr, tdee, kcal, p, c, f };
 }
 
-export const APP_VERSION = '0.99.3';
+export const APP_VERSION = '0.99.4';
 
 /* ---------------- sound, haptics, wake lock ----------------
    Shared by the hold timer and the rest timer, and meant for the cardio session

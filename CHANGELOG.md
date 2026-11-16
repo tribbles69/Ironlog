@@ -13,6 +13,10 @@ rather than guessed.
 
 ---
 
+## 0.99.4 — 16 Nov 2026
+- **PRs are harder to get by feel alone:** a record now counts at most 2 reps in reserve. Before, an easy set logged with a big RIR could take the PR off a heavier set done to the limit (90 × 5 at RIR 5 beat 100 × 5 at RIR 0). Your best e1RM, PR stars, rankings and the e1RM chart all use the new figure, so a best that came from a high-RIR set will read a little lower and a few old PR stars may go.
+- The weights the app sets for you haven't changed: planning still uses the RIR you log in full.
+
 ## 0.99.3 — 16 Nov 2026
 - **Safer saving:** if the phone's main storage ever fails and the app saves to its backup spot instead, that save is now the one it opens next time, so recent sessions aren't lost. A save also only counts as done once the phone has really written it.
 - Closing Profile with ✕, tapping outside or pressing Escape now throws your changes away, the same as Cancel. Bodyweight can't be negative.
