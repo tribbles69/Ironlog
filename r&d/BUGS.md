@@ -53,10 +53,30 @@ IDs run on and are never reused. Severity:
 
 ## Needs Aaron
 
-(none)
+### B-026 · sev 2 · Ironlog shares its storage with every other site on tribbles69.github.io
+Found: 2026-11-13, 0.99.1, security and privacy check
+Where: hosting — browsers keep localStorage / IndexedDB per origin (scheme + host), not per path
+Reproduce: from any other page on https://tribbles69.github.io/ (another repo's Pages site, or r&d/tools/demo-lab.html in this one), `localStorage.getItem('ironlog.anthropicKey')` and `indexedDB.open('ironlog')` read Ironlog's key, log, photos and clips. The same is true for anyone who self-hosts on their own username.github.io.
+Fix: give Ironlog an origin of its own — a custom subdomain on GitHub Pages, or e.g. a Cloudflare Pages ironlog.pages.dev. Question for Aaron: which address? Moving origin doesn't move anyone's data: users need a Drive sync or export first, so the old address should show a "we've moved — sync or export, then open the new one" screen for a while. The README's self-hosting steps should tell people to use a repo/domain that hosts nothing else.
+
+### B-027 · sev 2 · Public repo holds Aaron's personal training and health details
+Found: 2026-11-13, 0.99.1, security and privacy check
+Where: `r&d/data/hunchback-pplul-77wk.txt`, `r&d/data/routines/morning-stretch.json` (and the copy built into js/health.js, shown to every user as "Priority for kyphosis"), `r&d/data/vbt/ironlog-vbt-raw-2026-11-11.json`, Chelsea named in `r&d/specs/coach-spec.md`, `r&d/data/templates/README.md`, `r&d/ROADMAP.md`, `r&d/tools/smoke.js`
+Reproduce: the repo is public and GitHub Pages serves all of `r&d/` too
+Fix: question for Aaron — make the repo private (Pages from a private repo needs a paid GitHub plan, or host elsewhere, see B-026), and/or strip these: generic wording for the stretch flags ("priority for upper-back posture"), "a new lifter" instead of Chelsea, move personal data files out of the repo. Anything already pushed stays in git history unless the history is rewritten.
 
 ## Sweeps
 
+- **2026-11-13, 0.99.1 — security and privacy** — 266 script-injection payloads
+  written into every user text field (sessions, notes, goals, events, custom
+  exercises, places, plans, coach notes), then smoke 56/56 plus every
+  session, goal, event and movement screen opened: nothing ran, 48 showed as
+  plain text. Coach replies go in as textContent. Network: only the app's own
+  files, api.anthropic.com, Google Drive and Google sign-in; no trackers or
+  CDNs. Drive token in memory only, revoked on disconnect, drive.file scope.
+  Erase everything clears IDB (photos, clips, undo copy) and localStorage.
+  No secrets in the current tree. New: B-022 to B-027. Detail:
+  `r&d/notes/security-audit-2026-11.md`.
 - **2026-11-13, 0.98.3** — module by module after the E17 split: core, kit,
   loading, training, stats, io, sync, rest, workout, coach, health read for
   logic; module-map --check, lint-scope, eslint, check-version and validators
@@ -77,6 +97,11 @@ IDs run on and are never reused. Severity:
 ## Fixed
 
 Most recent first: `- B-000 · title — 0.00.0`
+
+- B-025 · CSV export cells starting = + - @ run as formulas in Excel / Sheets — 0.99.2
+- B-024 · No notice of what each AI feature sends to Anthropic — 0.99.2
+- B-023 · AI key note says "sent nowhere but Anthropic" while Drive backup can include it — 0.99.2
+- B-022 · No Content-Security-Policy: one missed esc() could send the log or AI key anywhere — 0.99.2
 
 - B-009 · "Moved X places" can say no change after two tests on one day — 0.99.1
 - B-008 · Meet placing: ties don't go to the lighter lifter — 0.99.1

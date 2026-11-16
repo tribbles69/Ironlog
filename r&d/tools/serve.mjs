@@ -61,6 +61,9 @@ http.createServer((req, res) => {
   if (!file.startsWith(ROOT)) { res.writeHead(403); return res.end('forbidden'); }
   fs.readFile(file, (err, data) => {
     if (err) { res.writeHead(404); return res.end('not found'); }
+    /* The app's CSP blocks eval(), which the console loaders for smoke.js / baseline.js use.
+       Locally only, the served index.html gets 'unsafe-eval' added; the deployed file is untouched. */
+    if (p === '/index.html') data = Buffer.from(String(data).replace("script-src 'self'", "script-src 'self' 'unsafe-eval'"));
     res.writeHead(200, { 'Content-Type': TYPES[path.extname(file)] || 'application/octet-stream', 'Cache-Control': 'no-store' });
     res.end(data);
   });

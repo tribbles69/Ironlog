@@ -177,6 +177,8 @@ async function bootRescue(err) {
   };
   q(raw ? 'brSave' : 'brRetry').focus();
 }
+// <img data-drop-broken> removes itself if the file is missing (the CSP blocks inline onerror=)
+document.addEventListener('error', e => { const t = e.target; if (t && t.tagName === 'IMG' && t.hasAttribute('data-drop-broken')) t.remove(); }, true);
 function boot() { return bootApp().catch(bootRescue); }
 
 boot();

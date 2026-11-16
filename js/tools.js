@@ -296,7 +296,8 @@ function foodExportData() {
 function foodExportCsv(data) {
   const DQ = String.fromCharCode(34);   // the CSV quote, spelled out so no regex or literal needs escaping
   const q = v => {
-    const s = v == null ? '' : String(v);
+    let s = v == null ? '' : String(v);
+    if (typeof v === 'string' && /^'*[=+\-@\t\r]/.test(s) && !/^-?\d+(\.\d+)?(e[+-]?\d+)?$/i.test(s)) s = "'" + s;   // formula guard, as csvCell
     return [',', DQ, '\n', '\r'].some(c => s.includes(c)) ? DQ + s.split(DQ).join(DQ + DQ) + DQ : s;
   };
   const head = ['date', 'meal', 'name', 'serving', 'kcal', 'protein_g', 'carbs_g', 'fat_g', 'fibre_g', 'source'];

@@ -77,5 +77,15 @@ if (mods.length) {
     catch (e) { bad.push(`${f} does not parse:\n    ${String(e.stderr).split('\n').slice(0, 5).join('\n    ')}`); }
   }
 }
+// CSP: every inline <script> in index.html must have its sha256 in the policy, or the browser blocks it
+{
+  const csp = (html.match(/http-equiv="Content-Security-Policy" content="([^"]+)"/) || [])[1];
+  if (!csp) bad.push('index.html: no Content-Security-Policy meta');
+  else for (const m of html.matchAll(/<script>([\s\S]*?)<\/script>/g)) {
+    const h = 'sha256-' + require('crypto').createHash('sha256').update(m[1]).digest('base64');
+    if (!csp.includes(`'${h}'`)) bad.push(`index.html: inline script changed — put '${h}' in the CSP script-src`);
+  }
+  if (/\son[a-z]+="/.test(html) || mods.some(f => /\son[a-z]+="/.test(rd(f)))) bad.push('inline on*="" handler found — the CSP blocks those; attach the listener in JS');
+}
 if (bad.length) { console.error('Mismatch:\n  ' + bad.join('\n  ')); process.exit(1); }
 console.log(`Versions agree: ${vj.version} / ${vj.sw}` + (mods.length ? `; ${mods.length} modules parse, their imports resolve, ${loaded.size} loaded files are precached` : ''));

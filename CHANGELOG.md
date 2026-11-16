@@ -13,6 +13,12 @@ rather than guessed.
 
 ---
 
+## 0.99.2 — 13 Nov 2026
+- **Safer by design:** the app now tells your browser exactly which sites it may talk to (Anthropic and Google Drive, nothing else). Even if a bug ever let bad text through, it couldn't send your log or AI key anywhere.
+- **Settings → AI** has a "What gets sent to Anthropic" section listing what each AI feature sends, and what never leaves the phone.
+- The AI key note now says plainly that ticking "Include my AI key in the backup" saves it in your Drive file, and suggests setting a spend limit on your Anthropic account.
+- CSV exports can no longer run as formulas when opened in Excel or Google Sheets.
+
 ## 0.99.1 — 13 Nov 2026
 - **DOTS for women over 150 kg bodyweight** now uses the official cap, so the score isn't inflated (Stats, profile, meet day, coach and the points calculator).
 - **IPF age category goes by calendar year,** as the IPF does: you're in a category for the whole year you reach that age, not from your birthday.

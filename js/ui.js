@@ -145,7 +145,7 @@ export function openWelcome(step = 1) {
   if (step === 1) return modal({
     title: 'Welcome to Ironlog', sticky: true,
     body: `${dots}
-      <img src="skins/goblin-strip.webp" alt="" width="960" height="320" onerror="this.remove()" style="display:block;width:100%;height:auto;margin:0 0 4px">
+      <img src="skins/goblin-strip.webp" alt="" width="960" height="320" data-drop-broken style="display:block;width:100%;height:auto;margin:0 0 4px">
       <div class="sub" style="text-align:center;margin-bottom:12px">Start a goblin. Train your way to an orc.</div>
       <div class="wl-list">
         <div><b>Your log stays on this phone.</b> No account and no Ironlog server — nothing about your training leaves the device unless you send it.</div>
@@ -1126,7 +1126,17 @@ export function openSettings() {
       <div class="field"><label for="stKey">Anthropic API key</label>
         <div class="row" style="gap:6px"><input id="stKey" type="password" autocomplete="off" spellcheck="false" style="flex:1"
           value="${esc(aiKey())}" placeholder="sk-ant-…"><button class="btn sm ghost" id="stKeyShow" aria-pressed="false">Show</button></div>
-        <div class="sub" style="margin-top:4px">Kept on this phone only and sent nowhere but Anthropic. Clearing site data removes it. Get one at console.anthropic.com.</div>
+        <div class="sub" style="margin-top:4px">Kept on this phone and sent only to Anthropic — unless you tick "Include my AI key in the backup" under Google Drive. Clearing site data removes it. Get one at console.anthropic.com, and <b>set a monthly spend limit there</b>: the cap below only stops this app, not someone who has your key.</div>
+        <details class="sub" style="margin-top:6px"><summary style="cursor:pointer">What gets sent to Anthropic</summary>
+          <div style="margin-top:6px">Nothing is sent until you use an AI feature. Then only that one request goes, straight from this phone to Anthropic (Claude), on your key. Anthropic's API terms say they don't train on it.</div>
+          <ul style="margin:6px 0 0;padding-left:18px">
+            <li><b>Voice / typed set logging</b> — the words you said or typed for that set.</li>
+            <li><b>Coach questions</b> — your question, coach goal, experience and notes, your main lifts' estimated maxes now and two weeks ago, sets per muscle this week, RIR against target, check-in counts, your next event's name and date, your current block, and fitting-test results.</li>
+            <li><b>Coach tailoring</b> — goal, experience, session length, areas to go easy on, coach notes, the same lift and muscle figures and fitting-test results, and the plan being tailored.</li>
+            <li><b>Write a plan with Claude</b> — only the description you type.</li>
+          </ul>
+          <div style="margin-top:6px">Never sent: your name, bodyweight, health page, photos, videos, places or the rest of your log.</div>
+        </details>
         <div class="row" style="gap:8px;margin-top:6px;align-items:center"><button class="btn sm" id="stKeyTest">Check key</button><span class="sub" id="stKeyMsg" role="status"></span></div>
       </div>
       <div class="field"><label for="stAiCap">Monthly cap ($)</label>

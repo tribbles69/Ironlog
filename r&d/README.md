@@ -46,7 +46,7 @@ All run from the repo root.
 The build tools find their line by pattern (`tools/app-source.cjs`), so they
 follow the code if it moves to another file.
 
-Runtime smoke test, in the browser console on the running app:
+Runtime smoke test, in the browser console on the running app (served by `serve.mjs`, which adds `'unsafe-eval'` to the app's CSP locally so these `eval` loaders work — the deployed app blocks eval):
 `fetch('r&d/tools/smoke.js').then(r => r.text()).then(eval).then(smoke)`
 
 Click-through of every page and a CSV round trip, with a fingerprint to compare
