@@ -49,7 +49,11 @@ IDs run on and are never reused. Severity:
 
 ## Open
 
-(none)
+### B-022 · sev 3 · Modifier picker's Cancel still keeps the adopted tempo
+Found: 2026-11-16, 0.99.1, nightly sweep
+Where: js/movement.js `openModPicker` (calls `adoptTempo(e)` from js/training.js before the sheet opens)
+Reproduce: from the code. On an exercise with a typed modifier such as `x:3-0-1 tempo` (or tempo text in its notes) and no `e.tempo`, open Modifiers and tap Cancel. `adoptTempo` has already set `e.tempo` and removed the `x:` tag from `e.mods` on the live entry, and the next `save()` writes that, so Cancel did not cancel.
+Fix: run `adoptTempo` on a copy (or compute the adopted values into the local `sel` / `tp` only) and write to `e` in `#mdOk`.
 
 ## Needs Aaron
 
@@ -57,6 +61,17 @@ IDs run on and are never reused. Severity:
 
 ## Sweeps
 
+- **2026-11-16, 0.99.1** — nightly. Scope: everything changed since the last
+  sweep (the 0.99.1 diff to core, events, health, io, ui) plus main and movement
+  in full and ui's update, changelog and profile code. The rotation stopped at
+  ui; tomorrow carries on with main's neighbours, then wraps to state, kit,
+  exercises. Checks: check-version, lint-scope, validate-exercises and
+  validate-mobility pass; module-map --check passes on typescript 5 (the
+  latest, typescript 7, has no JS API and crashes the tool — use `typescript@5`);
+  smoke 56/56 with no page errors. The scripted click-through of every page
+  timed out here, so it was not completed. Probes on the 0.99.1 changes
+  (yearAge, ageCategory, DOTS clamp, meet tie-break) behaved as intended.
+  New: B-022.
 - **2026-11-13, 0.98.3** — module by module after the E17 split: core, kit,
   loading, training, stats, io, sync, rest, workout, coach, health read for
   logic; module-map --check, lint-scope, eslint, check-version and validators
