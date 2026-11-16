@@ -420,7 +420,7 @@ function viewHome() {
   const bwNow = bws.length ? bws[bws.length - 1].weight : 0;
   const bw7 = bws.filter(c => daysBetween(c.date, today()) <= 7);
   const bwDelta = bw7.length > 1 ? bwNow - bw7[0].weight : 0;
-  const sessions7 = S.workouts.filter(w => w.status === 'completed' && w.kind !== 'mobility' && daysBetween(w.date, today()) <= 7).length;
+  const sessions7 = S.workouts.filter(w => w.status === 'completed' && w.kind !== 'mobility' && daysBetween(w.date, today()) <= 6 && daysBetween(w.date, today()) >= 0).length;
 
   /* Today's session leads Home for anyone who is training with Ironlog — a
      workout in progress, something planned today, or a log with history
