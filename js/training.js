@@ -567,15 +567,20 @@ export function autoBlock(wo) {
   if (a) return a.kind.auto && (!wo.prog || !!(wo.block && !FIXED_BLOCK.test(wo.block)));
   return !!(wo.prog && wo.block && !FIXED_BLOCK.test(wo.block));
 }
-/* Whole numbers only: "stop 1 shy", "RIR 2", "@2" in the program note, else 2. */
-/* A target RIR written in an exercise note: "stop 2 shy", "RIR 2", or RPE
-   notation ("@8", "RPE 8"), which is 10 − RPE in reserve (B-014). */
+/* A target RIR written in an exercise note (B-030):
+   - "stop 2 shy", "RIR 2", or "@0" to "@4": reps in reserve, as before 0.99.0
+   - "@5" to "@10" and "RPE 5" to "RPE 10": RPE, read as 10 − RPE (B-014).
+     Half RPEs leave the extra half rep in reserve ("RPE 8.5" → RIR 2).
+   A number followed by reps, kg, lb or % is a load or rep count, not effort. */
 export function noteRir(notes) {
   const n = String(notes || '').toLowerCase();
   let m = n.match(/stop (\d) shy/) || n.match(/rir\s*(\d)/);
   if (m) return { rir: +m[1], text: m[0] };
-  m = n.match(/(?:@|rpe)\s*(\d{1,2}(?:\.\d)?)(?![\d%])/);
-  if (m && +m[1] >= 5 && +m[1] <= 10) return { rir: Math.round(10 - +m[1]), text: m[0] };
+  m = n.match(/(@|rpe)\s*(\d{1,2}(?:\.\d)?)(?![\d%.])(?!\s*(?:reps?|kg|lbs?|%))/);
+  if (!m) return null;
+  const v = +m[2];
+  if (m[1] === '@' && Number.isInteger(v) && v >= 0 && v <= 4) return { rir: v, text: m[0] };
+  if (v >= 5 && v <= 10) return { rir: Math.ceil(10 - v), text: m[0] };
   return null;
 }
 export function targetRirFor(e, blockRir) {

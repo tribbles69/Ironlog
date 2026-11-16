@@ -13,6 +13,16 @@ rather than guessed.
 
 ---
 
+## 0.99.3 — 16 Nov 2026
+- **Safer saving:** if the phone's main storage ever fails and the app saves to its backup spot instead, that save is now the one it opens next time, so recent sessions aren't lost. A save also only counts as done once the phone has really written it.
+- Closing Profile with ✕, tapping outside or pressing Escape now throws your changes away, the same as Cancel. Bodyweight can't be negative.
+- On the welcome screen, switching between kg and lb converts the bodyweight you typed instead of keeping the number.
+- "Last 7 days" on Home now means 7 days, not 8.
+- Notes like "@2" are read as 2 reps in reserve again; "@8" or "RPE 8" still mean RPE. "3x5 @ 8 reps" is no longer read as effort.
+- Cancel in the Modifiers sheet no longer keeps a tempo picked up from your note.
+- "Best hold" only pops up for a hold that beats today's earlier ones too.
+- Cancel on a confirm box no longer closes the sheet underneath it.
+
 ## 0.99.2 — 13 Nov 2026
 - **Safer by design:** the app now tells your browser exactly which sites it may talk to (Anthropic and Google Drive, nothing else). Even if a bug ever let bad text through, it couldn't send your log or AI key anywhere.
 - **Settings → AI** has a "What gets sent to Anthropic" section listing what each AI feature sends, and what never leaves the phone.

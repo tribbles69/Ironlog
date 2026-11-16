@@ -209,7 +209,12 @@ export function openWelcome(step = 1) {
       const segs = (sel, attr, set) => bg.querySelectorAll(`${sel} button`).forEach(b => b.onclick = () => {
         bg.querySelectorAll(`${sel} button`).forEach(x => x.classList.toggle('on', x === b)); set(b.dataset[attr]);
       });
-      segs('#wlUnits', 'u', u => { S.settings.units = u; $('#wlBwU', bg).textContent = u; });
+      segs('#wlUnits', 'u', u => {
+        // the number in the box goes with the unit (B-032): read it in the old unit, show it in the new one
+        const box = $('#wlBw', bg), v = +box.value, kg = v > 0 ? toKg(v) : 0;
+        S.settings.units = u; $('#wlBwU', bg).textContent = u;
+        if (kg) box.value = nice(dw(kg));
+      });
       segs('#wlSex', 's', s => { S.settings.sex = s; });
       const keep = () => { const v = +$('#wlBw', bg).value; if (v > 0) S.settings.bodyweight = toKg(v); save(); };
       $('#wlBack', bg).onclick = () => { keep(); closeModal(); openWelcome(1); };
@@ -415,7 +420,7 @@ function viewHome() {
   const bwNow = bws.length ? bws[bws.length - 1].weight : 0;
   const bw7 = bws.filter(c => daysBetween(c.date, today()) <= 7);
   const bwDelta = bw7.length > 1 ? bwNow - bw7[0].weight : 0;
-  const sessions7 = S.workouts.filter(w => w.status === 'completed' && w.kind !== 'mobility' && daysBetween(w.date, today()) <= 7).length;
+  const sessions7 = S.workouts.filter(w => w.status === 'completed' && w.kind !== 'mobility' && daysBetween(w.date, today()) <= 6 && daysBetween(w.date, today()) >= 0).length;
 
   /* Today's session leads Home for anyone who is training with Ironlog — a
      workout in progress, something planned today, or a log with history
@@ -1007,6 +1012,8 @@ export function openProfile(snap) {
     title: 'Profile',
     body: draw(),
     foot: `<button class="btn ghost" id="pfCancel">Cancel</button><button class="btn primary" id="pfSave">Save</button>`,
+    // ✕, backdrop and Escape cancel too (B-029). Save and the redraw use closeModal, which skips this.
+    onClose: () => { Object.assign(st, original); render(); },
     onOpen(bg) {
       const collect = () => {
         st.handle = $('#pfHandle', bg).value.trim().slice(0, 32);
@@ -1014,7 +1021,7 @@ export function openProfile(snap) {
         st.dob = $('#pfDob', bg).value || '';
         st.heightCm = Math.max(0, Math.min(260, +$('#pfHeight', bg).value || 0));
         const raw = $('#pfBw', bg).value;
-        st.bodyweight = raw === '' ? 0 : toKg(+raw);
+        st.bodyweight = raw === '' ? 0 : Math.max(0, Math.min(400, toKg(+raw) || 0));   // clamped like height (B-034)
         st.activity = $('#pfAct', bg).value;
       };
       const re = () => { collect(); closeModal(); openProfile(original); };

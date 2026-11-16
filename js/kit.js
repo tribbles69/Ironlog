@@ -145,9 +145,10 @@ export function confirmDlg(msg, onYes, yesLabel = 'Delete', onNo) {
   modal({
     title: 'Are you sure?',
     body: `<p style="margin:0;color:var(--dim)">${esc(msg)}</p>`,
-    foot: `<button class="btn ghost" id="cfmNo" data-close>Cancel</button><button class="btn danger" id="cfmYes">${esc(yesLabel)}</button>`,
+    foot: `<button class="btn ghost" id="cfmNo"${onNo ? '' : ' data-close'}>Cancel</button><button class="btn danger" id="cfmYes">${esc(yesLabel)}</button>`,
     onOpen: bg => {
       $('#cfmYes', bg).onclick = () => { closeModal(); onYes(); };
+      // With onNo, Cancel has no data-close: the backdrop handler would close the sheet beneath too (B-028)
       if (onNo) $('#cfmNo', bg).onclick = () => { closeModal(); onNo(); };
     },
   });

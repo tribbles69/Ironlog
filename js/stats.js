@@ -911,7 +911,7 @@ export function srcChip(w) {
 }
 
 export function last7() {
-  return S.checkins.filter(c => daysBetween(c.date, today()) <= 7 && daysBetween(c.date, today()) >= 0);
+  return S.checkins.filter(c => daysBetween(c.date, today()) <= 6 && daysBetween(c.date, today()) >= 0);   // today and the six before (B-033)
 }
 export function avg(a) { return a.length ? a.reduce((x, y) => x + y, 0) / a.length : 0; }
 export function streak() {
