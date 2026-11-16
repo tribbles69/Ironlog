@@ -1007,6 +1007,8 @@ export function openProfile(snap) {
     title: 'Profile',
     body: draw(),
     foot: `<button class="btn ghost" id="pfCancel">Cancel</button><button class="btn primary" id="pfSave">Save</button>`,
+    // ✕, backdrop and Escape cancel too (B-029). Save and the redraw use closeModal, which skips this.
+    onClose: () => { Object.assign(st, original); render(); },
     onOpen(bg) {
       const collect = () => {
         st.handle = $('#pfHandle', bg).value.trim().slice(0, 32);
