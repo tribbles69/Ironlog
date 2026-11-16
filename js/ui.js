@@ -1016,7 +1016,7 @@ export function openProfile(snap) {
         st.dob = $('#pfDob', bg).value || '';
         st.heightCm = Math.max(0, Math.min(260, +$('#pfHeight', bg).value || 0));
         const raw = $('#pfBw', bg).value;
-        st.bodyweight = raw === '' ? 0 : toKg(+raw);
+        st.bodyweight = raw === '' ? 0 : Math.max(0, Math.min(400, toKg(+raw) || 0));   // clamped like height (B-034)
         st.activity = $('#pfAct', bg).value;
       };
       const re = () => { collect(); closeModal(); openProfile(original); };
