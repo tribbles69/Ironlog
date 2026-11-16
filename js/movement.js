@@ -163,9 +163,11 @@ function demoNotesBind(bg, m) {
   };
 }
 export function openModPicker(e, after) {
-  adoptTempo(e);
-  let sel = new Set(e.mods || []);
-  let tp = e.tempo ? tempoParts(e.tempo) : ['', '', '', ''];
+  /* Typed tempo is adopted on a copy: Done writes it, Cancel leaves e alone (B-037). */
+  const draft = { tempo: e.tempo, mods: [...(e.mods || [])], notes: e.notes };
+  adoptTempo(draft);
+  let sel = new Set(draft.mods);
+  let tp = draft.tempo ? tempoParts(draft.tempo) : ['', '', '', ''];
   let chainD = e.chainKg > 0 ? nice(dw(e.chainKg)) : '', bandD = e.bandKg > 0 ? nice(dw(e.bandKg)) : '';
   const draw = () => {
     const vocab = modVocab();
