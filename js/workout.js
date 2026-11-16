@@ -1834,6 +1834,12 @@ function beatsSession(peers, w, r, rpe) {
   if (!(w > 0)) return peers.filter(o => !(o.w > 0)).every(o => r > (o.r || 0));
   return peers.filter(o => o.w > 0 && o.r > 0).every(o => e1rm(w, r, rpe) > e1rm(o.w, o.r, o.rpe));
 }
+/* A hold beats today's earlier holds unless one was as long at the same or a
+   heavier weight (B-031). */
+function holdBeatsSession(peers, w, sec) {
+  const kg = w > 0 ? w : 0;
+  return peers.filter(o => o.sec > 0).every(o => !((o.w > 0 ? o.w : 0) >= kg && o.sec >= sec));
+}
 function toggleSetDone(ei, si) {
   const a = S.active;
   const ex = a && a.exercises[ei];
@@ -1877,7 +1883,7 @@ function toggleSetDone(ei, si) {
     s.done = true;
     Cue.logged();
     if (timed) {
-      if (isPRSet(s) && (!recs.n ? !peers.length : holdBeats(recs, s.w, s.sec))) {
+      if (isPRSet(s) && (!recs.n ? !peers.length : holdBeats(recs, s.w, s.sec) && holdBeatsSession(peers, s.w, s.sec))) {
         toast(recs.n ? `★ Best hold — ${exFull(ex)} ${holdLabel(s)}` : `★ First ${exFull(ex)} logged`, 'gold');
       }
     } else if (isPRSet(s) && (!st ? !peers.length : beatsBest(st, s.w, s.r, s.rpe) && beatsSession(peers, s.w, s.r, s.rpe))) {
