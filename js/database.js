@@ -39,7 +39,10 @@ export function idb(mode, fn) {
   return openDB().then(db => new Promise((res, rej) => {
     const tx = db.transaction(DB_STORE, mode);
     const r = fn(tx.objectStore(DB_STORE));
-    r.onsuccess = () => res(r.result);
+    /* A write only counts once the transaction commits (B-036): a put can
+       succeed and the commit still abort (quota, the tab killed). */
+    if (mode === 'readwrite') tx.oncomplete = () => res(r.result);
+    else r.onsuccess = () => res(r.result);
     r.onerror = () => rej(r.error);
     tx.onabort = () => rej(tx.error || new Error('aborted'));
   }));
@@ -52,7 +55,17 @@ export function idb(mode, fn) {
    and boot shows the rescue screen. Skins, photos and clips keep the old
    answer of "nothing there". A browser with no IndexedDB at all still runs
    on localStorage as before. */
+/* A localStorage copy is only written when IndexedDB failed, and is cleared
+   by the next IndexedDB write that lands (B-035). So a copy marked as a
+   fallback is newer than whatever IndexedDB holds, and wins at read. */
+const fallbackMark = k => `${k}.fallback`;
 export async function storeGet(k, strict) {
+  try {
+    if (localStorage.getItem(fallbackMark(k))) {
+      const ls = localStorage.getItem(k);
+      if (ls != null) return ls;
+    }
+  } catch (e) { /* blocked: fall through to IndexedDB */ }
   let failed = null;
   try {
     const v = await idb('readonly', st => st.get(k));
@@ -66,9 +79,12 @@ export async function storeGet(k, strict) {
 
 export async function storePut(k, v) {
   let ok = false;
-  try { await idb('readwrite', st => st.put(v, k)); ok = true; }
-  catch (e) {
-    try { localStorage.setItem(k, v); ok = true; }   // only mirror when IDB is down
+  try {
+    await idb('readwrite', st => st.put(v, k)); ok = true;
+    try { if (localStorage.getItem(fallbackMark(k))) { localStorage.removeItem(k); localStorage.removeItem(fallbackMark(k)); } }
+    catch (e) { /* blocked: nothing to clear */ }
+  } catch (e) {
+    try { localStorage.setItem(k, v); localStorage.setItem(fallbackMark(k), String(Date.now())); ok = true; }   // only mirror when IDB is down
     catch (e2) { ok = false; }
   }
   STORAGE_OK = ok;
