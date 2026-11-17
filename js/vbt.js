@@ -6,7 +6,7 @@ import { exFull, exKey, exName, isPRSet, isWarm } from './exercises.js';
 import { SERIES_COLORS, a11yPass, clipMime, clipRecorder, clipVideoEl, closeAllModals, closeModal, confirmDlg, modal,
   render, toast, why } from './kit.js';
 import { loadFor, roundLoadFor } from './loading.js';
-import { VBT_MIN_ROM, vbtDropBlips, vbtEstimateSet, vbtIntegrate, vbtSummary, vbtTiltMotion } from '../slew-reps.js';
+import { VBT_MIN_ROM, vbtDropBlips, vbtEstimateSet, vbtIntegrate, vbtLoss, vbtSummary, vbtTiltMotion } from '../slew-reps.js';
 import { S } from './state.js';
 import { bust, statsFor } from './stats.js';
 import { activeBlock, autoE1, lvDay, lvFit, lvSync, mvtFor, setRefText, slewLiftFor, targetRirFor, vbtEst, vbtMissed,
@@ -1266,7 +1266,8 @@ export function openCalibrate(ei) {
         if (c.fail && c.fail.place !== 'pocket') {
           if (c.fail.v0) addMvtObservation(liftId, c.fail.v0);
           const fp = c.fail.reps.length >= 3 ? Slew.fitProfile(c.fail.reps, 10, slewProfile(liftId)) : null;
-          if (fp && fp.vlF) saveSlewProfile(liftId, { vlF: fp.vlF, vlFCal: true, slope: fp.slope, cal: Date.now() });
+          const vlF = +vbtLoss(c.fail.reps).toFixed(3);   // the same velocity loss the estimate is compared with (B-049)
+          if (fp && vlF > 0) saveSlewProfile(liftId, { vlF, vlFCal: true, slope: fp.slope, cal: Date.now() });
         }
         delete ex.cal;
         save(); closeAllModals(); render();

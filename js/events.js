@@ -256,8 +256,11 @@ const PARA_CLASSES = {
   male: ['49', '54', '59', '65', '72', '80', '88', '97', '107', '107+'],
   female: ['41', '45', '50', '55', '61', '67', '73', '79', '86', '86+'],
 };
-/* Para attempts go up in whole kilograms (0.5 only for a record attempt). */
-function attemptRound(m) { return eventType(m).para ? (kg => Math.round(kg)) : roundBar; }
+/* Para attempts go up in whole kilograms (0.5 only for a record attempt).
+   Everyone else's go up in 2.5 kg whatever unit the lifter reads in: the
+   platform is loaded in kilos, and rounding to 5 lb gave a lb lifter an
+   opener of 395 lb = 179.17 kg, which no meet loads (B-053). */
+function attemptRound(m) { return eventType(m).para ? (kg => Math.round(kg)) : (kg => Math.round(kg / 2.5) * 2.5); }
 function attemptsFor(m, lift) {
   const roundBar = attemptRound(m);   // shadows the plate rounding for a para event
   const slot = typeof lift === 'string' ? lift : lift.slot;

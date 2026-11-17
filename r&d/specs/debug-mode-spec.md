@@ -39,7 +39,7 @@ report or a Claude chat.
 
 | Kind | Calculation | Where |
 |---|---|---|
-| `e1` | Estimated 1RM: Epley, reps + RIR, capped at 12 | Movement page best, rankings rows, session-complete PRs, Tools → e1RM |
+| `e1` | Estimated 1RM: Epley, reps + RIR, capped at 12. A record's figure (fourth argument true) counts at most 2 RIR (`e1pr`, 0.99.4); `'plan'` is the planning figure, reps to 30; a fifth argument carries the bodyweight term for pull-ups and dips (0.99.5) | Movement page best, rankings rows, session-complete PRs, Tools → e1RM |
 | `pr` | PR detection: the PR pool key (`exKey` → `prKey` modifiers), the session's best set, the best before that date, the comparison | Session-complete PRs, the movement page PR timeline |
 | `rank` | Strength tier and score: bodyweight and its source, best e1RM, ratio, the `STD` row and female factor, each tier mark in kg, the 0–100 score sum | Stats → Rankings rows |
 | `rir` | RIR ↔ RPE: `RIR = 10 − RPE`, and what effort maths uses | Tools → RPE ↔ RIR table |

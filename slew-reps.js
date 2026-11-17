@@ -116,10 +116,23 @@ export function vbtDropBlips(reps0, liftMinRom) {
   const s = reps.map(r => r.rom).sort((x, y) => x - y), med = s[Math.floor(s.length / 2)];
   return reps.filter(r => r.rom >= 0.6 * med).map((r, i) => ({ ...r, index: i + 1 }));
 }
+/* Velocity loss, one definition (B-049): from the fastest of the first three
+   reps to the last rep, as a fraction. The card used best rep → last, the
+   RIR estimate the median of the first three → last, and the lift's
+   loss-at-failure best → last again, so one set showed "50%" and "39%" at
+   once and a set to failure replayed as RIR 1. The research convention is
+   the fastest rep, which is normally the first; keeping to the first three
+   stops one mis-tracked rep late in the set from becoming the reference. */
+export function vbtLoss(vs) {
+  const v = (vs || []).filter(x => Number.isFinite(x));
+  if (!v.length) return 0;
+  const ref = Math.max(...v.slice(0, 3)), last = v[v.length - 1];
+  return ref > 0 ? Math.max(0, (ref - last) / ref) : 0;
+}
 export function vbtSummary(reps) {
   if (!reps.length) return { repCount: 0, bestMeanVelocity: 0, velocityLoss: 0, confidence: 0 };
-  const best = Math.max(...reps.map(r => r.concentric.meanVelocity)), last = reps[reps.length - 1].concentric.meanVelocity;
-  return { repCount: reps.length, bestMeanVelocity: best, velocityLoss: best > 0 ? (best - last) / best * 100 : 0,
+  const best = Math.max(...reps.map(r => r.concentric.meanVelocity));
+  return { repCount: reps.length, bestMeanVelocity: best, velocityLoss: vbtLoss(reps.map(r => r.concentric.meanVelocity)) * 100,
     confidence: reps.reduce((x, r) => x + r.quality.confidence, 0) / reps.length };
 }
 
@@ -160,6 +173,8 @@ const VBT_RIR = { minReps: 3, minLoss: 0.08, shape: 0.75, cap: 6, recent: 5, fai
 export function vbtEstimateSet(reps, profile, failure) {
   let base = Slew.estimateSet(reps, profile, failure);
   if (!base) return null;
+  const lossNow = vbtLoss(reps.map(r => r.concentric.meanVelocity));   // Slew's own figure is from the median of the first three
+  base = { ...base, velocityLoss: lossNow };
   const observed = e => e.method === 'observed-failure' || e.method === 'observed-grind';
   /* A missed rep or near-stall is only believed when the set had slowed down
      as well. Putting the bar down after an easy set reads as a failed attempt
@@ -168,7 +183,7 @@ export function vbtEstimateSet(reps, profile, failure) {
      or two has no slow-down to check, so the evidence stands. */
   let doubted = false;
   if (observed(base) && reps.length >= VBT_RIR.minReps && !(base.velocityLoss >= VBT_RIR.failLoss)) {
-    base = Slew.estimateSet(reps, profile, undefined) || base;
+    base = { ...(Slew.estimateSet(reps, profile, undefined) || base), velocityLoss: lossNow };
     doubted = !observed(base);
   }
   if (observed(base)) return { ...base, fill: true };
@@ -177,6 +192,14 @@ export function vbtEstimateSet(reps, profile, failure) {
     because: why + (doubted ? ' Something at the end looked like a missed rep, but the set had not slowed down, so it was left out.' : '') });
   if (n < VBT_RIR.minReps) return none('Too few reps to read effort from bar speed — it needs at least three to see you slowing down.');
   const loss = base.velocityLoss, vlF = profile.vlF > 0 ? profile.vlF : 0.45;
+  /* Already at or under the speed this lifter fails at (B-042). A heavy set
+     starts near that speed and loses little, so velocity loss alone read a
+     grinding triple as "6+ in reserve" (0.23 / 0.23 / 0.22 / 0.20 against a
+     limit of 0.25). Nothing can be slower than the limit and have reps left:
+     0 to 1. Shown, not written into the set — the limit is itself an average
+     of a few readings. */
+  if (profile.v0Observed > 0 && last <= profile.v0Observed) return { ...base, rir: 0.5, rpe: 9.5, spread: 1, method: 'at-limit', fill: false,
+    because: `Your last rep moved at ${last.toFixed(2)} m/s, at or under the ${profile.v0Observed.toFixed(2)} m/s you have failed at before, so there was little or nothing left.` };
   if (!(loss >= VBT_RIR.minLoss)) return none(`Your bar speed barely dropped across this set (${Math.round(Math.max(0, loss) * 100)}%), so there was plenty in reserve — more than bar speed can put a number on.`);
   const done = Math.max(0.05, Math.min(1, (loss / vlF) ** VBT_RIR.shape));
   let rir = n * (1 - done) / done, method = 'velocity-loss';

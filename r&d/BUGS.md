@@ -49,9 +49,30 @@ IDs run on and are never reused. Severity:
 
 ## Open
 
-(none)
+B-055 and B-056 are from the maths audit of 2026-11-16 (`r&d/notes/maths-audit-2026-11.md`).
+They are in PR #86's branch, which predates the module split, not in main: fix them
+when that work is rebuilt or before it merges. The rest of the audit's list was
+fixed in 0.99.5.
+
+### B-055 · sev 2 · PR #86 (not merged): goal projection measures the gap from the wrong number
+Found: 2026-11-16, branch `e16-honest-ledger` @ a4c0d30, maths audit
+Where: index.html on that branch, `projectGoal` (gap = target − `goalCurrent`, rate from the last 26 weeks of per-session best e1RM)
+Reproduce: from the code. `goalCurrent` is a true single if one was ever logged, else the all-time best e1RM; the rate is the slope of recent estimates. (a) A 150 single two years ago, estimates now 170 → 179 over six weeks, target 200: the projection divides 50 kg by the rate and says 233 days; the line is already at 179, which is 98 days. (b) Best-ever 180 from last year, coming back 140 → 155, target 185: it divides 5 kg and says 14 days; from the line it is 84.
+Fix: project from the fitted line's value today to the target (same units as the slope), and show the goal's own "current" beside it. Fix before merging.
+
+### B-056 · sev 3 · PR #86 (not merged): the projection's date range is narrower than it reads
+Found: 2026-11-16, branch `e16-honest-ledger` @ a4c0d30, maths audit
+Where: index.html on that branch, `projectGoal`, `projLine`
+Reproduce: from the code. The slope and its standard error are right (hand check: 100, 101, 103, 104 at two-week gaps gives 0.1000 ± 0.0101 kg a day, 54 to 67 days for 6 kg). But ±1 standard error on four points covers about 58% of cases (a 95% range needs ±4.3), a perfectly straight four points gives a range of one day, and the dates count from today even when the last session was ten weeks ago.
+Fix: widen by the t value for n − 2 (or say "about two times in three" and use 1.32 at n = 4), and count from the last session's date.
 
 ## Needs Aaron
+
+### B-057 · sev 2 · Zone 2 moves about 20 bpm when a resting heart rate is entered
+Found: 2026-11-16, 0.99.3, maths audit
+Where: js/health.js `HR_ZONES`, `zoneBpm`
+Reproduce: from the code. Max 187 (Tanaka at 30): "Zone 2 · easy" is 112–131 with no resting HR and 136–149 with a resting HR of 60. The same 60–70% is applied to max HR in one case and to heart-rate reserve in the other, and those are different intensities: 136–149 is 73–80% of max. ACSM's table puts 64–76% of max level with 40–59% of reserve (moderate), and 60–89% of reserve as vigorous.
+Fix: question for Aaron — which Zone 2 is meant? Either keep 60–70% of max and use 40–59%-style reserve bands when a resting HR is known, or keep the Karvonen 60–70% and raise the %-of-max bands to match. Both are in common use; the app shouldn't switch between them on an optional field.
 
 ### B-026 · sev 2 · Ironlog shares its storage with every other site on tribbles69.github.io
 Found: 2026-11-13, 0.99.1, security and privacy check
@@ -67,6 +88,35 @@ Fix: question for Aaron — make the repo private (Pages from a private repo nee
 
 ## Sweeps
 
+- **2026-11-17, 0.99.3 (nightly)** — rotation: the 11-16 run stopped at
+  database line 140, so tonight the **rest of database** (Drive calls, merge,
+  save / flush, backup nudge), **exercises** (muscle shares, `leafMuscles`,
+  option lists, leaf and set helpers; the demo-drawing code and the bundled
+  catalogue data were not read) and **stats** (standards, recovery,
+  weekly sets, `statsFor`, PRs, plausibility, goals) were read. Also read every
+  js change since the last sweep: the 0.99.3 fixes B-028 to B-037 (`confirmDlg`,
+  Profile cancel, Welcome unit switch, bodyweight clamp, modifier picker,
+  storage fallback, hold toast, `noteRir`, last-7 tiles). Tomorrow carries on
+  with **ai**, then **loading**, **training**. Checks: check-version,
+  lint-scope, validate-exercises, validate-mobility and module-map --check
+  (TypeScript 5.6.3 in a scratch folder) pass; smoke 56/56, no page errors
+  (headless Chromium). The click-through of every page was not run tonight.
+  Probes: all 283 catalogue movements give muscle shares that sum to 1, except
+  hip adduction and five neck movements, which have none (the map has no such
+  muscle, so they never count toward weekly sets or recovery; not logged as a
+  bug); every STD lift has hand-set shares. Not logged, noted: `fatigueMap`
+  drops a completed session that has no start/end time and is dated today
+  before 12:00 (`woTime` falls back to noon). New: B-059.
+- **2026-11-16, 0.99.3 — maths audit** — every formula that tells a lifter
+  what to lift or how they rank, against its source, with numeric probes run
+  on the shipped modules in Node: e1RM, autoregulation, PRs, bar speed, the
+  goal projection on the unmerged PR #86, DOTS / IPF GL, the standards table,
+  the fitting test, calipers, FFMI, TDEE and heart-rate zones. Matched their
+  sources: DOTS, IPF GL, Jackson–Pollock 3 and 7, Durnin–Womersley, Siri,
+  Mifflin-St Jeor, Katch–McArdle, Butt, normalised FFMI, Tanaka, Karvonen,
+  the balance norms, the load-velocity fit and the projection's least squares.
+  No Wilks in the app. New: B-038 to B-058 (seven sev 2, thirteen sev 3, one
+  for Aaron; B-058 decided the same day). Nothing fixed. Detail: `r&d/notes/maths-audit-2026-11.md`.
 - **2026-11-16, 0.99.1 (nightly)** — rotation: kit's remainder, exercises and
   database were due; tonight **database** (storage section) was read in
   depth, plus movement again (modifier picker). Stopped at: database line 140,
@@ -135,6 +185,25 @@ Fix: question for Aaron — make the repo private (Pages from a private repo nee
 
 Most recent first: `- B-000 · title — 0.00.0`
 
+- B-059 · A note's "RPE 8." or "@8." with a full stop after the number is not read as a target RIR — 0.99.5
+- B-054 · `loadFor` doesn't cap the reserve at 5 as `e1rm` does — 0.99.5
+- B-053 · Meet attempts for a lb user round to 5 lb, not 2.5 kg — 0.99.5
+- B-052 · Jackson–Pollock body fat goes down as skinfolds go up past the equation's range — 0.99.5 (held at the turning point and flagged)
+- B-051 · Rankings and "best" count backfilled sets, and the comment says they don't — 0.99.5 (comment corrected; EST chip when the best set is a backfill)
+- B-050 · A hold that is heavier and longer than an old record is not a PR if a heavier hold exists — 0.99.5
+- B-049 · Bar speed uses two different "velocity loss" figures — 0.99.5 (fastest of the first three reps → last, in the card, the estimate and calibration (`vbtLoss`))
+- B-048 · Target RIR from a note: common spellings missed, tempo and pause read as RIR — 0.99.5 ("rpe 9-10" still reads RIR 1, on purpose)
+- B-047 · Autoregulated targets round to 2.5 kg whatever the place can load — 0.99.5 (snaps to the lifter's own plate list only; the built-in list is unchanged)
+- B-046 · Set-to-set adjustment can't move a light set, and overshoots its 7.5% cap just above that — 0.99.5 (the cap, or one plate step when a step is bigger)
+- B-045 · The same lift entered twice in a session gives two PR rows — 0.99.5
+- B-044 · Assisted pull-up on a machine: more assistance reads as a PR — 0.99.5 (estimate runs on bodyweight − help; needs a bodyweight on file)
+- B-043 · Weighted pull-ups and dips: e1RM, PRs and targets use the added weight alone — 0.99.5 (estimate runs on bodyweight + added (`bodyLoad`, `recOf`); these lifts are left out of autoregulation)
+- B-042 · Bar-speed RIR says "6+" on a set that ended below the lifter's own failure speed — 0.99.5 (RIR 0–1, shown not filled)
+- B-041 · TDEE tool treats a blank age as age 0 — 0.99.5
+- B-040 · Rankings judge dumbbell lifts on the barbell row, and half the standards table is unreachable — 0.99.5 (`stdRowFor` maps the leaf to a row; 37 of 47 rows reachable; high-handle trap bar ÷ 1.15)
+- B-039 · More reps at the same weight is not a PR past 12 reps — 0.99.5 (ties on e1RM go to the set worth more reps (`recGt`))
+- B-038 · Autoregulation can't move a set once reps + RIR reach 12 — 0.99.5 (planning counts reps + RIR to 30 (`e1plan`, `loadFor`); records keep 12)
+- B-058 · A lighter, easier set can be a PR — 0.99.4 (records count at most 2 RIR: `e1pr`)
 - B-037 · Modifier picker's Cancel still keeps the adopted tempo — 0.99.3
 - B-036 · `idb()` reports a write as done before the transaction commits — 0.99.3
 - B-035 · A save that fell back to localStorage is ignored on the next open — 0.99.3

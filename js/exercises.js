@@ -299,6 +299,20 @@ export function setVolume(leaf, s) {
    product for an old entry without one. Every volume figure goes through this
    so the summary, stats and share card agree (B-010). */
 export function entryVolume(e, s) { return e && e.leaf ? setVolume(e.leaf, s) : (s.w || 0) * (s.r || 0); }
+/* Lifts where the whole body hangs off the working muscles, so the logged
+   number is only part of the load (B-043, B-044). +1: the number is ADDED to
+   bodyweight (a pull-up or dip with plates; rings and plain bodyweight are the
+   same lift). −1: the number is HELP taken off it (an assisted pull-up
+   machine). 0: everything else — including dips on a machine, which may be a
+   seated dip machine, and bands, whose "weight" isn't a load. Lifts that move
+   only part of the body (push-ups, rows, back extensions) are left alone. */
+const BODY_LIFTS = new Set(['pull-up', 'chin-up', 'triceps-dip', 'chest-dip']);
+export function bodyLoad(leaf) {
+  if (!leaf || !BODY_LIFTS.has(leaf.movement)) return 0;
+  if (leaf.equipment === 'plate' || leaf.equipment === 'bodyweight' || leaf.equipment === 'rings') return 1;
+  if (leaf.equipment === 'machine' && (leaf.movement === 'pull-up' || leaf.movement === 'chin-up')) return -1;
+  return 0;
+}
 export function metricFor(leaf) { const m = movementById(leaf.movement); return (m && m.metric) || 'reps_weight'; }
 /* Ten movements are logged by duration, not reps (spec §6): planks, dead hangs,
    carries, the sled, and the cardio machines. A timed set records `sec` and
@@ -519,14 +533,16 @@ function bestHold(key, kg) {
   const r = holdRecords(key);
   return kg == null ? r.best : (r.byWeight[kg > 0 ? kg : 0] || 0);
 }
-/* Does a hold beat the history? Longer than the best at the same weight, or
-   the first hold at a load heavier than any held before. A first hold at a
-   lighter weight is just a hold. */
+/* Does a hold beat the history? Yes unless some earlier hold was at least as
+   heavy AND at least as long — the rule the in-session check already used.
+   It was "longer at this exact weight, or heavier than anything", so 15 kg
+   for 60 s after 10 kg / 30 s and 20 kg / 10 s was no record though it beat
+   the first on both counts (B-050). A first hold at a lighter weight still
+   has to outlast every hold at that weight or more. */
 export function holdBeats(recs, kg, sec) {
   if (!recs.n || !(sec > 0)) return false;
   const w = kg > 0 ? kg : 0;
-  const at = recs.byWeight[w];
-  return at ? sec > at : w > recs.heaviest;
+  return !Object.entries(recs.byWeight).some(([k, best]) => +k >= w - 1e-9 && best >= sec);
 }
 
 

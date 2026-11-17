@@ -66,7 +66,9 @@ When a working set of an `e.auto` exercise is ticked **with RIR logged**:
 
 - day e1 = median e1 of the RIR-logged sets done so far this session;
 - each remaining undone set still marked `auto` is re-set from it, with the
-  plan's ratio, the change capped at ±7.5 % per step;
+  plan's ratio, the change capped at ±7.5 % per step — or one plate step where a
+  step is bigger than that and the uncapped target rounds to a different weight
+  (B-046, 0.99.5);
 - a toast says what moved ("Next sets → 140 kg · last set RIR 3, target 1").
 
 Typing a weight into a pending set clears its `auto` — a manual weight is
@@ -123,3 +125,16 @@ The Hunchback Hercules program is built this way by
 RIR follows the doc's RPE anchors (volume 8 → RIR 2, strength 9 → RIR 1);
 back-off RIR is worked out from the doc's top/back-off gap at build time, capped
 at 4; accessories RIR 2; AMRAPs stop 1 shy.
+
+## 0.99.5 (maths audit)
+
+- **Two estimates.** Planning (`e1plan`, and its inverse `loadFor`) counts reps
+  + RIR up to 30; capped at 12 a high-rep set could never move (B-038). Records
+  (`e1rm` / `e1pr`: best e1RM, PRs, rankings) still stop at 12 reps and count at
+  most 2 RIR (B-058).
+- **Target loads** on a bar snap to the lifter's own plate list when there is
+  one (B-047); the built-in list is not used for this.
+- **Pull-ups, chin-ups and dips** with plates, and assisted pull-ups, are left
+  out of autoregulation: the logged number is only part of the load (B-043).
+  Their PRs work from bodyweight ± that number.
+- `loadFor` caps the reserve at 5, as the estimate does (B-054).

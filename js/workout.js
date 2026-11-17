@@ -20,8 +20,8 @@ import { openAxisPicker, openAxisPickerFor, openFeel, openModPicker, openRolePic
 import { pickExercise } from './picker.js';
 import { adjustRest, paintRest, restBarHtml, startRest, stopRest } from './rest.js';
 import { S } from './state.js';
-import { beatsBest, bestSetOf, bust, historyFor, plausDlg, plausListDlg, plausibility, prsFor, setSummary, srcChip,
-  statsFor, totalVolume } from './stats.js';
+import { beatsBest, bestSetOf, bodyFor, bust, historyFor, plausDlg, plausListDlg, plausibility, prsFor, recGt, recOf,
+  setSummary, srcChip, statsFor, totalVolume } from './stats.js';
 import { autoSync, finishBackup } from './sync.js';
 import { CARD, MISS_REASONS, TEMPO_WORDS, activeBlock, adoptRange, adoptTempo, applyAuto, autoAdjust, autoBlock,
   e1Changes, installProgram, intensityOf, lastSession, loadProgram, lvDay, missLabel, missText, missesOn, mvtFor,
@@ -731,8 +731,8 @@ function exerciseCard(e, ei) {
   const bestE1 = st ? st.best.e1 : 0;
 
   // did anything today beat the historical PR?
-  const todayBest = Math.max(0, ...e.sets.filter(s => s.done && isPRSet(s) && s.w && s.r).map(s => e1rm(s.w, s.r, s.rpe)));
-  const beatE1 = st && todayBest > bestE1;
+  const todayBest = Math.max(0, ...e.sets.filter(s => s.done && isPRSet(s) && s.w && s.r).map(s => recOf(s.w, s.r, s.rpe, st && st.body).e1));
+  const beatE1 = st && e.sets.some(s => s.done && isPRSet(s) && s.w > 0 && s.r > 0 && beatsBest(st, s.w, s.r, s.rpe));
 
   const timed = isTimed(e);
   const isoE = isIso(e);
@@ -926,15 +926,18 @@ export function finishWorkout(force) {
 
   harvestLvp(logged);   // today's warm-up profiles join the stored ones (D1)
   // PRs — compare against history BEFORE this workout is saved
-  const prs = [];
+  const prs = [], prSeen = new Set();
   logged.forEach(e => {
     prs.push(...shapePRs(e, null, a.id));   // holds, carries, races, caps, series: their own records
     if (!inRepsPool(e)) return;             // none of those is an e1RM
+    if (prSeen.has(exKey(e))) return;       // one row per lift, from every entry of it (B-045)
+    prSeen.add(exKey(e));
     const st = statsFor(exKey(e));
-    const working = e.sets.filter(s => isPRSet(s) && s.r > 0);
+    const working = logged.filter(x => exKey(x) === exKey(e) && inRepsPool(x)).flatMap(x => x.sets).filter(s => isPRSet(s) && s.r > 0);
     if (!working.length) return;
-    const best = bestSetOf(working);
-    const e1 = e1rm(best.w, best.r, best.rpe);
+    const B = st ? st.body : bodyFor(exKey(e));
+    const best = bestSetOf(working, B);
+    const e1 = recOf(best.w, best.r, best.rpe, B).e1;
     if (!st) prs.push({ name: exName(e), key: exKey(e), w: best.w, r: best.r, e1, first: true });
     else if (beatsBest(st, best.w, best.r, best.rpe)) prs.push({ name: exName(e), key: exKey(e), w: best.w, r: best.r, e1, prev: st.best.e1, prevReps: st.bestBw ? st.bestBw.r : 0 });
   });
@@ -1113,7 +1116,7 @@ export function fullCardCanvas(wo) {
     const working = sets.filter(s => isWorking(s));
     const vol = working.reduce((a, s) => a + entryVolume(e, s), 0);
     const scored = inRepsPool(e) ? working.filter(s => isPRSet(s) && s.r > 0) : [];
-    const prSet = prKeys.has(exKey(e)) && scored.length ? bestSetOf(scored) : null;   // the one set prsFor scored
+    const prSet = prKeys.has(exKey(e)) && scored.length ? bestSetOf(scored, bodyFor(exKey(e), wo.date)) : null;   // the one set prsFor scored
     const reps = working.reduce((a, s) => a + (s.r || 0), 0);
     x.textAlign = 'left'; x.fillStyle = CARD.text; x.font = cardFont(29, 680);
     x.fillText(fitText(x, exFull(e) + (e.tempo ? `  · ${e.tempo}` : ''), W - P * 2 - 260), P, y + 42);
@@ -1830,9 +1833,9 @@ function sessionPeers(a, ex, s) {
   const k = exKey(ex);
   return a.exercises.filter(e => exKey(e) === k).flatMap(e => e.sets).filter(o => o !== s && o.done && isPRSet(o));
 }
-function beatsSession(peers, w, r, rpe) {
+function beatsSession(peers, w, r, rpe, B) {
   if (!(w > 0)) return peers.filter(o => !(o.w > 0)).every(o => r > (o.r || 0));
-  return peers.filter(o => o.w > 0 && o.r > 0).every(o => e1rm(w, r, rpe) > e1rm(o.w, o.r, o.rpe));
+  return peers.filter(o => o.w > 0 && o.r > 0).every(o => recGt(recOf(w, r, rpe, B), recOf(o.w, o.r, o.rpe, B)));
 }
 /* A hold beats today's earlier holds unless one was as long at the same or a
    heavier weight (B-031). */
@@ -1864,7 +1867,7 @@ function toggleSetDone(ei, si) {
     if (R && kind === 'series') {
       if (s.r > 0) {
         const st = statsFor(key);
-        if (st && beatsBest(st, s.w, 1, s.rpe) && beatsSession(sessionPeers(a, ex, s), s.w, 1, s.rpe)) toast(`★ PR — ${exFull(ex)} ${s.w > 0 ? wt(s.w) : 'bodyweight'}`, 'gold');
+        if (st && beatsBest(st, s.w, 1, s.rpe) && beatsSession(sessionPeers(a, ex, s), s.w, 1, s.rpe, st.body)) toast(`★ PR — ${exFull(ex)} ${s.w > 0 ? wt(s.w) : 'bodyweight'}`, 'gold');
       }
     } else if (R) {
       const what = shapeBeat(kind, R, s);
@@ -1886,7 +1889,7 @@ function toggleSetDone(ei, si) {
       if (isPRSet(s) && (!recs.n ? !peers.length : holdBeats(recs, s.w, s.sec) && holdBeatsSession(peers, s.w, s.sec))) {
         toast(recs.n ? `★ Best hold — ${exFull(ex)} ${holdLabel(s)}` : `★ First ${exFull(ex)} logged`, 'gold');
       }
-    } else if (isPRSet(s) && (!st ? !peers.length : beatsBest(st, s.w, s.r, s.rpe) && beatsSession(peers, s.w, s.r, s.rpe))) {
+    } else if (isPRSet(s) && (!st ? !peers.length : beatsBest(st, s.w, s.r, s.rpe) && beatsSession(peers, s.w, s.r, s.rpe, st.body))) {
       toast(st ? `★ PR — ${exFull(ex)} ${s.w > 0 ? `${wt(s.w)}×${s.r}` : `${s.r} reps`}` : `★ First ${exFull(ex)} logged`, 'gold');
     }
     const moved = autoAdjust(ex, s);

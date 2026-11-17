@@ -2828,6 +2828,7 @@ function viewBody() {
         <div class="stat"><div class="k">Lean / fat</div><div class="v" style="font-size:16px">${lastT.r.leanKg ? `${nice(dw(lastT.r.leanKg))} / ${nice(dw(lastT.r.fatKg))}` : '—'}</div><div class="d">${lastT.r.leanKg ? U() : 'no weigh-in within 3 days'}</div></div>
       </div>
       ${lastT.r.odd ? '<div class="sub" style="color:var(--gold);margin-bottom:6px">That result is outside 3–50% — check the readings.</div>' : ''}
+      ${lastT.r.past ? '<div class="sub" style="color:var(--gold);margin-bottom:6px">Skinfolds this large are past what this equation was built on. The figure is its ceiling; the real one is higher. Durnin–Womersley copes better.</div>' : ''}
       ${same.length > 1 ? `<div class="grid2" style="gap:8px">
         <div><div class="sub">Body fat %</div>${chart(same.map(x => ({ date: x.t.date, v: x.r.bf })), { h: 110, fmt: v => v.toFixed(1) })}</div>
         <div><div class="sub">Skinfold sum (mm)</div>${chart(same.map(x => ({ date: x.t.date, v: x.r.sum })), { h: 110, color: 'var(--blue)', fmt: v => Math.round(v) })}</div>
@@ -2945,6 +2946,7 @@ function openCaliper(id) {
           : `<b>${r.bf.toFixed(1)}%</b> body fat · <span class="mono">${Math.round(r.sum * 10) / 10} mm</span> sum · density ${r.bd.toFixed(4)}
             ${r.leanKg ? `<div class="sub">Lean ${wt(r.leanKg)} · fat ${wt(r.fatKg)} (at ${wt(r.wKg)})</div>` : '<div class="sub">No weigh-in within 3 days — lean and fat mass need one.</div>'}
             ${r.odd ? '<div class="sub" style="color:var(--gold)">Outside 3–50% — check the readings.</div>' : ''}
+            ${r.past ? '<div class="sub" style="color:var(--gold)">Skinfolds this large are past what this equation was built on. The figure is its ceiling; the real one is higher. Durnin–Womersley copes better.</div>' : ''}
             ${r.young ? '<div class="sub" style="color:var(--gold)">Durnin–Womersley is for 17 and over — using the 17–19 band.</div>' : ''}`;
       };
       const bind = () => {

@@ -52,7 +52,7 @@ export function roundBar(kg) { // round to nearest loadable increment, in displa
   return toKg(Math.round(disp / step) * step);
 }
 
-// e1RM — Epley, capped at 12 reps for sanity
+// e1RM — Epley on reps + reps in reserve
 /* The reps left in the tank that e1RM counts. RPE 8 means two left, so the
    set is worth reps + 2. Past RIR 5 nobody's guess is reliable, so RIR 6 and
    up count as 5 (bug sweep 3.7) — before, they counted as 0, so 100 × 5 at
@@ -62,12 +62,32 @@ export function e1Rir(rpe) {
   if (rpe == null || rpe === '' || !Number.isFinite(+rpe) || +rpe > 10) return 0;
   return +rpe < 5 ? 5 : 10 - rpe;
 }
-export function e1rm(kg, reps, rpe) {
+/* Two caps on the reps a set is worth. A RECORD stops at 12: past that the
+   estimate says more about endurance than strength, and a 25-rep set
+   shouldn't set a lift's best e1RM. PLANNING runs to 30 (B-038): capped at 12
+   every high-rep set was worth 1.4 × its weight whatever the reps or RIR, so
+   the load read back off it was the load you started with and autoregulation
+   could never move a set of 12 @ RIR 1, 15s, or anything in an 8–12 @ RIR 3
+   block. loadFor() (loading.js) is the inverse of the planning figure. */
+export const E1_CAP = 12, PLAN_CAP = 30;
+function epley(kg, reps, rpe, cap) {
   if (!kg || !reps) return 0;
-  const rir = e1Rir(rpe);
-  const eff = reps + rir;
+  const eff = reps + e1Rir(rpe);
   if (eff <= 1) return kg;
-  return kg * (1 + Math.min(eff, 12) / 30);
+  return kg * (1 + Math.min(eff, cap) / 30);
+}
+export function e1rm(kg, reps, rpe) { return epley(kg, reps, rpe, E1_CAP); }
+export function e1plan(kg, reps, rpe) { return epley(kg, reps, rpe, PLAN_CAP); }
+/* The e1RM a RECORD counts (B-058): the same estimate with at most PR_RIR
+   reps in reserve. A reserve is the lifter's own guess, so 90 × 5 called
+   RIR 5 used to out-score 100 × 5 to the limit and take the PR. Everything
+   that is a record reads this — the best set, the PR star, rankings, the
+   history series. Planning (autoregulation, the Tools calculator) keeps
+   e1rm() and the whole reserve. */
+export const PR_RIR = 2;
+export function e1pr(kg, reps, rpe, cap = E1_CAP) {
+  const counted = rpe == null || rpe === '' || !Number.isFinite(+rpe) || +rpe > 10;   // e1rm() reads these as no reserve
+  return epley(kg, reps, counted ? rpe : Math.max(+rpe, 10 - PR_RIR), cap);
 }
 
 // DOTS
@@ -89,6 +109,17 @@ export function esc(s) {
 export function bodyweightKg() {
   const ci = [...S.checkins].filter(c => c.weight > 0).sort((a, b) => a.date < b.date ? 1 : -1)[0];
   return ci ? ci.weight : (S.settings.bodyweight || 0);
+}
+/* Bodyweight on a given day: the latest check-in on or before it, else the
+   earliest after it, else the profile figure. For lifts where the body is
+   part of the load (B-043), so an old session is judged at what the lifter
+   weighed then. */
+export function bodyweightAt(date) {
+  const cs = S.checkins.filter(c => c.weight > 0);
+  if (!cs.length || !date) return bodyweightKg();
+  const by = [...cs].sort((a, b) => a.date < b.date ? -1 : 1);
+  const upTo = by.filter(c => c.date <= date);
+  return (upTo.length ? upTo[upTo.length - 1] : by[0]).weight;
 }
 /* Where the number came from, so the profile can say so rather than showing a
    figure with no provenance — a stale fallback and a check-in from this morning
@@ -154,7 +185,9 @@ export const NUTRITION_GOAL = {
 /* Mifflin-St Jeor — the usual estimate, and an estimate is all it is. One copy:
    the profile and the Tools TDEE calculator (D11) both come through here. */
 export function bmrMifflin(kg, cm, age, sex) {
-  if (!(kg > 0) || !(cm > 0) || !(age >= 0)) return 0;
+  /* `null >= 0` is true, so a blank age used to pass as age 0 and the TDEE tool
+     showed a figure 5 kcal a year too high (B-041). No age, no estimate. */
+  if (!(kg > 0) || !(cm > 0) || age == null || age === '' || !(age >= 0)) return 0;
   return Math.round(10 * kg + 6.25 * cm - 5 * age + (sex === 'female' ? -161 : 5));
 }
 function bmrKcal() {
@@ -179,7 +212,7 @@ export function suggestedTargets() {
   return { bmr, tdee, kcal, p, c, f };
 }
 
-export const APP_VERSION = '0.99.3';
+export const APP_VERSION = '0.99.5';
 
 /* ---------------- sound, haptics, wake lock ----------------
    Shared by the hold timer and the rest timer, and meant for the cardio session
