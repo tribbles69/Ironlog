@@ -801,8 +801,9 @@ Object.assign(WHY, {
       return m;
     });
     if (means.some(x => x == null)) return t.note('A site is missing, so there is no result.');
-    const sum = means.reduce((a, b) => a + b, 0), bd = M.bd(sum, c.age || 0, c.sex);
+    const sum = means.reduce((a, b) => a + b, 0), peak = M.peak ? M.peak(c.sex) : Infinity, bd = M.bd(Math.min(sum, peak), c.age || 0, c.sex);
     t.step('Sum', `${nice(sum)} mm`);
+    if (sum > peak) t.step('Held at', `${nice(Math.round(peak))} mm`, 'past this the equation turns over and would give less fat for more skinfold, so the figure is its ceiling');
     const eq = {
       jp3: c.sex === 'female' ? '1.0994921 − 0.0009929·S + 0.0000023·S² − 0.0001392·age' : '1.10938 − 0.0008267·S + 0.0000016·S² − 0.0002574·age',
       jp7: c.sex === 'female' ? '1.097 − 0.00046971·S + 0.00000056·S² − 0.00012828·age' : '1.112 − 0.00043499·S + 0.00000055·S² − 0.00028826·age',

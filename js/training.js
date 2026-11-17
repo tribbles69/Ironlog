@@ -998,10 +998,15 @@ export function caliperCalc(t) {
   const means = sites.map(s => { const r = ((t.mm || {})[s] || []).filter(x => x > 0); return r.length ? mean(r) : null; });
   if (means.some(x => x == null)) return { sites, means, complete: false };
   const sum = means.reduce((a, b) => a + b, 0);
-  const bd = M.bd(sum, t.age || 0, t.sex);
+  /* The Jackson–Pollock curves are quadratics that turn over: past `peak` a
+     bigger skinfold sum gave a LOWER body fat (JP7 men: 395 mm → 36.6%,
+     560 mm → 29.5%; B-052). Hold the sum at the turning point, so the figure
+     is the equation's ceiling, and say so (`past`). */
+  const peak = M.peak ? M.peak(t.sex) : Infinity, past = sum > peak;
+  const bd = M.bd(Math.min(sum, peak), t.age || 0, t.sex);
   const bf = siri(bd);
   const w = weightNear(t.date);
-  return { sites, means, complete: true, sum, bd, bf, odd: !(bf >= 3 && bf <= 50), young: t.method === 'dw4' && t.age < 17,
+  return { sites, means, complete: true, sum, bd, bf, past, odd: !(bf >= 3 && bf <= 50), young: t.method === 'dw4' && t.age < 17,
     wKg: w, fatKg: w ? w * bf / 100 : null, leanKg: w ? w * (1 - bf / 100) : null };
 }
 /* Every site's series: standard keys, then custom ones as "x:name". */
@@ -1022,12 +1027,14 @@ export const CAL_METHODS = {
     sites: sex => sex === 'female' ? ['triceps', 'suprailiac', 'thigh'] : ['chest', 'abdomen', 'thigh'],
     bd: (s, age, sex) => sex === 'female'
       ? 1.0994921 - 0.0009929 * s + 0.0000023 * s * s - 0.0001392 * age
-      : 1.10938 - 0.0008267 * s + 0.0000016 * s * s - 0.0002574 * age },
+      : 1.10938 - 0.0008267 * s + 0.0000016 * s * s - 0.0002574 * age,
+    peak: sex => sex === 'female' ? 0.0009929 / (2 * 0.0000023) : 0.0008267 / (2 * 0.0000016) },   // 216 / 258 mm
   jp7: { name: 'Jackson–Pollock 7-site', short: 'JP7',
     sites: () => ['chest', 'midaxillary', 'triceps', 'subscapular', 'abdomen', 'suprailiac', 'thigh'],
     bd: (s, age, sex) => sex === 'female'
       ? 1.097 - 0.00046971 * s + 0.00000056 * s * s - 0.00012828 * age
-      : 1.112 - 0.00043499 * s + 0.00000055 * s * s - 0.00028826 * age },
+      : 1.112 - 0.00043499 * s + 0.00000055 * s * s - 0.00028826 * age,
+    peak: sex => sex === 'female' ? 0.00046971 / (2 * 0.00000056) : 0.00043499 / (2 * 0.00000055) },   // 419 / 395 mm
   dw4: { name: 'Durnin–Womersley 4-site', short: 'DW4',
     sites: () => ['biceps', 'triceps', 'subscapular', 'suprailiac'],
     bd: (s, age, sex) => {
