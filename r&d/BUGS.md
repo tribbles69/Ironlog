@@ -160,6 +160,12 @@ Where: js/loading.js `loadFor`, js/core.js `e1Rir`
 Reproduce: from the code. `loadFor(140, 5, 6)` is 102.44, and `e1rm(102.44, 5, RIR 6)` reads back 136.59, not 140. Only reached by a target RIR of 6 or more ("stop 6 shy" in a note).
 Fix: pass the reserve through the same cap in `loadFor`.
 
+### B-059 · sev 3 · A note's "RPE 8." or "@8." with a full stop after the number is not read as a target RIR
+Found: 2026-11-17, 0.99.3, nightly sweep (review of the B-030 change)
+Where: js/training.js `noteRir` (the regex added in 0.99.3: `(?![\d%.])`)
+Reproduce: in the page, `(await import('/js/training.js')).noteRir(text)` gives `null` for "Work up to RPE 8.", "top set @8.", "RPE 8.5." and "@3." (full stop right after the number), but `{rir:2}` for "RPE 8 then", "@8, then back off" and "RIR 2.". So a program or exercise note that ends its sentence on the number silently falls back to the default target RIR instead of the one written. (0.99.2 and earlier read all of these.) The `.` was added to the lookahead to stop "@8.5" being cut to "@8", but it also blocks a plain full stop.
+Fix: let the lookahead refuse a dot only when a digit follows it: `(?![\d%]|\.\d)`. Add the four strings above to whatever test covers B-030. Numbering note: B-038 to B-058 are in use on the open PRs #109 and #110, so tonight's ID starts at B-059.
+
 ### B-056 · sev 3 · PR #86 (not merged): the projection's date range is narrower than it reads
 Found: 2026-11-16, branch `e16-honest-ledger` @ a4c0d30, maths audit
 Where: index.html on that branch, `projectGoal`, `projLine`
@@ -188,6 +194,25 @@ Fix: question for Aaron — make the repo private (Pages from a private repo nee
 
 ## Sweeps
 
+- **2026-11-17, 0.99.3 (nightly)** — rotation: the 11-16 run stopped at
+  database line 140, so tonight the **rest of database** (Drive calls, merge,
+  save / flush, backup nudge), **exercises** (muscle shares, `leafMuscles`,
+  option lists, leaf and set helpers; the demo-drawing code and the bundled
+  catalogue data were not read) and **stats** (standards, recovery,
+  weekly sets, `statsFor`, PRs, plausibility, goals) were read. Also read every
+  js change since the last sweep: the 0.99.3 fixes B-028 to B-037 (`confirmDlg`,
+  Profile cancel, Welcome unit switch, bodyweight clamp, modifier picker,
+  storage fallback, hold toast, `noteRir`, last-7 tiles). Tomorrow carries on
+  with **ai**, then **loading**, **training**. Checks: check-version,
+  lint-scope, validate-exercises, validate-mobility and module-map --check
+  (TypeScript 5.6.3 in a scratch folder) pass; smoke 56/56, no page errors
+  (headless Chromium). The click-through of every page was not run tonight.
+  Probes: all 283 catalogue movements give muscle shares that sum to 1, except
+  hip adduction and five neck movements, which have none (the map has no such
+  muscle, so they never count toward weekly sets or recovery; not logged as a
+  bug); every STD lift has hand-set shares. Not logged, noted: `fatigueMap`
+  drops a completed session that has no start/end time and is dated today
+  before 12:00 (`woTime` falls back to noon). New: B-059.
 - **2026-11-16, 0.99.3 — maths audit** — every formula that tells a lifter
   what to lift or how they rank, against its source, with numeric probes run
   on the shipped modules in Node: e1RM, autoregulation, PRs, bar speed, the
