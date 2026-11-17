@@ -17,6 +17,10 @@ B-058.
 | 6 | Scoring and standards | DOTS and IPF GL match to the last digit. No Wilks in the app. The standards table has no source and half of it is unreachable | B-040, B-053 |
 | 7 | Body composition and cardio | Every caliper equation, Siri, Mifflin, Katch–McArdle, Butt, FFMI, Tanaka and Karvonen match | B-041, B-052, B-057 |
 
+**Update, 2026-11-17 (0.99.5):** B-038 to B-054 are fixed, with B-059 from the
+nightly sweep; the tables below show the app as it was at 0.99.3. Still open:
+B-055 and B-056 (PR #86's branch) and B-057 (Aaron's call).
+
 Seven sev 2, thirteen sev 3, one question for Aaron (B-057). B-058 was a
 question and was answered the same day: limit the RIR that counts toward a PR.
 Fixed in 0.99.4 — records read `e1pr`, which counts at most 2 reps in reserve;

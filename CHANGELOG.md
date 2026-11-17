@@ -13,6 +13,20 @@ rather than guessed.
 
 ---
 
+## 0.99.5 — 17 Nov 2026
+The fixes from the maths audit.
+- **High-rep sets adjust again.** Sets of 12 or more (or fewer reps with a lot in reserve) used to get the same weight whatever RIR you logged. The app now counts reps and RIR up to 30 when it plans your loads, so an easy set of 15 goes up and a hard one comes down.
+- **More reps at the same weight is a PR**, however many reps: 30 kg × 15 after 30 kg × 12 now gets its star.
+- **Rankings use the right standard.** A dumbbell bench, press, curl or row is judged as a dumbbell lift, not on the barbell figures. Curls, rows, close-grip and incline bench, pushdowns and calf raises now get a rank. A high-handle trap bar deadlift is marked a little harder, as in the fitting test.
+- **Weighted pull-ups and dips count your bodyweight.** PRs and the best e1RM work from bodyweight plus the plates, so + 22.5 × 3 no longer beats + 20 × 5. On an assisted pull-up machine, less help is the PR, not more. The app no longer changes the planned weight on these lifts by itself.
+- **Bar speed:** a set that ends at or below the speed you have failed at reads as 0–1 in reserve, not "6+". The velocity loss on the card and the one used for RIR are now the same number.
+- The TDEE tool asks for an age instead of working as if you were 0.
+- A light set (under about 17 kg) can now move up or down a plate between sets. If you've listed your plates, the weights the app sets are ones those plates can make.
+- Notes like "2 RIR", "RIR: 3", "leave 2 in the tank" and "RPE 8." are read as targets. "@3-1-1-0" and "pause @ 3 sec" are not.
+- A hold that is heavier and longer than an old one is a record. The same lift entered twice in a session shows one PR, not two.
+- Caliper results past the range the Jackson–Pollock equations were built on no longer read lower for bigger skinfolds; the app says the figure is a ceiling.
+- Meet attempts are rounded to 2.5 kg even if you read weights in lb. A ranking that rests on a backfilled set is marked EST.
+
 ## 0.99.4 — 16 Nov 2026
 - **PRs are harder to get by feel alone:** a record now counts at most 2 reps in reserve. Before, an easy set logged with a big RIR could take the PR off a heavier set done to the limit (90 × 5 at RIR 5 beat 100 × 5 at RIR 0). Your best e1RM, PR stars, rankings and the e1RM chart all use the new figure, so a best that came from a high-RIR set will read a little lower and a few old PR stars may go.
 - The weights the app sets for you haven't changed: planning still uses the RIR you log in full.
