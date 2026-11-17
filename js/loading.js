@@ -539,7 +539,10 @@ function plateRowHtml(k, x) {
    Same cap as the planning estimate (30 reps, B-038), so a set read off a
    load and the load read back off the set always agree. */
 export function loadFor(e1, reps, rir) {
-  const eff = (reps || 0) + (rir || 0);
+  /* The reserve counts to 5 at most, as in the estimate (e1Rir): a target of
+     "stop 6 shy" used to give a load the estimate then read back lower
+     (B-054). */
+  const eff = (reps || 0) + Math.min(rir || 0, 5);
   return eff <= 1 ? e1 : e1 / (1 + Math.min(eff, PLAN_CAP) / 30);
 }
 export function roundLoadFor(kg, leaf) {
