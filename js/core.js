@@ -174,7 +174,9 @@ export const NUTRITION_GOAL = {
 /* Mifflin-St Jeor — the usual estimate, and an estimate is all it is. One copy:
    the profile and the Tools TDEE calculator (D11) both come through here. */
 export function bmrMifflin(kg, cm, age, sex) {
-  if (!(kg > 0) || !(cm > 0) || !(age >= 0)) return 0;
+  /* `null >= 0` is true, so a blank age used to pass as age 0 and the TDEE tool
+     showed a figure 5 kcal a year too high (B-041). No age, no estimate. */
+  if (!(kg > 0) || !(cm > 0) || age == null || age === '' || !(age >= 0)) return 0;
   return Math.round(10 * kg + 6.25 * cm - 5 * age + (sex === 'female' ? -161 : 5));
 }
 function bmrKcal() {
