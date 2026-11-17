@@ -13,7 +13,7 @@ import { bodyLoad, completeLeaf, customMovementFor, ensureCustomMovement, entryV
   exName, inRepsPool, isDrop, isIso, isMainLift, isPRSet, isTimed, isWarm, isWorking, keyLeaf, keyPR, kindOf, leafKey,
   leafMuscles, leafName, modsFromNote, resolveName, setNumber } from './exercises.js';
 import { toast } from './kit.js';
-import { loadFor, roundLoadFor } from './loading.js';
+import { loadFor, nextLoadFor, roundLoadFor } from './loading.js';
 import { S } from './state.js';
 import { MUSCLES, bodyFor, bust, prsFor, recOf, statsFor } from './stats.js';
 /* end imports */
@@ -676,6 +676,18 @@ function applyAutoRir(wo, ab) {
     likePrev(e);
   });
 }
+/* One set-to-set move: toward `want`, at most AUTO.stepCap of the load — or
+   one plate step, when a step is bigger than that. Below about 16.7 kg on a
+   bar (13.3 kg on dumbbells) 7.5% is less than half a step, so the capped
+   figure rounded straight back and a light set could never move however easy
+   it was (B-046). It moves only when the uncapped figure itself rounds to a
+   different weight, and then by one step, never more. */
+function stepCapped(want, w, leaf) {
+  const next = roundLoadFor(clamp(want, w * (1 - AUTO.stepCap), w * (1 + AUTO.stepCap)), leaf);
+  if (next !== w) return next;
+  const one = nextLoadFor(w, leaf, want > w ? 1 : -1);
+  return one !== w && roundLoadFor(want, leaf) !== w ? one : w;
+}
 /* After a working set is ticked with RIR: re-set the remaining auto sets
    from today's own e1, capped per step. Returns what moved, for the toast. */
 export function autoAdjust(e, s) {
@@ -688,7 +700,7 @@ export function autoAdjust(e, s) {
     e.sets.forEach(x => {
       if (x.done || !x.auto || !(x.r > 0)) return;
       const want = loadFor(day, x.r, x.t != null ? x.t : e.auto.t);
-      const capped = x.w > 0 ? roundLoadFor(clamp(want, x.w * (1 - AUTO.stepCap), x.w * (1 + AUTO.stepCap)), e.leaf) : roundLoadFor(want, e.leaf);
+      const capped = x.w > 0 ? stepCapped(want, x.w, e.leaf) : roundLoadFor(want, e.leaf);
       if (capped !== x.w) { moved = moved || { from: x.w || 0, to: capped }; x.w = capped; }
     });
     likePrev(e);
@@ -699,8 +711,7 @@ export function autoAdjust(e, s) {
   e.sets.forEach(x => {
     if (x.done || !x.auto || !(x.planW > 0)) return;
     const want = dayTop * x.planW / e.auto.planTop;
-    const capped = clamp(want, x.w * (1 - AUTO.stepCap), x.w * (1 + AUTO.stepCap));
-    const next = roundLoadFor(capped, e.leaf);
+    const next = stepCapped(want, x.w, e.leaf);
     if (next !== x.w) { moved = moved || { from: x.w, to: next }; x.w = next; }
   });
   return moved;

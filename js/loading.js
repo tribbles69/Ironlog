@@ -556,6 +556,15 @@ export function roundLoadFor(kg, leaf) {
   if (leaf && BAR_EQUIPMENT.includes(leaf.equipment) && ownPlates()) return loadableNear(step, barFor(leaf).kg + collarPair(), inventory());
   return step;
 }
+/* The next weight up (dir 1) or down (dir -1) from `kg` that roundLoadFor can
+   give for this leaf, or `kg` if there is none within 25 kg. */
+export function nextLoadFor(kg, leaf, dir) {
+  for (let d = 0.25; d <= 25; d += 0.25) {
+    const c = roundLoadFor(kg + dir * d, leaf);
+    if (dir > 0 ? c > kg + 1e-9 : c < kg - 1e-9) return c > 0 ? c : kg;
+  }
+  return kg;
+}
 /* Has the lifter said what plates they have, here or in general? */
 function ownPlates() {
   const pl = curPlace();
