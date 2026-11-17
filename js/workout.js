@@ -21,8 +21,8 @@ import { openAxisPicker, openAxisPickerFor, openFeel, openModPicker, openRolePic
 import { pickExercise } from './picker.js';
 import { adjustRest, paintRest, restBarHtml, startRest, stopRest } from './rest.js';
 import { S } from './state.js';
-import { beatsBest, bestSetOf, bust, historyFor, plausDlg, plausListDlg, plausibility, prsFor, setSummary, srcChip,
-  statsFor, totalVolume } from './stats.js';
+import { beatsBest, bestSetOf, bust, historyFor, plausDlg, plausListDlg, plausibility, prsFor, recGt, recOf,
+  setSummary, srcChip, statsFor, totalVolume } from './stats.js';
 import { autoSync, finishBackup } from './sync.js';
 import { CARD, MISS_REASONS, TEMPO_WORDS, activeBlock, adoptRange, adoptTempo, applyAuto, autoAdjust, autoBlock,
   e1Changes, installProgram, intensityOf, lastSession, loadProgram, lvDay, missLabel, missText, missesOn, mvtFor,
@@ -733,7 +733,7 @@ function exerciseCard(e, ei) {
 
   // did anything today beat the historical PR?
   const todayBest = Math.max(0, ...e.sets.filter(s => s.done && isPRSet(s) && s.w && s.r).map(s => e1pr(s.w, s.r, s.rpe)));
-  const beatE1 = st && todayBest > bestE1;
+  const beatE1 = st && e.sets.some(s => s.done && isPRSet(s) && s.w > 0 && s.r > 0 && beatsBest(st, s.w, s.r, s.rpe));
 
   const timed = isTimed(e);
   const isoE = isIso(e);
@@ -1833,7 +1833,7 @@ function sessionPeers(a, ex, s) {
 }
 function beatsSession(peers, w, r, rpe) {
   if (!(w > 0)) return peers.filter(o => !(o.w > 0)).every(o => r > (o.r || 0));
-  return peers.filter(o => o.w > 0 && o.r > 0).every(o => e1pr(w, r, rpe) > e1pr(o.w, o.r, o.rpe));
+  return peers.filter(o => o.w > 0 && o.r > 0).every(o => recGt(recOf(w, r, rpe), recOf(o.w, o.r, o.rpe)));
 }
 /* A hold beats today's earlier holds unless one was as long at the same or a
    heavier weight (B-031). */

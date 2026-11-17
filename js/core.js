@@ -85,9 +85,9 @@ export function e1plan(kg, reps, rpe) { return epley(kg, reps, rpe, PLAN_CAP); }
    history series. Planning (autoregulation, the Tools calculator) keeps
    e1rm() and the whole reserve. */
 export const PR_RIR = 2;
-export function e1pr(kg, reps, rpe) {
+export function e1pr(kg, reps, rpe, cap = E1_CAP) {
   const counted = rpe == null || rpe === '' || !Number.isFinite(+rpe) || +rpe > 10;   // e1rm() reads these as no reserve
-  return e1rm(kg, reps, counted ? rpe : Math.max(+rpe, 10 - PR_RIR));
+  return epley(kg, reps, counted ? rpe : Math.max(+rpe, 10 - PR_RIR), cap);
 }
 
 // DOTS

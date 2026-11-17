@@ -595,8 +595,9 @@ Object.assign(WHY, {
     if (best && best.w > 0) {
       t.step('Best before', `${setLine(st.best)} · ${fmtDate(st.best.date)}`, `e1RM ${wt(st.best.e1)}`);
       const now = e1pr(best.w, best.r, best.rpe);
-      mine = now > st.best.e1;
-      t.step('Compare', `${wt(now)} ${mine ? '>' : '≤'} ${wt(st.best.e1)}`, 'beats it only if strictly higher');
+      mine = beatsBest(st, best.w, best.r, best.rpe);
+      const tie = Math.abs(now - st.best.e1) < 1e-6;
+      t.step('Compare', `${wt(now)} ${tie ? '=' : now > st.best.e1 ? '>' : '<'} ${wt(st.best.e1)}`, tie ? `a tie past 12 reps goes to the set worth more reps: ${nice(best.r)} against ${nice(st.best.r)} (plus reserve, at most ${PR_RIR})` : 'beats it only if strictly higher');
     } else if (best) {
       t.step('Best before', st.bestBw ? `${st.bestBw.r} reps · ${fmtDate(st.bestBw.date)}` : 'no bodyweight sets', 'bodyweight sets only race bodyweight sets');
       mine = !!st.bestBw && best.r > st.bestBw.r;
