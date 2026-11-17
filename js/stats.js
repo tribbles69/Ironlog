@@ -127,8 +127,10 @@ function stdFor(key) {
 }
 
 /* Score is 0–100 with each tier worth 20 points, so the bar moves smoothly
-   between tiers instead of jumping. Uses best real e1RM — backfilled sets are
-   already excluded by statsFor, so an estimate can't inflate a rank. */
+   between tiers instead of jumping. Uses statsFor's best e1RM. Backfilled
+   sets count toward that unless Settings says otherwise (prCountEst), so a
+   rank whose best set is a backfill says so (bestIsEst → the EST chip,
+   B-051): it is the plan's weight, not one the lifter reported. */
 export function rankFor(key) {
   /* Keyed on the leaf like everything else. It took a display name until 0.7.0,
      which silently returned no stats and emptied the rankings entirely. The
@@ -165,7 +167,7 @@ export function rankFor(key) {
     color: tier < 0 ? 'var(--dim)' : TIER_COLOR[tier],
     nextName: nextIdx == null ? null : TIERS[nextIdx],
     toNext: nextIdx == null ? 0 : marks[nextIdx] - e1,
-    estOnly: st.estOnly, marks,
+    estOnly: st.estOnly, bestIsEst: st.bestIsEst, marks,
   };
 }
 
@@ -1106,7 +1108,7 @@ export function viewAnalytics() {
     ${ranks.slice(0, 12).map(r => `
       <div class="rank-row" data-exdetail="${esc(r.key)}">
         <div class="grow">
-          <div class="n">${r.leaf ? keyNameHtml(r.key) : esc(r.name)}${r.estOnly ? ' <span class="chip">EST</span>' : ''}</div>
+          <div class="n">${r.leaf ? keyNameHtml(r.key) : esc(r.name)}${r.estOnly || r.bestIsEst ? ' <span class="chip" title="From a backfilled session: the plan\'s weight, not a logged one">EST</span>' : ''}</div>
           <div class="m"><span class="tierlab" style="color:${r.color}">${r.tierName}</span>
             · ${wt(r.e1)} e1RM · ${r.ratio.toFixed(2)}× bw${r.nextName ? ` · ${wt(r.toNext)} to ${r.nextName}` : ''} ${why('rank', r.key)}</div>
           ${bar(r.score, r.color)}
