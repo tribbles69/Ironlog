@@ -310,6 +310,7 @@ const BODY_LIFTS = new Set(['pull-up', 'chin-up', 'triceps-dip', 'chest-dip']);
 export function bodyLoad(leaf) {
   if (!leaf || !BODY_LIFTS.has(leaf.movement)) return 0;
   if (leaf.equipment === 'plate' || leaf.equipment === 'bodyweight' || leaf.equipment === 'rings') return 1;
+  if (leaf.equipment === 'machine' && (leaf.movement === 'pull-up' || leaf.movement === 'chin-up')) return -1;
   return 0;
 }
 export function metricFor(leaf) { const m = movementById(leaf.movement); return (m && m.metric) || 'reps_weight'; }
