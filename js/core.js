@@ -110,6 +110,17 @@ export function bodyweightKg() {
   const ci = [...S.checkins].filter(c => c.weight > 0).sort((a, b) => a.date < b.date ? 1 : -1)[0];
   return ci ? ci.weight : (S.settings.bodyweight || 0);
 }
+/* Bodyweight on a given day: the latest check-in on or before it, else the
+   earliest after it, else the profile figure. For lifts where the body is
+   part of the load (B-043), so an old session is judged at what the lifter
+   weighed then. */
+export function bodyweightAt(date) {
+  const cs = S.checkins.filter(c => c.weight > 0);
+  if (!cs.length || !date) return bodyweightKg();
+  const by = [...cs].sort((a, b) => a.date < b.date ? -1 : 1);
+  const upTo = by.filter(c => c.date <= date);
+  return (upTo.length ? upTo[upTo.length - 1] : by[0]).weight;
+}
 /* Where the number came from, so the profile can say so rather than showing a
    figure with no provenance — a stale fallback and a check-in from this morning
    look identical otherwise. */

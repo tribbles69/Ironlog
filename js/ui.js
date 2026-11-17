@@ -27,10 +27,10 @@ import { BAR_PRESETS, barRow, mainBars, mainPlates, openPlaces, places } from '.
 import { maybePoolNotice, openExDetail } from './movement.js';
 import { restIv, restLoop } from './rest.js';
 import { S } from './state.js';
-import { BIG_MUSCLES, MUSCLES, RECOVERY, RECOVERY_WORDS, STD, TIERS, avg, beatsBest, bestSetOf, bust, fatigueMap,
-  goalRow, hardSetRows, last7, muscleTau, openVolMuscle, openerPct, prsFor, rankFor, setEffort, setSummary, setsTxt,
-  srcChip, statsFor, stdRowFor, streak, totalVolume, viewAnalytics, volStatus, volTarget, weeklySets, wireMuscleMap,
-  woTime } from './stats.js';
+import { BIG_MUSCLES, MUSCLES, RECOVERY, RECOVERY_WORDS, STD, TIERS, avg, beatsBest, bestSetOf, bodyFor, bust,
+  fatigueMap, goalRow, hardSetRows, last7, muscleTau, openVolMuscle, openerPct, prsFor, rankFor, recOf, setEffort,
+  setSummary, setsTxt, srcChip, statsFor, stdRowFor, streak, totalVolume, viewAnalytics, volStatus, volTarget,
+  weeklySets, wireMuscleMap, woTime } from './stats.js';
 import { driveSync, refreshSyncLine, relTime, syncLine } from './sync.js';
 import { hasFoodData, openFoodExport, openTool, openTools } from './tools.js';
 import { CAL_METHODS, DEFAULT_EVENT_TYPE, DW_BANDS, EVENT_TYPES, LV_SLACK, MVT_PRIOR_WEIGHT, VBT_RAW_MAX, activeBlock,
@@ -534,10 +534,16 @@ Object.assign(WHY, {
     tr.result('Hard sets', setsTxt(sum), `range ${t.mev}–${t.mrv}, ${volStatus(sum, t, new Date().getDay() !== 0).word}`);
     return tr.check('Hard sets', sum, (by[k] || [0])[weeks.length - 1] || 0, setsTxt);
   } },
-  e1: { label: 'estimated 1RM', fn: (kg, r, rpe, mode) => {   // mode true: a record's figure, at most PR_RIR in reserve (B-058); 'plan': the planning figure, reps to 30 (B-038)
+  e1: { label: 'estimated 1RM', fn: (logged, r, rpe, mode, B) => {   // B: the bodyweight term for a pull-up or dip (B-043, B-044). mode true: a record's figure, at most PR_RIR in reserve (B-058); 'plan': the planning figure, reps to 30 (B-038)
     const rec = mode === true, plan = mode === 'plan', cap = plan ? PLAN_CAP : E1_CAP;
     const t = trace(rec ? 'estimated 1RM — as a record' : plan ? 'estimated 1RM — for planning' : 'estimated 1RM');
-    t.step('Weight', wt(kg)).step('Reps', r);
+    /* A body lift's estimate runs on what was really lifted: bodyweight plus
+       the plates, or bodyweight less the machine's help. */
+    const body = B && logged > 0 && (B.sign > 0 ? B.bw > 0 : true) ? B : null;
+    const kg = !body ? logged : body.sign > 0 ? body.bw + logged : Math.max(0, (body.bw || 0) - logged);
+    t.step(body ? (body.sign > 0 ? 'Added weight' : 'Help from the machine') : 'Weight', wt(logged));
+    if (body) t.step('Load lifted', body.sign > 0 ? `${wt(body.bw)} + ${wt(logged)} = ${wt(kg)}` : body.bw > 0 ? `${wt(body.bw)} − ${wt(logged)} = ${wt(kg)}` : 'unknown', body.bw > 0 ? 'bodyweight on that day is part of the lift' : 'no bodyweight on file, so no estimate');
+    t.step('Reps', r);
     const full = e1Rir(rpe), rir = rec ? Math.min(full, PR_RIR) : full, eff = (r || 0) + rir;
     t.step('Effort', rpe == null ? 'not logged' : rirText(rpe), rpe == null ? 'counted as 0 reps left' : rpe > 10 ? 'off the scale, so counted as 0 reps left'
       : rpe < 5 ? 'past RIR 5, counted as 5 — guesses that far out aren\'t reliable' : 'RIR = 10 − RPE');
@@ -552,8 +558,9 @@ Object.assign(WHY, {
       mine = kg * (1 + c / 30);
       t.step('Epley', `${nice(dw(kg, 2))} × (1 + ${nice(c)} ÷ 30)`, 'weight × (1 + reps ÷ 30)');
     }
+    if (body && body.sign > 0 && mine) { t.step('Back to added weight', `${wt(mine)} − ${wt(body.bw)}`, 'shown in the same terms as the weight you log'); mine -= body.bw; }
     t.result('Estimated 1RM', wt(mine));
-    return t.check('Estimated 1RM', mine, (rec ? e1pr : plan ? e1plan : e1rm)(kg, r, rpe), v => wt(v));
+    return t.check('Estimated 1RM', mine, body ? recOf(logged, r, rpe, body).e1 : (rec ? e1pr : plan ? e1plan : e1rm)(kg, r, rpe), v => wt(v));
   } },
 
   rir: { label: 'RIR and RPE', fn: rpe => {
@@ -583,10 +590,12 @@ Object.assign(WHY, {
     }
     const e = wo.exercises.find(x => exKey(x) === p.key);
     const sets = e ? e.sets.filter(s => s.done && isPRSet(s) && s.r > 0) : [];
+    const B = bodyFor(p.key, wo.date);
     t.head('This session');
     t.note(`Warm-ups and drop sets never count; only done sets with reps. For a record, at most ${PR_RIR} reps in reserve count toward the e1RM.`);
-    sets.forEach((s, k) => t.step(`Set ${k + 1}`, setLine(s), s.w > 0 ? `e1RM ${wt(e1pr(s.w, s.r, s.rpe))}` : 'bodyweight'));
-    const best = sets.length ? bestSetOf(sets) : null;
+    sets.forEach((s, k) => t.step(`Set ${k + 1}`, setLine(s), s.w > 0 ? `e1RM ${wt(recOf(s.w, s.r, s.rpe, B).e1)}` : 'bodyweight'));
+    if (B) t.note(B.sign > 0 ? `Bodyweight is part of this lift: each estimate runs on ${wt(B.bw)} + the added weight and is shown as added weight.` : `The number logged is help, not load: each estimate is of bodyweight (${wt(B.bw)}) − help.`);
+    const best = sets.length ? bestSetOf(sets, B) : null;
     if (best) t.step('Best set', setLine(best), best.w > 0 ? 'highest e1RM' : 'most reps (nothing loaded)');
     const st = statsFor(p.key, wo);
     t.head('History before this session');
@@ -595,7 +604,7 @@ Object.assign(WHY, {
     let mine;
     if (best && best.w > 0) {
       t.step('Best before', `${setLine(st.best)} · ${fmtDate(st.best.date)}`, `e1RM ${wt(st.best.e1)}`);
-      const now = e1pr(best.w, best.r, best.rpe);
+      const now = recOf(best.w, best.r, best.rpe, B).e1;
       mine = beatsBest(st, best.w, best.r, best.rpe);
       const tie = Math.abs(now - st.best.e1) < 1e-6;
       t.step('Compare', `${wt(now)} ${tie ? '=' : now > st.best.e1 ? '>' : '<'} ${wt(st.best.e1)}`, tie ? `a tie past 12 reps goes to the set worth more reps: ${nice(best.r)} against ${nice(st.best.r)} (plus reserve, at most ${PR_RIR})` : 'beats it only if strictly higher');

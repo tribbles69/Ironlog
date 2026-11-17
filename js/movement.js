@@ -15,7 +15,7 @@ import { SERIES_COLORS, chartMulti, closeAllModals, closeModal, modal, modalStac
   whatsNewBusy, why } from './kit.js';
 import { kitHas, placeName, roundLoadFor } from './loading.js';
 import { S } from './state.js';
-import { bust, movementVariants, primaryVariantKey, prsFor, statsFor } from './stats.js';
+import { bodyFor, bust, movementVariants, primaryVariantKey, prsFor, statsFor } from './stats.js';
 import { TEMPO_PRESETS, TEMPO_WORDS, adoptTempo, imbalanceBlock, parseTempo, prPoolMoves, shapeKind, tempoFromText,
   tempoParts } from './training.js';
 import { openPRShare, viewCompleted } from './workout.js';
@@ -321,7 +321,7 @@ export function openMovementPage(movementId, focusKey) {
        machine chest press outranking a competition bench is nonsense. */
     const headline = ps
       ? `<div class="stats grid3" style="margin-bottom:6px">
-          <div class="stat"><div class="k">Best e1RM</div><div class="v">${w(ps.best.e1)}</div><div class="d">${esc(variantLabel(keyLeaf(pk)) || 'standard')}</div>${why('e1', ps.best.w, ps.best.r, ps.best.rpe, true)}</div>
+          <div class="stat"><div class="k">Best e1RM</div><div class="v">${w(ps.best.e1)}</div><div class="d">${esc(variantLabel(keyLeaf(pk)) || 'standard')}</div>${why('e1', ps.best.w, ps.best.r, ps.best.rpe, true, bodyFor(pk, ps.best.date))}</div>
           <div class="stat"><div class="k">Top set</div><div class="v">${w(ps.bestW.w)}</div><div class="d">× ${ps.bestW.r}</div></div>
           <div class="stat"><div class="k">Sessions</div><div class="v">${ps.sessions}</div><div class="d">${ps.totalSets} sets</div></div>
         </div>`
@@ -342,7 +342,7 @@ export function openMovementPage(movementId, focusKey) {
     const focusStrip = fv && focus !== pk ? `
       <div class="eyebrow" style="margin:12px 0 6px">${esc(keyVariantLabel(fv.key) || 'Standard')}</div>
       ${fs ? `<div class="stats grid3">
-          <div class="stat"><div class="k">Best e1RM</div><div class="v">${w(fs.best.e1)}</div>${why('e1', fs.best.w, fs.best.r, fs.best.rpe, true)}</div>
+          <div class="stat"><div class="k">Best e1RM</div><div class="v">${w(fs.best.e1)}</div>${why('e1', fs.best.w, fs.best.r, fs.best.rpe, true, bodyFor(fv.key, fs.best.date))}</div>
           <div class="stat"><div class="k">Top set</div><div class="v">${w(fs.bestW.w)}</div><div class="d">× ${fs.bestW.r}</div></div>
           <div class="stat"><div class="k">Last</div><div class="v" style="font-size:15px">${esc(relDay(fs.lastDate))}</div><div class="d">${fs.sessions} sessions</div></div>
         </div>` : `<div class="sub">This variant hasn't been logged yet.</div>`}` : '';
