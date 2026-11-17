@@ -52,7 +52,7 @@ export function roundBar(kg) { // round to nearest loadable increment, in displa
   return toKg(Math.round(disp / step) * step);
 }
 
-// e1RM — Epley, capped at 12 reps for sanity
+// e1RM — Epley on reps + reps in reserve
 /* The reps left in the tank that e1RM counts. RPE 8 means two left, so the
    set is worth reps + 2. Past RIR 5 nobody's guess is reliable, so RIR 6 and
    up count as 5 (bug sweep 3.7) — before, they counted as 0, so 100 × 5 at
@@ -62,13 +62,22 @@ export function e1Rir(rpe) {
   if (rpe == null || rpe === '' || !Number.isFinite(+rpe) || +rpe > 10) return 0;
   return +rpe < 5 ? 5 : 10 - rpe;
 }
-export function e1rm(kg, reps, rpe) {
+/* Two caps on the reps a set is worth. A RECORD stops at 12: past that the
+   estimate says more about endurance than strength, and a 25-rep set
+   shouldn't set a lift's best e1RM. PLANNING runs to 30 (B-038): capped at 12
+   every high-rep set was worth 1.4 × its weight whatever the reps or RIR, so
+   the load read back off it was the load you started with and autoregulation
+   could never move a set of 12 @ RIR 1, 15s, or anything in an 8–12 @ RIR 3
+   block. loadFor() (loading.js) is the inverse of the planning figure. */
+export const E1_CAP = 12, PLAN_CAP = 30;
+function epley(kg, reps, rpe, cap) {
   if (!kg || !reps) return 0;
-  const rir = e1Rir(rpe);
-  const eff = reps + rir;
+  const eff = reps + e1Rir(rpe);
   if (eff <= 1) return kg;
-  return kg * (1 + Math.min(eff, 12) / 30);
+  return kg * (1 + Math.min(eff, cap) / 30);
 }
+export function e1rm(kg, reps, rpe) { return epley(kg, reps, rpe, E1_CAP); }
+export function e1plan(kg, reps, rpe) { return epley(kg, reps, rpe, PLAN_CAP); }
 /* The e1RM a RECORD counts (B-058): the same estimate with at most PR_RIR
    reps in reserve. A reserve is the lifter's own guess, so 90 × 5 called
    RIR 5 used to out-score 100 × 5 to the limit and take the PR. Everything

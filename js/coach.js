@@ -1656,7 +1656,7 @@ export function coAnswerTopic(topic, arg) {
   CO.ctx = { topic, lift: lift || (CO.ctx || {}).lift || null, because: r.because || null, next: (r.act || [])[0] ? String(r.act[0][0]).split(':') : null };
   if (topic === 'stall' && !r.because) CO.ctx.because = 'A lift counts as stalled when, over its last five sessions, none of the last four beat the first by more than 1% (e1RM, off days left out). The reasons come from your RIR against targets, sleep, bodyweight, the muscle\'s weekly sets and missed sessions.';
   if (topic === 'deload' && !r.because) { const s = coDeloadScore(D); CO.ctx.because = s.pts.length ? `Score ${s.score}: ${s.pts.map(p => `${p[1]} (+${p[0]})`).join(', ')}. 3 or more says take a lighter week.` : 'Nothing in your log adds to the deload score — no stalls, effort on target, sleep and energy steady.'; }
-  if (topic === 'lift' && lift) CO.ctx.because = 'e1RM is Epley with your reps in reserve added to the reps, capped at 12. The working figure is your last three sessions, newest weighted most.';
+  if (topic === 'lift' && lift) CO.ctx.because = 'e1RM is Epley with your reps in reserve added to the reps. The working figure is your last three sessions, newest weighted most.';
   const seen = new Set();
   const act = [...(r.act || []), ...(CO_NEXT[topic] || [])].filter(([v]) => !seen.has(v) && seen.add(v)).slice(0, 4);
   coFollow(act);
