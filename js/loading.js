@@ -546,5 +546,18 @@ export function roundLoadFor(kg, leaf) {
   /* Dumbbells and kettlebells step in 2 kg, or 5 lb for a lifter working in
      pounds (it used to be 2 kg either way: 44.1 lb — bug sweep 3.3). */
   if (leaf && (leaf.equipment === 'dumbbells' || leaf.equipment === 'kettlebell')) return U() === 'lb' ? toKg(Math.round(fromKg(kg) / 5) * 5) : Math.round(kg / 2) * 2;
-  return roundBar(kg);
+  const step = roundBar(kg);
+  /* A bar the lifter has listed plates for: snap to what those plates build
+     (B-047). The usual 2.5 kg step asked for 107.5 at a place whose smallest
+     plates are 5s, and for 22.5 on a 7 kg bar. Only with the lifter's own
+     plate list — the built-in one is a guess, and in kg, so it would turn a
+     lb lifter's round numbers into odd ones. Rounded to the usual step first,
+     so owning 0.5 kg plates doesn't put them on every set. */
+  if (leaf && BAR_EQUIPMENT.includes(leaf.equipment) && ownPlates()) return loadableNear(step, barFor(leaf).kg + collarPair(), inventory());
+  return step;
+}
+/* Has the lifter said what plates they have, here or in general? */
+function ownPlates() {
+  const pl = curPlace();
+  return !!((pl && pl.plates && pl.plates.length) || (S.settings.plates && S.settings.plates.length));
 }
