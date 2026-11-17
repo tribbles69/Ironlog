@@ -577,7 +577,7 @@ export function noteRir(notes) {
   const n = String(notes || '').toLowerCase();
   let m = n.match(/stop (\d) shy/) || n.match(/rir\s*(\d)/);
   if (m) return { rir: +m[1], text: m[0] };
-  m = n.match(/(@|rpe)\s*(\d{1,2}(?:\.\d)?)(?![\d%.])(?!\s*(?:reps?|kg|lbs?|%))/);
+  m = n.match(/(@|rpe)\s*(\d{1,2}(?:\.\d)?)(?![\d%]|\.\d)(?!\s*(?:reps?|kg|lbs?|%))/);   // a full stop after the number ends a sentence; only ".5" means it was cut short (B-059)
   if (!m) return null;
   const v = +m[2];
   if (m[1] === '@' && Number.isInteger(v) && v >= 0 && v <= 4) return { rir: v, text: m[0] };
