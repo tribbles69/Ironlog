@@ -533,14 +533,16 @@ function bestHold(key, kg) {
   const r = holdRecords(key);
   return kg == null ? r.best : (r.byWeight[kg > 0 ? kg : 0] || 0);
 }
-/* Does a hold beat the history? Longer than the best at the same weight, or
-   the first hold at a load heavier than any held before. A first hold at a
-   lighter weight is just a hold. */
+/* Does a hold beat the history? Yes unless some earlier hold was at least as
+   heavy AND at least as long — the rule the in-session check already used.
+   It was "longer at this exact weight, or heavier than anything", so 15 kg
+   for 60 s after 10 kg / 30 s and 20 kg / 10 s was no record though it beat
+   the first on both counts (B-050). A first hold at a lighter weight still
+   has to outlast every hold at that weight or more. */
 export function holdBeats(recs, kg, sec) {
   if (!recs.n || !(sec > 0)) return false;
   const w = kg > 0 ? kg : 0;
-  const at = recs.byWeight[w];
-  return at ? sec > at : w > recs.heaviest;
+  return !Object.entries(recs.byWeight).some(([k, best]) => +k >= w - 1e-9 && best >= sec);
 }
 
 
