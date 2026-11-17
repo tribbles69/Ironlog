@@ -807,11 +807,16 @@ let _prCache = null;
 export function prsFor(wo) {
   if (!_prCache) _prCache = new Map();
   if (_prCache.has(wo.id)) return _prCache.get(wo.id);
-  const out = [];
+  const out = [], seen = new Set();
   wo.exercises.forEach(e => {
     out.push(...shapePRs(e, wo, wo.id));   // holds, carries, races, caps, series
     if (!inRepsPool(e)) return;
-    const sets = e.sets.filter(s => s.done && isPRSet(s) && s.r > 0);
+    /* One row per lift, from every entry of it: the same lift entered twice
+       used to give two PR rows (B-045). */
+    const k = exKey(e);
+    if (seen.has(k)) return;
+    seen.add(k);
+    const sets = wo.exercises.filter(x => exKey(x) === k && inRepsPool(x)).flatMap(x => x.sets).filter(s => s.done && isPRSet(s) && s.r > 0);
     if (!sets.length) return;
     const st = statsFor(exKey(e), wo);   // earlier days, and earlier the same day (3.6)
     if (!st) return;

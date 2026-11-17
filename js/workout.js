@@ -926,12 +926,14 @@ export function finishWorkout(force) {
 
   harvestLvp(logged);   // today's warm-up profiles join the stored ones (D1)
   // PRs — compare against history BEFORE this workout is saved
-  const prs = [];
+  const prs = [], prSeen = new Set();
   logged.forEach(e => {
     prs.push(...shapePRs(e, null, a.id));   // holds, carries, races, caps, series: their own records
     if (!inRepsPool(e)) return;             // none of those is an e1RM
+    if (prSeen.has(exKey(e))) return;       // one row per lift, from every entry of it (B-045)
+    prSeen.add(exKey(e));
     const st = statsFor(exKey(e));
-    const working = e.sets.filter(s => isPRSet(s) && s.r > 0);
+    const working = logged.filter(x => exKey(x) === exKey(e) && inRepsPool(x)).flatMap(x => x.sets).filter(s => isPRSet(s) && s.r > 0);
     if (!working.length) return;
     const B = st ? st.body : bodyFor(exKey(e));
     const best = bestSetOf(working, B);
