@@ -29,7 +29,8 @@ import { restIv, restLoop } from './rest.js';
 import { S } from './state.js';
 import { BIG_MUSCLES, MUSCLES, RECOVERY, RECOVERY_WORDS, STD, TIERS, avg, beatsBest, bestSetOf, bust, fatigueMap,
   goalRow, hardSetRows, last7, muscleTau, openVolMuscle, openerPct, prsFor, rankFor, setEffort, setSummary, setsTxt,
-  srcChip, statsFor, streak, totalVolume, viewAnalytics, volStatus, volTarget, weeklySets, wireMuscleMap, woTime } from './stats.js';
+  srcChip, statsFor, stdRowFor, streak, totalVolume, viewAnalytics, volStatus, volTarget, weeklySets, wireMuscleMap,
+  woTime } from './stats.js';
 import { driveSync, refreshSyncLine, relTime, syncLine } from './sync.js';
 import { hasFoodData, openFoodExport, openTool, openTools } from './tools.js';
 import { CAL_METHODS, DEFAULT_EVENT_TYPE, DW_BANDS, EVENT_TYPES, LV_SLACK, MVT_PRIOR_WEIGHT, VBT_RAW_MAX, activeBlock,
@@ -609,15 +610,16 @@ Object.assign(WHY, {
 
   rank: { label: 'strength tier', fn: key => {
     const name = leafName(key), t = trace(`${name} — tier`);
-    const src = bodyweightSource(), bw = bodyweightKg(), st = statsFor(key), raw = STD[name];
+    const src = bodyweightSource(), bw = bodyweightKg(), st = statsFor(key), R = stdRowFor(key), raw = R && STD[R.row];
     t.step('Bodyweight', wt(bw), src.from === 'checkin' ? `check-in ${fmtDate(src.date)}` : src.from === 'fallback' ? 'profile figure — no check-in weight' : 'none');
     if (!st) return t.note('No logged sets.');
     t.step('Best e1RM', wt(st.best.e1), `${setLine(st.best)} · ${fmtDate(st.best.date)}${st.best.est ? ' · backfilled' : ''}`);
-    if (!raw) return t.note(`No strength standard for "${name}".`);
+    if (!raw) return t.note(`No strength standard for this version of ${name}.`);
     const fem = S.settings.sex === 'female';
-    t.step('Standard row', name, `× bw: ${raw.slice(0, 5).join(' / ')}`);
+    t.step('Standard row', R.row, `× bw: ${raw.slice(0, 5).join(' / ')}`);
+    if (R.factor !== 1) t.step('Variation', `× ${R.factor.toFixed(2)}`, 'this version moves more than the row\'s lift, so its marks are that much higher');
     t.step('Sex', fem ? `female, × ${raw[5]}` : 'male, × 1', fem ? 'the row\'s female factor' : '');
-    const th = raw.slice(0, 5).map(v => v * (fem ? raw[5] : 1)), ratio = st.best.e1 / bw;
+    const th = raw.slice(0, 5).map(v => v * (fem ? raw[5] : 1) * R.factor), ratio = st.best.e1 / bw;
     t.step('Ratio', `${nice(dw(st.best.e1))} ÷ ${nice(dw(bw))} = ${ratio.toFixed(3)}× bw`);
     t.head('Tier marks');
     th.forEach((m, i) => t.step(TIERS[i], `${m.toFixed(2)}× = ${wt(m * bw)}`, ratio >= m ? 'reached' : 'not yet'));

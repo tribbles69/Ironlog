@@ -79,10 +79,50 @@ export const MUSCLES = {
 };
 
 
-function stdFor(name) {
-  const s = STD[name];
-  if (!s) return null;
-  const f = S.settings.sex === 'female' ? s[5] : 1;
+/* Which STD row judges a leaf (B-040). The row used to be found by movement
+   name alone, so a dumbbell bench (weight per hand) was judged on the barbell
+   row, and every row whose name is not a movement's name — "Dumbbell Bench",
+   "Barbell Curl", "Incline Bench", "Cable Row"… — was never reached.
+   Order: an entry here for the movement and equipment; else no rank for a
+   per-hand implement on a movement that is normally a bar or machine (a wrong
+   row is worse than none); else the entry's '*'; else the row named after the
+   movement. `factor` divides the lift first, as the fitting test does, for a
+   variation known to move more than the row's lift. Rows with no leaf of
+   their own (bar position, pauses, deficits) are modifiers now and unused. */
+const PER_HAND = new Set(['dumbbells', 'kettlebell']);
+const STD_ROWS = {
+  'bench-press': { dumbbells: 'Dumbbell Bench' },
+  'overhead-press': { dumbbells: 'Dumbbell Shoulder Press', kettlebell: 'Dumbbell Shoulder Press' },
+  'close-grip-bench': { '*': 'Close Grip Bench' },
+  'incline-bench-press': { '*': 'Incline Bench' },
+  'back-squat': { safety_squat_bar: 'Safety Bar Squat' },
+  'bent-over-row': { barbell: 'Barbell Row', smith: 'Barbell Row', dumbbells: 'Dumbbell Row' },
+  'single-arm-row': { dumbbells: 'Dumbbell Row', kettlebell: 'Dumbbell Row' },
+  'seated-row': { '*': 'Cable Row' },
+  'biceps-curl': { barbell: 'Barbell Curl', dumbbells: 'Dumbbell Curl', kettlebell: 'Dumbbell Curl' },
+  'skull-crusher': { barbell: 'Skullcrusher' },
+  'triceps-pushdown': { '*': 'Tricep Pushdown' },
+  'calf-raise-standing': { smith: 'Calf Raise', barbell: 'Calf Raise', machine: 'Calf Raise', plate_loaded_machine: 'Calf Raise' },
+};
+const STD_FACTORS = { 'deadlift/trap_bar/high_handles': 1.15 };   // the fitting test's figure for the same lift (health.js FIT.variations)
+export function stdRowFor(key) {
+  if (/[#|]/.test(String(key))) return null;                // chains, bands, a hold or a time cap: its own line, no standard
+  const leaf = keyLeaf(key), m = movementById(leaf.movement);
+  if (!m) return null;
+  const map = STD_ROWS[leaf.movement] || {};
+  let row = map[leaf.equipment];
+  if (!row) {
+    const usual = (m.equipment || [])[0];
+    if (PER_HAND.has(leaf.equipment) && !PER_HAND.has(usual)) return null;
+    row = map['*'] || m.name;
+  }
+  if (!STD[row]) return null;
+  return { row, factor: STD_FACTORS[`${leaf.movement}/${leaf.equipment}/${leaf.attachment}`] || 1 };
+}
+function stdFor(key) {
+  const R = stdRowFor(key);
+  if (!R) return null;
+  const s = STD[R.row], f = (S.settings.sex === 'female' ? s[5] : 1) * R.factor;
   return s.slice(0, 5).map(v => v * f);
 }
 
@@ -91,12 +131,12 @@ function stdFor(name) {
    already excluded by statsFor, so an estimate can't inflate a rank. */
 export function rankFor(key) {
   /* Keyed on the leaf like everything else. It took a display name until 0.7.0,
-     which silently returned no stats and emptied the rankings entirely.
-     Strength standards are per movement, so stdFor still looks up by name. */
+     which silently returned no stats and emptied the rankings entirely. The
+     standard's row comes from the leaf too (stdRowFor, B-040). */
   const name = leafName(key);
   const bw = bodyweightKg();
   const st = statsFor(key);
-  const th = stdFor(name);
+  const th = stdFor(key);   // marks in this lift's own terms: the row × sex × variation factor
   if (!bw || !st || !th) return null;
 
   const e1 = st.best.e1;
@@ -818,7 +858,7 @@ export function plausibility(key, w, r, rpe, before) {
       why.push(`e1RM ${wt(e1)} is ${Math.round((e1 / st.best.e1 - 1) * 100)}% over your best (${wt(st.best.e1)})`);
     }
   } else if (w > 0) {
-    const th = stdFor(name), bw = bodyweightKg();
+    const th = stdFor(key), bw = bodyweightKg();
     if (th && bw && w > th[4] * bw * PLAUS.overElite) {
       why.push(`${wt(w)} is ${(w / bw).toFixed(1)}× bodyweight — past the elite standard for ${name}, with nothing logged yet`);
     }
