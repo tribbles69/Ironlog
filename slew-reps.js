@@ -177,6 +177,14 @@ export function vbtEstimateSet(reps, profile, failure) {
     because: why + (doubted ? ' Something at the end looked like a missed rep, but the set had not slowed down, so it was left out.' : '') });
   if (n < VBT_RIR.minReps) return none('Too few reps to read effort from bar speed — it needs at least three to see you slowing down.');
   const loss = base.velocityLoss, vlF = profile.vlF > 0 ? profile.vlF : 0.45;
+  /* Already at or under the speed this lifter fails at (B-042). A heavy set
+     starts near that speed and loses little, so velocity loss alone read a
+     grinding triple as "6+ in reserve" (0.23 / 0.23 / 0.22 / 0.20 against a
+     limit of 0.25). Nothing can be slower than the limit and have reps left:
+     0 to 1. Shown, not written into the set — the limit is itself an average
+     of a few readings. */
+  if (profile.v0Observed > 0 && last <= profile.v0Observed) return { ...base, rir: 0.5, rpe: 9.5, spread: 1, method: 'at-limit', fill: false,
+    because: `Your last rep moved at ${last.toFixed(2)} m/s, at or under the ${profile.v0Observed.toFixed(2)} m/s you have failed at before, so there was little or nothing left.` };
   if (!(loss >= VBT_RIR.minLoss)) return none(`Your bar speed barely dropped across this set (${Math.round(Math.max(0, loss) * 100)}%), so there was plenty in reserve — more than bar speed can put a number on.`);
   const done = Math.max(0.05, Math.min(1, (loss / vlF) ** VBT_RIR.shape));
   let rir = n * (1 - done) / done, method = 'velocity-loss';
