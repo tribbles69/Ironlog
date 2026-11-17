@@ -569,15 +569,22 @@ export function autoBlock(wo) {
   return !!(wo.prog && wo.block && !FIXED_BLOCK.test(wo.block));
 }
 /* A target RIR written in an exercise note (B-030):
-   - "stop 2 shy", "RIR 2", or "@0" to "@4": reps in reserve, as before 0.99.0
+   - "stop 2 shy", "leave 2 in the tank", "RIR 2", "2 RIR", or "@0" to "@4":
+     reps in reserve
    - "@5" to "@10" and "RPE 5" to "RPE 10": RPE, read as 10 − RPE (B-014).
      Half RPEs leave the extra half rep in reserve ("RPE 8.5" → RIR 2).
    A number followed by reps, kg, lb or % is a load or rep count, not effort. */
 export function noteRir(notes) {
   const n = String(notes || '').toLowerCase();
-  let m = n.match(/stop (\d) shy/) || n.match(/rir\s*(\d)/);
-  if (m) return { rir: +m[1], text: m[0] };
-  m = n.match(/(@|rpe)\s*(\d{1,2}(?:\.\d)?)(?![\d%]|\.\d)(?!\s*(?:reps?|kg|lbs?|%))/);   // a full stop after the number ends a sentence; only ".5" means it was cut short (B-059)
+  /* B-048: "2 RIR", "RIR: 3" and "leave 2 in the tank" are read too, and
+     "RIR 10" is 10, not 1. */
+  let m = n.match(/stop (\d) shy/) || n.match(/leave (\d) in the tank/) || n.match(/\brir\s*:?\s*(\d{1,2})(?!\d)/) || n.match(/(?<![\d.])(\d{1,2})\s*rir\b/);
+  if (m) return { rir: clamp(+m[1], 0, 10), text: m[0] };
+  /* After the number: a digit, a % or a decimal means it was cut short; a
+     plain full stop ends a sentence and is fine (B-059: "RPE 8." read as
+     nothing). "-1-" is a tempo ("@3-1-1-0") and seconds are a pause
+     ("@ 3 sec") — neither is effort (B-048). */
+  m = n.match(/(@|rpe)\s*(\d{1,2}(?:\.\d)?)(?![\d%]|\.\d|-\d+-)(?!\s*(?:reps?|kg|lbs?|%|s\b|secs?\b|seconds?\b))/);
   if (!m) return null;
   const v = +m[2];
   if (m[1] === '@' && Number.isInteger(v) && v >= 0 && v <= 4) return { rir: v, text: m[0] };
