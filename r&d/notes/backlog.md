@@ -76,6 +76,39 @@ unsupported row 0.6, isolation 0.3). Score = sets × effort × weight. That
 could estimate how demanding a planned session is against the readiness score.
 Check the weights against D7's muscle shares before using them.
 
+## Timed mobility circuits and cue cards (Aaron, 2026-11-18 — after 1.0)
+
+Prompted by a "Walking Yoga" lead-magnet PDF from an Instagram ad (20 sessions
+of 15–17 min: marching in place plus Warrior 1 / Tree Pose etc.). The content
+is beginner filler; the *format* is worth borrowing. Parked because new ideas
+wait until after 1.0.
+
+**Timed auto-advance circuits on the Mobility start.**
+- A routine is an ordered list of timed moves (default 30 s), split into
+  warm-up and main blocks. Left and right are separate entries, run back to
+  back.
+- One tap starts it; the timer counts down and advances on its own with an
+  audio cue (and watch buzz) between moves, plus a "next up" preview. Pause,
+  skip and back always available.
+- Aaron's daily morning full-body stretch routine is the first routine to
+  build in this format.
+- Logged as a mobility session (moves done, total time), not as sets.
+
+**Cue-card format for the mobility database** (`r&d/data/mobility.json`).
+- Each entry: name, default duration, side (L / R / both), and 3–5 short
+  numbered cues — setup, the movement, what to hold or keep doing. Sized to
+  read on one phone card mid-routine.
+- Write our own cues; don't copy the PDF's text.
+
+**Gentle tier.** A very low-entry starter routine (standing, no kit, no
+floor
+work) for people coming in through the physio-plan feature or with no
+training history — e.g. older beginners. Same engine, just a different
+routine.
+
+Single-leg balance moves (e.g. Tree Pose) can tie into the eyes-closed
+balance test so balance work and the test show on the same trend.
+
 ## Sleep and recovery on the workouts
 
 Check-ins already collect sleep hours and quality, energy, soreness, stress and
