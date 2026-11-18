@@ -55,6 +55,17 @@ Where: js/training.js `noteRir` (the regex added in 0.99.3: `(?![\d%.])`)
 Reproduce: in the page, `(await import('/js/training.js')).noteRir(text)` gives `null` for "Work up to RPE 8.", "top set @8.", "RPE 8.5." and "@3." (full stop right after the number), but `{rir:2}` for "RPE 8 then", "@8, then back off" and "RIR 2.". So a program or exercise note that ends its sentence on the number silently falls back to the default target RIR instead of the one written. (0.99.2 and earlier read all of these.) The `.` was added to the lookahead to stop "@8.5" being cut to "@8", but it also blocks a plain full stop.
 Fix: let the lookahead refuse a dot only when a digit follows it: `(?![\d%]|\.\d)`. Add the four strings above to whatever test covers B-030. Numbering note: B-038 to B-058 are in use on the open PRs #109 and #110, so tonight's ID starts at B-059.
 
+### B-060 · sev 2 · Backfilling planned sessions turns holds and carries into empty "completed" sessions
+Found: 2026-11-18, 0.99.3, nightly sweep
+Where: js/training.js `backfillPlanned` (marks a set done only if `s.r > 0 || s.sec > 0`) and `rirOnlySession` (only looks at rep lifts)
+Reproduce: in the page, push a planned session dated two days ago whose only exercise is a planned hold (`iso: true`, `sec: null`, `target: 45`, as `installProgram` builds it) and another whose only exercise is a carry (`m: 40`, `r: 0`, `w: 30`), then `backfillPlanned(7)`. It returns 2; both sessions become `status: 'completed'`, `source: 'backfill'` with `exercises: []`. A planned hold has no `sec` and a carry has no reps, so no set passes the test, every set is filtered out, and the plan's content is gone. They show in the log as empty completed sessions and `removeProgram` can no longer clear them (it only removes planned ones). In a mixed session the hold and carry sets are dropped while the rep sets stay.
+Fix: count a hold as done when it has a `target` (log `sec` as the target), and a carry when `m > 0`; or leave a session alone when it has no set that backfill can mark done (treat it like `rirOnlySession`). Never write a completed session with no exercises.
+
+### B-061 · sev 3 · Lifters on lb: opening the warm-up sheet or saving a place nudges bar and plate weights off their kg values
+Found: 2026-11-18, 0.99.3, nightly sweep
+Where: js/loading.js `openRamp` (`upd`: `S.settings.barKg = toKg(bar)`, where `bar` comes from the `nice(dw(...))` field, rounded to 0.1) and `openPlaceEdit` save (`toKg(+el.value)` on plate fields shown with `dw(x.kg, 2)`, and on bar fields shown with `nice(dw(b.kg))`)
+Reproduce: with units set to lb, the 20 kg bar shows as 44.1, and `toKg(44.1)` is 20.0034 kg. In the Warm-up sheet, typing in any of Target, Reps or Bar makes `upd` save that into `S.settings.barKg` (20 → 20.0034), and from then on `loadableNear(60, 20.0034, mainPlates())` returns 60.0034, so "Add to workout" puts warm-ups and the work set in at weights a few thousandths of a kg off. Saving a place with its own plates does the same to every plate: 25 kg shows as 55.12 and is stored as 25.0020, 1.25 kg as 1.2519, 20 kg as 19.9989. The plate colours (`PLATE_COLOR[p.kg]` is an exact-key lookup) then fall back to grey, and the greedy plate maths' 1e-9 tolerances see weights that don't match. kg lifters are not affected (the round trip is exact).
+Fix: only write a field back when the lifter changed it (compare against the value the box was drawn with, and keep the original kg when it is unchanged), or snap on the way in: round plates and bars to 0.01 kg after `toKg` (and match `PLATE_COLOR` by `Math.round(kg * 100) / 100`).
 
 ## Needs Aaron
 
@@ -72,6 +83,26 @@ Fix: question for Aaron — make the repo private (Pages from a private repo nee
 
 ## Sweeps
 
+- **2026-11-18, 0.99.3 (nightly)** — rotation: the 11-17 run stopped at
+  stats, so tonight **ai**, **loading** and **training** were read in full
+  (ai: key, cap, usage, `aiCall`, `claudeParse`; loading: ramps, plate maths,
+  nearest loadable, bars, places and their editor; training: missed sessions,
+  programs and backfill, rep ranges, per-side, tempo, autoregulation, event
+  types and run-in blocks, load-velocity day and outliers, caliper maths, the
+  imbalance card). No js file has changed on main since the 11-16 sweep
+  (main's code is still 0.99.3; the fixes are on the open PRs #110 and #112,
+  which were not reviewed). Tomorrow carries on with **picker**, then
+  **events**, **vbt**. Checks: check-version, lint-scope, validate-exercises,
+  validate-mobility and module-map --check (TypeScript 5.6.3 in a scratch
+  folder) pass; smoke 56/56, no page errors (headless Chromium); a click
+  through Home, Calendar, Train, Stats and Health and the first tabs on each
+  gave no page errors. Probes in the page: backfill of a hold-only and a
+  carry-only session (B-060), and the lb round trip of a bar and plates
+  (B-061). Not logged, noted: the first week of a weekday-laid program
+  starting mid-week puts later days before earlier ones (documented "first
+  such weekday on or after the start"); `removeProgram` keeps
+  `S.programStarts[id]`, so a reinstall without a date reuses the old start.
+  New: B-060, B-061.
 - **2026-11-17, 0.99.3 (nightly)** — rotation: the 11-16 run stopped at
   database line 140, so tonight the **rest of database** (Drive calls, merge,
   save / flush, backup nudge), **exercises** (muscle shares, `leafMuscles`,
