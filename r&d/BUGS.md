@@ -49,7 +49,29 @@ IDs run on and are never reused. Severity:
 
 ## Open
 
-(none)
+### B-038 · sev 2 · A note that ends "RPE 8." or "@8." is not read as a target RIR
+Found: 2026-11-19, 0.99.3, nightly sweep
+Where: js/training.js `noteRir` (the 0.99.2 B-030 rewrite)
+Reproduce: import `/js/training.js` in the page and call `noteRir` — "RPE 8" → RIR 2, "@8" → 2, "rpe 8, rest" → 2, but "Work to RPE 8." → null and "keep @8. then back off" → null. The new `(?![\d%.])` lookahead refuses any number followed by a full stop, so a sentence-ending period (very common in a note) makes the whole match fail. `targetRirFor` then silently falls back to the block RIR or 2, so "@9." (RIR 1) or "RPE 7." (RIR 3) drive autoregulation off the wrong target. Worked before 0.99.2.
+Fix: only refuse a full stop that starts a decimal, i.e. `(?!\d|%|\.\d)` instead of `(?![\d%.])`; add "RPE 8." and "@8. then" to the probe list.
+
+### B-039 · sev 3 · `claudeParse` fails when Claude's lead-in sentence contains a "["
+Found: 2026-11-19, 0.99.3, nightly sweep
+Where: js/ai.js `claudeParse`
+Reproduce: stub `fetch` to answer `Here is your plan [as asked]: {"name":"X","days":[1,2]}` and call `claudeParse` — it throws `badjson`. The salvage takes the first `[` or `{` anywhere as the start and the last `]` or `}` as the end, so here it slices from the `[` in the prose to the closing `}`, which isn't JSON. Hits plan writer, tailor and voice parsing whenever the model adds a lead-in containing a bracket.
+Fix: when the reply doesn't start with JSON, try the slice from the first `{` to the last `}` and the slice from the first `[` to the last `]` separately and keep the one that parses (or try each candidate start in turn).
+
+### B-040 · sev 3 · Home's "/ 7d" bodyweight change uses an 8-day window and counts future check-ins
+Found: 2026-11-19, 0.99.3, nightly sweep (sibling of B-033, which fixed the session and check-in tiles but not this line)
+Where: js/ui.js `viewHome` — `bw7 = bws.filter(c => daysBetween(c.date, today()) <= 7)`
+Reproduce: `daysBetween` of today−7 is 7 and of today−8 is 8 (probe in the page), so the window is today plus the previous seven days, 8 days, under a "/ 7d" label. A check-in dated in the future gives a negative number, passes `<= 7`, and is also used as `bwNow` (the last entry). Entering a weight for tomorrow shows it as today's weight and a wrong delta.
+Fix: `<= 6 && >= 0` like `last7()` and `sessions7`, and take `bwNow` from the filtered list (or the latest check-in dated today or earlier).
+
+### B-041 · sev 4 · The doc comment for `holdRecords` sits above `isBefore`, not above the function
+Found: 2026-11-19, 0.99.3, nightly sweep
+Where: js/exercises.js, the block before `isBefore` / `holdRecords`
+Reproduce: from the code — "Completed working holds for a key…" (per-weight records, `best`, `heaviest`) is followed by the "History before a session" comment and `isBefore`, so `holdRecords` has no comment of its own and `isBefore` appears to document two things.
+Fix: move the hold-records comment down to sit directly above `holdRecords`.
 
 ## Needs Aaron
 
@@ -67,6 +89,22 @@ Fix: question for Aaron — make the repo private (Pages from a private repo nee
 
 ## Sweeps
 
+- **2026-11-19, 0.99.3 (nightly)** — rotation: tonight **database** (from line
+  95 to the end: storage safety, backup cards, `mergeSync`, Drive calls),
+  **exercises**, **stats** and **ai**. Stopped at: **ai**, so tomorrow carries on
+  with **loading**, then training, picker. Also read every js file changed
+  since 11-16 (the 0.99.3 diff: B-028 to B-037 fixes in database, kit, movement,
+  stats, ui, workout, training, io, tools, main, sync, core). The CSV formula
+  guard round-trips (a leading `'` is added then stripped once); the storage
+  fallback mark and `idb()` commit change read correctly; `holdBeatsSession`
+  and `last7` are right. Probes in the page behind B-038 (noteRir), B-039
+  (claudeParse with a stubbed fetch) and B-040 (daysBetween) are in their
+  entries. Checks: check-version (0.99.3 / ironlog-v189), lint-scope,
+  validate-exercises, validate-mobility and module-map --check (TypeScript
+  5.6.3 in a scratch folder) pass; smoke 56/56, no page errors (headless
+  Chromium). The click-through of every page was not completed: the headless
+  renderer crashed on the first button taps, as in earlier sweeps. New: B-038
+  to B-041.
 - **2026-11-16, 0.99.1 (nightly)** — rotation: kit's remainder, exercises and
   database were due; tonight **database** (storage section) was read in
   depth, plus movement again (modifier picker). Stopped at: database line 140,
