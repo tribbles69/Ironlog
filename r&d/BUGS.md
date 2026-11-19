@@ -67,6 +67,24 @@ Where: js/loading.js `openRamp` (`upd`: `S.settings.barKg = toKg(bar)`, where `b
 Reproduce: with units set to lb, the 20 kg bar shows as 44.1, and `toKg(44.1)` is 20.0034 kg. In the Warm-up sheet, typing in any of Target, Reps or Bar makes `upd` save that into `S.settings.barKg` (20 → 20.0034), and from then on `loadableNear(60, 20.0034, mainPlates())` returns 60.0034, so "Add to workout" puts warm-ups and the work set in at weights a few thousandths of a kg off. Saving a place with its own plates does the same to every plate: 25 kg shows as 55.12 and is stored as 25.0020, 1.25 kg as 1.2519, 20 kg as 19.9989. The plate colours (`PLATE_COLOR[p.kg]` is an exact-key lookup) then fall back to grey, and the greedy plate maths' 1e-9 tolerances see weights that don't match. kg lifters are not affected (the round trip is exact).
 Fix: only write a field back when the lifter changed it (compare against the value the box was drawn with, and keep the original kg when it is unchanged), or snap on the way in: round plates and bars to 0.01 kg after `toKg` (and match `PLATE_COLOR` by `Math.round(kg * 100) / 100`).
 
+### B-062 · sev 3 · `claudeParse` fails when Claude's lead-in sentence contains a "["
+Found: 2026-11-19, 0.99.3, nightly sweep
+Where: js/ai.js `claudeParse`
+Reproduce: stub `fetch` to answer `Here is your plan [as asked]: {"name":"X","days":[1,2]}` and call `claudeParse` — it throws `badjson`. The salvage takes the first `[` or `{` anywhere as the start and the last `]` or `}` as the end, so here it slices from the `[` in the prose to the closing `}`, which isn't JSON. Hits plan writer, tailor and voice parsing whenever the model adds a lead-in containing a bracket.
+Fix: when the reply doesn't start with JSON, try the `{`…`}` slice and the `[`…`]` slice separately and keep the one that parses.
+
+### B-063 · sev 3 · Home's "/ 7d" bodyweight change uses an 8-day window and counts future check-ins
+Found: 2026-11-19, 0.99.3, nightly sweep (sibling of B-033, which fixed the tiles but not this line)
+Where: js/ui.js `viewHome` — `bw7 = bws.filter(c => daysBetween(c.date, today()) <= 7)`
+Reproduce: `daysBetween` of today−7 is 7 and of today−8 is 8 (probe in the page), so the window is 8 calendar days under a "/ 7d" label. A check-in dated in the future gives a negative number, passes `<= 7`, and is also taken as `bwNow` (the last entry), so a weight entered for tomorrow shows as today's weight with a wrong delta.
+Fix: `<= 6 && >= 0` like `last7()` and `sessions7`, and take `bwNow` from check-ins dated today or earlier.
+
+### B-064 · sev 4 · The doc comment for `holdRecords` sits above `isBefore`, not above the function
+Found: 2026-11-19, 0.99.3, nightly sweep
+Where: js/exercises.js, the block before `isBefore` / `holdRecords`
+Reproduce: from the code — "Completed working holds for a key…" is followed by the "History before a session" comment and `isBefore`, so `holdRecords` has no comment and `isBefore` appears to document two things.
+Fix: move the hold-records comment down to sit directly above `holdRecords`.
+
 ## Needs Aaron
 
 ### B-026 · sev 2 · Ironlog shares its storage with every other site on tribbles69.github.io
@@ -83,6 +101,19 @@ Fix: question for Aaron — make the repo private (Pages from a private repo nee
 
 ## Sweeps
 
+- **2026-11-19, 0.99.3 (nightly)** — this run started from a checkout that did
+  not have the 11-17 and 11-18 sweeps, so it re-read the same ground:
+  **database** (line 95 to the end), **exercises**, **stats** and **ai**, plus
+  the 0.99.3 diff. The rotation is unchanged: tomorrow carries on with
+  **picker**, then **events**, **vbt**. The `noteRir` full-stop bug ("RPE 8.")
+  was found again here and is B-059 (already fixed on PR #112), so not
+  re-logged. Probes in the page: `claudeParse` with a stubbed fetch (B-062),
+  `daysBetween` at −8, −7 and +3 days (B-063). CSV formula guard round trip,
+  the storage fallback mark and `holdBeatsSession` read correct. Checks:
+  check-version, lint-scope, validate-exercises, validate-mobility and
+  module-map --check (TypeScript 5.6.3) pass; smoke 56/56, no page errors.
+  The click-through of every page crashed the headless renderer on the first
+  taps and was not completed. New: B-062 to B-064.
 - **2026-11-18, 0.99.3 (nightly)** — rotation: the 11-17 run stopped at
   stats, so tonight **ai**, **loading** and **training** were read in full
   (ai: key, cap, usage, `aiCall`, `claudeParse`; loading: ramps, plate maths,
