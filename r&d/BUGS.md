@@ -101,6 +101,20 @@ Fix: question for Aaron — make the repo private (Pages from a private repo nee
 
 ## Sweeps
 
+- **2026-11-20, 0.99.3 (nightly)** — this run again started from a checkout
+  without the 11-17 to 11-19 sweeps (`git fetch` showed the open PR #111), so
+  it re-read database (Drive merge, Drive calls, save and flush), exercises
+  (volume convention, `holdRecords`, `isBefore`, set numbering), stats (ranks,
+  hard sets, `statsFor`, PRs, plausibility, goals, `last7`) and the whole
+  0.99.3 diff. Both things it found were already listed: `noteRir` with a full
+  stop (B-059; probed `"RPE 8."`, `"keep @8."`, `"@1."` → null) and Home's
+  `bw7` eight-day window (B-063). Nothing new. Checks: check-version,
+  lint-scope, validate-exercises, validate-mobility and module-map --check
+  (TypeScript 5.6.3) pass; smoke 56/56, no page errors. The click-through was
+  not completed (the Welcome sheet blocks the clicks on a fresh profile).
+  Rotation unchanged: tomorrow carries on with **picker**, then **events**,
+  **vbt**. New: none.
+
 - **2026-11-19, 0.99.3 (nightly)** — this run started from a checkout that did
   not have the 11-17 and 11-18 sweeps, so it re-read the same ground:
   **database** (line 95 to the end), **exercises**, **stats** and **ai**, plus
