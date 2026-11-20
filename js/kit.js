@@ -165,11 +165,12 @@ export function bar(pct, cls = '') {
    machine press and a competition bench are not the same lift. Series may
    cover different dates, so the x axis is the union of all of them. */
 export const SERIES_COLORS = ['var(--accent)', 'var(--blue)', 'var(--green)', 'var(--purple)', 'var(--gold)'];
-export function chartMulti(series, { h = 170, fmt = v => nice(v) } = {}) {
+// refs: optional dotted reference lines, [{ v, color, label }] — always kept in view
+export function chartMulti(series, { h = 170, fmt = v => nice(v), refs = [] } = {}) {
   const live = series.filter(s => s.points.length);
   if (!live.length) return `<div class="empty">No data yet</div>`;
   const dates = [...new Set(live.flatMap(s => s.points.map(p => p.date)))].sort();
-  const vals = live.flatMap(s => s.points.map(p => p.v));
+  const vals = [...live.flatMap(s => s.points.map(p => p.v)), ...refs.map(r => r.v)];
   let min = Math.min(...vals), max = Math.max(...vals);
   if (min === max) { min = min * 0.95 || 0; max = max * 1.05 || 1; }
   const span = max - min || 1;
@@ -185,6 +186,11 @@ export function chartMulti(series, { h = 170, fmt = v => nice(v) } = {}) {
     grid += `<line class="grid" x1="${padL}" x2="${W - padR}" y1="${yy.toFixed(1)}" y2="${yy.toFixed(1)}" opacity=".5"/>
              <text class="axis" x="${padL - 5}" y="${(yy + 3).toFixed(1)}" text-anchor="end">${fmt(v)}</text>`;
   }
+  const refLines = refs.map(r => {
+    const yy = y(r.v).toFixed(1);
+    return `<line x1="${padL}" x2="${W - padR}" y1="${yy}" y2="${yy}" style="stroke:${r.color};stroke-width:1.2;stroke-dasharray:3 3;opacity:.75"/>` +
+      (r.label ? `<text class="axis" x="${W - padR}" y="${(+yy - 3).toFixed(1)}" text-anchor="end" style="fill:${r.color}">${esc(r.label)}</text>` : '');
+  }).join('');
   const lines = live.map((s, si) => {
     const c = s.color || SERIES_COLORS[si % SERIES_COLORS.length];
     const pts = s.points.map(p => [x(p.date), y(p.v)]);
@@ -201,7 +207,7 @@ export function chartMulti(series, { h = 170, fmt = v => nice(v) } = {}) {
   const legend = live.length > 1 ? `<div class="legend">${live.map((s, si) =>
     `<span><i style="background:${s.color || SERIES_COLORS[si % SERIES_COLORS.length]}"></i>${esc(s.label)}</span>`).join('')}</div>` : '';
   return `<div class="chartbox"><svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" style="height:${H}px">
-    ${grid}${lines}${xlabs}</svg>${legend}</div>`;   // legend inside the box: the 98 skin restates colours per surface, so outside it the swatches drift from the lines
+    ${grid}${refLines}${lines}${xlabs}</svg>${legend}</div>`;   // legend inside the box: the 98 skin restates colours per surface, so outside it the swatches drift from the lines
 }
 
 export function chart(data, { color = 'var(--accent)', h = 150, fmt = v => nice(v) } = {}) {
