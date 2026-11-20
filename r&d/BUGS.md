@@ -49,7 +49,41 @@ IDs run on and are never reused. Severity:
 
 ## Open
 
-(none)
+### B-059 · sev 3 · A note's "RPE 8." or "@8." with a full stop after the number is not read as a target RIR
+Found: 2026-11-17, 0.99.3, nightly sweep (review of the B-030 change)
+Where: js/training.js `noteRir` (the regex added in 0.99.3: `(?![\d%.])`)
+Reproduce: in the page, `(await import('/js/training.js')).noteRir(text)` gives `null` for "Work up to RPE 8.", "top set @8.", "RPE 8.5." and "@3." (full stop right after the number), but `{rir:2}` for "RPE 8 then", "@8, then back off" and "RIR 2.". So a program or exercise note that ends its sentence on the number silently falls back to the default target RIR instead of the one written. (0.99.2 and earlier read all of these.) The `.` was added to the lookahead to stop "@8.5" being cut to "@8", but it also blocks a plain full stop.
+Fix: let the lookahead refuse a dot only when a digit follows it: `(?![\d%]|\.\d)`. Add the four strings above to whatever test covers B-030. Numbering note: B-038 to B-058 are in use on the open PRs #109 and #110, so tonight's ID starts at B-059.
+
+### B-060 · sev 2 · Backfilling planned sessions turns holds and carries into empty "completed" sessions
+Found: 2026-11-18, 0.99.3, nightly sweep
+Where: js/training.js `backfillPlanned` (marks a set done only if `s.r > 0 || s.sec > 0`) and `rirOnlySession` (only looks at rep lifts)
+Reproduce: in the page, push a planned session dated two days ago whose only exercise is a planned hold (`iso: true`, `sec: null`, `target: 45`, as `installProgram` builds it) and another whose only exercise is a carry (`m: 40`, `r: 0`, `w: 30`), then `backfillPlanned(7)`. It returns 2; both sessions become `status: 'completed'`, `source: 'backfill'` with `exercises: []`. A planned hold has no `sec` and a carry has no reps, so no set passes the test, every set is filtered out, and the plan's content is gone. They show in the log as empty completed sessions and `removeProgram` can no longer clear them (it only removes planned ones). In a mixed session the hold and carry sets are dropped while the rep sets stay.
+Fix: count a hold as done when it has a `target` (log `sec` as the target), and a carry when `m > 0`; or leave a session alone when it has no set that backfill can mark done (treat it like `rirOnlySession`). Never write a completed session with no exercises.
+
+### B-061 · sev 3 · Lifters on lb: opening the warm-up sheet or saving a place nudges bar and plate weights off their kg values
+Found: 2026-11-18, 0.99.3, nightly sweep
+Where: js/loading.js `openRamp` (`upd`: `S.settings.barKg = toKg(bar)`, where `bar` comes from the `nice(dw(...))` field, rounded to 0.1) and `openPlaceEdit` save (`toKg(+el.value)` on plate fields shown with `dw(x.kg, 2)`, and on bar fields shown with `nice(dw(b.kg))`)
+Reproduce: with units set to lb, the 20 kg bar shows as 44.1, and `toKg(44.1)` is 20.0034 kg. In the Warm-up sheet, typing in any of Target, Reps or Bar makes `upd` save that into `S.settings.barKg` (20 → 20.0034), and from then on `loadableNear(60, 20.0034, mainPlates())` returns 60.0034, so "Add to workout" puts warm-ups and the work set in at weights a few thousandths of a kg off. Saving a place with its own plates does the same to every plate: 25 kg shows as 55.12 and is stored as 25.0020, 1.25 kg as 1.2519, 20 kg as 19.9989. The plate colours (`PLATE_COLOR[p.kg]` is an exact-key lookup) then fall back to grey, and the greedy plate maths' 1e-9 tolerances see weights that don't match. kg lifters are not affected (the round trip is exact).
+Fix: only write a field back when the lifter changed it (compare against the value the box was drawn with, and keep the original kg when it is unchanged), or snap on the way in: round plates and bars to 0.01 kg after `toKg` (and match `PLATE_COLOR` by `Math.round(kg * 100) / 100`).
+
+### B-062 · sev 3 · `claudeParse` fails when Claude's lead-in sentence contains a "["
+Found: 2026-11-19, 0.99.3, nightly sweep
+Where: js/ai.js `claudeParse`
+Reproduce: stub `fetch` to answer `Here is your plan [as asked]: {"name":"X","days":[1,2]}` and call `claudeParse` — it throws `badjson`. The salvage takes the first `[` or `{` anywhere as the start and the last `]` or `}` as the end, so here it slices from the `[` in the prose to the closing `}`, which isn't JSON. Hits plan writer, tailor and voice parsing whenever the model adds a lead-in containing a bracket.
+Fix: when the reply doesn't start with JSON, try the `{`…`}` slice and the `[`…`]` slice separately and keep the one that parses.
+
+### B-063 · sev 3 · Home's "/ 7d" bodyweight change uses an 8-day window and counts future check-ins
+Found: 2026-11-19, 0.99.3, nightly sweep (sibling of B-033, which fixed the tiles but not this line)
+Where: js/ui.js `viewHome` — `bw7 = bws.filter(c => daysBetween(c.date, today()) <= 7)`
+Reproduce: `daysBetween` of today−7 is 7 and of today−8 is 8 (probe in the page), so the window is 8 calendar days under a "/ 7d" label. A check-in dated in the future gives a negative number, passes `<= 7`, and is also taken as `bwNow` (the last entry), so a weight entered for tomorrow shows as today's weight with a wrong delta.
+Fix: `<= 6 && >= 0` like `last7()` and `sessions7`, and take `bwNow` from check-ins dated today or earlier.
+
+### B-064 · sev 4 · The doc comment for `holdRecords` sits above `isBefore`, not above the function
+Found: 2026-11-19, 0.99.3, nightly sweep
+Where: js/exercises.js, the block before `isBefore` / `holdRecords`
+Reproduce: from the code — "Completed working holds for a key…" is followed by the "History before a session" comment and `isBefore`, so `holdRecords` has no comment and `isBefore` appears to document two things.
+Fix: move the hold-records comment down to sit directly above `holdRecords`.
 
 ## Needs Aaron
 
@@ -67,6 +101,72 @@ Fix: question for Aaron — make the repo private (Pages from a private repo nee
 
 ## Sweeps
 
+- **2026-11-20, 0.99.3 (nightly)** — this run again started from a checkout
+  without the 11-17 to 11-19 sweeps (`git fetch` showed the open PR #111), so
+  it re-read database (Drive merge, Drive calls, save and flush), exercises
+  (volume convention, `holdRecords`, `isBefore`, set numbering), stats (ranks,
+  hard sets, `statsFor`, PRs, plausibility, goals, `last7`) and the whole
+  0.99.3 diff. Both things it found were already listed: `noteRir` with a full
+  stop (B-059; probed `"RPE 8."`, `"keep @8."`, `"@1."` → null) and Home's
+  `bw7` eight-day window (B-063). Nothing new. Checks: check-version,
+  lint-scope, validate-exercises, validate-mobility and module-map --check
+  (TypeScript 5.6.3) pass; smoke 56/56, no page errors. The click-through was
+  not completed (the Welcome sheet blocks the clicks on a fresh profile).
+  Rotation unchanged: tomorrow carries on with **picker**, then **events**,
+  **vbt**. New: none.
+
+- **2026-11-19, 0.99.3 (nightly)** — this run started from a checkout that did
+  not have the 11-17 and 11-18 sweeps, so it re-read the same ground:
+  **database** (line 95 to the end), **exercises**, **stats** and **ai**, plus
+  the 0.99.3 diff. The rotation is unchanged: tomorrow carries on with
+  **picker**, then **events**, **vbt**. The `noteRir` full-stop bug ("RPE 8.")
+  was found again here and is B-059 (already fixed on PR #112), so not
+  re-logged. Probes in the page: `claudeParse` with a stubbed fetch (B-062),
+  `daysBetween` at −8, −7 and +3 days (B-063). CSV formula guard round trip,
+  the storage fallback mark and `holdBeatsSession` read correct. Checks:
+  check-version, lint-scope, validate-exercises, validate-mobility and
+  module-map --check (TypeScript 5.6.3) pass; smoke 56/56, no page errors.
+  The click-through of every page crashed the headless renderer on the first
+  taps and was not completed. New: B-062 to B-064.
+- **2026-11-18, 0.99.3 (nightly)** — rotation: the 11-17 run stopped at
+  stats, so tonight **ai**, **loading** and **training** were read in full
+  (ai: key, cap, usage, `aiCall`, `claudeParse`; loading: ramps, plate maths,
+  nearest loadable, bars, places and their editor; training: missed sessions,
+  programs and backfill, rep ranges, per-side, tempo, autoregulation, event
+  types and run-in blocks, load-velocity day and outliers, caliper maths, the
+  imbalance card). No js file has changed on main since the 11-16 sweep
+  (main's code is still 0.99.3; the fixes are on the open PRs #110 and #112,
+  which were not reviewed). Tomorrow carries on with **picker**, then
+  **events**, **vbt**. Checks: check-version, lint-scope, validate-exercises,
+  validate-mobility and module-map --check (TypeScript 5.6.3 in a scratch
+  folder) pass; smoke 56/56, no page errors (headless Chromium); a click
+  through Home, Calendar, Train, Stats and Health and the first tabs on each
+  gave no page errors. Probes in the page: backfill of a hold-only and a
+  carry-only session (B-060), and the lb round trip of a bar and plates
+  (B-061). Not logged, noted: the first week of a weekday-laid program
+  starting mid-week puts later days before earlier ones (documented "first
+  such weekday on or after the start"); `removeProgram` keeps
+  `S.programStarts[id]`, so a reinstall without a date reuses the old start.
+  New: B-060, B-061.
+- **2026-11-17, 0.99.3 (nightly)** — rotation: the 11-16 run stopped at
+  database line 140, so tonight the **rest of database** (Drive calls, merge,
+  save / flush, backup nudge), **exercises** (muscle shares, `leafMuscles`,
+  option lists, leaf and set helpers; the demo-drawing code and the bundled
+  catalogue data were not read) and **stats** (standards, recovery,
+  weekly sets, `statsFor`, PRs, plausibility, goals) were read. Also read every
+  js change since the last sweep: the 0.99.3 fixes B-028 to B-037 (`confirmDlg`,
+  Profile cancel, Welcome unit switch, bodyweight clamp, modifier picker,
+  storage fallback, hold toast, `noteRir`, last-7 tiles). Tomorrow carries on
+  with **ai**, then **loading**, **training**. Checks: check-version,
+  lint-scope, validate-exercises, validate-mobility and module-map --check
+  (TypeScript 5.6.3 in a scratch folder) pass; smoke 56/56, no page errors
+  (headless Chromium). The click-through of every page was not run tonight.
+  Probes: all 283 catalogue movements give muscle shares that sum to 1, except
+  hip adduction and five neck movements, which have none (the map has no such
+  muscle, so they never count toward weekly sets or recovery; not logged as a
+  bug); every STD lift has hand-set shares. Not logged, noted: `fatigueMap`
+  drops a completed session that has no start/end time and is dated today
+  before 12:00 (`woTime` falls back to noon). New: B-059.
 - **2026-11-16, 0.99.1 (nightly)** — rotation: kit's remainder, exercises and
   database were due; tonight **database** (storage section) was read in
   depth, plus movement again (modifier picker). Stopped at: database line 140,
