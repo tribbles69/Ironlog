@@ -13,6 +13,12 @@ rather than guessed.
 
 ---
 
+## 0.99.5 — 20 Nov 2026
+- **New programme: One Heavy Lift · A/B PPLUL** (23 Nov – 30 Dec). One heavy lift a session, on alternate days: A week bench, squat and high-handle trap bar; B week row, overhead press and hip thrust. The rest of each session is cable and machine accessories, and B weeks add light technique sets of bench, squat and trap bar.
+- The first fortnight comes with guide weights; after that the weights come from your log, as before. It ends with a test week after Christmas.
+- Both rack pulls and the cable flies are gone.
+- To switch: in Settings → Training programme, remove the WDC Records sessions, then install the new one.
+
 ## 0.99.4 — 20 Nov 2026
 - **Blood pressure chart:** dotted lines now mark the top of the ideal range — 120 for systolic, 80 for diastolic, in matching colours — so you can see at a glance whether a reading is in range.
 
