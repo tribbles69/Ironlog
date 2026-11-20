@@ -49,7 +49,17 @@ IDs run on and are never reused. Severity:
 
 ## Open
 
-(none)
+### B-038 · sev 3 · A target written "RPE 8." or "@8." at the end of a sentence is ignored
+Found: 2026-11-20, 0.99.3, nightly sweep (reading the B-030 change)
+Where: js/training.js `noteRir`, the second regex: `(?![\d%.])`
+Reproduce: add the exercise note "Top set @8." or "Keep it RPE 8." Probe in node on the function as shipped: `noteRir("RPE 8.")`, `noteRir("keep @8.")`, `noteRir("@1.")` and `noteRir("RPE 8.5.")` all return `null` (so the target falls back to the default RIR 2), while `noteRir("RPE 8")`, `"@8!"`, `"@8,"` and `"stop 2 shy."` read correctly. Before 0.99.3 the lookahead was `(?![\d%])` and the full stop was fine, so "RPE 7." used to give RIR 3 and no longer does. The `.` was added to stop "@8.5x" style decimals being cut, but it also rejects a sentence-ending full stop.
+Fix: refuse only a full stop that is followed by a digit: `(?![\d%])(?!\.\d)`. Add `"RPE 8."` and `"@2."` to the noteRir cases in the smoke test.
+
+### B-039 · sev 3 · Home's bodyweight "/ 7d" change looks back eight days and counts future check-ins
+Found: 2026-11-20, 0.99.3, nightly sweep (B-033 fixed the neighbouring lines)
+Where: js/ui.js `viewHome`, `bw7` (about line 421) and `bwDelta` (label at about line 465)
+Reproduce: from the code: `bw7 = bws.filter(c => daysBetween(c.date, today()) <= 7)`. B-033 changed `last7()` and `sessions7` to `<= 6 && >= 0`, but this filter was left. Today 20 Nov: a weigh-in on 13 Nov (7 days back) is the "start" of the 7-day change, so the tile compares eight days of data. A check-in dated in the future (a typo, or a planned entry) has a negative `daysBetween`, passes `<= 7`, sorts last, and becomes both `bwNow` and the end of the "week".
+Fix: same window as `last7`: `daysBetween(...) <= 6 && >= 0` (or reuse `last7()`'s filter), and take `bwNow` from check-ins dated today or earlier.
 
 ## Needs Aaron
 
@@ -66,6 +76,22 @@ Reproduce: the repo is public and GitHub Pages serves all of `r&d/` too
 Fix: question for Aaron — make the repo private (Pages from a private repo needs a paid GitHub plan, or host elsewhere, see B-026), and/or strip these: generic wording for the stretch flags ("priority for upper-back posture"), "a new lifter" instead of Chelsea, move personal data files out of the repo. Anything already pushed stays in git history unless the history is rewritten.
 
 ## Sweeps
+
+- **2026-11-20, 0.99.3 (nightly)** — scope: every js file changed since the
+  11-16 sweep (the 0.99.3 batch: core, database, io, kit, main, movement,
+  stats, sync, tools, training, ui, workout; diff read in full), then the
+  rotation: rest of **database** (Drive merge, Drive calls, save and flush),
+  **exercises** (volume and load convention, hold records, `isBefore`, set
+  numbering) and **stats** (ranks, hard sets, `statsFor`, PRs, plausibility,
+  goals, `last7`). Stopped at: stats, so tomorrow carries on with **ai**, then
+  loading, training. Checks: check-version (0.99.3 / ironlog-v189),
+  lint-scope, validate-exercises, validate-mobility and module-map --check
+  (TypeScript 5.6.3 in a scratch folder) pass; smoke 56/56 and no page errors
+  (headless Chromium on `serve.mjs` 5178). The click-through of every page was
+  not completed: the Welcome sheet covers the page on a fresh profile and
+  blocks the clicks, and the run did not set a profile up first. The `add_repo`
+  tool was not offered in this run; the repo was already cloned with the same
+  origin, so the sweep used that. New: B-038, B-039. No sev 1 or 2.
 
 - **2026-11-16, 0.99.1 (nightly)** — rotation: kit's remainder, exercises and
   database were due; tonight **database** (storage section) was read in
