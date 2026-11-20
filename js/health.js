@@ -1403,7 +1403,9 @@ function bpCard() {
       </div>
       ${bpBand(last.sys, last.dia).id === 'veryhigh' ? '<div class="sub" style="color:var(--red);margin-bottom:6px">A reading this high: if you also feel unwell — chest pain, breathlessness, a bad headache, blurred vision — get urgent medical help (NHS 111, or 999 in an emergency). If you feel fine, rest 5 minutes and measure again.</div>' : ''}
       ${days.length > 1 ? chartMulti([{ label: 'Systolic', color: 'var(--accent)', points: days.map(d => ({ date: d, v: dayMean(d, 'sys') })) },
-        { label: 'Diastolic', color: 'var(--blue)', points: days.map(d => ({ date: d, v: dayMean(d, 'dia') })) }], { h: 130, fmt: v => Math.round(v) }) : ''}
+        { label: 'Diastolic', color: 'var(--blue)', points: days.map(d => ({ date: d, v: dayMean(d, 'dia') })) }], { h: 130, fmt: v => Math.round(v),
+          refs: [{ v: 120, color: 'var(--accent)', label: '120' }, { v: 80, color: 'var(--blue)', label: '80' }] })
+        + '<div class="sub" style="margin-top:2px">Dotted lines: top of the ideal range (120 systolic, 80 diastolic). Below its line is in range.</div>' : ''}
       ${rs.slice(-8).reverse().map(r => `<button class="exline" data-bp="${esc(r.id)}" style="width:100%;background:none;border:0;color:inherit;text-align:left">
         <span class="dimmer">${fmtDate(r.date, { day: 'numeric', month: 'short' })}${r.time ? ' ' + esc(r.time) : ''}</span>
         <span class="mono">${r.sys}/${r.dia}${r.pulse ? ` · ${r.pulse} bpm` : ''} ${bandChip(bpBand(r.sys, r.dia))}</span></button>`).join('')}`

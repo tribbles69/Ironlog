@@ -13,6 +13,9 @@ rather than guessed.
 
 ---
 
+## 0.99.4 — 20 Nov 2026
+- **Blood pressure chart:** dotted lines now mark the top of the ideal range — 120 for systolic, 80 for diastolic, in matching colours — so you can see at a glance whether a reading is in range.
+
 ## 0.99.3 — 16 Nov 2026
 - **Safer saving:** if the phone's main storage ever fails and the app saves to its backup spot instead, that save is now the one it opens next time, so recent sessions aren't lost. A save also only counts as done once the phone has really written it.
 - Closing Profile with ✕, tapping outside or pressing Escape now throws your changes away, the same as Cancel. Bodyweight can't be negative.
