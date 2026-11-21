@@ -85,6 +85,30 @@ Where: js/exercises.js, the block before `isBefore` / `holdRecords`
 Reproduce: from the code — "Completed working holds for a key…" is followed by the "History before a session" comment and `isBefore`, so `holdRecords` has no comment and `isBefore` appears to document two things.
 Fix: move the hold-records comment down to sit directly above `holdRecords`.
 
+### B-065 · sev 2 · Editing a meet and pressing Save throws away its run-in blocks
+Found: 2026-11-21, 0.99.5, nightly sweep
+Where: js/events.js `openMeet` (the `rec` object built in the `#mSave` handler lists `lifts$`, `prog`, `strategy`, `attemptsLocked` and `day` but not `blocks`)
+Reproduce: in the page, set `S.meets = [{ id:'m1', type:'powerlifting', name:'Test', date:'2027-03-01', wclass:'83kg', lifts:{squat:200,bench:130,deadlift:240}, attempts:{}, pct:{o:90,s:95}, blocks:[{kind:'accumulation',weeks:6},{kind:'peak',weeks:2}] }]`, call `openMeet('m1')`, change only the notes and click Save. `S.meets[0].blocks` is `undefined` afterwards and the keys are `id,name,date,fed,loc,wclass,bwTarget,notes,type,lifts$,lifts,attempts,pct,prog`. The run-in card goes back to "Plan the run-in", `activeBlock` finds nothing, so the Train page stops giving block RIR and rep targets. Any edit to a powerlifting or strengthlifting event (a date change, a new goal) does this. The strongman editor is fine: it clones the event and keeps `blocks`.
+Fix: build `rec` from a copy of the existing event (`{ ...existing, ...changedFields }`) so any field the form doesn't own survives, or add `...(m.blocks ? { blocks: m.blocks } : {})` next to the `day` line. A copy is safer: the next field someone adds to a meet would be dropped the same way.
+
+### B-066 · sev 3 · "Save results as tested singles" can be pressed again and logs the meet twice
+Found: 2026-11-21, 0.99.5, nightly sweep
+Where: js/events.js `openMeetDay` (`#mdTests` handler: `d.saved = true` only changes the label)
+Reproduce: in the page, open a meet's Meet day on Attempts, give the opener two white lights, tap the save button. The label turns to "✓ Saved as tested singles" but the button is still enabled; tapping it again adds a second "Squat test" session (`S.workouts` goes 1 → 2, both with the same set). Each copy counts in session counts, volume and the test list. Editing an attempt after saving and pressing it again is the same: another session, the first one is not replaced.
+Fix: when `d.saved` is true, either disable the button or have the handler replace the earlier test sessions (store their ids on `d`, e.g. `d.savedIds`, and remove them before logging again).
+
+### B-067 · sev 3 · Lifters on lb: saving an event nudges goal, attempt and target weights off their kg values
+Found: 2026-11-21, 0.99.5, nightly sweep (sibling of B-061)
+Where: js/events.js `openMeet` save (`attVal` reads every goal, opener and second field with `toKg(+el.value)`, and `#mBw`), `openStrongmanMeet` save (`smBw`); the fields are drawn with `dw(x)` rounded to 0.1
+Reproduce: with units set to lb, goal squat 200 kg is drawn as 440.9; open the event, change only the notes, Save: `S.meets[0].lifts.squat` is 199.9889, bench 130 becomes 129.9996, deadlift 240 becomes 239.9957, and an opener of 215 kg is saved as 215.0028. Every untouched field is rewritten from its rounded display value. The stored kg figures no longer match the round numbers the event was seeded with (and any goal compared exactly against a tested single is off by up to a few grams). kg lifters are not affected.
+Fix: same as B-061: write a field back only when its box was changed (compare with the value it was drawn with), or round kg to 0.01 after `toKg`.
+
+### B-068 · sev 3 · Bar path from video names the last weighted set's load, but the result attaches to the next unfinished set
+Found: 2026-11-21, 0.99.5, nightly sweep
+Where: js/vbt.js `openBarPath` (`lastW`, shown in `stepPick` and passed to `bpAnalyse` as `loadKg`), against `attachVbt` (`findIndex(s => !s.done && !s.vbt)`)
+Reproduce: from the code. With a warm-up of 60 kg still to do and the 140 kg top set already typed in, the pick screen says "For Back Squat at 140 kg — the result attaches to its next set", the clip is analysed with `loadKg: 140`, and `attachVbt` puts it on the 60 kg warm-up. `openVbtRecord` was fixed for exactly this in "bug sweep 3.5" (`tgt = ex.sets.find(s => !s.done && !s.vbt)`); the video path was not.
+Fix: use the same `tgt` rule in `openBarPath` for both the text and `loadKg`.
+
 ## Needs Aaron
 
 ### B-026 · sev 2 · Ironlog shares its storage with every other site on tribbles69.github.io
@@ -100,6 +124,25 @@ Reproduce: the repo is public and GitHub Pages serves all of `r&d/` too
 Fix: question for Aaron — make the repo private (Pages from a private repo needs a paid GitHub plan, or host elsewhere, see B-026), and/or strip these: generic wording for the stretch flags ("priority for upper-back posture"), "a new lifter" instead of Chelsea, move personal data files out of the repo. Anything already pushed stays in git history unless the history is rewritten.
 
 ## Sweeps
+
+- **2026-11-21, 0.99.5 (nightly)** — rotation: the 11-20 run ended with
+  **picker** next, so tonight **picker**, **events** and **vbt** were read in
+  full (events: meet cards, placing predictor, run-in, meet day, strongman,
+  editors; vbt: Measure, bar path from video, depth, load-velocity, calibrate).
+  Also read every js change since the last sweep: the 0.99.4 BP reference
+  lines (`chartMulti` refs, health BP card) and the 0.99.5 version bump. Tomorrow
+  wraps to **core**, then **state**, **kit**. Checks: check-version, lint-scope,
+  validate-exercises, validate-mobility and module-map --check (TypeScript 5.6.3
+  in a scratch folder) pass; smoke 56/56, no page errors (headless Chromium);
+  Home, Calendar, Train, Stats, Health and Events open with no page errors, and
+  every events sheet (meet day, run-in, add event, test log, priority, strongman
+  editor) opens and closes clean. Probes in the page: meet edit and save with
+  run-in blocks (B-065), meet day double save (B-066), lb save of goal and
+  attempt weights (B-067). Not logged, noted: the "Lifters in flight" box on
+  the meet-day warm-up tab is stored but not used in the clock times;
+  `testLog`'s comparator returns -1 for equal dates (it happens to give newest
+  first in Chromium). No open nightly PR existed, so this is a new one.
+  New: B-065 to B-068.
 
 - **2026-11-20, 0.99.3 (nightly)** — this run again started from a checkout
   without the 11-17 to 11-19 sweeps (`git fetch` showed the open PR #111), so
