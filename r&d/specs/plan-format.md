@@ -1,6 +1,6 @@
 # The Ironlog plan format (`ironlog-plan` v1)
 
-Written 2026-11-02 at Aaron's request: people may already follow a plan, so the
+Written 2026-11-02 on request: people may already follow a plan, so the
 coach asks whether they want one built, and anyone can bring their own in. The
 format is short and plain so **any AI can write it** — the lifter's own AI app
 on their phone, or Claude inside Ironlog on their key (D8).
@@ -18,7 +18,9 @@ on their phone, or Claude inside Ironlog on their key (D8).
   2. **Write my plan** — Claude Haiku 5.5 on the lifter's key (`aiCall`,
      feature `plan`) with the same rules as its system prompt.
   3. **Paste or load a file** — plan JSON, or a full Ironlog program
-     (`program.json` shape, with `workouts`).
+     (with `workouts`, the shape `installProgram` takes), or a file of
+     routines alone.
+- **Train → Mobility → Bring in a plan…** opens the same sheet.
 - **Check the plan** shows every day, any exercise that isn't in the
   catalogue (added as the lifter's own), and anything guessed, then a start
   date and **Put it on my calendar**. Other programs with planned sessions get
@@ -77,7 +79,11 @@ source of truth; this file mirrors it** — change both together.
   { "name": "Leg day", "exercises": [
       { "mobility": ["cossack-mob", "knee-to-wall"], "name": "Squat warm-up", "at": "start" },
       { "name": "Back Squat", "sets": 3, "reps": 5, "rir": 2 } ] },
-  { "name": "Stretch", "kind": "mobility", "routine": "morning-stretch" }
+  { "name": "Stretch", "kind": "mobility", "routine": "evening-stretch" }
+],
+"routines": [
+  { "id": "evening-stretch", "name": "Evening stretch",
+    "items": [ { "id": "cat-cow" }, { "id": "open-book", "dose": { "reps": 6, "perSide": true } }, { "id": "couch-stretch" } ] }
 ]
 ```
 
@@ -86,7 +92,8 @@ source of truth; this file mirrors it** — change both together.
 | exercise with `cardio` / `mobility` | A warm-up (`"at": "start"`) or finisher (`"end"`) inside a lift day. Without `at`: before the first lift → warm-up, after → finisher |
 | day with `kind` | `"cardio"` or `"mobility"`: a session of its own, no exercises |
 | `cardio` | A machine: treadmill, bike, airbike, rower, skierg, elliptical, stairs, outdoor, other (common names understood). With `minutes`, `zone` (`z2` `z3` `z4`), or `intervals`: a preset name or `"work/rest x rounds"` (`"30/30 x 10"`, `"1:00/1:30 x 6"`) |
-| `mobility` | A list of mobility-library ids, or `"routine": "<id>"` |
+| `mobility` | A list of mobility-library ids, or `"routine": "<id>"` — one of the lifter's routines, or one in this file's `routines`. The instructions list the lifter's routines by id; with none, only drill lists are offered |
+| `routines` | Optional, top level, in a plan or a full program file: the lifter's own mobility routines, so a plan that uses one can travel with it. Each is `{ id, name, items: [{ id, dose? }] }` (library ids; `dose` as the routine editor writes it), or `{ id, name, subtitle?, estMin?, zones: [{ name, items: [full item] }] }` for one written out in full (mobility-spec.md §1). They keep their ids and are added to Mobility before the plan installs. One already on the phone under the same id is left as it is (and listed). Unknown library ids are left out and listed. A file with `routines` and no days or workouts just adds them |
 | repeated weekday | Two sessions on one day; `"slot": "am"` / `"pm"` orders them |
 
 Up to 14 entries a week (two a day); past 7 the plan must give `weekdays`.
@@ -95,9 +102,9 @@ Errors stop the import with a plain message (no JSON found, no days, a lift
 day with no exercises, more than 14 entries, more than 7 with no weekdays).
 Everything else is fixed up and listed.
 
-## Why a separate format rather than `program.json`
+## Why a separate format rather than a full program
 
-`program.json` lists every session of every week (the 8-week shipped program
-is 40 sessions), which is long for an AI to write and easy to get wrong. The
+A full program lists every session of every week (an 8-week block is about
+40 sessions), which is long for an AI to write and easy to get wrong. The
 plan format is one week (plus an optional B week) and a week count; Ironlog
 expands it. Full programs still import as they are.

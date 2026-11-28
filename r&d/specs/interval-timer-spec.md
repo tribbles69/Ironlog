@@ -2,7 +2,7 @@
 
 Added 2026-11-08. Work / rest intervals with an optional warm-up and
 cool-down, audio and vibration cues, screen kept on, saved presets, logged as
-a cardio session. Replaces INTVL on Aaron's phone.
+a cardio session. Reference app: INTVL.
 
 ## 1. Where it starts
 

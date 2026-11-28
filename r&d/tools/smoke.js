@@ -107,9 +107,12 @@ window.smoke = async function smoke(opts) {
     S.workouts = []; S.meets = []; S.goals = []; S.checkins = []; delete S.foods;
     S.customMovements = []; S.programs = []; S.active = null; S.exAliases = {};
     S.checkins = [{ date: today(), weight: 90 }];
+    /* The app ships no program (0.100.7), so the program seeds install a
+       generic test fixture, the way "Bring in a plan" would: named, from today. */
     if (o.seed === 'program' || o.seed === 'migrated') {
-      const P = await loadProgram();
-      if (P) installProgram(P);
+      const P = await fetch('r&d/tools/fixtures/program-generic.json').then(r => r.json());
+      S.programNames = { ...(S.programNames || {}), [P.id]: P.name };
+      installProgram(P, today());
     }
     if (o.seed === 'migrated') {
       // tested singles, a completed session, a goal, an unresolved movement
@@ -191,7 +194,7 @@ window.smoke = async function smoke(opts) {
     if (bad.length) throw new Error(`${bad.length} imported entries have no leaf`);
     return `${added} session(s), ${imported.flatMap(w => w.exercises).length} entries, all with leaves`;
   });
-  await openCheck('modal: program', () => openProgram(), 200);
+  await openCheck('modal: bring in a plan', () => openPlanImport(), 200);
 
   for (const t of Object.keys(EVENT_TYPES)) {
     const type = EVENT_TYPES[t];
@@ -511,10 +514,19 @@ window.smoke = async function smoke(opts) {
      and a session on each starts, renders and finishes. */
   /* Mobility (E5): ticking writes today's session, untick-all removes it, and
      the player, Home line and calendar card all render. */
+  /* No built-in routine since 0.100.7: a routine kept whole in zones (as
+     plan files bring one in) is added for the test and taken
+     away after. */
   await step('flow: mobility routine', async () => {
     close();
-    const r = BUILTIN_ROUTINES[0];
-    if (!r) throw new Error('no built-in routine');
+    const keepR = JSON.stringify(S.routines || []);
+    const lib = id => structuredClone(mobLibItem(id));
+    S.routines = [...(S.routines || []), { id: 'r-smoke-zones', name: 'Smoke zones', subtitle: 'Test routine', estMin: 6, mt: Date.now(),
+      zones: [{ n: 1, name: 'Neck', items: [lib('chin-tuck'), lib('neck-rotation')] }, { n: 2, name: 'Hips', items: [lib('couch-stretch'), lib('pigeon-pose-modified')] }],
+      items: [{ id: 'chin-tuck' }, { id: 'neck-rotation' }, { id: 'couch-stretch' }, { id: 'pigeon-pose-modified' }] }];
+    try {
+    const r = mobRoutine('r-smoke-zones');
+    if (!r || r.zones.length !== 2) throw new Error('zoned routine did not resolve');
     const d = today(), before = S.workouts.length;
     const ids = r.zones[0].items.map(x => x.id);
     ids.forEach(id => mobTick(r.id, id, true, d));
@@ -526,7 +538,64 @@ window.smoke = async function smoke(opts) {
     if (!document.querySelector('[data-mobopen]')) throw new Error('no Home line');
     ids.forEach(id => mobTick(r.id, id, false, d));
     if (mobSession(r.id, d) || S.workouts.length !== before) throw new Error('untick-all left a session');
-    return `${mobTotal(r)} items`;
+    return `${mobTotal(r)} items in ${r.zones.length} zones`;
+    } finally { S.routines = JSON.parse(keepR); bust(); save(); close(); }
+  });
+
+  /* A new log has no routine at all: Mobility says how to make one, and the
+     coach's mobility answer offers to, rather than opening nothing. */
+  await step('flow: no routines — Mobility and coach empty states', async () => {
+    close();
+    const keepR = JSON.stringify(S.routines || []), keepW = S.workouts;
+    try {
+      S.routines = []; S.workouts = S.workouts.filter(w => w.kind !== 'mobility'); bust();
+      if (allRoutines().length || defaultRoutine()) throw new Error('a routine is built in');
+      openMobilityPicker(); await wait(60);
+      const body = (document.querySelector('.modal-body') || {}).textContent || '';
+      if (!/No routines yet/.test(body) || !document.querySelector('#mobNew') || !document.querySelector('#mobPlan')) throw new Error('no empty state');
+      close();
+      const keepC = JSON.stringify(S.coach || {});
+      S.coach = { ...JSON.parse(keepC), setupDone: true };
+      openCoach(); await wait(60);
+      coAnswerTopic('mobility'); await wait(40);
+      const last = [...document.querySelectorAll('.co-b.coach')].pop();
+      S.coach = JSON.parse(keepC);
+      if (!last || !/no routine yet/i.test(last.textContent)) throw new Error('coach mobility answer');
+      close();
+      if (/one of the lifter's routines/.test(planFormatText())) throw new Error('plan instructions offer routines the lifter has none of');
+      if (!/not on this phone/.test(sideLine('mobility', { routine: 'r-gone' }, 'Stretch'))) throw new Error('a missing routine reads wrongly');
+      return 'empty Mobility, coach offers to make one';
+    } finally { S.routines = JSON.parse(keepR); S.workouts = keepW; bust(); save(); close(); }
+  });
+
+  /* A plan file can bring routines (plan-format.md): with a plan, the plan's
+     stretch session finds the routine; on their own, they are just added. */
+  await step('flow: plan file with routines', async () => {
+    close();
+    const keep = { programs: [...S.programs], names: { ...(S.programNames || {}) }, n: S.workouts.length, routines: JSON.stringify(S.routines || []) };
+    let pid = null;
+    try {
+      const rt = { id: 'r-smoke-file', name: 'Smoke file stretch', items: [{ id: 'cat-cow' }, { id: 'open-book', dose: { reps: 6, perSide: true } }, { id: 'no-such-stretch' }] };
+      const only = planToProgram({ format: 'ironlog-plan', version: 1, routines: [rt] });
+      if (only.P || only.routines.length !== 1 || only.routines[0].items.length !== 2) throw new Error('routine-only file');
+      if (!only.warn.some(w => /no-such-stretch/.test(w))) throw new Error('unknown stretch not reported');
+      const res = planToProgram({ format: 'ironlog-plan', version: 1, name: 'Smoke stretch plan', weeks: 1, weekdays: ['mon', 'mon'], routines: [rt],
+        days: [{ name: 'Lift', exercises: [{ name: 'Back Squat', sets: 3, reps: 5, rir: 2 }] }, { name: 'Stretch', kind: 'mobility', routine: 'r-smoke-file', slot: 'pm' }] });
+      if (res.warn.some(w => /isn't on this phone/.test(w))) throw new Error('the file\'s own routine counted as missing');
+      if (addPlanRoutines(res.routines) !== 1 || addPlanRoutines(res.routines) !== 0) throw new Error('routines added twice');
+      let n = 0;
+      installAsking(res.P, today(), [], k => { n = k; });
+      await wait(40);
+      if (modalTitle() === 'Other planned sessions') { document.querySelector('#coKeep').click(); await wait(40); }
+      pid = res.P.id;
+      const st = S.workouts.find(w => w.prog === pid && w.kind === 'mobility');
+      if (!n || !st || st.plan.routine !== 'r-smoke-file' || !mobRoutine('r-smoke-file')) throw new Error('stretch session does not find its routine');
+      return `${n} sessions, routine added once`;
+    } finally {
+      if (pid) removeProgram(pid);
+      S.programs = keep.programs; S.programNames = keep.names; S.routines = JSON.parse(keep.routines); bust(); save(); close();
+      if (S.workouts.length !== keep.n) throw new Error('cleanup left sessions behind');
+    }
   });
 
   /* Stretch library and custom routines (0.98.0): the library browses and
@@ -714,7 +783,7 @@ window.smoke = async function smoke(opts) {
     D.bw = 93; D.sex = 'male'; D.age = 40;
     Object.assign(D.home, { k2w: { L: 9, R: 13 }, scratch: { L: 5, R: 20 }, ohs: { flat: 1, heels: 2 }, bal: { L: 6, R: 12 } });
     D.power = { mode: 'jump', cm: 45 };
-    // the spec's worked example (§4): 93 kg, trap bar high handles
+    // the spec's worked example (§4)
     const L = D.ladder.hinge;
     if (fitLadderNext(L, 'hinge', 93).kg !== 47.5) throw new Error('hinge should start at 47.5');
     [[47.5, 8, 6], [92.5, 5, 5], [140, 3, 3], [162.5, 2, 1]].forEach(([kg, r, rir]) => L.sets.push({ kg, r, rpe: rirToRpe(rir) }));
@@ -788,13 +857,13 @@ window.smoke = async function smoke(opts) {
       const home = { id: 'zzhome', name: 'Home', kit: ['bodyweight', 'dumbbells', 'resistance_band'], extras: ['bench'] };
       S.settings.places = [...JSON.parse(keep.places), gym, home];
       // the spec's two test cases
-      const aaron = coachBuild({ goal: 'strongman', where: 'gym', gymPlace: 'zzgym', days: ['mon', 'tue', 'wed', 'thu', 'fri'], minutes: 45,
+      const expd = coachBuild({ goal: 'strongman', where: 'gym', gymPlace: 'zzgym', days: ['mon', 'tue', 'wed', 'thu', 'fri'], minutes: 45,
         experience: 'over2y', priority: ['deadlift/trap_bar/bilateral/none'], easy: [] }, null);
-      const lower = aaron.days.find(d => d.name === 'Lower');
+      const lower = expd.days.find(d => d.name === 'Lower');
       if (lower.A[0].key !== 'deadlift/trap_bar') throw new Error(`Lower main ${lower.A[0].key}`);
       if (!lower.A.some(x => x.event)) throw new Error('no strongman event on Lower');
-      if (aaron.days.some(d => d.A.length !== 7)) throw new Error('45 min should hold 7');
-      aaron.days.forEach(d => ['A', 'B'].forEach(w => { const ks = (d[w] || []).map(x => x.key);
+      if (expd.days.some(d => d.A.length !== 7)) throw new Error('45 min should hold 7');
+      expd.days.forEach(d => ['A', 'B'].forEach(w => { const ks = (d[w] || []).map(x => x.key);
         if (ks.some(k => k.startsWith('leg-press/')) && ks.some(k => k.startsWith('back-squat/') || k === 'deadlift/trap_bar')) throw new Error(`${d.name} ${w}: leg press with squat or trap bar`); }));
       const newbie = coachBuild({ goal: 'general', where: 'both', gymPlace: 'zzgym', homePlace: 'zzhome', days: ['mon', 'wed', 'fri'],
         dayPlace: { wed: 'home' }, minutes: 45, experience: 'under6m', easy: ['knees'] }, null);
@@ -816,13 +885,13 @@ window.smoke = async function smoke(opts) {
       if (S.coach.answers.goal !== 'strength') throw new Error('answer not stored');
       close();
       let n = 0;
-      coachAccept(aaron, k => { n = k; });
+      coachAccept(expd, k => { n = k; });
       await wait(40);
       if (modalTitle() === 'Other planned sessions') { document.querySelector('#coKeep').click(); await wait(40); }
       pid = S.coach.planProg;
       const ws = S.workouts.filter(w => w.prog === pid);
       if (!n || ws.length !== n || ws[0].loads !== 'rir' || ws[0].exercises.some(e => !e.leaf)) throw new Error(`accept installed ${ws.length}/${n}`);
-      return `Aaron: ${aaron.days.map(d => d.A[0].key.split('/')[0]).join(', ')}; new lifter starts ${newbie.days.map(d => d.A[0].key.split('/')[0]).join(', ')}; accept → ${n} sessions`;
+      return `Experienced: ${expd.days.map(d => d.A[0].key.split('/')[0]).join(', ')}; new lifter starts ${newbie.days.map(d => d.A[0].key.split('/')[0]).join(', ')}; accept → ${n} sessions`;
     } finally {
       if (pid) removeProgram(pid);
       S.coach = JSON.parse(keep.coach); S.settings.places = JSON.parse(keep.places); S.programs = keep.programs; bust(); save(); close();

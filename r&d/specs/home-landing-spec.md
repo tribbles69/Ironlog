@@ -1,6 +1,6 @@
 # Home as the landing page (roadmap D14)
 
-Written 2026-10-31. **Aaron's decision (2026-10-31): D14 is the in-app Home,
+Written 2026-10-31. **Decision (2026-10-31): D14 is the in-app Home,
 not a separate public site.** The app stays at the site root and installed
 PWAs are untouched — no `start_url`, scope or service-worker change.
 

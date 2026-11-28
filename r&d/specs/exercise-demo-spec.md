@@ -1,6 +1,6 @@
 # Exercise demos — animated figure and description on the Info tab
 
-Added 2026-11-05 at Aaron's request. The squat prototype (side-view outline
+Added 2026-11-05 on request. The squat prototype (side-view outline
 mannequin) was approved in a planning chat as "perfect"; this spec turns it
 into one engine that every mapped movement uses. Where this spec and the
 roadmap disagree, this spec wins.
@@ -185,7 +185,7 @@ Rules:
 - Your notes textarea has a visible label.
 
 ## 6. Build order
-1. Engine + squat; headless phone-width screenshot (both skins) for Aaron.
+1. Engine + squat; headless phone-width screenshot (both skins) for the owner.
 2. The other nine patterns, the mapping and the text.
 3. Version bump, changelog, PR.
 

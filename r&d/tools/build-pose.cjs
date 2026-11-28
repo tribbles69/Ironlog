@@ -4,7 +4,7 @@
 
    pose/ is an OPTIONAL download: nothing in it is precached by sw.js, and the
    app fetches it only when the lifter turns depth judging on (Settings). It is
-   hosted here rather than fetched from a CDN on Aaron's call (2026-11-08):
+   hosted here rather than fetched from a CDN on the owner's call (2026-11-08):
    local-only, no third party sees a request — the same rule Slew follows.
 
    What goes in, all from slew-v2's installed @mediapipe/tasks-vision so the

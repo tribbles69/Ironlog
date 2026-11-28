@@ -20,7 +20,7 @@ damages a log, or a core flow (logging a set, finishing a session) is blocked.
   sense — one bump and one changelog entry for the batch is fine — but keep
   one commit per bug so each can be reverted alone. Move each fixed entry to
   **Fixed** with its version.
-- Anything that needs Aaron's call goes under **Needs Aaron** with the
+- Anything that needs the owner's call goes under **Needs the owner** with the
   question spelled out, not in Open.
 - Check a bug is still real before fixing it; if it's gone, move it to Fixed
   with "not reproducible" and the version you checked against.
@@ -49,57 +49,51 @@ IDs run on and are never reused. Severity:
 
 ## Open
 
-### B-263 · sev 4 · `build-program.py` crashes: the old program.json it reads has no `priority`
-Found: 2026-11-28, 0.100.4, while moving the program's source text off GitHub (B-027)
-Where: r&d/tools/build-program.py (`'priority': old['priority'], 'meets': old['meets']`)
-Reproduce: with `r&d/private/hunchback-pplul-77wk.txt` in place, `python3 "r&d/tools/build-program.py"` → KeyError: 'priority'. Same on main before this change.
-Fix: read those keys with `.get()` (or drop them if program.json no longer carries them).
-
 ### B-262 · sev 4 · `lint-scope.js` does not check code inside top-level object literals
 Found: 2026-11-28, 0.100.3, while fixing B-211
 Where: r&d/tools/lint-scope.js (collects what each top-level *function* declares and reads); the `WHY` explainers in js/ui.js live in `Object.assign(WHY, { … })`
 Reproduce: from the run: with `inc()` used in `WHY.range` and not imported into ui.js, lint-scope reported "no undeclared identifiers found"; check-version passed too. It would have thrown the first time the rep-range "how?" opened in debug mode.
 Fix: also walk arrow functions and methods inside top-level object literals (or at least the `WHY` block).
 
-## Needs Aaron
+## Needs the owner
 
 ### B-057 · sev 2 · Zone 2 moves about 20 bpm when a resting heart rate is entered
 Found: 2026-11-16, 0.99.3, maths audit
 Where: js/health.js `HR_ZONES`, `zoneBpm`
 Reproduce: from the code. Max 187 (Tanaka at 30): "Zone 2 · easy" is 112–131 with no resting HR and 136–149 with a resting HR of 60. The same 60–70% is applied to max HR in one case and to heart-rate reserve in the other, and those are different intensities: 136–149 is 73–80% of max. ACSM's table puts 64–76% of max level with 40–59% of reserve (moderate), and 60–89% of reserve as vigorous.
-Fix: question for Aaron — which Zone 2 is meant? Either keep 60–70% of max and use 40–59%-style reserve bands when a resting HR is known, or keep the Karvonen 60–70% and raise the %-of-max bands to match. Both are in common use; the app shouldn't switch between them on an optional field.
+Fix: Question for the owner — which Zone 2 is meant? Either keep 60–70% of max and use 40–59%-style reserve bands when a resting HR is known, or keep the Karvonen 60–70% and raise the %-of-max bands to match. Both are in common use; the app shouldn't switch between them on an optional field.
 
 ### B-026 · sev 2 · Ironlog shares its storage with every other site on tribbles69.github.io
 Found: 2026-11-13, 0.99.1, security and privacy check
 Where: hosting — browsers keep localStorage / IndexedDB per origin (scheme + host), not per path
 Reproduce: from any other page on https://tribbles69.github.io/ (another repo's Pages site, or r&d/tools/demo-lab.html in this one), `localStorage.getItem('ironlog.anthropicKey')` and `indexedDB.open('ironlog')` read Ironlog's key, log, photos and clips. The same is true for anyone who self-hosts on their own username.github.io.
-Fix: give Ironlog an origin of its own — a custom subdomain on GitHub Pages, or e.g. a Cloudflare Pages ironlog.pages.dev. Question for Aaron: which address? Moving origin doesn't move anyone's data: users need a Drive sync or export first, so the old address should show a "we've moved — sync or export, then open the new one" screen for a while. The README's self-hosting steps should tell people to use a repo/domain that hosts nothing else.
+Fix: give Ironlog an origin of its own — a custom subdomain on GitHub Pages, or e.g. a Cloudflare Pages ironlog.pages.dev. Question for the owner: which address? Moving origin doesn't move anyone's data: users need a Drive sync or export first, so the old address should show a "we've moved — sync or export, then open the new one" screen for a while. The README's self-hosting steps should tell people to use a repo/domain that hosts nothing else.
 
 ### B-139 · sev 2 · Sync keeps only the newer copy of a session edited on two phones
 Found: 2026-11-23, 0.99.6, Haiku swarm sweep
 Where: js/database.js `mergeSync` → `pick` (whole record, newest `stampOf` wins), as `r&d/specs/drive-sync-spec.md` merge step 2 says
 Reproduce: from the code. Phone A logs a set on a session at 10:00 without syncing; phone B edits the same session at 10:05 and syncs; when A syncs, its set is gone.
-Question for Aaron: it's the spec's rule, so this is a design call. Keep it (rare for one lifter), or merge sessions set by set?
+Question for the owner: it's the spec's rule, so this is a design call. Keep it (rare for one lifter), or merge sessions set by set?
 
 ### B-140 · sev 3 · Voice card logs a 0 kg set when the weight box is cleared
 Found: 2026-11-23, 0.99.6, Haiku swarm sweep
 Where: js/workout.js `confirmVoiceSet` `#vsGo` (`+''` is 0, no check)
 Reproduce: from the code. Clear the weight, tap Log set: a weighted lift is logged at 0 kg as done.
-Question for Aaron: is that meant for bodyweight moves? If not, ask for a weight when the lift is loaded.
+Question for the owner: is that meant for bodyweight moves? If not, ask for a weight when the lift is loaded.
 
 ### B-136 · sev 3 · An ignored "failed rep" is still taken out of the rep count
 Found: 2026-11-23, 0.99.6, Haiku swarm sweep
 Where: js/vbt.js `trustFailure`; slew-core.js `analyse` (already removed the flagged rep)
 Reproduce: from the code. A fast set with a partial last rep: the note says the failure was ignored, but the rep stays out and the "missed rep" chip is hidden.
 Fix: when the failure isn't trusted, put the rep back (or have Slew return it).
-Blocked on Slew: `Slew.analyse` drops the flagged rep (`allReps.slice(0, failedRepIndex)`) and returns only the kept reps, and `slew-core.js` is generated from Slew's repo (do not edit). Question for Aaron: change Slew's `analyse` to also return all reps (or the dropped one), then rebuild with `build-slew.cjs`?
+Blocked on Slew: `Slew.analyse` drops the flagged rep (`allReps.slice(0, failedRepIndex)`) and returns only the kept reps, and `slew-core.js` is generated from Slew's repo (do not edit). Question for the owner: change Slew's `analyse` to also return all reps (or the dropped one), then rebuild with `build-slew.cjs`?
 
 ### B-138 · sev 3 · "Looking for the plate" can hang forever on a seek that never finishes
 Found: 2026-11-23, 0.99.6, Haiku swarm sweep
 Where: slew-video.js `searchPlateInClip` → `seekTo` (no timeout, unlike `bpSeek` in vbt.js)
 Reproduce: from the code.
 Fix: the same timeout `bpSeek` uses.
-Blocked on Slew: `slew-video.js` is generated from Slew's repo (do not edit). Question for Aaron: add a timeout to `searchPlateInClip`'s `seekTo` in Slew (as `bpSeek` has), then rebuild with `build-slew.cjs`?
+Blocked on Slew: `slew-video.js` is generated from Slew's repo (do not edit). Question for the owner: add a timeout to `searchPlateInClip`'s `seekTo` in Slew (as `bpSeek` has), then rebuild with `build-slew.cjs`?
 
 ## Sweeps
 
@@ -116,7 +110,7 @@ Blocked on Slew: `slew-video.js` is generated from Slew's repo (do not edit). Qu
 - **2026-11-23 evening, 0.99.8 (Haiku swarm, cut short)** — a run of the new
   one-agent-per-file swarm, started by hand to measure its cost. 29 slices
   (health, workout and coach split in two); 20 ran at once (the session's
-  cap) and the run hit Aaron's 5-hour usage limit: 8 finished (health part 2,
+  cap) and the run was stopped early: 8 finished (health part 2,
   io, stats, database, kit, core, tools, slew-reps), 12 stopped partway and
   were not resumed, 8 never started. Tokens: the 8 finished used 1.29M
   (142k–199k each, about 162k on average), so a full nightly swarm is about
@@ -277,7 +271,7 @@ Blocked on Slew: `slew-video.js` is generated from Slew's repo (do not edit). Qu
   Mifflin-St Jeor, Katch–McArdle, Butt, normalised FFMI, Tanaka, Karvonen,
   the balance norms, the load-velocity fit and the projection's least squares.
   No Wilks in the app. New: B-038 to B-058 (seven sev 2, thirteen sev 3, one
-  for Aaron; B-058 decided the same day). Nothing fixed. Detail: `r&d/notes/maths-audit-2026-11.md`.
+  for the owner; B-058 decided the same day). Nothing fixed. Detail: `r&d/notes/maths-audit-2026-11.md`.
 - **2026-11-16, 0.99.1 (nightly)** — rotation: kit's remainder, exercises and
   database were due; tonight **database** (storage section) was read in
   depth, plus movement again (modifier picker). Stopped at: database line 140,
@@ -346,12 +340,13 @@ Blocked on Slew: `slew-video.js` is generated from Slew's repo (do not edit). Qu
 
 Most recent first: `- B-000 · title — 0.00.0`
 
-- B-027 · Public repo held Aaron's personal training and health details — 0.100.5 (app wording made generic, names removed, personal files moved to Aaron's Drive; git history rewritten afterwards)
+- B-263 · `build-program.py` crashes: the old program.json it reads has no `priority` — 0.100.7 (not applicable: the builder and program.json left the repo; the app ships no program)
+- B-027 · Public repo held personal training and health details — 0.100.5 (app wording made generic, names removed, personal files moved out of the repo; git history rewritten afterwards)
 - B-240 · Plan import: AM / PM order is lost when another day sits between the two sessions in the list — 0.100.4
 - B-238 · Voice logging: a reply with a sentence after the JSON is thrown away — 0.100.4
 - B-237 · Plan writer: a reply that takes over 90 s is reported as offline and not counted against the cap — 0.100.4
 - B-236 · The 90 s AI timeout stops once the reply's headers arrive, so a stalled reply body never times out — 0.100.4
-- B-232 · Plan import: a warm-up whose drills are all unknown installs as the 30-minute Full Body Stretch — 0.100.4
+- B-232 · Plan import: a warm-up whose drills are all unknown installs as the 30-minute stretch routine — 0.100.4
 - B-206 · Bring in a plan: "Check the plan" opens after the sheet was closed while Claude was writing — 0.100.4
 - B-205 · Coach: "Make next week lighter" leaves sets with no target RIR at the usual effort — 0.100.4
 - B-204 · Coach tells lb lifters to add 2.5 kg — 0.100.4

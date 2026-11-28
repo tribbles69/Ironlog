@@ -1,5 +1,5 @@
 {
-  "note": "DRAFT for Aaron to read (coach-spec §3 'Final rep / RIR numbers per goal'). Reps are [low, high]; rir is the target reps in reserve. Where rir is a pair [a, b], 2+ years gets a and everyone else b. Under 6 months never goes below RIR 2.",
+  "note": "DRAFT (coach-spec §3 'Final rep / RIR numbers per goal'). Reps are [low, high]; rir is the target reps in reserve. Where rir is a pair [a, b], 2+ years gets a and everyone else b. Under 6 months never goes below RIR 2.",
   "roles": {
     "main": "The day's one heavy compound. Never trimmed.",
     "secondary": "A second compound or close variation.",
@@ -136,7 +136,7 @@
     },
     "fat-loss": {
       "label": "Lose weight",
-      "note": "Keep lifting fairly heavy so the weight lost is fat, not muscle (Aaron, 2026-11-05: added for gen-pop users). Nutrition and the target-weight goal do the rest.",
+      "note": "Keep lifting fairly heavy so the weight lost is fat, not muscle (2026-11-05: added for gen-pop users). Nutrition and the target-weight goal do the rest.",
       "main": {
         "reps": [
           6,
@@ -174,7 +174,7 @@
     },
     "move": {
       "label": "Move better, ease aches",
-      "note": "Gentle loading for everyday strength and joints: moderate reps, plenty in reserve (Aaron, 2026-11-05).",
+      "note": "Gentle loading for everyday strength and joints: moderate reps, plenty in reserve (2026-11-05).",
       "main": {
         "reps": [
           8,
@@ -254,7 +254,7 @@
     "45": 7,
     "60": 8,
     "90": 8,
-    "note": "Slots kept per day from the top of the list; main never cut. At 45 min and under, kept accessories and finishers are paired into supersets (1+2, 3+4...) and marked in the exercise notes (Aaron, 2026-11-02).",
+    "note": "Slots kept per day from the top of the list; main never cut. At 45 min and under, kept accessories and finishers are paired into supersets (1+2, 3+4...) and marked in the exercise notes (2026-11-02).",
     "supersetsUpTo": 45
   },
   "fromFittingTest": {

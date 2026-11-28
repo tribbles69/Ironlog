@@ -1,9 +1,13 @@
 #!/usr/bin/env node
-/* Inline r&d/data/routines/*.json into index.html as the BUILTIN_ROUTINES line.
+/* Inline r&d/data/routines/*.json into js/health.js as the BUILTIN_ROUTINES line.
 
    Built-in mobility routines (roadmap E5). Small, and needed offline the
    moment someone taps Mobility, so they're inlined like the exercise
    catalogue rather than fetched.
+
+   Since 0.100.7 the app ships none: every routine is the lifter's own. With
+   no r&d/data/routines folder (or an empty one) this writes an empty list.
+   A routine added here must be generic, never anyone's personal routine.
 
    Run from the repo root after editing a routine:
        node "r&d/tools/build-routines.cjs"
@@ -16,7 +20,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const { fileWith, rel } = require('./app-source.cjs');
 const DIR = path.join(ROOT, 'r&d/data/routines');
 
-const routines = fs.readdirSync(DIR).filter(f => f.endsWith('.json')).sort()
+const routines = (fs.existsSync(DIR) ? fs.readdirSync(DIR) : []).filter(f => f.endsWith('.json')).sort()
   .map(f => JSON.parse(fs.readFileSync(path.join(DIR, f), 'utf8')));
 const ids = new Set();
 routines.forEach(r => {

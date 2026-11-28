@@ -18,7 +18,7 @@ Question: is a user's data safe, including when they host Ironlog themselves?
   (Drive, only after the user connects). No analytics, fonts or CDNs.
 - **Drive.** `drive.file` scope (only the files Ironlog creates); access token
   held in memory, revoked on disconnect; mass-delete guard on merge.
-  A self-hoster's copy can't use Aaron's client ID — Google ties it to his
+  A self-hoster's copy can't use the official client ID — Google ties it to its
   origin — so they enter their own in Settings.
 - **AI key.** Separate localStorage key; not in JSON/CSV export or the Drive
   summary file. Only in the Drive backup if "Include my AI key" is ticked.
@@ -52,7 +52,7 @@ Question: is a user's data safe, including when they host Ironlog themselves?
   number) get a leading `'`; the Ironlog CSV importer takes it off again, so
   the round trip is exact.
 
-## Open (BUGS.md → Needs Aaron)
+## Open (BUGS.md → Needs the owner)
 
 - B-026 shared github.io origin.
 - B-027 personal data in the public repo.

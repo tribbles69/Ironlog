@@ -1,15 +1,28 @@
 # Mobility (roadmap E5)
 
-Written 2026-10-31, when Aaron moved E5 ahead of D8–D9. In two parts:
+Written 2026-10-31, when E5 was moved ahead of D8–D9. In two parts:
 **routines** (0.60.0) and **tests** on Health (0.61.0).
 
 ## 1. Routines
 
 ### Data
-Built-in routines live in `r&d/data/routines/*.json` and are inlined into
-`index.html` as `BUILTIN_ROUTINES` by `r&d/tools/build-routines.cjs` (edit the
-JSON, run the tool, bump). The first is Aaron's **Full Body Stretch**
-(`morning-stretch.json`): 8 zones, 25 items, ~30 min.
+**Since 0.100.7 the app ships no routine.** Every routine is the lifter's
+own, in `S.routines`: made in the routine editor from the library, or
+brought in with a plan file (plan-format.md, `routines`). `BUILTIN_ROUTINES`
+in `js/health.js` is an empty list, still built from `r&d/data/routines/*.json`
+by `r&d/tools/build-routines.cjs` (the folder is gone; anything put back there
+must be generic, never one person's routine). The routine that shipped
+until then was not migrated (no personal data in the app code): a log that
+used it keeps its sessions, ticks and planned stretches under the old id,
+shows "routine not on this phone" (`routineMissing()` offers Bring in a
+plan), and finds it all again once its plan file is brought in with the same
+id.
+
+A routine of the lifter's is either a list of library ids with any dose they
+changed (`items: [{ id, dose? }]`, resolved against the library every time it
+opens) or, for one kept whole, `zones` written out as below (plus `items`,
+the same stretches in order, which is what the editor works on; saving from
+the editor keeps just the list).
 
 - **Routine:** `id`, `name`, `subtitle`, `estMin`, `zones[]`.
 - **Zone:** `n`, `name`, `estMin`, `items[]`.
@@ -21,7 +34,7 @@ JSON, run the tool, bump). The first is Aaron's **Full Body Stretch**
   `then` ({ name, hold } after both sides).
 
 ### Hypermobility review
-Aaron chose "propose swaps" (2026-10-31). Five passive end-range items carry
+Decided: "propose swaps" (2026-10-31). Five passive end-range items carry
 an active or loaded `swap`, **on by default** and switchable per item in the
 player (*Swap* / *Original*, stored in `settings.mobility.swaps[itemId]`):
 
@@ -34,8 +47,7 @@ player (*Swap* / *Original*, stored in `settings.mobility.swaps[itemId]`):
 | Standing Forward Fold (daily hang) | Slow Romanian deadlift, 8 × 2 | length under load; the weekly reach test is unchanged |
 
 **Go easy on** (player → Options): joints the lifter wants to protect, in
-`settings.mobility.protect`. No joints are protected by default (Aaron's
-call). An item tagged with a protected joint uses its swap if it has one,
+`settings.mobility.protect`. No joints are protected by default (decided). An item tagged with a protected joint uses its swap if it has one,
 and is otherwise skipped and shown as skipped. Skipped items leave the total.
 
 ### The session record
@@ -62,10 +74,12 @@ Drive sync carry it like any session.
   guided run.
 
 ### Where it shows
-- **Train → 🧘 Mobility** (the picker opens straight into the routine while
-  there's only one).
-- **Home:** "🧘 Full Body Stretch · 8 / 25 today", with Start / Resume, while
-  any mobility session exists in the last 14 days.
+- **Train → 🧘 Mobility**: the lifter's routines, ＋ Create a routine, the
+  stretch library and Bring in a plan. With none yet it says so and how to
+  get one.
+- **Home:** "🧘 <routine> · 8 / 25 today" for the routine done most recently
+  (`defaultRoutine()`), with Start / Resume, while any mobility session
+  exists in the last 14 days.
 - **Calendar:** a purple dot; the day panel and history show a mobility
   card, and its View opens the player for that day.
 - Mobility days don't count as training sessions (Home's 7-day count, Stats
@@ -107,9 +121,10 @@ table, `MOB_TESTS`:
 `r&d/data/mobility.json` — the stretch and mobility library, the mobility
 counterpart of `exercises.json`; inlined into `js/health.js` as
 `MOBILITY_LIBRARY` by `r&d/tools/build-mobility.cjs`, checked by
-`r&d/tools/validate-mobility.cjs`. 104 items: the 25 Full Body Stretch items
-under their routine ids (`inRoutine`), their five swaps as items, and the rest
-of the master research (§20, the mobility drills of §19).
+`r&d/tools/validate-mobility.cjs`. 104 items: 25 head-to-toe stretches, their
+five active or loaded swaps as items, and the rest of the master research
+(§20, the mobility drills of §19). Ids are permanent: ticks and swap choices
+key on them.
 
 - **Item:** `id` (permanent), `name`, `region`, `style` (`static`, `active`,
   `dynamic`, `pnf`, `loaded`, `release`), `targets[]`, `joints[]` (the Go easy

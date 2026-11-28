@@ -36,7 +36,6 @@
 <link rel="modulepreload" href="js/movement.js">
 <link rel="modulepreload" href="js/io.js">
 <link rel="modulepreload" href="js/sync.js">
-<link rel="modulepreload" href="js/data.js">
 <link rel="modulepreload" href="js/database.js">
 <link rel="modulepreload" href="js/events.js">
 <link rel="modulepreload" href="js/exercises.js">
@@ -62,8 +61,8 @@ try {
 <link rel="stylesheet" href="css/app.css">
 <!-- The one rule that has to stay in the page: it points at a gradient inside
      the chart's own <svg>, and from an external sheet some browsers look for
-     that in the stylesheet's file instead. It sits between the two sheets,
-     where it was, so the Windows 98 skin still overrides it. -->
+     that in the stylesheet's file instead. It sits between the two sheets
+     so the Windows 98 skin still overrides it. -->
 <style>.chart .area{fill:url(#gfade)}</style>
 <!-- The Windows 98 skin: every rule scoped to html[data-skin="win98"], and loaded after the base sheet so it wins. -->
 <link rel="stylesheet" href="css/skin98.css" id="skin98">

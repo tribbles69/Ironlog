@@ -1,12 +1,12 @@
-# Shared summary files: one readable record across Aaron's apps
+# Shared summary files: one readable record across companion apps
 
-Written 2026-11-05. Aaron plans a food app and a symptom / disability logger
-alongside Ironlog, and wants one central record that he controls. That
-record should let the pre-session brief judge a session from logged
+Written 2026-11-05. Companion apps (for example a food app and a symptom
+logger) may sit alongside Ironlog, with one central record that the user
+controls. That record should let the pre-session brief judge a session from logged
 symptoms, food and training together.
 
 Ironlog's `Ironlog summary.md` (0.78.0, see `drive-sync-spec.md`) is the
-first file to this format. This spec is for every app Aaron builds, so it
+first file to this format. This spec is for every companion app, so it
 lives in Ironlog's r&d as the reference copy. Each new app links back to it.
 
 ## Principles
@@ -84,12 +84,12 @@ Written <YYYY-MM-DD HH:MM> UTC by <App> <version>. Last <N> days. <One sentence 
 
 ## Who reads it
 
-- **session-debrief** and **pre-session-brief** (Claude skills) read
-  `Ironlog summary.md` today.
+- An AI assistant with Drive access (for example a session debrief or a
+  pre-session brief) can read `Ironlog summary.md` today.
 - Once the other files exist, the brief should read all three for today and
   yesterday and set the session's mode from the combined picture. For
   example: a symptom flare logged this morning, or food well under target
-  after a long shift, means Amber before Aaron says anything.
+  after a long day, means Amber before the lifter says anything.
 - Joining is by date only. The brief should never treat a missing file as
   "nothing logged". Missing means unknown.
 

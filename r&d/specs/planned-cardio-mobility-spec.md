@@ -1,6 +1,6 @@
 # Planned cardio and mobility (roadmap 000-F1)
 
-Written 2026-11-27 at Aaron's request: "a cardio overhaul allowing them to be
+Written 2026-11-27 on request: "a cardio overhaul allowing them to be
 planned alongside, within and separately from other gym sessions. Allow the
 same for planned flexibility sessions too." **Agreed 2026-11-27** — decisions in §8.
 
@@ -18,7 +18,7 @@ Each works the same for cardio and mobility.
 |---|---|---|
 | **Within** | An add-on inside a planned lift session, placed `start` (warm-up) or `end` (finisher) | 2 × 8 Cossack squats per side before Smith squats; 8 min row intervals after upper |
 | **Alongside** | Its own planned session on the **same day** as a lift session | Bike before work on Monday, push at 2pm |
-| **Separately** | Its own planned session on a **day with no lift** | Saturday 30 min walk; Sunday Full Body Stretch |
+| **Separately** | Its own planned session on a **day with no lift** | Saturday 30 min walk; Sunday stretch routine |
 
 Alongside and separately are the same object. The only difference is whether
 a lift is planned that day, which the calendar and Home show (§5).
@@ -39,7 +39,7 @@ A planned workout with the `kind` it already gets when it is logged:
           slot?: 'am' | 'pm' } }               // optional label, ordering only
 
 { id, date, status: 'planned', prog?, name, kind: 'mobility',
-  plan: { routine: 'morning-stretch' } }       // a built-in or custom routine id
+  plan: { routine: 'evening-stretch' } }       // one of the lifter's routine ids
 ```
 
 **Start** opens the existing setup with these values filled in (cardio
@@ -100,7 +100,7 @@ w.addons = [
 
 ## 4. In the plan formats
 
-### `program.json`
+### Full program files (`workouts`, the shape `installProgram` takes)
 
 - `workouts[]` items may carry `kind: 'cardio' | 'mobility'`, `slot` and a
   `plan` (§2) instead of `exercises`.
@@ -122,7 +122,7 @@ Kept at version 1, since these are additions and old plans still read the same:
       { "name": "Bench Press", "sets": 3, "reps": 5, "rir": 2 },
       { "cardio": "rowing-machine", "intervals": "30/30 x 10", "at": "end" } ] },
   { "name": "Morning bike", "kind": "cardio", "cardio": "stationary-bike", "minutes": 20, "zone": "z2" },
-  { "name": "Stretch", "kind": "mobility", "routine": "morning-stretch" }
+  { "name": "Stretch", "kind": "mobility", "routine": "evening-stretch" }
 ],
 "weekdays": ["mon", "mon", "thu", "thu", "sun"]
 ```
@@ -171,11 +171,11 @@ Kept at version 1, since these are additions and old plans still read the same:
    a layer (mobility guided first, then intervals, then HR-zone).
 3. `ironlog-plan` additions, `planFormatText()`, the check screen.
 4. Adherence lines; export / CSV / Drive sync round-trip checked with a plan holding add-ons and side sessions.
-5. Aaron's own plan: put the Monday and Thursday morning bike/row sessions
-   and the leg-day Cossack warm-up into One Heavy Lift (`program.json`), once
-   §8 is answered.
+5. ~~The shipped plan: morning bike/row sessions and a leg-day warm-up.~~
+   Done in 0.100.1; since 0.100.7 the app ships no plan at all (the
+   maintainer's is a plan file kept outside the repo).
 
-## 8. Decisions (Aaron, 2026-11-27)
+## 8. Decisions (2026-11-27)
 
 1. **Pre-1.0**, as a base feature (section 000).
 2. **The full player runs inside a lift session in the first build** (§3):

@@ -1,10 +1,10 @@
 # Ironlog roadmap
 
-The single list of what's being built next, in order. Written for Aaron and for
+The single list of what's being built next, in order. Written for the owner and for
 any agent (Claude Code etc.) picking up work cold.
 
 **Who it's for:** powerlifters, strongman and strengthlifters, adaptive lifters
-especially. Ironlog has to earn its keep for one user first — Aaron — before it
+especially. Ironlog has to earn its keep for one user first — its owner — before it
 competes with anything.
 
 **Model (decided 2026-09-24): Ironlog is completely free.** A passion project
@@ -14,13 +14,13 @@ for the community, not a money-maker.
   Backup/sync goes to the **user's own cloud drive** (Google Drive first), so
   their data sits in their storage, not ours (see B6).
 - **AI runs on the user's own API key** (bring-your-own-key), entered on the
-  device and used only from the device. Aaron doesn't pay for other people's AI
+  device and used only from the device. The project doesn't pay for other people's AI
   usage. Every AI feature must be optional — the app is complete without a key.
 - Optional support: donations (Ko-fi / GitHub Sponsors) and cosmetic
   muscle-map skin packs. Never gate a feature behind either.
 - **Food logging is leaving Ironlog** for its own separate app (A1).
 
-**Where the priorities come from (2026-09-24):** Aaron's own plans, the open
+**Where the priorities come from (2026-09-24):** the owner's own plans, the open
 issues of a competing app (<https://github.com/madmustachecompany/Blast-Workout-App/issues>
 — "Blast #n" below is the issue number), and desk research on what lifters ask
 for in training apps. The research's main finding: people stay or leave over
@@ -37,22 +37,22 @@ Paths here are from the repo root. The folder is `r&d` — **quote it in the
 shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
 
 1. Take the **first unchecked item, top to bottom** — section 00, then 0, A, B,
-   C, D, E — unless Aaron says otherwise.
+   C, D, E — unless the owner says otherwise.
    Within a section, the **order on the page** is the order of work; item
    numbers are labels and don't always run in sequence (D12 was moved up
    2026-10-31, D8–D9 moved to the end of D; E5 and the new D16 moved ahead of
-   D8 the same day; E1–E2 were done early at Aaron's request, 0.63.0).
+   D8 the same day; E1–E2 were done early on request, 0.63.0).
 
    **Where things stand (2026-11-01, 0.66.0):** everything in A–D is built
-   except D9. A4 and A6 are waiting on Aaron. Aaron asked for E11 and
-   E12 next (E11 shipped 0.64.0, E12's first build 0.65.0); D8 shipped 0.66.0.
+   except D9. A4 and A6 are waiting on the owner. E11 and
+   E12 were requested next (E11 shipped 0.64.0, E12's first build 0.65.0); D8 shipped 0.66.0.
    D9 finished in 0.73.0.
 
    **Where the section-00 sweep got to (2026-11-11, 0.90.17, branch
    `fix/bug-sweep-2026-11`):** 00-B1 is done — the ranked list is
    `r&d/notes/bug-sweep-2026-11.md`. 00-B2: every severity 1 and 2 finding
    is fixed, and every 3 and 4 that needs no decision (0.90.1–0.90.17).
-   Aaron's calls on 3.4, 3.6, 3.7, 3.10, the relink part of 1.8 and 4.5
+   The owner's calls on 3.4, 3.6, 3.7, 3.10, the relink part of 1.8 and 4.5
    shipped 0.96.0–0.96.5 (branch `ccr-66354ca4-ybhg0b`). 00-V1 to 00-V4 shipped 0.91.0–0.93.1 and
    00-D1 0.94.0–0.94.4; 00-D2 part done 0.95.0–0.95.1 (branch
    `design/assets-2026-11`, which holds all of it). **Next:** A4 items 21–26, then what's left of 00-D2, then section 0 and E3.
@@ -61,12 +61,12 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    finish the base features as 0.x minors, then 1.0. Extras go in its parked
    list for after 1.0.
 
-   **Next up (2026-11-11, Aaron):** section **00** (bug fixes, then VBT, then design)
+   **Next up (2026-11-11):** section **00** (bug fixes, then VBT, then design)
    comes before everything else, in page order. Then what's left of section
    **0** (01–03 shipped; 04c moved into 00). After those, carry on from
    **E3**.
    **Bugs** aren't roadmap items: non-critical ones go in `r&d/BUGS.md` as
-   they're found and get cleared in a batch when Aaron asks ("fix the bugs").
+   they're found and get cleared in a batch when the owner asks ("fix the bugs").
 2. **Check the code before trusting a status here.** Some items were marked from
    memory of planning chats, not from the code. If something is already built,
    tick it, note the version, and move on.
@@ -89,11 +89,18 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
    node -e "const fs=require('fs');const h=fs.readFileSync('index.html','utf8');[...h.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)].forEach((m,i)=>{try{new Function(m[1]);console.log(i,'OK')}catch(e){console.log(i,'ERR',e.message)}})"
    ```
 6. When an item ships, tick it here with the version number. Don't reorder
-   priorities without asking Aaron.
+   priorities without asking the owner.
 7. Items marked **(check on phone)** can't be finished from here — do what can
-   be done in code, then leave a short checklist for Aaron and move on.
+   be done in code, then leave a short checklist for the owner and move on.
 
 **Standing rules (don't break these):**
+- **The app ships nothing personal (0.100.7).** No built-in training program
+  and no built-in stretch routine: a new user starts empty and builds their
+  own (the coach, Bring in a plan, the routine editor). Programs and routines
+  are user content and live only in the user's log on their phone (and their
+  own Drive backup). The owner's own programs and routines are plan files he
+  keeps outside the repo and imports like anyone else. Anything bundled
+  (templates, the exercise and stretch libraries, test fixtures) is generic.
 - RIR is what's shown and typed; **RPE is what's stored** and what all effort
   maths uses, via `rirToRpe` / `rpeToRir`. Don't store RIR.
 - Weights are kg.
@@ -153,26 +160,26 @@ shell** (`cd "r&d"`), since an unquoted `&` backgrounds the command.
       the model and migration shipped 0.7.0, the workout page on it 0.22.0, any
       equipment for any movement 0.53.0 (B9). Leaf keys, `allExercises()`,
       `variantLabel()` and the axis picker are what everything since builds on.
-- ~~PR detection against history~~ — not a bug (Aaron's logging error, 2026-09-24).
+- ~~PR detection against history~~ — not a bug (2026-09-24).
 
 ---
 
-## 000. Road to 1.0 (Aaron, 2026-11-13)
+## 000. Road to 1.0 (2026-11-13)
 
 **Ironlog stays on 0.x minor versions until the base features are 100%.**
-Aaron: there is very little left. Finishing or fixing a base feature (logging,
+There is very little left. Finishing or fixing a base feature (logging,
 timers, stats, sync, import/export, the screens that already exist) is a minor
 (0.100.0, 0.101.0 …); a bug fix alone is a patch. The extras in the list below
 are **not** base features — they wait for after 1.0.
 
-**Bugs:** a nightly scheduled task (02:37 UK) reviews three modules in
+**Bugs:** a nightly scheduled task reviews three modules in
 rotation plus anything changed that day, runs the checks, and logs what it
-finds in `r&d/BUGS.md` on one open PR (Sonnet, to spare the weekly usage).
+finds in `r&d/BUGS.md` on one open PR.
 It never fixes or merges anything — a severity 1 bug is flagged at the top
-of the morning message and in the PR title, and left for Aaron.
+of the morning message and in the PR title, and left for the owner.
 
 **When it is 1.0**
-1. Aaron says the base features are done.
+1. The owner says the base features are done.
 2. Nothing at severity 2 open on `r&d/BUGS.md`.
 3. Three training sessions in a row with nothing new on the bug list.
 4. One Google Drive sync, one JSON export and one CSV export checked on the
@@ -182,25 +189,25 @@ Then: `node "r&d/tools/bump.cjs" 1.0.0`, a changelog entry that says what 1.0
 means, and tick this section. Fixes after that are 1.0.1, 1.0.2; the next
 feature is 1.1.0.
 
-### [x] 000-F1. Planned cardio and mobility — within, alongside and separate from lift sessions (Aaron, 2026-11-27) — spec `r&d/specs/planned-cardio-mobility-spec.md` (agreed 2026-11-27: pre-1.0, full player inside lift sessions, skips count) — **shipped 0.100.0** (add-ons live in `w.addons`, cardio parks the lift as `S.parked`; One Heavy Lift has the Mon/Thu intervals and the legs-day warm-up; **Aaron: run a cardio finisher and the legs warm-up at the gym, and Reinstall fresh from today to pick up the new sessions**)
+### [x] 000-F1. Planned cardio and mobility — within, alongside and separate from lift sessions (2026-11-27) — spec `r&d/specs/planned-cardio-mobility-spec.md` (agreed 2026-11-27: pre-1.0, full player inside lift sessions, skips count) — **shipped 0.100.0** (add-ons live in `w.addons`, cardio parks the lift as `S.parked`; **Owner: run a cardio finisher and the legs warm-up at the gym** — Reinstall went with the shipped program in 0.100.7, so to refresh the block bring its plan file in and replace the old one)
 Plans are lift-only today: a timed cardio row loses its target on install,
 and the HR-zone session, interval timer and mobility player can only be
 started by hand. This lets a plan hold cardio and mobility three ways:
 **within** a lift session (a warm-up or finisher block with ▶ Run),
 **alongside** one (its own session the same day, e.g. a morning bike before a
-2pm push), or **separately** (its own day). Covers `program.json`, the
+2pm push), or **separately** (its own day). Covers full program files, the
 `ironlog-plan` format, the calendar, Home / Train today, skip / move,
 backfill and adherence. Base feature: it joins three things that already exist. Last
-step: put his Monday and Thursday morning bike/row sessions and a Cossack
-squat leg-day warm-up into One Heavy Lift.
+step: put Monday and Thursday morning bike/row sessions and a Cossack
+squat leg-day warm-up into the bundled program (since removed).
 
 ### Ideas parked for after 1.0
-(added during the beta; Aaron added all of P1–P8 on 2026-11-13, in this
+(added during the beta; P1–P8 were all added on 2026-11-13, in this
 order. Each needs a short spec before building.)
 
-- [ ] **P1. Send a lift to the strength records site.** A record attempt in
+- [ ] **P1. Send a lift to a strength records site.** A record attempt in
   Ironlog packages video, weight, bodyweight, date and division as a
-  submission for Aaron's records registry (`areas: strength-records-site`).
+  submission for a records registry.
 - [ ] **P2. Record-attempt planner** for the WDC trap bar and Viking deadlift
   records: attempts from bar speed and recent singles, gap to the record.
   Builds on C2's attempt plan.
@@ -225,12 +232,11 @@ order. Each needs a short spec before building.)
 
 ---
 
-## 00. Top priority — bug fixes, then VBT (added 2026-11-10, Aaron)
+## 00. Top priority — bug fixes, then VBT (added 2026-11-10)
 
-Aaron asked for these at the top, in this order: bugs first, then VBT. Planned
-as a **Fable 5.2 sweep** during the 9–16 Nov launch week, so the allowance is
-limited: do the audit (00-B1) first and write it down, so Opus can carry on
-from the list if the Fable allowance runs out. Same rules as everywhere — one
+Requested at the top, in this order: bugs first, then VBT. Do the audit
+(00-B1) first and write it down, so a later session can carry on
+from the list. Same rules as everywhere — one
 fix per commit, version bump, changelog entry.
 
 ### Bug fixes
@@ -249,45 +255,45 @@ Read all of `index.html`, `slew-core.js`, `slew-video.js`, `sw.js` and the
 Note for each: where it is, how to reproduce, and a suggested fix. Don't fix
 anything in this step — the list is the deliverable.
 
-### [ ] 00-B2. Fix the audit's findings, top of the list down — **0.90.1–0.90.17 shipped**: all of severity 1 and 2, and what needs no decision in 3 and 4 (the gripper step is 0.90.11). Left open for Aaron's calls: 3.4, 3.6, 3.7, 3.10, part of 1.8, 4.5 (`r&d/notes/bug-sweep-2026-11.md`)
+### [ ] 00-B2. Fix the audit's findings, top of the list down — **0.90.1–0.90.17 shipped**: all of severity 1 and 2, and what needs no decision in 3 and 4 (the gripper step is 0.90.11). Left open for the owner's calls: 3.4, 3.6, 3.7, 3.10, part of 1.8, 4.5 (`r&d/notes/bug-sweep-2026-11.md`)
 One fix per version. Severity 1 and 2 before anything else. Anything that
-would change existing PR numbers or stored data gets flagged to Aaron first
+would change existing PR numbers or stored data gets flagged to the owner first
 (as D10 was). Known small one to include: the rep-range "add weight" step
 assumes 2.5 kg, which a fixed-rating gripper can't do (E13).
 
 ### VBT
 
-### [x] 00-V1. Tilt correction for Measure — shipped 0.91.0 (each sample re-read against the phone's own gravity; 9 Nov still 80 of 81 but those traces have no 3-axis data so they only prove the fallback; 11 Nov 65 of 65 with steadier range of motion; before/after in `r&d/notes/vbt-validation.md`; **Aaron: A4 item 21** — a heavy day recorded with debug on is what would really test it)
+### [x] 00-V1. Tilt correction for Measure — shipped 0.91.0 (each sample re-read against the phone's own gravity; 9 Nov still 80 of 81 but those traces have no 3-axis data so they only prove the fallback; 11 Nov 65 of 65 with steadier range of motion; before/after in `r&d/notes/vbt-validation.md`; **Owner: A4 item 21** — a heavy day recorded with debug on is what would really test it)
 0.90.0 started recording the phone's full 3-axis readings so the phone
-tilting as the bar rolls could be corrected later. Use Aaron's saved
+tilting as the bar rolls could be corrected later. Use the saved
 bar-speed debug traces (`r&d/data/vbt/` — start with its README) to correct for tilt, then re-check rep counts and
 speeds against the 9 Nov push day (80 of 81 reps found in 0.90.0 — must not
 get worse). Record before/after in `r&d/notes/vbt-validation.md`.
 
-### [x] 00-V2. Bar-speed RIR accuracy — shipped 0.92.0, **not validated** (the traces hold only two typed RIRs — the rest were the sensor's own estimates written back into the set; the two worst misreads are fixed, 35 × 17 from RIR 12 to ~3 and a 40 kg warm-up from 0.2 to ~4; estimates are now only written into a set when observed or calibrated, and sensor-filled RIRs are marked; `r&d/notes/vbt-validation.md`, `r&d/tools/vbt-rir.cjs`; **Aaron: A4 item 23** — type your RIR on measured sets so there's something to check against)
+### [x] 00-V2. Bar-speed RIR accuracy — shipped 0.92.0, **not validated** (the traces hold only two typed RIRs — the rest were the sensor's own estimates written back into the set; the two worst misreads are fixed, 35 × 17 from RIR 12 to ~3 and a 40 kg warm-up from 0.2 to ~4; estimates are now only written into a set when observed or calibrated, and sensor-filled RIRs are marked; `r&d/notes/vbt-validation.md`, `r&d/tools/vbt-rir.cjs`; **Owner: A4 item 23** — type your RIR on measured sets so there's something to check against)
 Changelog 0.89.0 says bar-speed RIR is still a rough guide. Compare the
-estimated RIR against the RIR Aaron logged on the same sets (debug traces and
+estimated RIR against the RIR logged on the same sets (debug traces and
 history), find where it's off (lift, set length, pocket vs bar mode) and tune
 it. Keep showing it as an estimate; still hide it when reps were missed.
 
-### [x] 00-V3. Record video in the app (04c, moved up from section 0) — shipped 0.93.0 (● Record on the first screen of ▶ Video and Tools → Bar path; rear camera, straight into the existing trim → bar path → squat depth flow; on the device only; spec `r&d/specs/bar-path-spec.md` §10; tested with a simulated camera only — **Aaron: A4 item 24**)
+### [x] 00-V3. Record video in the app (04c, moved up from section 0) — shipped 0.93.0 (● Record on the first screen of ▶ Video and Tools → Bar path; rear camera, straight into the existing trim → bar path → squat depth flow; on the device only; spec `r&d/specs/bar-path-spec.md` §10; tested with a simulated camera only — **Owner: A4 item 24**)
 Finish part c of item 04: record the side-on clip inside Ironlog rather than
 picking it from the gallery, then run it through the existing bar path (04a)
 and squat depth (04b) flow. On the device only, no uploads. Check on phone —
 add an A4 checklist item.
 
-### [x] 00-V4. Validation (Aaron + code) — code side shipped 0.93.1 (the bar-speed export lists every measured set, sensor and video; `r&d/tools/vbt-validate.cjs` writes a sheet to fill in with the reference device's speeds and turns it into the results-table rows: MCV bias, limits of agreement, RIR error; steps in `r&d/notes/vbt-validation.md` → Filling the results table. **The sets with a reference device are still Aaron's to do**, and the e1RM-in-range check isn't built)
+### [x] 00-V4. Validation (owner + code) — code side shipped 0.93.1 (the bar-speed export lists every measured set, sensor and video; `r&d/tools/vbt-validate.cjs` writes a sheet to fill in with the reference device's speeds and turns it into the results-table rows: MCV bias, limits of agreement, RIR error; steps in `r&d/notes/vbt-validation.md` → Filling the results table. **The sets with a reference device are still to do**, and the e1RM-in-range check isn't built)
 Whatever `r&d/notes/vbt-validation.md` still needs on the code side to compare
-Measure and video against a known device. The sets themselves are Aaron's to
-film and log.
+Measure and video against a known device. The sets themselves still need
+filming and logging.
 
-### Design (added 2026-11-11, Aaron)
+### Design (added 2026-11-11)
 
-Aaron asked for a design pass in the same sweep, after the VBT items. He's
-happy for the agent to make the UI and menu changes it judges best — no
+A design pass was requested in the same sweep, after the VBT items. The
+agent may make the UI and menu changes it judges best — no
 sign-off needed per change — within the rules below.
 
-### [x] 00-D1. UI and menu pass — shipped 0.94.0–0.94.4 (40 px tap areas on small buttons; Home leads with today's session; Stats / Skip-or-move labels; a jump row in Settings; empty states with actions; what and why in `r&d/notes/design-pass-2026-11.md`, with eight things left for Aaron to decide. **The axe check was not run** — loading it was blocked in the session; a script checked names, contrast and tap size instead. Aaron: run axe once, or OK an agent loading it)
+### [x] 00-D1. UI and menu pass — shipped 0.94.0–0.94.4 (40 px tap areas on small buttons; Home leads with today's session; Stats / Skip-or-move labels; a jump row in Settings; empty states with actions; what and why in `r&d/notes/design-pass-2026-11.md`, with eight things left for the owner to decide. **The axe check was not run** — loading it was blocked in the session; a script checked names, contrast and tap size instead. Owner: run axe once, or OK an agent loading it)
 Go through every page, sheet and menu in both skins and improve what's
 cluttered, inconsistent or hard to reach: layout, spacing, hierarchy, labels,
 menu structure, empty states, onboarding. Write what you changed and why to
@@ -300,34 +306,33 @@ menu structure, empty states, onboarding. Write what you changed and why to
 - Every change passes C4: TalkBack labels, contrast, re-run the axe check in
   both skins.
 - No features removed. If something seems pointless, list it in the note for
-  Aaron instead of deleting it.
+  the owner instead of deleting it.
 - Ship in small versions (one area per version) with changelog entries, so
-  anything Aaron dislikes can be rolled back on its own.
+  anything unwanted can be rolled back on its own.
 
-### [ ] 00-D2. Art and audio (was E16) — **part shipped 0.95.0–0.95.1**: recorded voice for the interval timer (25 cues, 171 KB, phone voice as fallback), a goblin-to-orc muscle-map skin beside the template, and the welcome picture. List, prompts, spend (26 Higgsfield credits, 777 ElevenLabs) and what's left in `r&d/notes/assets-pass.md`. **Left:** PR card backgrounds, and cardio and mobility voice — their cues are built from numbers and exercise names on the spot, so they can't be recordings without a way to speak numbers. Nobody has listened to the audio yet (A4 item 25) or seen the skin on a phone (item 26)
+### [ ] 00-D2. Art and audio (was E16) — **part shipped 0.95.0–0.95.1**: recorded voice for the interval timer (25 cues, 171 KB, phone voice as fallback), a goblin-to-orc muscle-map skin beside the template, and the welcome picture. List, prompts and what's left in `r&d/notes/assets-pass.md`. **Left:** PR card backgrounds, and cardio and mobility voice — their cues are built from numbers and exercise names on the spot, so they can't be recordings without a way to speak numbers. Nobody has listened to the audio yet (A4 item 25) or seen the skin on a phone (item 26)
 After 00-D1, so the art fits the new layout: go through the app and replace
-placeholder or weak art and audio with generated assets. Aaron has connected
+placeholder or weak art and audio with generated assets. The session has
 **Higgsfield** (images; skip video, it's costly) and **ElevenLabs** (voice,
-sound). Both are MCP connectors on Aaron's account — check they show in
+sound). Both are MCP connectors — check they show in
 `/mcp`; if not, list what's needed and carry on with the rest.
 - **Make a list first** in `r&d/notes/assets-pass.md`: every placeholder or
   weak asset (art, icons, sounds, spoken cues), what it should become, and
-  which tool makes it, then generate it — Aaron is happy for this pass to
-  spend the credits (Higgsfield ~80 credits on Basic; ElevenLabs Starter
-  30k/month). Check the cost before big batches and stop before running out.
+  which tool makes it, then generate it — this pass may spend
+  generation credits. Check the cost before big batches and stop before running out.
 - **Art (Higgsfield):** the muscle-map skins first — the shipped
-  `skins/template.png` is a placeholder; Aaron's idea is a goblin that turns
+  `skins/template.png` is a placeholder; the idea is a goblin that turns
   into an orc muscle by muscle. One cell per muscle per tier, matching the
   sheet layout in `r&d/skins/`, so it drops in as a normal skin. Then PR share
   card backgrounds (E2), the welcome screen (C1) and the in-app Home (D14).
 - **Audio (ElevenLabs):** recorded voice cues for the interval timer (02),
   HR-zone cardio (D15) and mobility holds (E5), in place of the phone's speech
   voice; cleaner beeps for `Cue` if they're worth it.
-- **ElevenLabs is on the Starter plan (Aaron, 2026-11-11)**, which includes
+- **ElevenLabs audio is generated on a paid plan (2026-11-11)**, which includes
   the commercial licence. Audio generated while subscribed can be shipped and
   stays licensed even after the plan is cancelled, so no placeholders and no
   redo before launch. Generate everything while the plan is active. Higgsfield
-  (Basic, paid) art is the same: commercial use allowed, no attribution.
+  (paid plan) art is the same: commercial use allowed, no attribution.
 - **Keep the app light and offline:** compress everything, cache it in
   `sw.js`, and keep the phone's speech voice as the fallback so any cue whose
   wording changes still works without new recordings. Large packs can be an
@@ -341,11 +346,11 @@ sound). Both are MCP connectors on Aaron's account — check they show in
 
 ## 0. Next up — extras from the app audit (added 2026-11-08)
 
-From the Hub's `roadmaps/ironlog-from-audit.md`: the audit items Ironlog
-doesn't have yet. Once these are in, the matching third-party apps can come off
-Aaron's phone. Check the code first in case any part already exists.
+From an app audit: the items Ironlog
+doesn't have yet, so the matching third-party apps aren't needed alongside
+it. Check the code first in case any part already exists.
 
-### [x] 01. Weekly sets per muscle against a target range — shipped 0.83.0 (spec `r&d/specs/weekly-sets-spec.md`; main muscle 1 set, helpers ½ (share ≥ 0.20), drops ½, RIR 5+ and warm-ups left out; card + 8-week chart + editable range on Stats → Muscles; **Aaron: check the default ranges suit you**)
+### [x] 01. Weekly sets per muscle against a target range — shipped 0.83.0 (spec `r&d/specs/weekly-sets-spec.md`; main muscle 1 set, helpers ½ (share ≥ 0.20), drops ½, RIR 5+ and warm-ups left out; card + 8-week chart + editable range on Stats → Muscles; **Owner: check the default ranges suit you**)
 (Tonnage's MEV / MRV landmarks.) Count hard sets per muscle per week, using the
 muscle shares Ironlog already has (`EX_DB`, D7), against a target range the
 lifter can edit (MEV → MAV → MRV), with sensible defaults per muscle. Show it
@@ -353,20 +358,20 @@ on Stats → Muscles: under / in range / over for the current week, and a trend.
 Warm-ups stay out (B3). Decide how fractional shares count (e.g. a set counts
 fully for primary muscles, half for secondary) and write it down.
 
-### [x] 02. Interval timer — shipped 0.84.0 (spec `r&d/specs/interval-timer-spec.md`; Train → ⏱ Intervals; runs as a cardio session with `cardio.iv` on top, no HR zone so nothing talks over it; six built-in presets plus your own in `settings.ivPresets`; **Aaron: run one at the gym — A4 item 17**)
+### [x] 02. Interval timer — shipped 0.84.0 (spec `r&d/specs/interval-timer-spec.md`; Train → ⏱ Intervals; runs as a cardio session with `cardio.iv` on top, no HR zone so nothing talks over it; six built-in presets plus your own in `settings.ivPresets`; **Owner: run one at the gym — A4 item 17**)
 (INTVL.) Build run / rest intervals — work, rest, rounds, optional warm-up and
 cool-down — with audio and vibration cues from `Cue` and the screen kept on
 with `Awake`. Starts from **Train → Cardio** next to the HR-zone session;
 saved presets; logs as a cardio session in the calendar and history.
 
-### [x] 03. Daily one-second progress clip — shipped 0.85.0 (spec `r&d/specs/progress-clip-spec.md`, browser check in §1: canvas + MediaRecorder, MP4 where supported, joins in real time ~1 s per clip; Health → Daily clip; ghost of the last clip as the pose reminder; on the device only; **Aaron: A4 item 18** — the camera couldn't be tested from here)
+### [x] 03. Daily one-second progress clip — shipped 0.85.0 (spec `r&d/specs/progress-clip-spec.md`, browser check in §1: canvas + MediaRecorder, MP4 where supported, joins in real time ~1 s per clip; Health → Daily clip; ghost of the last clip as the pose reminder; on the device only; **Owner: A4 item 18** — the camera couldn't be tested from here)
 (1 Second Everyday.) Extends E4's progress photos: record or pick a one-second
 clip a day, kept on the device only like the photos, and join them into a
-timelapse of the bulk and cut that can be played and saved. Same pose
+timelapse of a bulk or cut that can be played and saved. Same pose
 reminder as the photos so clips line up. Check what the browser can do for
 joining clips on the phone (MediaRecorder / canvas) before writing the spec.
 
-### [ ] 04. Video bar-path tracing and depth judging — **04a shipped 0.86.0** (spec `r&d/specs/bar-path-spec.md`, agreed 2026-11-08: Slew's plate tracker bundled as `slew-video.js`, no MediaPipe; ▶ Video on a lift and Tools → Bar path; rim measured on still frames for the scale; **Aaron: A4 item 19, then the video section of `r&d/notes/vbt-validation.md`**). **04b shipped 0.87.0** (squat depth: MediaPipe lite pose hosted in `pose/`, 16.6 MB optional download, deep / high / too close to call; plus three bar-path fixes, spec §9 and §12; **Aaron: A4 item 20**). Still to do: **04c** record in the app — **moved to 00-V3** (2026-11-10)
+### [ ] 04. Video bar-path tracing and depth judging — **04a shipped 0.86.0** (spec `r&d/specs/bar-path-spec.md`, agreed 2026-11-08: Slew's plate tracker bundled as `slew-video.js`, no MediaPipe; ▶ Video on a lift and Tools → Bar path; rim measured on still frames for the scale; **Owner: A4 item 19, then the video section of `r&d/notes/vbt-validation.md`**). **04b shipped 0.87.0** (squat depth: MediaPipe lite pose hosted in `pose/`, 16.6 MB optional download, deep / high / too close to call; plus three bar-path fixes, spec §9 and §12; **Owner: A4 item 20**). Still to do: **04c** record in the app — **moved to 00-V3** (2026-11-10)
 (VBTgo, Metric, PDC Performance.) **Write a spec first.** Record or pick a
 side-on video of a set; track the bar end through it to draw the bar path,
 and give velocity per rep from the video as a second source next to D1's
@@ -385,7 +390,7 @@ Decided 2026-09-24: food logging leaves Ironlog for its own separate app.
    (JSON, plus CSV for spreadsheets) covering every logged food entry,
    saved/custom foods and daily targets, so nobody loses data. The future food
    app will import this file.
-2. [x] **Shipped 0.25.0.** Aaron OK'd shipping it straight after step 1, so a
+2. [x] **Shipped 0.25.0.** The owner OK'd shipping it straight after step 1, so a
    leftover food log is **kept (unshown) until exported or removed** rather than
    dropped by the migration: Settings → Data → Save old food log, then Clear
    data → Old food log. An empty log and its targets are dropped on load.
@@ -402,8 +407,8 @@ Decided 2026-09-24: food logging leaves Ironlog for its own separate app.
    still contain food data must import without errors (ignore the food part).
 
 ### [x] A2. "What's new" screen — shipped 0.26.0
-Added 2026-09-24 at Aaron's request, straight after A1. Shows the changelog in
-the app so Aaron (and users) can see what each update changed.
+Added 2026-09-24 on request, straight after A1. Shows the changelog in
+the app so users can see what each update changed.
 - **Move the changelog to the repo root** as `CHANGELOG.md` (the app loads it,
   so by the layout rule it lives at the root). Update `CLAUDE.md` and
   `r&d/README.md` to point at the new path. Cache it in `sw.js` like the shell.
@@ -426,23 +431,23 @@ Chrome can clear a PWA's IndexedDB when the phone is short on space.
   older than ~2 weeks, dismissable, never blocking a workout.
 
 ### [ ] A4. Real-phone checks (check on phone)
-Everything shipped but never tested on Aaron's actual kit (Oppo Reno 8,
-Galaxy Watch 7, Chrome):
+Everything shipped but never tested on a real phone and watch (Android,
+Wear OS watch, Chrome):
 - Rest timer: alert still fires with the screen locked and the app in the
   background; background notification forwards to the watch and buzzes it
   (Blast #17, #64, #101). If it's unreliable, say so in the setting.
 - Cardio: HR strap/watch pairing, cue audio and voice, disconnect/reconnect.
-  (A third-party Wear OS "heart rate broadcast" app may let the Galaxy Watch
+  (A third-party Wear OS "heart rate broadcast" app may let the watch
   act as the HR source with no code changes — worth trying.)
 - Run Settings → Check exercise data against the real log and the Liftoff CSV.
 
-**Checklist for Aaron** (written 0.27.1 — nothing left to do in code until
+**Checklist for the owner** (written 0.27.1 — nothing left to do in code until
 these come back; report anything that fails):
 1. **Rest timer, locked:** tick a set, lock the phone, wait out the rest. Does
    it beep/buzz? Repeat with Ironlog in the background (another app open).
 2. **Rest notification:** Settings → Rest timer → *Notify me when rest ends in
    the background* → allow. Background the app during a rest: does a
-   notification appear, and does it reach the Galaxy Watch and buzz it?
+   notification appear, and does it reach the watch and buzz it?
 3. **Hold timer:** from a cold start, the count-in beeps on the first tap;
    screen stays on through a 60 s planned hold.
 4. **Cardio:** pair the HR strap (or try a Wear OS "heart rate broadcast" app
@@ -476,14 +481,13 @@ these come back; report anything that fails):
     sheet should end in a green tick, not a red ✗.
 14. **Fitting test (0.65.0):** run the home screen at least (Health → Fitting
     test). Are the inputs quick enough mid-test, does the balance timer fill
-    the boxes, and does the profile line read right? The full hour is planned
-    for the Christmas test day.
+    the boxes, and does the profile line read right?
 15. **AI key (0.66.0):** Settings → AI → paste your key → *Check key* should
     say it works. Then say a set the grammar can't read and see whether
     Claude fills it in; *This month* should count the call.
 16. **Coach (0.67.0):** tap the middle Coach button and run the setup as
     yourself, then as a new lifter would (under 6 months). Does the plan look like
-    a sane relative of your PPLUL? Swap a lift, Accept, and check the
+    a sane relative of the built-in PPLUL? Swap a lift, Accept, and check the
     calendar. Then Coach settings → Forget everything and try a home setup.
 17. **Interval timer (0.84.0):** Train → ⏱ Intervals → Tabata. Are the beeps
     and buzzes loud and clear over gym noise, does the 3-2-1 land right, and
@@ -554,7 +558,7 @@ Blast shipped these; make sure Ironlog doesn't have them. Tick each.
   elsewhere (#49) — **fixed 0.27.1**: a tap on anything that isn't a form
   control blurs the field, and so does the keyboard closing.
 
-### [ ] A6. Name check (Aaron, not code)
+### [ ] A6. Name check (owner, not code)
 Search the UK trademark register (UKIPO) and the app stores for "Ironlog" before
 promoting it. A rename is cheap now and expensive later.
 
@@ -590,7 +594,7 @@ The biggest documented strongman gap (Blast #96, #109; research).
 - Feeds strongman events in C2.
 
 ### [x] B2. Last session inline and fast entry — shipped 0.29.0
-**Parked in 0.49.1:** the step buttons (±weight, ±rep) and Copy down are hidden (`FAST_BAR = false` in `index.html`) while Aaron designs a replacement. Prev fill and tick-to-log still work.
+**Parked in 0.49.1:** the step buttons (±weight, ±rep) and Copy down are hidden (`FAST_BAR = false` in `index.html`) while a replacement is designed. Prev fill and tick-to-log still work.
 The single most-requested general feature (Blast #113, #42, #43; research).
 - Show last time's weight × reps @ RIR beside each set.
 - Tap to fill; copy a value down to the remaining sets.
@@ -648,7 +652,7 @@ show a dry-run report before anything is written.
 ### [x] B9. Let any equipment be picked for any movement — shipped 0.53.0 (spec 1a updated; the Check exercise data report and JSON/Drive import never rejected these leaves, so only the picker and the name importer changed)
 Added 2026-10-31. Today the equipment picker (`openAxisPicker`) greys **and
 disables** equipment a movement doesn't list — spec 1a in
-`r&d/specs/exercise-system.md`. Aaron's call: grey is fine as a hint, but it
+`r&d/specs/exercise-system.md`. The owner's call: grey is fine as a hint, but it
 must still be selectable. If someone wants to bench press with a kettlebell,
 that's up to them. Update spec 1a to say so.
 - Unlisted equipment stays **greyed and sorted below** the usual options, but
@@ -663,7 +667,7 @@ that's up to them. Update spec 1a to say so.
   importers (B8) must accept these leaves instead of flagging them as invalid.
 - The places filter (D6) still applies on top: equipment that isn't at the
   current place shows "not at …" as now, and stays selectable too.
-- Execution and attachment axes stay as they are unless Aaron asks for the
+- Execution and attachment axes stay as they are unless asked for the
   same there.
 
 ---
@@ -691,7 +695,7 @@ Builds on the existing Events page. Write `r&d/specs/events-spec.md` first.
 - Bodyweight against weight class on the run-in.
 
 ### [x] C3. Para powerlifting mode — shipped 0.38.0 (rules as written here; events spec §5)
-No app does this; Aaron's own niche. Check current WPPO rules before building.
+No app does this. Check current WPPO rules before building.
 - Bench press only; WPPO bodyweight classes (men 49, 54, 59, 65, 72, 80, 88, 97,
   107, 107+ kg; women 41, 45, 50, 55, 61, 67, 73, 79, 86, 86+ kg).
 - Three attempts, plus an optional record attempt that doesn't count toward
@@ -720,7 +724,7 @@ Done in code:
   22 px-wide plate and timer buttons. There are no gesture-only actions.
 - `Cue.logged()` gives a short buzz on a ticked set. Rest end already buzzed.
 
-**Checklist for Aaron (TalkBack on, Settings → Accessibility):**
+**Checklist for the owner (TalkBack on, Settings → Accessibility):**
 1. Home → Workout → Start blank: swipe through, and every button is spoken
    with a name. No "unlabelled" or bare symbols like "check mark".
 2. Add Bench Press: each set box reads e.g. "Set 1 weight (kg), edit box".
@@ -738,7 +742,7 @@ Note anything read badly or out of order.
 Extends the modifier chips. Structured modifiers such as **seated, strapped,
 assisted, one-sided set-up** that annotate a set **without** splitting the PR
 leaf, plus an optional quick pain/fatigue flag on a set or session. Validate the
-list with adaptive lifters (Aaron's community) before finalising.
+list with adaptive lifters before finalising.
 
 ### [x] C6. Training blocks counting down to a meet — shipped 0.41.0 (spec: `r&d/specs/blocks-spec.md`)
 Block templates (e.g. accumulation → intensification → peak → taper) laid out
@@ -851,10 +855,10 @@ Bottom bar goes from Home · Calendar · Workout · Stats · Events to:
 - C4 rules: nav labels, `aria-current`, 40 px targets; re-run the axe check
   in both skins.
 
-### [x] D10. Fix `prKey` / `splitsPR`, with band and chain fields — shipped 0.55.0 (`exKey` on `prKey`; `chainKg` / `bandKg` per entry; what moved is shown once after the update and in Check exercise data — **Aaron: read that notice on the phone**)
+### [x] D10. Fix `prKey` / `splitsPR`, with band and chain fields — shipped 0.55.0 (`exKey` on `prKey`; `chainKg` / `bandKg` per entry; what moved is shown once after the update and in Check exercise data — **Owner: read that notice on the phone**)
 `prKey()` is dead code, so chains, bands, slingshot and equipped currently share
 a PR pool with the raw lift. Real bug, but fixing it **changes existing PR
-numbers** — do it on its own, deliberately, and tell Aaron what moved. Add band
+numbers** — do it on its own, deliberately, and tell the owner what moved. Add band
 tension and chain weight fields at the same time (Blast #112, recast for
 accommodating resistance).
 
@@ -910,12 +914,12 @@ body data. Write `r&d/specs/health-page-spec.md` before building.
 - Same rules as everywhere: C4 accessibility, both skins, data stays on the
   device and is in JSON export / Drive sync.
 
-### [x] D14. A proper landing page — shipped 0.58.0 as the **in-app Home** (Aaron, 2026-10-31: not a separate public site; spec `r&d/specs/home-landing-spec.md`). App URL, scope and service worker untouched
+### [x] D14. A proper landing page — shipped 0.58.0 as the **in-app Home** (2026-10-31: not a separate public site; spec `r&d/specs/home-landing-spec.md`). App URL, scope and service worker untouched
 Added 2026-10-31. A public page that explains what Ironlog is before someone
 installs it: who it's for (powerlifting, strongman, strengthlifting, adaptive
 lifters), the free / local-only / bring-your-own-AI-key model, a few
 screenshots, and a clear **Install** button with Android steps.
-- **Check with Aaron first** that this means the public site, not the in-app
+- **Check with the owner first** that this means the public site, not the in-app
   Home page.
 - The app currently *is* the site root (`index.html`), so moving it would break
   installed PWAs (`start_url` / service worker scope). Spec the URL layout
@@ -952,14 +956,15 @@ Update the spec first — its "Other machines" note is where this was parked.
   required.
 - Real-gym check per machine goes on the A4 list.
 
-### [x] E5. Mobility training — moved up 2026-10-31 (Aaron); routines shipped 0.60.0, tests and balance test 0.61.0 (spec `r&d/specs/mobility-spec.md`; five hypermobility swaps proposed and on by default — **Aaron: check them**; "loaded-stretch drills as lifting sets" and more saved routines still to come; the stretch and mobility library `r&d/data/mobility.json` — 101 items — landed with 0.98.0 with a library browser and custom routines — spec §3)
+### [x] E5. Mobility training — moved up 2026-10-31; routines shipped 0.60.0, tests and balance test 0.61.0 (spec `r&d/specs/mobility-spec.md`; five hypermobility swaps proposed and on by default — **Owner: check them**; "loaded-stretch drills as lifting sets" and more saved routines still to come; the stretch and mobility library `r&d/data/mobility.json` — 101 items — landed with 0.98.0 with a library browser and custom routines — spec §3)
 Write `r&d/specs/mobility-spec.md` before building.
 - Routines start from **Train → Mobility**; tests and their charts live on
   **Health** (D12, D13).
-- **Starting point (added 2026-10-31):** Aaron's daily morning routine,
-  transcribed to `r&d/data/routines/morning-stretch.json` — 8 zones, 25
-  stretches (the sheet says 24; it lists 25), ~30 min. Ship it as the first
-  built-in routine and use it to shape the data model:
+- **Starting point (added 2026-10-31):** a daily morning routine sheet,
+  transcribed as a 30-minute, 8-zone, 25-stretch routine. It shipped as the
+  first built-in routine and shaped the data model (since 0.100.7 the app
+  ships no routine; it moved to the lifter's own log, and its source is out
+  of the repo):
   - zones with an estimated time each; items with targets, position, cue text
   - dose types: hold (s), hold range (60–90 s), hold × sets, hold × reps
     (chin tuck 5 s × 8), plain reps (cat-cow), per side, and a follow-on
@@ -972,7 +977,7 @@ Write `r&d/specs/mobility-spec.md` before building.
   - **Review the content against the hypermobility rule below before it
     ships:** most of it is passive static stretching (pigeon, prone quad,
     wrist stretches, deep squat hold), which this item says to go easy on.
-    Aaron decides what stays, gets an alt, or becomes a loaded version.
+    The owner decides what stays, gets an alt, or becomes a loaded version.
 - Saved routines (evening routine, pre-lift warm-up, "strength at length"
   block) of timed holds and rep-based drills, per side where relevant.
 - Guided player with hold countdowns, side switches, contract-relax cues —
@@ -983,7 +988,7 @@ Write `r&d/specs/mobility-spec.md` before building.
   optionally via the phone's inclinometer), Thomas test, wall shoulder flexion —
   charted per test and side.
 - Loaded-stretch drills log as normal lifting sets so PRs still work.
-- **Balance test** (added 2026-10-26 at Aaron's request): single-leg stand,
+- **Balance test** (added 2026-10-26 on request): single-leg stand,
   eyes closed. Press and hold a big pad when the foot lifts, release when it
   touches down; time shown to 0.1 s. Pick the standing leg, auto-switch after
   each attempt, ignore anything under 1 s, buzz on start and stop (reuse `Cue`,
@@ -992,14 +997,14 @@ Write `r&d/specs/mobility-spec.md` before building.
   the interaction exists as a standalone artifact ("Stork Stand").
 
 ### [x] D16. Blood pressure and blood glucose on Health — shipped 0.62.0 (spec `r&d/specs/health-page-spec.md` → Vitals)
-Added 2026-10-31 at Aaron's request — for diabetic lifters especially. Write
+Added 2026-10-31 on request — for diabetic lifters especially. Write
 the spec into `r&d/specs/health-page-spec.md` first.
 - **Blood pressure:** systolic / diastolic, optional pulse, arm and note;
   several readings a day. Charted, with the latest and a 7-day average.
-- **Blood glucose:** stored in mmol/L (Aaron's call), shown in mmol/L or
+- **Blood glucose:** stored in mmol/L (decided), shown in mmol/L or
   mg/dL by a setting. Each reading has a context: fasting, before a meal,
   2 h after, bedtime, other.
-- **Reference bands (Aaron's call: NHS):** BP coloured against the NHS
+- **Reference bands (decided: NHS):** BP coloured against the NHS
   bands (low, ideal, raised, high). Glucose against targets the lifter sets
   per context, with NHS general targets as the defaults, and a low under 4
   always flagged. Labelled as reference, not advice: a diabetes team may set
@@ -1015,7 +1020,7 @@ No Ironlog AI server and no paid tier.
 - Every AI feature is optional and hidden or greyed until a key is added.
 - Remove any server-side AI function left after A1.
 
-### [x] D9. Coach — template plans, then AI coaching — **all parts shipped by 0.73.0**; **parts 0–1 shipped 0.67.0** (Coach button, chat setup, memory, plan builder with preview/swap/accept; kit in two taps and the fitting-test invite added 2026-11-02). 0.67.1 asks for sex, date of birth and bodyweight when missing; 0.68.0 asks whether to build a plan at all and adds **Bring in a plan** (the Ironlog plan format, `r&d/specs/plan-format.md`, written by the lifter's own AI or by Claude on their key). 0.69.0 makes the chat local-first (Aaron: "build up as much automated chat as you can"): digest, debrief, weekly review, data-built Ask chips, a typed-question matcher, "remember …" notes, AI only as the fallback; 0.70.0 adds conversation (context, small talk, quick sums, situations). 0.71.0 adds suggested changes (swap a stalled lift, add a set, lighter week — apply and undo). 0.72.0 adds Tailor it (Claude on the lifter's key, swaps and ±1 sets only, re-checked locally). 0.73.0 adds the cardio trend coach, built locally (HR slope over 90 s, a minute's projection, the smallest step early; a switch on cardio setup) instead of a Haiku call a minute — no AI needed
+### [x] D9. Coach — template plans, then AI coaching — **all parts shipped by 0.73.0**; **parts 0–1 shipped 0.67.0** (Coach button, chat setup, memory, plan builder with preview/swap/accept; kit in two taps and the fitting-test invite added 2026-11-02). 0.67.1 asks for sex, date of birth and bodyweight when missing; 0.68.0 asks whether to build a plan at all and adds **Bring in a plan** (the Ironlog plan format, `r&d/specs/plan-format.md`, written by the lifter's own AI or by Claude on their key). 0.69.0 makes the chat local-first (the brief: "build up as much automated chat as you can"): digest, debrief, weekly review, data-built Ask chips, a typed-question matcher, "remember …" notes, AI only as the fallback; 0.70.0 adds conversation (context, small talk, quick sums, situations). 0.71.0 adds suggested changes (swap a stalled lift, add a set, lighter week — apply and undo). 0.72.0 adds Tailor it (Claude on the lifter's key, swaps and ±1 sets only, re-checked locally). 0.73.0 adds the cardio trend coach, built locally (HR slope over 90 s, a minute's projection, the smallest step early; a switch on cardio setup) instead of a Haiku call a minute — no AI needed
 **Spec: `r&d/specs/coach-spec.md`** (planned 2026-11-01 — the spec wins over
 this summary). Uses D8 for the AI parts.
 - **Build first: a raised Coach button mid-nav opening a chat with its own small memory (`S.coach`: setup done?, answers, notes), and the template plan builder run inside that chat, no AI.** Setup questions (goal,
@@ -1023,7 +1028,7 @@ this summary). Uses D8 for the AI parts.
   body · 2 upper/lower · 3 PPL · 4 ULUL · 5 PPLUL · 6 PPLPPL — session length,
   experience, priority lifts (skipped under 6 months), go-easy list), then a
   preview with swaps and Accept. Output is a normal `loads: "rir"` program.
-  Aaron tests it on himself and on a new lifter.
+  Tested on an experienced lifter and on a new lifter.
 - Then: a local **training digest**, AI **session debrief** and **weekly
   review**, optional **Tailor it** (slot swaps only, re-checked locally), and
   **Ask the coach**. Nothing changes a plan without the user accepting it.
@@ -1044,11 +1049,11 @@ A read-only report (JSON / text / PDF) of a training block for a coach. No
 accounts, no server.
 
 ### [x] E2. Share cards — shipped 0.63.0 (session cards were already in; added the PR card, 1080×1350, from the session-complete sheet and the Stats PR timeline; spec `r&d/specs/share-spec.md`)
-A PR or session summary as an image to post (hunchback_hercules-friendly).
+A PR or session summary as an image to post (Instagram-friendly).
 Optional; no social feed.
 
 ### [ ] E3. Native wrapper project
-One project, only if Aaron decides to go native: Capacitor wrapper for the Play
+One project, only if the owner decides to go native: Capacitor wrapper for the Play
 Store, **Health Connect** (bodyweight, HR, body-comp scans in; sessions out —
 Blast #58, #12), and a **Wear OS companion** (current set and rest countdown on
 the watch, tick sets from the wrist). A PWA can't do any of these.
@@ -1094,7 +1099,7 @@ instructions (#21)~~ (E14) · suspension trainer, rings and jump rope exercises 
 #93, #40).
 
 ### [ ] E10. More themes — dark mode, Frutiger Metro, Ceefax
-Added 2026-09-27 at Aaron's request. Ironlog already has two skins (default and
+Added 2026-09-27 on request. Ironlog already has two skins (default and
 98) — check how they're switched and styled before adding more, and turn that
 into a proper theme layer (colour/type tokens per theme) so a new theme is one
 block of CSS, not edits scattered through `index.html`.
@@ -1115,8 +1120,8 @@ block of CSS, not edits scattered through `index.html`.
 - Muscle map skins (0.23.0) are separate from themes — check they read well on
   dark backgrounds.
 
-### [x] E11. Debug mode — show the working — shipped 0.64.0 (spec `r&d/specs/debug-mode-spec.md`; Aaron's call: every calculation listed below in the first build; fitting-test scores join with E12)
-Added 2026-10-31 at Aaron's request, after seeing a step-by-step scoring trace
+### [x] E11. Debug mode — show the working — shipped 0.64.0 (spec `r&d/specs/debug-mode-spec.md`; the owner's call: every calculation listed below in the first build; fitting-test scores join with E12)
+Added 2026-10-31 on request, after seeing a step-by-step scoring trace
 for the strength fitting test's home screen. Goal: any number the app works out
 can show how it got there, so a wrong-looking result can be checked or reported.
 - **A Settings toggle, off by default.** When on, calculated values get a small
@@ -1137,7 +1142,7 @@ can show how it got there, so a wrong-looking result can be checked or reported.
 - Trace sheets follow C4 (labels, contrast, text size).
 
 ### [x] E12. Strength fitting test — first build shipped 0.65.0 (results and flags only; decisions in spec §13: Ironlog's STD standards, heaviest set at ≤ 3 RIR for the ladder e1RM, lives on Health) **(check on phone; the plan side of §9 and the open cutoffs in §12 are still to do)**
-Added 2026-10-31 at Aaron's request. **Spec: `r&d/specs/fitting-test-spec.md`**
+Added 2026-10-31 on request. **Spec: `r&d/specs/fitting-test-spec.md`**
 (reference workbook with working formulas: `r&d/data/fitting-test/strength-fitting-test.xlsx`).
 Colour analysis for training: a one-hour test (15 min home, 45 min gym, no true
 maxes) that ranks every lift and physical quality, assigns a profile type and
@@ -1161,7 +1166,7 @@ raises flags that change the plan.
   changes the profile drives are not specified yet — first build shows results
   and flags only.
 
-### [x] E13. Grippers and finger extension bands — shipped 0.75.0 (Aaron asked 2026-11-02)
+### [x] E13. Grippers and finger extension bands — shipped 0.75.0 (requested 2026-11-02)
 Two new movements in `r&d/data/exercises.json`: **Gripper Close** (equipment
 `gripper`) and **Finger Extension** (equipment `extension_band`, or a normal
 resistance band). Both default to one hand and are `loadOverride: per_side`, so
@@ -1172,7 +1177,7 @@ missing at a place. Not done: gripper presets by brand/rating (lb → kg), and
 the rep-range "add weight" step still assumes 2.5 kg, which a fixed-rating
 gripper can't do.
 
-### [x] E14. Exercise demos on the Info tab — shipped 0.80.0 (spec `r&d/specs/exercise-demo-spec.md`; Aaron asked 2026-11-05)
+### [x] E14. Exercise demos on the Info tab — shipped 0.80.0 (spec `r&d/specs/exercise-demo-spec.md`; requested 2026-11-05)
 Animated side-view outline figure (inline SVG, one engine, patterns as data —
 ten patterns, 43 movements mapped), effort-tinted primary muscles, bar path,
 phase labels and controls; setup / cues / mistakes / variant note text in
@@ -1193,11 +1198,11 @@ now cheap thanks to `heel`. Then one engine change per family: plank
 press, posterior-chain benches, dips. Cross-body moves (flyes, pec deck,
 rear-delt fly, hip ab/adduction) wait for the front-view toggle.
 
-### [ ] E15. Logn's cool-down and calm rests in Ironlog (Aaron asked 2026-11-09)
-Bring the parts of **Logn** (`tribbles69/logn`, Aaron's standalone calm/focus
+### [ ] E15. Logn's cool-down and calm rests in Ironlog (requested 2026-11-09)
+Bring the parts of **Logn** (a standalone calm/focus
 PWA) that earn their place into Ironlog. Logn's README already names the plan:
 Downshift becomes the rest-timer and cool-down screen, Lock-in the pre-set
-screen. **Check with Aaron first which modes have worked for him in Logn** —
+screen. **Check first which Logn modes have worked in use** —
 its home screen's Cool-down comparison (pulse drop and control-pause change
 per setup) is the evidence. Then write a spec (`r&d/specs/calm-spec.md`).
 - **Cool-down after a session:** an offer on the session-complete sheet —
@@ -1212,8 +1217,7 @@ per setup) is the evidence. Then write a spec (`r&d/specs/calm-spec.md`).
   from the active set.
 - **HRV check on Health:** Logn's camera (fingertip + torch, RMSSD) and RR
   interval check, compared against the last 7; could feed D7 recovery and
-  the Coach's readiness later. Port Logn's fix for a saturated torch image
-  (logn #4).
+  the Coach's readiness later. Port Logn's fix for a saturated torch image.
 - Logn's design rules come with it: no flicker or strobing, dark and dim,
   screen kept awake (`Awake`). Offer an import of Logn's JSON export so its
   history isn't lost. Logn stays a standalone app either way.
@@ -1222,7 +1226,7 @@ per setup) is the evidence. Then write a spec (`r&d/specs/calm-spec.md`).
 
 ---
 
-### [x] E17. Untangle the modules (Aaron, 2026-11-13) — **done, 0.98.1–0.98.3**
+### [x] E17. Untangle the modules (2026-11-13) — **done, 0.98.1–0.98.3**
 After the module split, almost every file imported every other one in a
 circle. Make the layers real, so a file can be read, edited and bug-checked
 with only what is below it. Pure refactors: no behaviour change, checked each

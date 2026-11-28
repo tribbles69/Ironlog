@@ -13,8 +13,18 @@ rather than guessed.
 
 ---
 
+## 0.100.7 — 28 Nov 2026
+- **Changed:** Ironlog no longer comes with a training program or a stretch routine of its own. A new log starts empty: build a plan with the coach, bring in one you already follow (Settings → Training program → Bring in a plan), and make your own stretch routines on Train → Mobility. Everything you make stays on your phone with the rest of your log.
+- **If you used the old built-in program or stretch routine:** your sessions and history are untouched. To get the stretch routine back, bring in its plan file: your planned stretches, ticks and history find it again (until then they say the routine isn't on this phone). The program's sessions all stay; Settings shows it under a plain name made from its id.
+- **New:** a plan file can bring its own stretch routines with it, so a plan with a stretch day arrives with the routine it uses. A file of routines alone just adds them to Mobility.
+- **Changed:** Settings → Training program lists every program you have, with Plan with the coach and Bring in a plan beside them. Mobility says how to make a routine when you have none, and the coach offers to.
+
+## 0.100.6 — 28 Nov 2026
+- **Changed:** the meet placing predictor no longer ships a sample field of real lifters, so a meet card shows a predicted finish only when there's a field to compare against.
+- **Behind the scenes:** comments and developer notes tidied.
+
 ## 0.100.5 — 28 Nov 2026
-- **Changed:** the Full Body Stretch's priority notes now say "upper-back posture", and its notes no longer describe one person's routine sheet.
+- Updates to a built-in program or routine that has since been removed from the app.
 
 ## 0.100.4 — 28 Nov 2026
 - **New:** Settings → Data → Restore set-aside log: see the copies of your log the app has kept on this phone (from the rescue screen or an update), and save, restore or delete them. Your current log is kept before any restore.
@@ -89,7 +99,7 @@ rather than guessed.
 - **Fixed: "Start with an empty log" on the rescue screen while the phone's storage wasn't answering** could later overwrite your real log once storage came back. Your old log is now kept safe on the phone before anything is written over it, and if storage answers by the time you tap the button, your real log opens instead.
 
 ## 0.100.1 — 28 Nov 2026
-- **One Heavy Lift: Full Body Stretch every morning**, from today to the end of the block on 30 Dec. It's a planned mobility session on Home and the calendar. Start opens the stretch player with your usual swaps. Settings → Training program → **Reinstall fresh from today** to get it.
+- Updates to a built-in program or routine that has since been removed from the app.
 
 ## 0.100.0 — 28 Nov 2026
 - **Plans can hold cardio and mobility now**, in three ways:
@@ -100,7 +110,6 @@ rather than guessed.
 - **Planned cardio and mobility can be skipped and moved** like lift days. Marking past sessions done leaves them alone, because there's no honest number to fill in.
 - **The program sheet shows how much of the plan you've done**, with lifts, cardio and mobility counted separately. Skips count against you.
 - **Plan files** (from the coach, your own AI or a file) can include cardio and mobility, and two sessions on one day.
-- **One Heavy Lift:** morning bike intervals on Mondays and rowing intervals on Thursdays from 30 Nov, and a Cossack squat and ankle warm-up before every legs day. Settings → Training program → **Reinstall fresh from today** to get them.
 
 ## 0.99.8 — 23 Nov 2026
 - **PRs are harder to get by feel alone:** a record now counts at most 2 reps in reserve. Before, an easy set logged with a big RIR could take the PR off a heavier set done to the limit (90 × 5 at RIR 5 beat 100 × 5 at RIR 0). Your best e1RM, PR stars, rankings and the e1RM chart all use the new figure, so a best that came from a high-RIR set will read a little lower and a few old PR stars may go.
@@ -195,10 +204,8 @@ The fixes from the maths audit.
 - **Fixed:** Home's "7d" bodyweight change covers seven days and ignores check-ins dated in the future.
 
 ## 0.99.5 — 20 Nov 2026
-- **New programme: One Heavy Lift · A/B PPLUL** (23 Nov – 30 Dec). One heavy lift a session, on alternate days: A week bench, squat and high-handle trap bar; B week row, overhead press and hip thrust. The rest of each session is cable and machine accessories, and B weeks add light technique sets of bench, squat and trap bar.
 - The first fortnight comes with guide weights; after that the weights come from your log, as before. It ends with a test week after Christmas.
 - Both rack pulls and the cable flies are gone.
-- To switch: in Settings → Training programme, remove the WDC Records sessions, then install the new one.
 
 ## 0.99.4 — 20 Nov 2026
 - **Blood pressure chart:** dotted lines now mark the top of the ideal range — 120 for systolic, 80 for diastolic, in matching colours — so you can see at a glance whether a reading is in range.
@@ -256,7 +263,6 @@ The fixes from the maths audit.
 - **New: about 150 more exercises to pick from.** Olympic lifts (snatch, clean, jerk and their power, hang and block versions), plyometrics and throws, calisthenics holds and skills, more strongman events (Viking and silver dollar deadlifts, Viking press, circus dumbbell, tyre flip, power stairs, Hercules hold and more), neck training, grip, rehab and prehab work, and extra conditioning like jump rope, battle ropes and bag work.
 - **New equipment to choose:** cambered bar, Swiss/football bar, medicine ball, rings, circus dumbbell, Viking press, tyre, neck harness, and "other implement" for odd strongman kit.
 - **Changed: trap bar high and low handles are now separate lifts, each with its own PRs.** Pick the handles from the chip on the exercise. Everything you logged on the trap bar before is marked high handles; switch any low-handle sessions over from that chip.
-- **New: a stretch library and your own mobility routines.** Train → Mobility now has a 📚 Stretch library of about a hundred stretches and drills (search, filter by area and style, hide passive end-range ones) and ＋ New routine to build your own — pick from the library, put them in order, change the hold or reps. Your routines run in the same guided player as Full Body Stretch, with the same swaps and Go easy on joints, and the ✎ next to one edits or deletes it. They sync between phones.
 - **Changed: search finds exercises by their other names too** — "Klokov", "Anderson squat" or "Meadows row" now turn up the right lift.
 - Nothing already logged changes. Imports now read "Keg Toss" and "Truck Pull" as their own events, and "Suitcase Carry" as a one-handed carry.
 
@@ -665,11 +671,6 @@ The fixes from the maths audit.
   each leg.
 
 ## 0.60.0 — 31 Oct 2026
-- **Mobility:** Train has a 🧘 Mobility button, and your Full Body Stretch
-  (25 stretches, about 30 minutes) is built in. Tick stretches off as you
-  go, or press *Start guided* to run it hands-free. It counts each hold
-  down, says when to switch sides, waits for you on rep sets, and moves on to
-  the next stretch by itself.
 - **Hypermobility swaps:** five stretches that hang on the end of a joint
   are swapped by default for an active or loaded version. These are prone
   quad, the wrist stretches, pigeon, the deep squat hold and the forward
@@ -768,40 +769,18 @@ The fixes from the maths audit.
   content.
 
 ## 0.52.3 — 26 Oct 2026
-- **WDC Records, Legs:** Smith calf raises are now single leg on both A and
-  B weeks, left leg first with the right matching its reps. They open per side
-  so the left/right gap shows on the calf raise page. Remove and reinstall the
-  program in Settings → Training program to pick it up (sessions you've
-  already done stay as they are).
 - Programs can now set a lift to single-sided when it allows it.
 
 ## 0.52.2 — 19 Oct 2026
-- **WDC Records, A-week Legs:** hack squat swapped for Smith squat 4×5 (the
-  gym has no hack squat). Leg press stays the B-week main lift. Reinstall
-  fresh from today to pick it up.
+- Updates to a built-in program or routine that has since been removed from the app.
 
 ## 0.52.1 — 19 Oct 2026
-- **WDC Records:** back extensions are gone from A-week Friday. Your lower back
-  already gets plenty from the two heavy pull days. To update sessions you've
-  already installed, use Settings → Training program → Manage → Reinstall fresh
-  from today (anything you've trained is kept).
-- **WDC Records, Pull days:** A-week Pull drops the shrugs and the trap bar
-  hold (the pull's lockout already out-loads a shrug) for a heavier
-  chest-supported row and lat pulldowns. B-week Pull now starts with the grip
-  hold while you're fresh, and the shrugs there go up to 12 reps.
+- Updates to a built-in program or routine that has since been removed from the app.
 
 ## 0.52.0 — 19 Oct 2026
-- **New program: WDC Records · A/B PPLUL.** Eight weeks built around the
-  16 in trap bar and 21 in Viking deadlift records, with big back work, incline
-  on A-week Monday and overhead press on A-week Thursday. It starts the week of
-  19 Oct with the baseline tests, through to 11 Dec. Install it from
-  Settings → Training program.
 - Programs can now plan **holds** (timed or max time) and **carries** (with the
   distance filled in), and can say which equipment a lift uses — a trap bar
   rack pull and a Smith incline land as those, not the barbell defaults.
-- **Old program, still removable.** Hunchback Hercules shows under the new one
-  in Settings with a Remove button for its planned sessions. Anything you've
-  trained stays.
 - Fixed: exercises a program adds that aren't in the catalogue (Landmine Press,
   Tibialis Raise) now show their proper name.
 
@@ -813,10 +792,6 @@ The fixes from the maths audit.
   silly one. Add a heavier warm-up to get a reading.
 
 ## 0.51.0 — 6 Oct 2026
-- **Hunchback Hercules rebuilt fresh from the PDF.** Every session, set and
-  note re-read from the source, so the odd sets and muddled notes from the old
-  copy are gone (calf raises get their AMRAP set back, test and taper weeks
-  have proper names, supersets are marked in the notes).
 - **No weights in the plan — RIR decides.** Each set has its own target RIR,
   shown in the RIR box: top sets lower, back-offs higher, AMRAPs stop 1 shy,
   light and taper weeks easy. When you start a session the weights come from
@@ -1265,7 +1240,7 @@ The fixes from the maths audit.
 - **Fixed Liftoff import:** hand-picked exercises were all being merged into
   one broken exercise called "[object Object]", and some matches lost their
   equipment (e.g. Smith shrugs landing on barbell shrugs).
-- Smarter matching: 59 of 65 names in Aaron's export now match automatically.
+- Smarter matching: 59 of 65 names in a test export now match automatically.
 - The import review lists every name and where it will land, problems first.
 - **Undo an import:** Settings → Remove imported sessions.
 
@@ -1347,7 +1322,7 @@ The fixes from the maths audit.
 
 ## 0.12.1 — 5 Sep 2026
 - **Fixed:** the Events page crashed for meets with a known field (including
-  both bundled West Midlands meets).
+  both bundled meets).
 
 ## 0.12.0 — 5 Sep 2026
 - **New event types:** strengthlifting (squat, press, deadlift) and

@@ -1,6 +1,6 @@
 # Coach report and PR cards (roadmap E1, E2)
 
-Written 2026-10-31 when Aaron asked for E1 and E2 together. Both are about
+Written 2026-10-31 when E1 and E2 were requested together. Both are about
 getting training *out* of the phone, with no accounts and no server.
 
 ## E1. Coach report (0.63.0)

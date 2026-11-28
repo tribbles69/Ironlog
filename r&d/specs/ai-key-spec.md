@@ -1,6 +1,6 @@
 # AI on your own key (roadmap D8)
 
-Written 2026-11-01 when Aaron said to start D8. The groundwork every AI
+Written 2026-11-01 when D8 was started. The groundwork every AI
 feature (D9 coaching, the cardio trend coach) sits on.
 
 ## What exists before this
@@ -68,7 +68,7 @@ D9's coach, the cardio trend coach, prompt caching (no prompt here is long
 enough to cache yet), streaming.
 
 
-## Model per feature (0.79.0, Aaron 2026-11-05)
+## Model per feature (0.79.0, 2026-11-05)
 
 `AI_MODELS` lists Haiku 5.5 ($0.10 / $0.50), Sonnet 5.5 ($2 / $10) and
 Opus 5.5 ($4 / $20) per million tokens in / out (Haiku's rate is for

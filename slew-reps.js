@@ -10,13 +10,12 @@
    tuning against real traces lives (r&d/notes/vbt-validation.md), and
    r&d/tools/vbt-sim.cjs and vbt-rir.cjs run this file itself.
 
-   Moved here whole from index.html in the module split
-   (r&d/notes/module-split.md); nothing in it changed. */
+*/
 
 /* Acceleration → displacement for Measure. Replaces Slew.integrateMotion.
    Slew only removes drift where MotionCapture marks the bar still, and then
-   zeroes the speed there. On real sets that fails two ways (9 raw traces,
-   9 Nov 2026, r&d/notes/vbt-validation.md):
+   zeroes the speed there. On real sets that fails two ways (9 raw validation
+   traces, r&d/notes/vbt-validation.md):
    - the phone's vertical acceleration averages −0.1 to −0.24 m/s² over a set
      that starts and ends at rest, and an OHP set is "still" only 2–8% of the
      time, so drift ran for 20–50 s uncorrected: 0 of 16 reps found;
@@ -36,7 +35,7 @@ const VBT_HP_V = 0.15, VBT_HP_X = 0.05, VBT_FS = 60;
    into the reading and real vertical movement leaks out of it. The phone
    already knows where down is at every sample — its own gyro-fused gravity is
    the with-gravity reading minus the linear one — so each sample's linear
-   acceleration is projected onto that instead. 11 Nov 2026 traces (5 kg bar,
+   acceleration is projected onto that instead. A second set of traces (5 kg bar,
    11 sets): range of motion steadied (overhead press 44–58 cm, was 17–40) and
    two miscounted sets came right. r&d/notes/vbt-validation.md.
    xyz: { lx, ly, lz, gx, gy, gz } one row per motion sample. Returns the
@@ -109,19 +108,19 @@ export function vbtIntegrate(motion) {
   return x.map((y, i) => ({ t: ts[i], x: y - xSlow[i], conf: still[i] ? 1 : 0.85 }));   // confidence falls while unanchored — that is where drift hides
 }
 /* Which of Slew's reps are real. Slew is asked for reps down to VBT_MIN_ROM
-   (4 cm) — the 9 Nov AMRAP's slow late reps read 14–17 cm through the drift
+   (4 cm) — a slow AMRAP's slow late reps read 14–17 cm through the drift
    filter and the lift's 15 cm floor threw them away; calf raises travel 5–8 cm.
    Then, in a set of 4+, a rep under 0.6 of the set's median travel is a
-   lift-off from the hooks or a fidget (11–16 cm against ~30 cm on the 9 Nov
+   lift-off from the hooks or a fidget (11–16 cm against ~30 cm on validation
    warm-ups; genuine reps never fell below 0.71). A set of 1–3 has no median
-   worth trusting, so it keeps the lift's own floor. 9 Nov traces: 80 of 81
+   worth trusting, so it keeps the lift's own floor. Validation traces: 80 of 81
    reps, none extra. */
 export const VBT_MIN_ROM = 0.04, VBT_SETUP_MS = 1800;
 export function vbtDropBlips(reps0, liftMinRom) {
   /* In a set of 4+, a first "rep" that ends within 1.8 s of Start (or that
      Slew flags as clipped at the start) is the bar being got into position:
-     nobody taps the phone, takes the bar and finishes a rep that fast (11 Nov squat: the bar going onto the back read as a 39 cm
-     rep ending at 1.5 s; the earliest real first rep on either day ended at
+     nobody taps the phone, takes the bar and finishes a rep that fast (a validation squat: the bar going onto the back read as a 39 cm
+     rep ending at 1.5 s; the earliest real first rep in the validation traces ended at
      2.7 s). */
   const early = r => r.tEnd < VBT_SETUP_MS || ((r.quality && r.quality.flags) || []).includes('clipped-start');
   const reps = reps0.length >= 4 && early(reps0[0]) ? reps0.slice(1) : reps0;
@@ -160,7 +159,7 @@ export function vbtSummary(reps) {
    a set that ends in a missed rep or a near-stall — that is observed, not
    estimated. For everything else it compared the phone's speed with a
    typical failure speed for the lift, either straight ("profile") or by
-   carrying the whole set's average slow-down forward ("decay"). On the 9 Nov
+   carrying the whole set's average slow-down forward ("decay"). On a validation
    push day both went wrong: a 40 kg warm-up triple read RIR 0.2, because the
    phone under-reads slow heavy reps and a population failure speed knows
    nothing about this phone; a 17-rep AMRAP that lost 41% of its speed read
@@ -191,7 +190,7 @@ export function vbtEstimateSet(reps, profile, failure) {
   const observed = e => e.method === 'observed-failure' || e.method === 'observed-grind';
   /* A missed rep or near-stall is only believed when the set had slowed down
      as well. Putting the bar down after an easy set reads as a failed attempt
-     (11 Nov: a 5 kg row, 3% slower by the end, came out as RIR 0), and that
+     (a validation 5 kg row, 3% slower by the end, came out as RIR 0), and that
      would also have been stored as the lifter's failure speed. A set of one
      or two has no slow-down to check, so the evidence stands. */
   let doubted = false;

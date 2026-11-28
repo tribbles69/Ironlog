@@ -24,7 +24,7 @@ moved over" into the page for the body.
    (D11): *FFMI* and *Max muscular potential*. They prefill from here.
 5. **Recovery** — one line linking to the recovery heatmap. It stays on
    Stats → Muscles (D7) — it's training load, and it sits better next to the
-   strength map. Revisit if Aaron wants it here.
+   strength map. Revisit if it's wanted here.
 
 ## Later items that land here
 
@@ -44,8 +44,8 @@ Nothing is shown for these until they exist: no empty placeholders.
 
 ## Vitals — blood pressure and blood glucose (roadmap D16, 0.62.0)
 
-Added 2026-10-31 at Aaron's request, for diabetic lifters especially. Aaron's
-calls: glucose stored and shown in **mmol/L** (mg/dL by a setting), and
+Added 2026-10-31 on request, for diabetic lifters especially. Decided:
+glucose stored and shown in **mmol/L** (mg/dL by a setting), and
 **NHS reference bands**.
 
 **Stores** (in `DEFAULT_STATE`, JSON export, `SYNC_SETS`):

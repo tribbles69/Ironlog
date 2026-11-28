@@ -1,0 +1,1045 @@
+{
+ "id": "smoke-generic-3x",
+ "name": "Smoke \u00b7 Generic 3-day",
+ "subtitle": "Test fixture: 3 weeks, 3 lift days, a bike day and a stretch day. Not a real program.",
+ "loads": "rir",
+ "weekdays": [
+  1,
+  3,
+  5,
+  6,
+  0
+ ],
+ "meets": [],
+ "workouts": [
+  {
+   "week": 1,
+   "day": 1,
+   "name": "Upper A",
+   "block": "Week 1",
+   "exercises": [
+    {
+     "name": "Bench Press",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 5,
+       "type": "warmup",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Barbell Row",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Overhead Press",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Biceps Curl",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    }
+   ],
+   "addons": [
+    {
+     "kind": "cardio",
+     "at": "end",
+     "plan": {
+      "machine": "rower",
+      "min": 10,
+      "zone": "z2"
+     }
+    }
+   ]
+  },
+  {
+   "week": 1,
+   "day": 2,
+   "name": "Lower A",
+   "block": "Week 1",
+   "exercises": [
+    {
+     "mobility": {
+      "items": [
+       "cossack-mob",
+       "knee-to-wall"
+      ],
+      "name": "Squat warm-up"
+     },
+     "at": "start"
+    },
+    {
+     "name": "Back Squat",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 5,
+       "type": "warmup",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Romanian Deadlift",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Plank",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "sec": 45,
+       "type": "working"
+      },
+      {
+       "w": null,
+       "r": null,
+       "sec": 45,
+       "type": "working"
+      }
+     ],
+     "iso": true
+    }
+   ]
+  },
+  {
+   "week": 1,
+   "day": 3,
+   "name": "Full Body",
+   "block": "Week 1",
+   "exercises": [
+    {
+     "name": "Deadlift",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "warmup",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Dumbbell Bench",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Lat Pulldown",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Farmers Carry",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "m": 20,
+       "type": "working"
+      },
+      {
+       "w": null,
+       "r": null,
+       "m": 20,
+       "type": "working"
+      },
+      {
+       "w": null,
+       "r": null,
+       "m": 20,
+       "type": "working"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 1,
+   "day": 4,
+   "name": "Easy bike",
+   "kind": "cardio",
+   "plan": {
+    "machine": "bike",
+    "min": 20,
+    "zone": "z2"
+   },
+   "exercises": []
+  },
+  {
+   "week": 1,
+   "day": 5,
+   "name": "Stretch",
+   "kind": "mobility",
+   "plan": {
+    "items": [
+     {
+      "id": "cat-cow"
+     },
+     {
+      "id": "open-book"
+     },
+     {
+      "id": "couch-stretch"
+     }
+    ],
+    "name": "Stretch"
+   },
+   "exercises": []
+  },
+  {
+   "week": 2,
+   "day": 1,
+   "name": "Upper A",
+   "block": "Week 2",
+   "exercises": [
+    {
+     "name": "Bench Press",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 5,
+       "type": "warmup",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Barbell Row",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Overhead Press",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Biceps Curl",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    }
+   ],
+   "addons": [
+    {
+     "kind": "cardio",
+     "at": "end",
+     "plan": {
+      "machine": "rower",
+      "min": 10,
+      "zone": "z2"
+     }
+    }
+   ]
+  },
+  {
+   "week": 2,
+   "day": 2,
+   "name": "Lower A",
+   "block": "Week 2",
+   "exercises": [
+    {
+     "mobility": {
+      "items": [
+       "cossack-mob",
+       "knee-to-wall"
+      ],
+      "name": "Squat warm-up"
+     },
+     "at": "start"
+    },
+    {
+     "name": "Back Squat",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 5,
+       "type": "warmup",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Romanian Deadlift",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Plank",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "sec": 45,
+       "type": "working"
+      },
+      {
+       "w": null,
+       "r": null,
+       "sec": 45,
+       "type": "working"
+      }
+     ],
+     "iso": true
+    }
+   ]
+  },
+  {
+   "week": 2,
+   "day": 3,
+   "name": "Full Body",
+   "block": "Week 2",
+   "exercises": [
+    {
+     "name": "Deadlift",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "warmup",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Dumbbell Bench",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Lat Pulldown",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Farmers Carry",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "m": 20,
+       "type": "working"
+      },
+      {
+       "w": null,
+       "r": null,
+       "m": 20,
+       "type": "working"
+      },
+      {
+       "w": null,
+       "r": null,
+       "m": 20,
+       "type": "working"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 2,
+   "day": 4,
+   "name": "Easy bike",
+   "kind": "cardio",
+   "plan": {
+    "machine": "bike",
+    "min": 20,
+    "zone": "z2"
+   },
+   "exercises": []
+  },
+  {
+   "week": 2,
+   "day": 5,
+   "name": "Stretch",
+   "kind": "mobility",
+   "plan": {
+    "items": [
+     {
+      "id": "cat-cow"
+     },
+     {
+      "id": "open-book"
+     },
+     {
+      "id": "couch-stretch"
+     }
+    ],
+    "name": "Stretch"
+   },
+   "exercises": []
+  },
+  {
+   "week": 3,
+   "day": 1,
+   "name": "Upper A",
+   "block": "Week 3",
+   "exercises": [
+    {
+     "name": "Bench Press",
+     "notes": "last set as many reps as you can",
+     "sets": [
+      {
+       "w": null,
+       "r": 5,
+       "type": "warmup",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": null,
+       "type": "amrap",
+       "t": 1
+      }
+     ]
+    },
+    {
+     "name": "Barbell Row",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Overhead Press",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Biceps Curl",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 1
+      },
+      {
+       "w": null,
+       "r": 12,
+       "type": "working",
+       "t": 1
+      }
+     ]
+    }
+   ],
+   "addons": [
+    {
+     "kind": "cardio",
+     "at": "end",
+     "plan": {
+      "machine": "rower",
+      "min": 10,
+      "zone": "z2"
+     }
+    }
+   ]
+  },
+  {
+   "week": 3,
+   "day": 2,
+   "name": "Lower A",
+   "block": "Week 3",
+   "exercises": [
+    {
+     "mobility": {
+      "items": [
+       "cossack-mob",
+       "knee-to-wall"
+      ],
+      "name": "Squat warm-up"
+     },
+     "at": "start"
+    },
+    {
+     "name": "Back Squat",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 5,
+       "type": "warmup",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 5,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Romanian Deadlift",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 8,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Plank",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "sec": 45,
+       "type": "working"
+      },
+      {
+       "w": null,
+       "r": null,
+       "sec": 45,
+       "type": "working"
+      }
+     ],
+     "iso": true
+    }
+   ]
+  },
+  {
+   "week": 3,
+   "day": 3,
+   "name": "Full Body",
+   "block": "Week 3",
+   "exercises": [
+    {
+     "name": "Deadlift",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 3,
+       "type": "warmup",
+       "t": 3
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 3,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Dumbbell Bench",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Lat Pulldown",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      },
+      {
+       "w": null,
+       "r": 10,
+       "type": "working",
+       "t": 2
+      }
+     ]
+    },
+    {
+     "name": "Farmers Carry",
+     "notes": "",
+     "sets": [
+      {
+       "w": null,
+       "r": null,
+       "m": 20,
+       "type": "working"
+      },
+      {
+       "w": null,
+       "r": null,
+       "m": 20,
+       "type": "working"
+      },
+      {
+       "w": null,
+       "r": null,
+       "m": 20,
+       "type": "working"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "week": 3,
+   "day": 4,
+   "name": "Easy bike",
+   "kind": "cardio",
+   "plan": {
+    "machine": "bike",
+    "min": 20,
+    "zone": "z2"
+   },
+   "exercises": []
+  },
+  {
+   "week": 3,
+   "day": 5,
+   "name": "Stretch",
+   "kind": "mobility",
+   "plan": {
+    "items": [
+     {
+      "id": "cat-cow"
+     },
+     {
+      "id": "open-book"
+     },
+     {
+      "id": "couch-stretch"
+     }
+    ],
+    "name": "Stretch"
+   },
+   "exercises": []
+  }
+ ]
+}
