@@ -8,7 +8,6 @@ index.html              the app (single file)
 sw.js                   offline cache + update handling
 manifest.webmanifest    name, icon, "open full screen"
 version.json            how a running app notices a new build
-program.json            bundled training program
 slew-core.js            VBT velocity engine (generated — see r&d/tools)
 icon-*.png              app icons
 r&d/                    roadmap, specs, notes, data sources, build tools — not used by the app

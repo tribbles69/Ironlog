@@ -1,8 +1,8 @@
 # Daily one-second progress clip (roadmap 03)
 
 Added 2026-11-08. One second of video a day, kept on the phone, joined into a
-timelapse of the bulk and cut that can be played and saved. Replaces
-1 Second Everyday on Aaron's phone. Extends E4's progress photos and shares
+timelapse of a bulk or cut that can be played and saved. Reference
+app: 1 Second Everyday. Extends E4's progress photos and shares
 their rules: **on this device only, never in JSON export, CSV or Drive sync.**
 
 ## 1. What the browser can do (checked 2026-11-08, before this spec)

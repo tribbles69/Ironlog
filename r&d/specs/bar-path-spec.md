@@ -1,17 +1,17 @@
 # Video bar-path tracing and depth judging (roadmap 04)
 
-**Status: agreed 2026-11-08 — Aaron took the recommended answer to all five
+**Status: agreed 2026-11-08 — the recommended answer was taken on all five
 decisions in §11 ("Yes, build 04a").** 04a is being built; 04b and 04c wait.
 
 Record or pick a side-on video of a set, track the bar end through it, draw
 the bar path and give velocity per rep as a second source next to D1's
 motion-sensor Measure. Depth judging for squats comes later. All processing on
-the device, no uploads, results labelled as estimates. Replaces VBTgo, Metric
-and PDC Performance on Aaron's phone.
+the device, no uploads, results labelled as estimates. Reference apps: VBTgo, Metric
+and PDC Performance.
 
 ## 1. What already exists — most of this is built, in Slew
 
-Aaron's Slew app (`slew-v2`) already has a working video mode. Its README
+The Slew app (`slew-v2`) already has a working video mode. Its README
 records why each piece is the way it is. Reused here:
 
 | Slew file | What it does | Needs MediaPipe? |
@@ -140,7 +140,7 @@ video shows "from video"; the sensor's shows "from sensor".
 ## 9. Squat depth (04b) — built 0.87.0
 
 **As built:**
-- **Hosting (Aaron, 2026-11-08): in the repo**, `pose/`, not a CDN.
+- **Hosting (2026-11-08): in the repo**, `pose/`, not a CDN.
   `r&d/tools/build-pose.cjs` copies it from slew-v2's installed
   `@mediapipe/tasks-vision` 0.10.35: `vision.js` (the tasks JS as one IIFE,
   0.13 MB), the SIMD engine `vision_wasm_internal.{js,wasm}` (10.9 MB) and
@@ -208,7 +208,7 @@ awake while the camera is open, and a clip stops itself at 3 minutes.
   record → stop → trim → plate found. **A real phone camera is A4 item 24**,
   including what frame rate Chrome actually gives.
 
-## 11. Decisions for Aaron (before building)
+## 11. Decisions for the owner (before building)
 
 **Answered 2026-11-08: yes to all five as recommended** — plate-only first;
 depth later as an optional download; video stays out of calibration, profile

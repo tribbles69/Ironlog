@@ -1,6 +1,6 @@
 # Debug mode — show the working (roadmap E11)
 
-Written 2026-11-01 when Aaron asked for E11 and E12 together. Aaron's call:
+Written 2026-11-01 when E11 and E12 were requested together. Decided:
 **every calculation listed in the roadmap item, in the first build.**
 
 ## What it is

@@ -27,8 +27,8 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 
 /* Every script block, joined. They share one global scope in the page, so
-   analysing only the biggest one made globals declared in another block — like
-   PROGRAM_MANIFEST — look undefined. */
+   analysing only the biggest one made globals declared in another block look
+   undefined. */
 const blocks = [...html.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)].map(m => m[1]);
 const inlineSrc = blocks.join('\n;\n');
 

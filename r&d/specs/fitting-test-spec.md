@@ -4,7 +4,7 @@ Status: **agreed in chat 2026-10-31; first build 0.65.0** (results and flags
 only — see §13 for the decisions taken when it was built). Roadmap item E12.
 Reference workbook with every formula working: `r&d/data/fitting-test/strength-fitting-test.xlsx`
 (tabs: Run sheet, Home screen, Ladder, Gym tests, Results, Rules). If this spec
-and the workbook disagree, this spec wins; tell Aaron.
+and the workbook disagree, this spec wins; tell the owner.
 
 ## 0. The idea
 
@@ -54,7 +54,7 @@ Reuse E5's `MOB_TESTS` / `S.mobTests` wherever a test exists; add what's missing
 
 ## 3. Part 2 — Power (4 min)
 
-The seated med ball chest throw was **dropped** (Aaron's gym has no floor
+The seated med ball chest throw was **dropped** (many gyms have no floor
 space for it). Two options; the tester picks one and keeps it for retests.
 
 - **A. Speed rep (default if the user has VBT):** phone on the trap bar via the
@@ -88,7 +88,7 @@ needs no known max, and adapts to beginners and advanced lifters alike.
 | 0 | stop |
 
 Why jump size scales with RIR: a fixed +50% jump is fine for a strong lifter and
-dangerous for a novice (Aaron's trap bar max is ~220% bodyweight; someone at
+dangerous for a novice (a strong lifter's trap bar max can be ~220% bodyweight; someone at
 120% would go from "8 easy" at 100% to a failed rep at 150%).
 
 **Patterns, defaults, starting loads**
@@ -106,10 +106,10 @@ every retest. Log Smith and cable loads the same way every time.
 **Estimated 1RM per set:** Epley adjusted for reps left —
 `e1RM = load × (1 + (reps + RIR) / 30)`. Pattern result = the best set's e1RM
 (the workbook takes the max; the lower-rep sets are the more trustworthy, so
-consider weighting them when built — Aaron to decide).
+consider weighting them when built — to be decided).
 
-Worked example (93kg bodyweight, hinge): 47.5 × 8 @ 6 RIR → 92.5 × 5 @ 5 →
-140 × 3 @ 3 → 162.5 × 2 @ 1, stop. e1RM 178.8kg = 1.92× BW.
+Worked example (100kg bodyweight, hinge): 50 × 8 @ 6 RIR → 100 × 5 @ 5 →
+150 × 3 @ 3 → 175 × 2 @ 1, stop. e1RM 192.5kg = 1.93× BW.
 
 Ladder sets are real sets: log them as a normal session so history and PRs see
 them, tagged as fitting-test sets.
@@ -163,7 +163,7 @@ for the user's sex.
 
 **Use Ironlog's existing `STD` table / `stdFor()`** so the test and the Stats
 rankings never disagree. The workbook uses StrengthLog / Strength Level figures
-for the four patterns instead; they're close but not identical. Aaron to pick
+for the four patterns instead; they're close but not identical. Pick
 one source for both. Workbook figures, for reference (multiple of BW, ratios
 taken at 80kg men / 60kg women):
 
@@ -270,9 +270,8 @@ lagging ones highlighted, the profile type as the headline, flags under it.
   the profile type itself has changed.
 - Keep each test's history with the variation used; never compare across a
   changed variation without saying so.
-- Aaron's first full run planned for the Christmas 2026 test day.
 
-## 11. Where it lives (proposal — Aaron to confirm)
+## 11. Where it lives (proposal — to confirm)
 
 - Start: **Health → Fitting test** (guided, one part per screen, timers reused
   from E5 / isometrics, ladder screen that calculates the next load live).
@@ -289,7 +288,7 @@ lagging ones highlighted, the profile type as the headline, flags under it.
 
 - One standards source for Stats and the test: `STD` or StrengthLog/Strength Level?
 - Adaptive standards: none exist. Collect anonymised opt-in results (e.g. via
-  r/DisabledWeightlifting) to build them? Fits local-only only if it's an
+  an adaptive-lifting community) to build them? Fits local-only only if it's an
   explicit export the user sends.
 - Weight the lower-rep ladder sets when picking the pattern's e1RM?
 - Real cutoffs for grip, the estimated mobility steps, and the Smith / landmine
@@ -298,7 +297,7 @@ lagging ones highlighted, the profile type as the headline, flags under it.
 
 ## 13. Decisions for the first build (2026-11-01)
 
-Aaron's answers:
+Answers:
 - **Standards: Ironlog's `STD` / `stdFor()`**, so the test and Stats → Rankings
   never disagree. Rows: hinge → `Deadlift`, squat → `Back Squat`, press →
   `Bench Press`, pull → `Cable Row`, with the row's female factor. Score = how

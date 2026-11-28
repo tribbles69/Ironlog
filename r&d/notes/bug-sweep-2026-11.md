@@ -140,9 +140,9 @@ session-level fields other than the ones listed are dropped too.
 **Reproduce:** start a planned session that has `prog` but no `block`,
 finish it → the saved session has no `prog`.
 **Fix:** keep `prog` whenever it's there. (Stored data: adds a field to new
-sessions only. Old ones could be relinked by id prefix — **ask Aaron
+sessions only. Old ones could be relinked by id prefix — **ask the owner
 first**.)
-**Relink shipped (0.96.4, Aaron's call):** a once-only migration gives a
+**Relink shipped (0.96.4, the owner's call):** a once-only migration gives a
 finished session with no `prog` its program back when its id starts with
 exactly one program id the log knows (installed, start dates, names, shipped
 names, any session's or miss's `prog`) followed by `#` and a plan-day id
@@ -200,7 +200,7 @@ Carries have no `r`, so `w × r` is NaN; the stored `summary.volume` becomes
 **Reproduce:** finish any session that includes a farmer's carry.
 **Fix:** `s.w * (s.r || 0)` in the three sums and the rep total. (Recomputes
 on the next finish or edit; stored summaries of old sessions stay as they
-are unless Aaron wants them rebuilt.)
+are unless someone wants them rebuilt.)
 
 ### [x] 3.2 (0.90.11) The rep-range "add weight" step assumes 2.5 kg (roadmap's known one, E13) — From the code
 **Where:** `rangeNextLoad` (~14152), `roundLoadFor` (~14690).
@@ -222,9 +222,9 @@ sessions done at the prescribed loads" then writes every set at 0 kg. Those
 count as bodyweight rep records, as hard sets in Weekly sets, and as
 sessions in each lift's stats.
 **Fix:** leave RIR-only sessions out of backfill and say why, or mark them
-skipped (the Missed flow already exists). **Ask Aaron** before touching any
+skipped (the Missed flow already exists). **Ask the owner** before touching any
 that are already backfilled — that's stored data.
-**Shipped (0.96.1, Aaron's call):** RIR-only sessions (every loaded
+**Shipped (0.96.1, the owner's call):** RIR-only sessions (every loaded
 weight × reps set has no weight; bodyweight lifts, holds and carries don't
 count either way) are left out of backfill, and Settings says how many and
 why. A once-only migration turns sessions already backfilled that way
@@ -245,8 +245,8 @@ a reading), as `attachVbt` does.
 **Where:** `prsFor` (~4287) reads history strictly *before* the session's
 date, so a second session that day doesn't see the first.
 **Fix:** compare by date then end time. **Would change which sessions show
-a PR badge — ask Aaron.**
-**Shipped (0.96.2, Aaron's call):** `isBefore(w, before)` — `before` is a
+a PR badge — ask the owner.**
+**Shipped (0.96.2, the owner's call):** `isBefore(w, before)` — `before` is a
 date as before, or a session: earlier days, plus the same day with an earlier
 finish (`end`, else `start`). A session with no time sorts first on its day;
 two with none don't see each other. Used by `historyFor`, `holdRecords` and
@@ -259,8 +259,8 @@ date callers are unchanged.
 set tops out at 12 "effective reps", so 12 reps at RIR 0 and 12 at RIR 4
 give the same number.
 **Fix:** none suggested without a decision — any change moves existing PR
-and e1RM numbers. **For Aaron to decide; not part of 00-B2 unless he says.**
-**Shipped (0.96.3, Aaron's call):** RIR 6 and above count as RIR 5
+and e1RM numbers. **For the owner to decide; not part of 00-B2 unless decided.**
+**Shipped (0.96.3, the owner's call):** RIR 6 and above count as RIR 5
 (`e1Rir`); no effort logged or an off-scale RPE still count as 0. The
 12-rep cap stays, by decision. The e1RM explainer says which rule applied.
 
@@ -280,11 +280,11 @@ neither is in `r&d/data/exercises.json`.
 Installing the program turns them into custom movements
 (`custom-landmine-press`, `custom-tibialis-raise`): no muscles, so no
 Weekly sets credit and no recovery; no demo; no bar-speed profile.
-**Fix:** add both to the catalogue. **Ask Aaron first:** anyone who has
-already logged them (Aaron, weeks 1–4) has those sets under the custom ids.
+**Fix:** add both to the catalogue. **Ask the owner first:** anyone who has
+already logged them (the built-in program's weeks 1–4) has those sets under the custom ids.
 Adding the built-in ones starts a second history unless the old sets are
 re-pointed, and that is a change to stored data.
-**Shipped (0.96.0, Aaron's call):** both in the catalogue with muscles and a
+**Shipped (0.96.0, the owner's call):** both in the catalogue with muscles and a
 demo (the tibialis raise needed the demo engine's `heel` to go negative: toes
 lift, pivoting on the heel). No bar-speed profile — none of Slew's nine fits.
 A once-only migration moves every pointer to the old custom ids onto the new
@@ -328,9 +328,9 @@ the versioned cache; only a new worker version brings new files.
 ### [x] 4.5 (0.96.5) Settings made on one phone never reach another — by the spec, worth a look
 `drive-sync-spec.md` §4: local settings win except on an empty phone. So
 bar-speed calibration, places, rest times and plates don't travel after the
-first restore. Not a bug against the spec. **For Aaron:** sync at least
+first restore. Not a bug against the spec. **For the owner:** sync at least
 `slewProfiles` and `places`?
-**Shipped (0.96.5, Aaron: yes, just those two):** `places` (by id) and
+**Shipped (0.96.5, decided: yes, just those two):** `places` (by id) and
 `slewProfiles` (by lift) are synced collections now — `SYNC_FROM_SETTINGS`;
 they stay in `S.settings` on the phone and travel as their own collections,
 with tombstones and newest-wins by `mt` (stamped on save). An older file's
@@ -362,13 +362,13 @@ before.
 import) → 1.1 (sync tombstones) → 1.5 → 1.4 → 1.6 → 1.7 → 1.8 → 3.1 → 3.2 →
 3.3 → 3.5 → 3.9 → 4.x.
 
-**Waiting on Aaron before any fix:** 3.4 (already-backfilled sessions),
+**Waiting on a decision before any fix:** 3.4 (already-backfilled sessions),
 3.6, 3.7, 3.10, the relink part of 1.8, and the question in 4.5 — all
 decided 11 Nov and shipped 0.96.0–0.96.5 (3.10, 3.4, 3.6, 3.7, 1.8, 4.5).
 
 ## Where 00-B2 stands (11 Nov 2026, 0.96.5)
 
-Aaron's six decisions shipped one per version, 0.96.0–0.96.5. Every
+The six decisions shipped one per version, 0.96.0–0.96.5. Every
 stored-data change runs through one runner (`runDataMigrations`): once per
 log (`S.migrations`), idempotent, the log saved under
 `ironlog.v1.before-<migration id>` before anything changes. Left in 00-B2:
@@ -377,7 +377,7 @@ the stale validator checks in 4.7.
 ### Earlier (0.90.17)
 
 Everything in severity 1 and 2 is fixed, and everything in 3 and 4 that
-doesn't need a decision. Left: the six items above (Aaron), 3.8 and 3.9
+doesn't need a decision. Left: the six items above, 3.8 and 3.9
 (with the VBT work), and the stale validator checks in 4.7.
 
 Also still true after 1.1: goals, meets and edits to planned sessions carry

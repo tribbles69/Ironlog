@@ -1,6 +1,6 @@
 # Layout rework — Home · Calendar · Train · Stats · Health (roadmap D12)
 
-Written 2026-10-31. Aaron's call on the shape (roadmap D12); this spec is how
+Written 2026-10-31. The owner's call on the shape (roadmap D12); this spec is how
 it's built. Covers both skins: the 98 menu bar is a second door onto the same
 pages, so it changes with them.
 

@@ -1,7 +1,7 @@
 # Design pass — November 2026 (roadmap 00-D1)
 
 What was changed in the UI and menus, and why. One area per version, so
-anything Aaron dislikes can be reverted on its own (`git revert` the commit
+anything unwanted can be reverted on its own (`git revert` the commit
 named for the version).
 
 Rules this pass kept to (from the roadmap): nothing added between a set and
@@ -26,7 +26,7 @@ both skins:
 
 That covers the C4 rules that have bitten before, but it is not axe: it
 doesn't check ARIA roles, landmark structure, heading order or focus order.
-**For Aaron:** run axe once on the finished branch (the browser extension
+**For the owner:** run axe once on the finished branch (the browser extension
 is enough) — or say it's fine for an agent to load it.
 
 Starting point (0.93.1): no unnamed controls, no contrast failures, and
@@ -65,7 +65,7 @@ tiles, so Start needed a scroll every day.
 **Unchanged for someone new:** with no workout, nothing planned today and no
 history, the About card still comes first, as `home-landing-spec.md` set
 out, and Today's training stays where it was.
-**For Aaron:** the check-in is now second. If you'd rather check in before
+**For the owner:** the check-in is now second. If you'd rather check in before
 you see the session, this is the commit to revert.
 
 ### 0.94.2 — labels that say what the thing is
@@ -88,11 +88,11 @@ too; it honours "reduce motion").
 **Why:** Settings is one sheet about 4,600 px tall — six screens at phone
 size — with Export, Import, Drive and Erase at the very bottom. Nothing was
 moved or regrouped, so everything is where it was for anyone who knows it.
-**Not done, for Aaron to decide:** Settings mixes three kinds of thing —
+**Not done, for the owner to decide:** Settings mixes three kinds of thing —
 preferences (skin, units, timers), kit (places, bars, plates) and data
 (program, backfill, export, Drive, erase). Splitting it into two or three
 sheets would be the real fix; that changes where things live, so it's
-listed under "For Aaron" below rather than done.
+listed under "For the owner" below rather than done.
 
 ### 0.94.4 — empty screens that lead somewhere
 **What:**
@@ -128,7 +128,7 @@ Same script, every page and main sheet, both skins, at 0.94.4:
   and the toolbar. Everything in those menus is also reachable from the
   ordinary buttons.
 
-## For Aaron — seen, not done
+## For the owner — seen, not done
 
 Nothing was removed. These are the things that looked like they want a
 decision rather than a tidy:

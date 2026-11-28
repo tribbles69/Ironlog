@@ -1,6 +1,6 @@
 # Master exercise catalogue — what went into the catalogue (0.98.0, 13 Nov 2026)
 
-Source: Aaron's research, `master-catalogue-research.md` (base exercises × modifiers,
+Source: the research in `master-catalogue-research.md` (base exercises × modifiers,
 20 sections). This note records what was taken from it, how it was mapped onto the
 existing schema, and what was left out on purpose.
 
@@ -39,7 +39,7 @@ existing schema, and what was left out on purpose.
   keg load) and **Truck Pull** (was on sled drag). **Suitcase Carry** now pins the
   unilateral farmers carry leaf.
 - Exercise search in the picker also matches aliases.
-- **Trap bar handles (Aaron, 13 Nov 2026):** high and low handles are the
+- **Trap bar handles (13 Nov 2026):** high and low handles are the
   attachment axis on a trap bar (`attachmentKind` `trap_handle`,
   `attachmentApplies.trap_bar`), so they are separate leaves with separate PRs,
   on deadlift, rack pull, RDL, shrug, deadlift hold and jump squat. Default is
@@ -48,7 +48,7 @@ existing schema, and what was left out on purpose.
   CSV import. The fitting test's trap_high / trap_low variations point at the
   two leaves.
 - **Mobility library:** `data/mobility.json`, 101 stretches and drills (the 25
-  Full Body Stretch items under their routine ids, plus 76 from §20 and the
+  routine items under their routine ids, plus 76 from §20 and the
   mobility drills of §19), with style, region, joints, default dose and an
   `endRange` flag plus an active `swap` for passive end-range work. Checked by
   `tools/validate-mobility.cjs`, inlined by `tools/build-mobility.cjs`. Used by

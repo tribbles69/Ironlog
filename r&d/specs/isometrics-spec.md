@@ -199,7 +199,7 @@ input rather than asking.
   hold seconds on a rep-based movement and throws them into a note. That is exactly
   the isometric case. Convert those to `iso: true` entries with `sec` populated
   instead of a note.
-- Aaron has existing sets logged as "one rep plus a note" from before this feature.
+- Some existing logs have sets recorded as "one rep plus a note" from before this feature.
   Do **not** attempt to auto-detect and migrate those from free-text notes — too
   lossy. Leave them; mention in the commit message that they stay as-is.
 

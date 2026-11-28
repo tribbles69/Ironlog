@@ -1,6 +1,6 @@
 # Coach plan templates — agreed 2026-11-02
 
-Coach spec §3 asked for these to be read before any code; Aaron read them and
+Coach spec §3 asked for these to be read before any code; they were reviewed and
 answered on 2026-11-02 (below). The JSON files beside this one are the
 source; the tables are generated from them. Change the JSON, not this page.
 
@@ -51,9 +51,9 @@ second. Under 6 months never goes below RIR 2.
 | 6 months–2 years | 3 | 3 | 3 | 2 | no | no |
 | 2+ years | 4 | 3 | 3 | 3 | yes | yes |
 
-## Your two test cases
+## Two test cases
 
-- **Aaron** — 5 days, gym, 45 min, strongman, 2+ years, priority trap bar
+- **Experienced lifter** (example) — 5 days, gym, 45 min, strongman, 2+ years, priority trap bar
   and OHP: the PPLUL below at 7 slots a day, accessories in supersets.
   Lower's main becomes trap bar (priority, and strongman ranks it first),
   with the event slot after it; B-week Lower is hip thrust. Legs B is leg
@@ -65,7 +65,7 @@ second. Under 6 months never goes below RIR 2.
   ladder e1RMs give her starting weights; if not, they're blank until her
   first RIR sets.
 
-## Agreed with Aaron (2026-11-02)
+## Agreed (2026-11-02)
 
 1. **Supersets** so 45 min holds about 7 — yes.
 2. **Beginners start on machines and dumbbells**, barbell later — yes
@@ -221,7 +221,7 @@ second. Under 6 months never goes below RIR 2.
 
 ### 5 days — Push / Pull / Legs / Upper / Lower
 
-Reference: Aaron's 77-week PPLUL (the built-in Hunchback Hercules program; its source text is kept off GitHub).
+Reference: a 77-week PPLUL block (the maintainer's own; the app ships no program since 0.100.7, and its source is not in the repo).
 
 **Push**
 

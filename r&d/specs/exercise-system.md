@@ -79,7 +79,7 @@ Defined in `r&d/data/exercises.json`:
 - `aliases` are historical and colloquial names. Used for import
   resolution only, never for identity.
 - `verified: false` means the entry was generated rather than confirmed
-  against Aaron's own logs. Treat as provisional.
+  against real logs. Treat as provisional.
 - `metric` defaults to `reps_weight`. Other values: `time`, `distance`,
   `time_distance`. See §6.
 
@@ -200,7 +200,7 @@ modifier carries a `splitsPR` flag.
 Same leaf, same PR pool. Recorded and displayed, but does not fragment
 history.
 
-Seed vocabulary, taken from Aaron's existing program notes:
+Seed vocabulary, taken from the existing program notes:
 `comp pause`, `slow eccentric`, `2s pause at stretch`, `IPF depth`,
 `comp stance`, `full commands`, `heavy single`, `opener`,
 `stop 1 shy`, `technique`.
@@ -331,7 +331,7 @@ The logging screen must render the correct fields per metric. A
 ### Relative dates
 
 Programs currently carry absolute dates (2026-07-13 → 2027-12-20). This
-cannot work for anyone else and breaks if Aaron's own start slips.
+cannot work for anyone else and breaks if the original start slips.
 
 Replace with `week` + `day` + a user-supplied `startDate` at install
 time. All display dates are computed, never stored.
@@ -353,7 +353,7 @@ name strings — same shape as logged sets.
 ### Prescription types
 
 A prescribed set may specify load as: absolute weight, `%1RM`, `RPE`, or
-bodyweight. Aaron's current program is absolute throughout, which is the
+bodyweight. The current built-in program is absolute throughout, which is the
 other reason it can't survive a start-date change.
 
 Prescriptions also carry: sets, reps (or rep range), rest, and notes.
@@ -362,7 +362,7 @@ Prescriptions also carry: sets, reps (or rep range), rest, and notes.
 
 `installProgram` currently overwrites `settings.priority` unconditionally.
 A program may *declare* suggested priority lifts; installing must offer
-them, not impose them. Priority lifts reference a specific leaf — Aaron's
+them, not impose them. Priority lifts reference a specific leaf — an
 IPF squat is Back Squat / barbell / bilateral, not "best squat variant".
 
 ### Rest times

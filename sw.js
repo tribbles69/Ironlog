@@ -3,7 +3,7 @@
    install a new worker. Once it has downloaded, the page applies it about
    1.4 s later if the app is idle (no live session, no sheet open), and
    otherwise leaves it waiting for the next launch (js/main.js). */
-const VERSION = 'ironlog-v200';
+const VERSION = 'ironlog-v202';
 
 const ASSETS = [
   './',
@@ -11,7 +11,6 @@ const ASSETS = [
   './css/app.css',
   './css/skin98.css',
   './js/main.js',   // the entry point. Every js/ file must be listed here: r&d/tools/check-version.cjs checks
-  './js/data.js',
   './js/core.js',
   './js/state.js',
   './js/kit.js',
@@ -38,8 +37,6 @@ const ASSETS = [
   './slew-reps.js',   // Ironlog's rep detection and RIR estimate on top of slew-core.js (r&d/notes/slew-api.md)
   './CHANGELOG.md',
   './manifest.webmanifest',
-  './program.json',
-  './program-manifest.json',   // what Settings shows for the shipped program; read at boot
   './slew-core.js',
   './slew-video.js',   // bar path from video (04a) — loaded on first use, cached so it works offline in the gym
   './icon-192.png',
@@ -110,12 +107,11 @@ self.addEventListener('fetch', e => {
     const cache = await caches.open(VERSION);
     const cached = await cache.match(req, { ignoreSearch: true });
 
-    /* A cached file is never refreshed in place. It used to be re-fetched on
-       every launch and written back into this same cache, so a new index.html
-       was in use on the second launch whether or not the update had been
-       accepted — mid-workout included — and on a patchy signal one file
-       could be new while another was old. New files arrive with a new worker
-       (a new VERSION), which the app applies when it's safe to. */
+    /* A cached file is never refreshed in place: re-fetching it on launch
+       would put a new index.html in use whether or not the update had been
+       accepted — mid-workout included — and on a patchy signal leave one file
+       new while another was old. New files arrive with a new worker (a new
+       VERSION), which the app applies when it's safe to. */
     if (cached) return cached;
 
     // not precached: fetch it, and keep it so it works offline next time

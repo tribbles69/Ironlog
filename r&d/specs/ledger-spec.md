@@ -1,6 +1,6 @@
 # E16 — The Honest Ledger
 
-Asked for by Aaron, 2026-11-09 (from a pirate-council brainstorm). How far you
+Requested 2026-11-09 (from a brainstorm). How far you
 are from a record, on numbers you can trust.
 
 ## What it is

@@ -54,7 +54,7 @@ _None yet._
 
 9 raw sensor traces, Mon 9 Nov 2026, Wk 4 Push, phone on the bar, 59 Hz
 (Settings → Bar-speed debug export). Reps counted against the logged reps;
-the 35 × 16 OHP AMRAP wasn't attached to a set, so its 16 came from Aaron.
+the 35 × 16 OHP AMRAP wasn't attached to a set, so its 16 came from the lifter.
 
 | set | did | Slew.integrateMotion | vbtIntegrate (0.89.0) |
 |---|---|---|---|
@@ -126,7 +126,7 @@ bar onto the back), bent-over row 44–54°, front raise 49°, RDL 20–34°.
   count went from three to one.
 - **Front raise reads 6 against 5 logged.** The six are evenly spaced
   (every ~2.5 s), 69–83 cm, 1.1–1.4 m/s — they look like six real reps.
-  Aaron: did you do six and log five?
+  Unconfirmed: six done and five logged?
 - **Back squat** read 7 with tilt correction alone: getting the bar onto the
   back became a clean 39 cm "rep" ending 1.5 s after Start. New rule in
   `vbtDropBlips`: in a set of 4+, a first rep that is over within 1.8 s of
@@ -150,7 +150,7 @@ same correction; no pocket traces exist to check it against.
 "logged RIR" for each set, but until 0.92.0 Measure wrote its own estimate
 into an empty RIR box and nothing recorded that it had. So "RIR 9" on the
 17-rep AMRAP, and the 0 / 4.5 / 9 on the 5 kg bar, are the sensor's own
-guesses read back, not Aaron's ratings. Only two RIRs in the file can be
+guesses read back, not the lifter's ratings. Only two RIRs in the file can be
 taken as typed: OHP 35 × 9 at RIR 1 (the sensor missed a rep there, so it
 filled nothing) and incline 55 × 5 at RIR 1 (the sensor gave no estimate).
 Two points can't tune anything. What follows fixes what was plainly wrong
@@ -214,8 +214,8 @@ sets to failure also calibrate `vlF` and the failure speed.
 
 ## Filling the results table (00-V4, 0.93.1)
 
-The code side of the protocol at the top of this note. The sets are Aaron's
-to film and log; this is how they turn into rows.
+The code side of the protocol at the top of this note. The sets are still
+to be filmed and logged; this is how they turn into rows.
 
 1. Do the protocol sets with the reference device on the bar. **◉ Measure**
    each set (or **▶ Video → ● Record** for the video table). Type your own

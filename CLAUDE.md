@@ -8,7 +8,7 @@ committing).
 
 **Bugs:** non-critical bugs you find — on a sweep or while building something
 else — go in **`r&d/BUGS.md`**, not fixed mid-feature. Critical ones (data
-loss, app won't open, a core flow blocked) get fixed straight away. When Aaron
+loss, app won't open, a core flow blocked) get fixed straight away. When the owner
 says "fix the bugs" / "clear the bug list", work that file top down. Its own
 header has the rules.
 
@@ -55,14 +55,13 @@ imports the rest:
 | `js/vbt.js` | bar speed: Measure, bar path, load-velocity profile |
 | `js/tools.js` | the Tools sheet, calculators, printing and sharing the report, food export |
 | `js/ui.js` | the shell: draws the pages (Home, Settings, Profile, welcome, What's new), the `WHY` explainers, Windows 98 chrome. Only `main.js` imports it; it plugs `renderPage` and the skin into the kit's `shell` hooks |
-| `js/data.js` | bundled data (`program-manifest.json`) |
 | `css/app.css`, `css/skin98.css` | the two stylesheets |
 | `slew-core.js`, `slew-video.js`, `slew-reps.js` | the bar-speed engine. Takes nothing from Ironlog: `r&d/notes/slew-api.md` |
 
 **Layers (0.98.3, `r&d/notes/module-split.md` → Untangle).** Lowest first;
 a file imports only from rows above it, never below:
 
-1. `state`, `data` — 2. `core` — 3. `exercises`, `kit` — 4. `database` —
+1. `state` — 2. `core` — 3. `exercises`, `kit` — 4. `database` —
 5. `stats`, `ai` — 6. `loading` — 7. `training`, `picker` —
 8. `events`, `vbt`, `report`, `rest`, `migrate` — 9. `sync`, `tools` — 10. `io` —
 11. the screens: `workout`, `health`, `coach`, `movement` — 12. `ui` — 13. `main`.

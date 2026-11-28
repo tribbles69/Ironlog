@@ -1,5 +1,5 @@
 {
-  "note": "DRAFT for Aaron to read (coach-spec §3, 2026-11-01). A pattern is a ranked list of movement/equipment candidates. Filling a slot takes the first candidate that is available at that day's place (D6), not on the go-easy list, and breaks no rule below; the rest become the preview's Swap list. Priority lifts (Q7) that fit the pattern jump to the front.",
+  "note": "DRAFT (coach-spec §3, 2026-11-01). A pattern is a ranked list of movement/equipment candidates. Filling a slot takes the first candidate that is available at that day's place (D6), not on the go-easy list, and breaks no rule below; the rest become the preview's Swap list. Priority lifts (Q7) that fit the pattern jump to the front.",
   "rules": {
     "oneMainPerDay": true,
     "neverTogether": [
@@ -367,7 +367,7 @@
     ]
   },
   "experienceOverrides": {
-    "note": "Under 6 months starts on machines and dumbbells (Aaron, 2026-11-02); the barbell is suggested later, accept-only.",
+    "note": "Under 6 months starts on machines and dumbbells (2026-11-02); the barbell is suggested later, accept-only.",
     "under6m": {
       "squat": [
         "leg-press/plate_loaded_machine",

@@ -19,9 +19,9 @@ B-058.
 
 **Update, 2026-11-17 (0.99.5):** B-038 to B-054 are fixed, with B-059 from the
 nightly sweep; the tables below show the app as it was at 0.99.3. Still open:
-B-055 and B-056 (PR #86's branch) and B-057 (Aaron's call).
+B-055 and B-056 (PR #86's branch) and B-057 (the owner's call).
 
-Seven sev 2, thirteen sev 3, one question for Aaron (B-057). B-058 was a
+Seven sev 2, thirteen sev 3, one question for the owner (B-057). B-058 was a
 question and was answered the same day: limit the RIR that counts toward a PR.
 Fixed in 0.99.4 — records read `e1pr`, which counts at most 2 reps in reserve;
 autoregulation still reads `e1rm`.
@@ -206,7 +206,7 @@ plan, the bar-speed day estimate averaged in at half weight.
 | lb user, 225 × 5 twice | no PR on the repeat | none |
 | 30 × 12 → 30 × 15 → 30 × 20 | two PRs | **none** (B-039) |
 | 30 × 10 @ RIR 2 → 30 × 12 @ RIR 2 | PR | **none** (B-039) |
-| 100 × 5 @ RIR 0 → 90 × 5 @ RIR 5 | arguable | PR, 120.0 over 116.7 (B-058; Aaron decided to limit RIR for PRs) |
+| 100 × 5 @ RIR 0 → 90 × 5 @ RIR 5 | arguable | PR, 120.0 over 116.7 (B-058; decided to limit RIR for PRs) |
 | Two sessions one day, finish times 10:00 and 18:00, same 110 × 5 | first only | first only |
 | The same, both imported with no times | first only | **both** (known: the comment on `isBefore` says so) |
 | One session, Back Squat entered twice (110 × 5, 105 × 5) | one row | **two rows** (B-045) |
@@ -543,7 +543,7 @@ inches and pounds.
 | **Age blank** (Tools → TDEE) | "enter an age" | **1930**, the age-0 figure (B-041) |
 | Bodyweight 0 | nothing | 0 |
 | FFMI, 80 kg, 180 cm, 15% | lean 68.0, 20.99, normalised 20.99 | same expressions in the tool |
-| FFMI, 62 kg, 157 cm, 15% | lean 52.7, 21.38, normalised 22.78 | same |
+| FFMI, 60 kg, 155 cm, 15% | lean 51.0, 21.23, normalised 22.75 | same |
 | Butt, 70 in, 7 in wrist, 9 in ankle, 10% | 179.3 lb | same expression in the tool |
 
 Katch–McArdle, FFMI and Butt are computed inline in the tool, so they were
@@ -567,7 +567,7 @@ reproduced in PMC8581515 and PMC9830234).
 | Resting ≥ max | falls back to % of max | 112–131 |
 | No date of birth and no measured max | no zone | none |
 
-Tanaka and Karvonen are both implemented correctly. **B-057 (for Aaron):**
+Tanaka and Karvonen are both implemented correctly. **B-057 (for the owner):**
 the same 60–70% is applied to max HR or to reserve depending on whether a
 resting HR was typed in, and those are not the same effort. 136–149 is
 73–80% of max. In ACSM's table 64–76% of max sits level with 40–59% of

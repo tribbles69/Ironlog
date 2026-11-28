@@ -3,10 +3,10 @@
 Things deliberately deferred, with enough context to pick up cold. Not a wish
 list — each of these was raised, understood, and parked for a reason.
 
-## Physio / rehab plans (Aaron, 2026-11-14 — after 1.0)
+## Physio / rehab plans (2026-11-14 — after 1.0)
 
 Let someone scan a physio's exercise sheet (or type it in) and follow it in
-Ironlog. Prompted by a Wibbi sheet from Heartlands Hospital physio: three
+Ironlog. Prompted by a Wibbi-style physio sheet: three
 squat variations, a dose (sets × reps × days/week) on only one of them.
 Parked because new ideas wait until after 1.0.
 
@@ -32,11 +32,11 @@ Shape agreed in chat:
 - Fits alongside the Mobility start and the mobility database (`r&d/data/mobility.json`);
   holds reuse the isometric timing.
 
-## Readiness score and grip check (Aaron, 2026-11-17 — after 1.0)
+## Readiness score and grip check (2026-11-17 — after 1.0)
 
 A quick check before each session that says **push, keep going, or back off**.
 Prompted by Mitchell Hooper's free Team Moose PDFs (Sympathetic Fatigue Score,
-Pre-Workout Self Screening), which Aaron read on 2026-11-17. Parked because new
+Pre-Workout Self Screening). Parked because new
 ideas wait until after 1.0.
 
 **Readiness score.** About 16 one-tap questions in four groups: sleep, mood
@@ -58,16 +58,15 @@ from the PDF, not its text.
 **Grip check.** Today's grip reading against the lifter's own recent average,
 as a readiness check that doesn't tire anything out. Hooper's screening sheet
 buckets the gap at 5% below, within 5%, and 5% above.
-- Input: a typed dynamometer reading, kg per hand. Aaron wanted digital grip
-  tracking (July 2026). A Bluetooth dynamometer is a later option.
+- Input: a typed dynamometer reading, kg per hand. A Bluetooth dynamometer is a later option.
 - Reaction time could sit beside it the same way, against the lifter's own
   average. Optional, lowest priority.
 - The bar-speed readiness idea in D1 (warm-up velocity against the stored
   profile) is the same idea from a different sensor. Show them together once
   both exist.
 
-**Leave out** the wall overhead-reach test as a fixed pass/fail. Kyphosis and
-other adaptive cases would fail it every day. Only ever compare a lifter
+**Leave out** the wall overhead-reach test as a fixed pass/fail. Some adaptive
+lifters would fail it every day. Only ever compare a lifter
 against their own baseline.
 
 **Possible extra:** the screening sheet also weights each lift's fatigue
@@ -76,9 +75,9 @@ unsupported row 0.6, isolation 0.3). Score = sets × effort × weight. That
 could estimate how demanding a planned session is against the readiness score.
 Check the weights against D7's muscle shares before using them.
 
-## Timed mobility circuits and cue cards (Aaron, 2026-11-18 — after 1.0)
+## Timed mobility circuits and cue cards (2026-11-18 — after 1.0)
 
-Prompted by a "Walking Yoga" lead-magnet PDF from an Instagram ad (20 sessions
+Prompted by a "Walking Yoga" lead-magnet PDF (20 sessions
 of 15–17 min: marching in place plus Warrior 1 / Tree Pose etc.). The content
 is beginner filler; the *format* is worth borrowing. Parked because new ideas
 wait until after 1.0.
@@ -90,8 +89,8 @@ wait until after 1.0.
 - One tap starts it; the timer counts down and advances on its own with an
   audio cue (and watch buzz) between moves, plus a "next up" preview. Pause,
   skip and back always available.
-- Aaron's daily morning full-body stretch routine is the first routine to
-  build in this format.
+- The lifter's own routines (zoned ones too) are the first to play in
+  this format.
 - Logged as a mobility session (moves done, total time), not as sets.
 
 **Cue-card format for the mobility database** (`r&d/data/mobility.json`).
@@ -141,3 +140,13 @@ the rest timer, and the way `exercises[]` is a flat list with no grouping.
 
 The data change is small (a `group` key on the entry); the interface change is
 not, because the set table is per-exercise and a superset wants to interleave.
+
+## Your own field for the placing predictor (2026-11-28 — after 1.0)
+
+The meet card's placing predictor used to ship one sample field of real
+lifters; that was removed in 0.100.6. The maths (`predictPlacing`) is still
+there and reads a field the meet carries (`m.field`: `label`, `lifters` of
+`{ name, bw, total }`, optional `bombRate`), but nothing in the app writes one
+yet, so the prediction stays hidden. Needs a way to enter or import a field:
+typed lifters, or a pasted OpenPowerlifting CSV for the class (keep the
+attribution).

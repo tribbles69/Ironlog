@@ -194,7 +194,7 @@ new file. The edits are:
   installed on the machine this was done on, so that edit has not been run.
 
 **Decisions taken where the brief left a choice** (the questions at the end of
-this file; Aaron said go ahead without answering them one by one, so each took
+this file; the go-ahead came without answering them one by one, so each took
 the recommendation given there):
 
 1. "Bundled program data" was read as the program manifest → `program-manifest.json`.
@@ -510,7 +510,7 @@ top-level statements in their existing order, plus generated `import` and
 one closed function that sets a global (`Slew`, `SlewVideo`).
 
 What is *not* standalone is Ironlog's own layer on top, which is where the
-rep detection Aaron tuned actually lives (lines 12114–12300): the tilt
+rep detection that was tuned actually lives (lines 12114–12300): the tilt
 correction, the drift high-pass (`vbtIntegrate`), the blip filter, the set
 summary and the RIR estimate (`vbtEstimateSet`). Those functions are pure —
 samples and a profile in, reps and an estimate out, calling only `Slew` —
@@ -534,7 +534,7 @@ Proposed, pending question 1 of the Slew pair below:
 - `vbt-sim.cjs` and friends import the same files the app does, instead of
   a regex over `index.html`. 453/480 must not move.
 
-## Questions for Aaron
+## Questions for the owner
 
 1. **"Bundled program data" → JSON.** `program.json` is already its own
    file. What is still bundled is the two-line manifest Settings shows

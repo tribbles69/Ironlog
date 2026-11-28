@@ -11,7 +11,7 @@ session (a top set and lighter back-offs, say). **RIR decides the load.** Each
 exercise has one working number, and the day's weights come from it and the
 target RIR, not from a week-by-week table.
 
-## Decisions (Aaron, 2026-09-24)
+## Decisions (2026-09-24)
 
 - **Override normal weeks only.** Sessions from an installed program whose
   block is a normal training block get their weights set by autoregulation
@@ -97,7 +97,7 @@ via `rirToRpe`, as ever.
 ## Not in this change
 
 - VBT input (item 7) — `autoE1()` is the hook.
-- Changing `program.json` itself. The plan keeps its weights; they're the
+- Changing the program itself. The plan keeps its weights; they're the
   fallback and they still drive the fixed blocks.
 
 ---
@@ -120,11 +120,10 @@ is marked `like: "prev"`. Installed sessions keep `loads: "rir"`, the set role
   reps and RIR, capped at ±7.5 % per step when it already has a weight.
 - The RIR box's placeholder is the set's own `t`.
 
-The Hunchback Hercules program is built this way by
-`r&d/tools/build-program.py` from `r&d/private/hunchback-pplul-77wk.txt` (kept off GitHub). Top-set
-RIR follows the doc's RPE anchors (volume 8 → RIR 2, strength 9 → RIR 1);
-back-off RIR is worked out from the doc's top/back-off gap at build time, capped
-at 4; accessories RIR 2; AMRAPs stop 1 shy.
+A program converted from an RPE-written plan follows its RPE anchors (volume
+8 → RIR 2, strength 9 → RIR 1); back-off RIR comes from the plan's
+top/back-off gap, capped at 4; accessories RIR 2; AMRAPs stop 1 shy. (The app
+ships no program since 0.100.7: these are rules for whoever writes one.)
 
 ## 0.99.5 (maths audit)
 

@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 /* Validates r&d/data/mobility.json, the stretch and mobility library, and checks
-   it against the built-in routines (r&d/data/routines/*.json).
+   it against any built-in routines (r&d/data/routines/*.json — none since
+   0.100.7, when the folder went: the routine check then passes with none).
 
    Exits non-zero on any failure. Run from the repo root:
        node "r&d/tools/validate-mobility.cjs"
@@ -12,7 +13,7 @@ const ROOT = path.resolve(__dirname, '..', '..');
 const J = JSON.parse(fs.readFileSync(path.join(ROOT, 'r&d/data/mobility.json'), 'utf8'));
 const V = J.vocabularies, I = J.items;
 const DIR = path.join(ROOT, 'r&d/data/routines');
-const routines = fs.readdirSync(DIR).filter(f => f.endsWith('.json')).map(f => JSON.parse(fs.readFileSync(path.join(DIR, f), 'utf8')));
+const routines = (fs.existsSync(DIR) ? fs.readdirSync(DIR) : []).filter(f => f.endsWith('.json')).map(f => JSON.parse(fs.readFileSync(path.join(DIR, f), 'utf8')));
 
 let fail = 0;
 const ok = (cond, label, detail) => {
@@ -60,7 +61,7 @@ routines.forEach(r => r.zones.forEach(z => z.items.forEach(it => {
   if (!x) missing.push(`${r.id}/${it.id}`);
   else if (x.name !== it.name) missing.push(`${r.id}/${it.id} name differs`);
 })));
-ok(missing.length === 0, 'every routine item is a library item', missing.slice(0, 5).join('; '));
+ok(missing.length === 0, `every built-in routine item is a library item (${routines.length} routine${routines.length === 1 ? '' : 's'})`, missing.slice(0, 5).join('; '));
 
 console.log(`\n  ${I.length} items — ` + V.style.map(s => `${s} ${I.filter(x => x.style === s).length}`).join(', ') +
   ` — ${I.filter(x => x.endRange).length} end-range`);

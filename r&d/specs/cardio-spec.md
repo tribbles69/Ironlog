@@ -6,9 +6,9 @@ Roadmap item 3. Written against 0.18.0. Line numbers drift — grep.
 
 ## The problem
 
-The gym treadmill (Technogym) has no control API. Ironlog can read heart rate
-live but can't touch the belt, so **Aaron is the actuator**: the app watches HR
-against a target zone and tells him when to change speed (or incline).
+A gym treadmill has no control API. Ironlog can read heart rate
+live but can't touch the belt, so **the lifter is the actuator**: the app watches HR
+against a target zone and says when to change speed (or incline).
 
 Today cardio is a `treadmill` entry with one timed set — duration only, no HR,
 no speed, no distance.
@@ -35,8 +35,8 @@ advanced from `Date.now()` differences, so a throttled tick loses nothing.
 **A cue is assumed done.** (Changed after first use: a Done tap per cue was
 one tap too many on a moving belt.) When the app says "set speed to 5.6" it
 records 5.6 itself. The last cue sits on one line with **Undo**, which puts
-the number back if he didn't make the change; small −/+ buttons cover any
-change he makes on his own.
+the number back if the change wasn't made; small −/+ buttons cover any
+change made without a cue.
 
 **Local only.** HR comes over Web Bluetooth straight to the phone; nothing is
 sent anywhere.

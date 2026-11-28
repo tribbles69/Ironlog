@@ -1,12 +1,12 @@
 # Raw VBT traces
 
-Bar-speed debug exports from Aaron's phone (Settings → Debug mode, format
+Bar-speed debug exports from a test phone (Settings → Debug mode, format
 `ironlog-vbt-raw`, v2): the phone's full 3-axis readings at 60 Hz per set, what
 Measure detected, and the set as logged. For roadmap **00-V1** (tilt
 correction) and **00-V2** (bar-speed RIR accuracy). The exports themselves hold
-personal training data, so they are **not in the repo**: they live in Aaron's
-private Drive folder. Copy one into `r&d/private/` (git-ignored) to run the
-tools on it, and put new exports in the Drive folder, not here.
+personal training data, so they are **not in the repo**: they are kept in a
+private folder outside the repo. Copy one into `r&d/private/` (git-ignored) to run the
+tools on it, and keep new exports out of the repo too.
 
 Exports from 0.93.1 are **v3**: the same `traces`, plus `readings` (every measured set of the last 60 days as the lifter saw it) and, on each trace, `tilt` (share of samples tilt-corrected) and `found` (reps after the filters). `logged.rirFrom` says whether the set's RIR was typed or filled by the sensor. Tools: `vbt-sim.cjs` (rep counts), `vbt-rir.cjs` (RIR, old vs new), `vbt-validate.cjs` (against a reference device).
 
@@ -19,7 +19,7 @@ set 2) and incline bench (three profile-mode warm-ups at 20/30/40 kg, sets
 comparing; 0.89–0.90 claim 80 of 81 reps on this day.
 
 **11 Nov, Accessory day (11 traces):** recorded on purpose to teach Measure
-each movement. **Home barbell, 5 kg**, every set phone on the bar, set mode.
+each movement. **A 5 kg barbell**, every set phone on the bar, set mode.
 Light weight, so speed is about movement shape, not effort.
 
 | Time | Logged as | Logged reps | Detected | Lift profile in trace |
@@ -32,7 +32,7 @@ Light weight, so speed is about movement shape, not effort.
 | 09:35 | Overhead Press set 2 | 6 | 8 | Overhead press |
 | 09:36 | Back Squat set 1 | 6 | 7 | Squat (free bar) |
 | 09:36 | Front Raise (barbell) set 1 | 5 | 7 | none |
-| 09:37 | **not logged** — probably the overhead triceps extension Aaron planned (check with him) | ? | 6 | none |
+| 09:37 | **not logged** — probably an overhead triceps extension (unconfirmed) | ? | 6 | none |
 | 09:37 | Bent Over Row set 1 | 6 | 6 | Row / pulldown |
 | 09:38 | Bent Over Row set 2 | 6 | 6 | Row / pulldown |
 
@@ -47,4 +47,4 @@ What this shows at a glance:
   — Measure falls back to a default. Decide whether these need profiles or a
   generic "arc" mode.
 - RIR values on this day (OHP @0, row @9 then @0, squat @4.5) on a 5 kg
-  bar can't be real effort ratings — check with Aaron before using them for 00-V2.
+  bar can't be real effort ratings — don't use them for 00-V2 unless confirmed.

@@ -1,4 +1,4 @@
-/* Ironlog — the base stylesheet. Moved out of index.html in the module split (r&d/notes/module-split.md); the rules are unchanged. */
+/* Ironlog — the base stylesheet. */
 /* ---------- base ---------- */
 :root{
   --bg:#0d0f14;
@@ -22,7 +22,7 @@
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html,body{margin:0;padding:0}
-/* An app, not a page: no pinch or double-tap zoom (Aaron's call, 0.62.1), no
+/* An app, not a page: no pinch or double-tap zoom, no
    Android font boosting, and nothing wider than the screen can drag the
    layout out sideways. Text size follows the phone's own font setting. */
 html{-webkit-text-size-adjust:100%;text-size-adjust:100%;touch-action:manipulation;overflow-x:hidden}

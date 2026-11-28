@@ -21,7 +21,7 @@ The spec is committed here with these corrections applied in place.
 | 5 | "stores AMRAP sets as `r: 0` — **346** of them" | **143** zero-rep sets. 355 entries mention AMRAP in notes; 243 of those store a real rep count and have no defect; 112 store it as `r: 0`. |
 | 5 | one AMRAP defect, one migration | **Two defects.** 100 Smith Calf Raise zeros are the *last* set of their entry (real AMRAP). 43 Machine Chest Press zeros sit in 12 entries where *every* set is zero — bad PDF extraction, not AMRAP. Converting both would fabricate 43 AMRAP sets. |
 | 1a | attachments are "29 movements — all cable or ankle-strap based" | 29 is right, the reason is wrong. Several are also barbell/dumbbell movements (`biceps-curl`, `hammer-curl`). Attachment must be scoped **by equipment**, else `DB Hammer Curl` resolves to a dumbbell curl holding a rope. |
-| 3 | `splitsPR: true` seeds "taken from Aaron's program notes" | True of the ten `splitsPR: false` seeds — all verified present. **None** of the `splitsPR: true` seeds appears anywhere in the program. |
+| 3 | `splitsPR: true` seeds "taken from the program notes" | True of the ten `splitsPR: false` seeds — all verified present. **None** of the `splitsPR: true` seeds appears anywhere in the program. |
 | 3 | `deficit`, `block/rack pull`, `board press` are modifiers | They collide with movement ids. `rack-pull`, `box-squat`, `pin-press` already exist as movements. Removed from the modifier list; see §8.1. |
 | 2 | load convention (spec text correct) | The **catalogue** contradicted it — `vocabularies.load` still encoded the flat `bilateral → total` rule §2 says would "corrupt every dumbbell record". Catalogue fixed (E4). |
 | 1 | "104 movements" | Correct for the current `exercises.json`. An earlier 32-movement draft is superseded and not committed. |
@@ -353,12 +353,12 @@ payload, so a partial rollout cannot orphan a blob.
 
 ```jsonc
 {
-  "id": "hunchback-hercules-pplul-77",
+  "id": "example-program-77",
   "schemaVersion": 2,
   "weeks": 77,
   "anchor": { "mode": "startDate", "defaultStart": "2026-07-13", "weekStartsOn": "monday" },
   "priority": [ /* slot-bound leaf refs, 5.7 */ ],
-  "meets": [ { "name": "West Midlands Spring", "date": "2027-04-10" } ],
+  "meets": [ { "name": "Spring Open", "date": "2027-04-10" } ],
   "sessions": [{
     "uid": "a3f19c2b",     // sha1(programId | week | day | slug(name)), 8 hex
     "week": 1, "day": 1,   // 1-based, relative

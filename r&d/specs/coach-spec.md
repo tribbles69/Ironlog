@@ -1,6 +1,6 @@
 # Coach — plans, reviews and AI coaching (roadmap D9)
 
-Written 2026-11-01 from a planning chat with Aaron. **Parts 0–1 shipped in
+Written 2026-11-01 from a planning chat. **Parts 0–1 shipped in
 0.67.0** (code: "coach: chat, memory and the plan builder" in index.html;
 templates built in with r&d/tools/build-coach-templates.cjs). Adaptation
 chips (C5) in Q8 and the load/press strongman events are not in yet — the
@@ -27,7 +27,7 @@ it fast, free for most people, and stops the AI inventing numbers.
 6. **Ask the coach** — scoped chat (§7).
 7. **Cardio trend coach** — optional, as in the roadmap (§8).
 
-Aaron will test part 1 on himself (experienced) and on a new lifter (new to
+Part 1 is tested on an experienced lifter and on a new lifter (new to
 training), so both paths must be right in the first build.
 
 ---
@@ -78,13 +78,13 @@ S.coach = {
   untouched).
 - **Size:** notes capped (about 20 short lines) and `summary` kept under
   ~300 words, since memory is sent with every AI call (cached).
-- **Existing users** (like Aaron, who already has data): `setupDone` starts
+- **Existing users** (who already have data): `setupDone` starts
   false, but the setup pre-fills everything it can from history, places and
   the installed program, so it's a quick confirm, not a quiz.
 
 ## 1. Setup questions
 
-**Q0 — does the lifter want a plan?** (Aaron, 2026-11-02) Asked first: *Build me a
+**Q0 — does the lifter want a plan?** (2026-11-02) Asked first: *Build me a
 plan* · *I've got a plan — bring it in* · *No plan — I'll just log*. Bringing
 one in asks only the goal, experience and profile basics, then opens the
 import sheet (`r&d/specs/plan-format.md`): the lifter's own AI app, Claude on
@@ -112,7 +112,7 @@ instead.
 | 7 | Lifts you care most about? *(skipped for under 6 months)* | Pre-selected from Q1; add / remove | These go first in their session and get the most sets. Beginners get Q1's default main lifts |
 | 8 | Anything to go easy on? | Joints-to-leave-alone list (E5) and adaptation chips (C5) | Swaps exercises before the preview |
 
-**Profile basics** (Aaron, 2026-11-02), asked right after Q1 and only when the
+**Profile basics** (2026-11-02), asked right after Q1 and only when the
 profile lacks them: which strength standards (men's / women's), date of birth
 (skippable) and bodyweight (saved as today's check-in). Someone who set up
 before this is asked once, before their next plan.
@@ -121,13 +121,13 @@ Then the **fitting test invite** (§1b), then **Preview → Accept** (or
 **Tailor it**, §4, when a key is set).
 
 - There is **no separate "how many days" question** — tapping the days is the
-  answer (Aaron, 2026-11-01).
+  answer (2026-11-01).
 - Q4 shows a gentle warning, not a block, when heavy lower days land back to
   back, and suggests a respaced week.
 - Every answer can be changed from the preview without starting over.
 - C4 rules: big targets, labels, works with TalkBack.
 
-## 1a. Kit — quick, not a checklist (Aaron, 2026-11-02)
+## 1a. Kit — quick, not a checklist (2026-11-02)
 
 Nobody lists every piece of kit. The coach asks one question per place:
 
@@ -148,7 +148,7 @@ Nobody lists every piece of kit. The coach asks one question per place:
 - If the user already has places, the coach offers them first ("Use *Gym*?")
   and only asks for a place that's missing.
 
-## 1b. The fitting test invite (Aaron, 2026-11-02)
+## 1b. The fitting test invite (2026-11-02)
 
 After the setup questions, before the preview, the coach invites the user to
 do the E12 fitting test, because it makes the plan fit them:
@@ -184,7 +184,7 @@ there. With a key, *Tailor it* (§4) can go further.
 | Days tapped | Split | Notes |
 |---|---|---|
 | 1 | Full body | |
-| 2 | Upper / Lower | Aaron's call (2026-11-01) — not full body ×2 |
+| 2 | Upper / Lower | the owner's call (2026-11-01) — not full body ×2 |
 | 3 | Push / Pull / Legs | |
 | 4 | Upper / Lower / Upper / Lower | |
 | 5 | Push / Pull / Legs / Upper / Lower | |
@@ -194,7 +194,8 @@ there. With a key, *Tailor it* (§4) can go further.
 ## 3. Templates
 
 A template is data, not code: one JSON file per split in `r&d/data/templates/`
-built into the app, like the morning-stretch routine.
+built into the app, like the stretch library. (Templates are generic: the
+app ships no one's own program or routine.)
 
 - **Days are lists of slots**, not exercises. A slot is a movement pattern and
   a role, e.g. `{ pattern: "horizontal-press", role: "main" }`,
@@ -203,23 +204,23 @@ built into the app, like the morning-stretch routine.
   is available at that day's place (D6), isn't on the go-easy list (Q8), and
   prefers the user's priority lifts (Q7). Each slot keeps a short ranked list
   so the preview can offer **Swap** with sensible alternatives.
-- **Supersets at 45 min and under** (Aaron, 2026-11-02): after the main and
+- **Supersets at 45 min and under** (2026-11-02): after the main and
   secondary lifts, kept accessories and finishers are paired (1+2, 3+4…) so
-  45 min holds about 7 exercises like his PPLUL. Slots kept: 30 → 5,
+  45 min holds about 7 exercises like the built-in PPLUL. Slots kept: 30 → 5,
   45 → 7, 60 → 8, 90 → 8 (no pairing at 60 and over). Ironlog has no
   superset feature yet (backlog), so a pair is marked in each exercise's
   note — "Superset with Leg Curl" — as the PPLUL doc does.
 - **Session length** (Q5) trims slots from the end of the day: accessories go
   first, main slots never.
 - **Goal** (Q1) sets reps and RIR per role. Starting values (to be checked
-  with Aaron before shipping):
+  before shipping):
   - Strength: main 3–5 reps @ RIR 2, accessories 6–10 @ RIR 2
   - Size: main 6–10 @ RIR 2, accessories 10–15 @ RIR 1–2
   - Strongman: Strength, plus an event slot (carry, load or press medley
     from B1) on one day
   - Powerlifting meet: Strength with the competition lifts as main
   - General fitness ("Get fitter and healthier"): 8–12 @ RIR 2–3 everywhere
-  - **Everyday goals** (Aaron, 2026-11-05, from a new lifter: the coach read as
+  - **Everyday goals** (2026-11-05, from a new lifter: the coach read as
     athlete-only). Listed first: Lose weight, Get fitter and healthier, Build
     muscle / tone up (= Size), Move better / ease aches. Strength, Strongman
     and Powerlifting follow.
@@ -234,12 +235,12 @@ built into the app, like the morning-stretch routine.
 - **Experience** (Q6):
   - Under 6 months: one version every week, fewer sets, RIR never below 2,
     no AMRAPs, and slower load increases. **Starts on machines and
-    dumbbells** (Aaron, 2026-11-02): leg press, DB bench, DB overhead press,
+    dumbbells** (2026-11-02): leg press, DB bench, DB overhead press,
     trap bar, machine rows (`patterns.json → experienceOverrides`). Moving
     to the barbell is suggested later by the weekly review, accept-only.
   - 6 months–2 years: the standard template.
   - 2+ years: the **A/B-week version** (heavy comp-lift week / accessory
-    week, so two ultra-heavy lifts never land in one session). Aaron's own
+    week, so two ultra-heavy lifts never land in one session). The built-in
     PPLUL is the reference for the 5-day A/B template.
 - **Output is a normal program with `loads: "rir"`** (see
   `autoreg-spec.md` → Plans with no weights): no planned weights, each set
@@ -254,21 +255,21 @@ built into the app, like the morning-stretch routine.
 - **Preview:** the week as day cards — exercises, sets × reps @ RIR, place.
   Tap an exercise to **Swap** from its slot's ranked list.
 - **Accept** installs it. **Nothing changes a plan without the user
-  accepting it** — not a template, not the AI (Aaron, 2026-11-01).
+  accepting it** — not a template, not the AI (2026-11-01).
 - **Tailor it** (key set, optional): one Haiku 5.5 call. Input: the
   template plan plus the digest (§5). It may only return **slot swaps and
   set-count changes** as JSON, with a one-line reason each — e.g. move a
   lagging pattern from the fitting test (E12) or a stalled lift up the day.
   The app re-runs every local check on the result (kit, plates, go-easy
-  list, session length, Aaron's rule that trap bar and leg press never share
+  list, session length, the rule that trap bar and leg press never share
   a day) and drops anything that fails. Shown as a diff on the preview.
 - This also gives E12 its missing "plan side" (fitting-test spec §9): the
   profile's flags feed Tailor it, and with no key they at least re-rank slot
   picks locally.
 
-## 4b. Local first (Aaron, 2026-11-02)
+## 4b. Local first (2026-11-02)
 
-Aaron: "build up as much automated chat as you can." The coach's chat works
+The brief: "build up as much automated chat as you can." The coach's chat works
 **without AI**: Ironlog's own numbers answer, written as short sentences by
 rules and templates — free, offline, can't invent a number, and each answer
 says what it's based on. AI is only the fallback for a typed question the
@@ -388,8 +389,8 @@ the local cue engine still runs without it.
 
 ## Testing
 
-- **Aaron** (2+ years, Gym, 5 days, 45 min, strongman/strength, priority
-  trap bar and OHP): the result should look like a sane relative of his
+- **Experienced lifter** (example: 2+ years, Gym, 5 days, 45 min, strongman/strength, priority
+  trap bar and OHP): the result should look like a sane relative of the built-in
   PPLUL with no trap bar + leg press day.
 - **New lifter** (under 6 months): Q7 skipped, simple version, RIR ≥ 2, blank
   starting weights that fill in from their first sets.
@@ -398,11 +399,11 @@ the local cue engine still runs without it.
 
 ## Open (decide before building)
 
-- ~~Final rep / RIR numbers per goal (§3).~~ Agreed as drafted (Aaron,
-  2026-11-02), as were the 6-day split and home lower days without a heavy
+- ~~Final rep / RIR numbers per goal (§3).~~ Agreed as drafted
+  (2026-11-02), as were the 6-day split and home lower days without a heavy
   squat or hinge.
 - Slot lists for each split — draft them in `r&d/data/templates/` and have
-  Aaron read them before the code. **Drafted 2026-11-01:**
+  them reviewed before the code. **Drafted 2026-11-01:**
   `r&d/data/templates/README.md` has every split as tables, the numbers, and
-  five questions for Aaron (supersets at 45 min, beginners on machines, the
+  five questions for the owner (supersets at 45 min, beginners on machines, the
   numbers, the 6-day split, home lower days).

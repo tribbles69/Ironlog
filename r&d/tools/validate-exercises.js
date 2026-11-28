@@ -83,8 +83,14 @@ ok(!M.some(m => m.review || m.reviewNote), 'no review flags remain (E10)');
 
 /* ------------------------------------------------------- 2. leaf-level dry run */
 console.log('\n=== 2. LEAF-LEVEL MIGRATION DRY RUN ===');
-/* The program moved out of index.html in 0.7.0 — it is fetched on demand now. */
-const P = JSON.parse(fs.readFileSync(path.join(ROOT, 'program.json'), 'utf8'));
+/* The app ships no program since 0.100.7. Sections 2 and 3 check a program
+   file's names and shape: the one given on the command line, else the
+   maintainer's own r&d/private/program.json if it has been copied in (not in
+   the repo), else the generic test fixture the smoke test installs. */
+const PROGRAM_FILE = process.argv[2] ? path.resolve(process.argv[2])
+  : [path.join(ROOT, 'r&d/private/program.json'), path.join(ROOT, 'r&d/tools/fixtures/program-generic.json')].find(f => fs.existsSync(f));
+const P = JSON.parse(fs.readFileSync(PROGRAM_FILE, 'utf8'));
+console.log(`  program file: ${path.relative(ROOT, PROGRAM_FILE)} (${P.name})`);
 
 const byName = new Map(M.map(m => [m.name.toLowerCase(), { m, a: null }]));
 const byAlias = new Map();
@@ -146,33 +152,22 @@ console.log(`\n  ${names.length} names / ${totalEntries} entries resolved — ` 
             (orphans.length ? `, ${orphans.length} not in the catalogue — the app installs those as custom movements` : ''));
 
 /* --------------------------------------------- 3. the program file
-   The phase 1 figures (327 sessions, 4409 sets, 143 zero-rep sets standing in
-   for AMRAPs) described the first auto-converted program. 0.51.0 rebuilt it
-   with r&d/tools/build-program.py: no weights, a target RIR on every set, and
-   AMRAPs as a set type instead of r: 0. These check that shape. Since 0.93
-   the shipped program is the WDC trap bar / Viking deadlift block (40
-   sessions). Since 0.99.5 it is the One Heavy Lift A/B block
-   (r&d/tools/build-program-hybrid.py, 25 sessions): its first fortnight
-   carries guide weights, and B-week technique sets target RIR 9, so the RIR
-   range runs 0-9 (load maths caps reps + RIR at 12). The counts below pin
-   that block (B-003). */
+   The shape every program Ironlog installs should have since 0.51.0: a
+   target RIR on every rep set and AMRAPs as a set type rather than r: 0.
+   The counts that pinned the shipped program (B-003) went with it in
+   0.100.7. RIR runs 0-9 (load maths caps reps + RIR at 12). */
 console.log('\n=== 3. THE PROGRAM FILE ===');
-const GUIDE_END = '2026-12-04';   // the guide-weight fortnight ends that Friday
-let sets = 0, weighted = 0, zeroRep = 0, badT = 0, amraps = 0, amrapWithReps = 0;
+let sets = 0, zeroRep = 0, badT = 0, amraps = 0, amrapWithReps = 0;
 P.workouts.forEach(w => liftEntries(w).forEach(e => e.sets.forEach(s => {
   sets++;
-  if (s.w != null && w.date > GUIDE_END && s.type !== 'amrap') weighted++;
   if (s.r === 0) zeroRep++;
-  if (!("hold" in s) && s.sec == null && !(Number.isInteger(s.t) && s.t >= 0 && s.t <= 9)) badT++;   // timed holds have no RIR
+  if (!("hold" in s) && s.sec == null && s.m == null && !(Number.isInteger(s.t) && s.t >= 0 && s.t <= 9)) badT++;   // timed holds and carries have no RIR
   if (s.type === 'amrap') { amraps++; if (s.r != null) amrapWithReps++; }
 })));
 ok(P.loads === 'rir', 'program declares loads: "rir"');
 const liftSessions = P.workouts.filter(w => liftEntries(w).length).length;
 const kindN = k => P.workouts.filter(w => w.kind === k).length;
-ok(liftSessions === 25 && kindN('cardio') === 7 && kindN('mobility') === 33 && P.workouts.length === 65,
-  `program sessions = ${P.workouts.length}: ${liftSessions} lifting, ${kindN('cardio')} cardio, ${kindN('mobility')} mobility (One Heavy Lift block: 25 + 7 + 33)`);
-ok(totalEntries === 131, `program exercise entries = ${totalEntries} (One Heavy Lift block: 131)`);
-ok(weighted === 0, `no planned weights after the guide fortnight (${weighted} of ${sets} sets carry one)`);
+ok(liftSessions > 0, `program sessions = ${P.workouts.length}: ${liftSessions} lifting, ${kindN('cardio')} cardio, ${kindN('mobility')} mobility; ${totalEntries} exercise entries, ${sets} sets`);
 ok(badT === 0, `every rep set has a whole-number target RIR (${badT} without)`);
 ok(zeroRep === 0, 'no zero-rep sets — AMRAPs are a set type now');
 ok(amraps > 0 && amrapWithReps === 0, `AMRAP sets have no rep count (${amraps} AMRAPs)`);
@@ -187,7 +182,7 @@ ok(M.filter(m => m.verified === true).length === 32, 'verified:true = 32');
 /* verified:true means the leaf mapping was checked against logged data, which
    was done for the old program. Movements the WDC block brought in are listed
    to check, not failed. */
-const unverified = names.filter(n => resolve(n).m.verified !== true);
+const unverified = names.filter(n => resolve(n) && resolve(n).m.verified !== true);
 console.log(`  NOTE  program names on movements not yet verified: ${unverified.length ? unverified.join(', ') : 'none'}`);
 // adaptation modifiers (C5) are a provisional list, not drawn from the program notes
 ok(V.modifier.filter(m => !m.splitsPR && m.group !== 'adaptation').every(m => m.evidence.programEntries > 0),
