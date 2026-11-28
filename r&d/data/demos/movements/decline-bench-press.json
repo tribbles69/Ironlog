@@ -1,0 +1,15 @@
+{
+  "pattern": "press",
+  "o": {
+    "incline": -12,
+    "hand": [["root", 0.06, 0.575], ["chest", 0.7, 0.035]]
+  },
+  "text": {
+    "setup": "Legs hooked in, shoulder blades back. Grip as for a flat bench.",
+    "cues": [
+      "Unrack with straight arms.",
+      "Lower to the bottom of your chest.",
+      "Press up and back over your shoulders."
+    ]
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "pattern": "press",
+  "o": {
+    "legsUp": true
+  },
+  "text": {
+    "setup": "Bench set-up, but legs straight out and feet off the floor — no leg drive.",
+    "cues": [
+      "Stay tight through your core so you don't roll.",
+      "Lower to your lower chest.",
+      "Press up and back."
+    ],
+    "mistakes": ["Wriggling or bridging to cheat the press.", "Losing the shoulder blades."]
+  }
+}

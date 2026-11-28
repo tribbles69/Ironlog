@@ -1,0 +1,69 @@
+{
+  "note": "DRAFT for Aaron to read (coach-spec §2-§3). Each day lists slots in training order; session length keeps the first N (main never cut). b = the B-week pattern for 2+ years (A/B fortnight); without b the slot is the same both weeks.",
+  "id": "pplppl",
+  "name": "Push / Pull / Legs × 2",
+  "days": 6,
+  "eventDay": 5,
+  "dayList": [
+    { "name": "Push 1", "slots": [
+      { "p": "bench", "role": "main", "b": "bench-b" },
+      { "p": "ohp", "role": "secondary", "b": "ohp-b" },
+      { "p": "incline-press", "role": "accessory" },
+      { "p": "lateral-raise", "role": "accessory" },
+      { "p": "triceps", "role": "accessory" },
+      { "p": "chest-iso", "role": "accessory" },
+      { "p": "abs", "role": "finisher" },
+      { "p": "triceps-oh", "role": "accessory" }
+    ] },
+    { "name": "Pull 1", "slots": [
+      { "p": "hinge", "role": "main", "b": "glute-main" },
+      { "p": "row", "role": "secondary", "b": "pulldown" },
+      { "p": "pulldown", "role": "accessory", "b": "row" },
+      { "p": "shrug", "role": "accessory" },
+      { "p": "biceps", "role": "accessory" },
+      { "p": "rear-delt", "role": "accessory" },
+      { "p": "obliques", "role": "finisher" },
+      { "p": "biceps-2", "role": "accessory" }
+    ] },
+    { "name": "Legs 1", "slots": [
+      { "p": "squat", "role": "main", "b": "squat-machine" },
+      { "p": "single-leg", "role": "secondary" },
+      { "p": "ham-curl", "role": "accessory" },
+      { "p": "quad-iso", "role": "accessory" },
+      { "p": "calves", "role": "finisher" },
+      { "p": "abs", "role": "finisher" },
+      { "p": "glute-iso", "role": "accessory" },
+      { "p": "adductors", "role": "accessory" }
+    ] },
+    { "name": "Push 2", "slots": [
+      { "p": "ohp", "role": "main", "b": "ohp-b" },
+      { "p": "incline-press", "role": "secondary" },
+      { "p": "close-grip", "role": "secondary" },
+      { "p": "lateral-raise", "role": "accessory" },
+      { "p": "triceps-oh", "role": "accessory" },
+      { "p": "chest-iso", "role": "accessory" },
+      { "p": "abs", "role": "finisher" },
+      { "p": "rear-delt", "role": "accessory" }
+    ] },
+    { "name": "Pull 2", "slots": [
+      { "p": "pulldown", "role": "main", "b": "row" },
+      { "p": "row", "role": "secondary", "b": "pulldown" },
+      { "p": "rear-delt", "role": "accessory" },
+      { "p": "biceps-2", "role": "accessory" },
+      { "p": "shrug", "role": "accessory" },
+      { "p": "biceps", "role": "accessory" },
+      { "p": "obliques", "role": "finisher" },
+      { "p": "lateral-raise", "role": "accessory" }
+    ] },
+    { "name": "Legs 2", "slots": [
+      { "p": "squat-machine", "role": "main", "b": "squat" },
+      { "p": "hinge-2", "role": "secondary" },
+      { "p": "glute-main", "role": "accessory" },
+      { "p": "ham-curl", "role": "accessory" },
+      { "p": "quad-iso", "role": "accessory" },
+      { "p": "calves", "role": "finisher" },
+      { "p": "adductors", "role": "accessory" },
+      { "p": "abs", "role": "finisher" }
+    ] }
+  ]
+}

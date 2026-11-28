@@ -1,0 +1,25 @@
+{
+  "pattern": "vpull",
+  "o": {
+    "base": "hang",
+    "rootFrom": [-0.02, -0.585],
+    "rootTo": [-0.08, -0.2],
+    "torso": [-4, -10],
+    "eq": {
+      "_": {
+        "draw": "none"
+      }
+    },
+    "labels": ["Dead hang, palms to you", "Pull your chest up", "Chin over the bar", "Lower all the way"]
+  },
+  "text": {
+    "setup": "Hands shoulder-width, palms facing you, hanging with straight arms.",
+    "cues": ["Pull your chest towards the bar.", "Get your chin over it.", "Lower all the way down."],
+    "mistakes": ["Swinging.", "Stopping short of straight arms."],
+    "variants": {
+      "machine": "An assisted machine takes off some body weight — less assistance means harder.",
+      "resistance_band": "A band under your knees or feet helps most at the bottom.",
+      "plate": "Weight on a belt or between your feet; keep the legs still."
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  "pattern": "curl",
+  "o": {
+    "arms": "target",
+    "elbow": "back",
+    "hand": [["root", 0.05, -0.575], ["chest", 0.78, 0.05]],
+    "labels": [
+      "Bar against your thighs",
+      "Drag it up your body, elbows back",
+      "Bar at your lower chest",
+      "Lower down your body"
+    ]
+  },
+  "text": {
+    "setup": "Stand tall holding the bar against your thighs, hands shoulder-width, palms up.",
+    "cues": [
+      "Pull your elbows back as you curl, so the bar slides up your body.",
+      "Keep the bar touching or nearly touching you all the way.",
+      "Stop at your lower chest, then lower it back down your body."
+    ],
+    "mistakes": [
+      "Letting the bar swing out in front, which makes it a normal curl.",
+      "Shrugging the bar up.",
+      "Leaning back."
+    ],
+    "variants": {
+      "dumbbells": "Drag the bells up your sides.",
+      "smith": "The track keeps the bar close, but set your feet so it can travel straight.",
+      "cable": "Stand close to a low pulley so the cable runs up your body."
+    }
+  }
+}

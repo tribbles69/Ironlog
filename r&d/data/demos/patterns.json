@@ -1,0 +1,549 @@
+{
+  "squat": {
+    "base": "stand",
+    "concentric": "back",
+    "path": "midfoot",
+    "shin": [0, 38],
+    "thigh": [-2, 108],
+    "solve": "midfoot",
+    "hold": "back",
+    "arms": "hold",
+    "elbow": "down",
+    "labels": ["Brace", "Sit down between your heels", "Depth", "Drive up"],
+    "eq": {
+      "_": {
+        "draw": "barbell"
+      },
+      "smith": {
+        "rail": true
+      },
+      "safety_squat_bar": {
+        "ssb": true
+      },
+      "dumbbells": {
+        "hold": "goblet",
+        "draw": "dumbbell"
+      },
+      "kettlebell": {
+        "hold": "goblet",
+        "draw": "kettlebell"
+      },
+      "plate": {
+        "hold": "goblet",
+        "draw": "plate"
+      },
+      "belt_squat": {
+        "hold": "goblet",
+        "draw": "belt",
+        "arms": "angles",
+        "upperArm": 20,
+        "foreArm": 70,
+        "solve": null,
+        "torso": [2, 30]
+      }
+    },
+    "text": {
+      "setup": "Bar on your upper back, hands just outside your shoulders. Feet about shoulder-width, toes out 15–30°. Big breath and brace before every rep.",
+      "cues": [
+        "Break at the hips and knees together and sit down between your heels.",
+        "Knees travel out over your toes; keep the bar over the middle of your foot.",
+        "Full depth is the hip crease below the top of the knee — then drive up, chest and hips rising together."
+      ],
+      "mistakes": [
+        "Hips shooting up first, so the squat turns into a good morning.",
+        "Heels lifting off the floor.",
+        "Knees caving in on the way up.",
+        "Losing the brace at the bottom."
+      ],
+      "variants": {
+        "barbell": "Set the safety arms just below your bottom position before the first set.",
+        "smith": "The bar runs on a fixed track, so your feet can sit a little further forward than a free squat.",
+        "safety_squat_bar": "Hold the handles in front. The cambered bar sits further forward and tips you into the hole, so fight to stay upright.",
+        "belt_squat": "The load hangs from a belt at your hips, so your back carries nothing. Stay tall and sit straight down.",
+        "dumbbells": "Hold one dumbbell upright against your chest, elbows pointing down inside your knees.",
+        "kettlebell": "Hold the bell by the horns against your chest, elbows pointing down inside your knees."
+      }
+    }
+  },
+  "hinge": {
+    "base": "stand",
+    "concentric": "go",
+    "path": "midfoot",
+    "shin": [[0, 15], [0.45, 4], [1, 0]],
+    "thigh": [[0, 62], [0.45, 32], [1, -2]],
+    "solve": "midfoot",
+    "hold": "hands",
+    "arms": "hold",
+    "labels": [
+      "Brace, pull the slack out",
+      "Push the floor away",
+      "Lock out — hips through",
+      "Lower it, hips back first"
+    ],
+    "eq": {
+      "_": {
+        "draw": "barbell"
+      },
+      "axle": {
+        "draw": "barbell"
+      },
+      "smith": {
+        "rail": true
+      },
+      "trap_bar": {
+        "draw": "trap",
+        "shin": [[0, 24], [0.45, 8], [1, 0]],
+        "thigh": [[0, 74], [0.45, 36], [1, -2]]
+      },
+      "dumbbells": {
+        "draw": "dumbbell"
+      },
+      "kettlebell": {
+        "draw": "kettlebell"
+      }
+    },
+    "text": {
+      "setup": "Bar over the middle of your foot, about a fist from your shins. Hips-width stance. Grip just outside your legs, then bring your shins to the bar.",
+      "cues": [
+        "Chest up, lats tight — pull the slack out of the bar until it clicks against the plates.",
+        "Push the floor away; the bar stays in contact with your legs the whole way.",
+        "Finish by squeezing your hips through. Stand tall, don't lean back."
+      ],
+      "mistakes": [
+        "Hips rising before the bar leaves the floor.",
+        "The bar drifting forward away from the legs.",
+        "Jerking the bar off the floor instead of squeezing it."
+      ],
+      "variants": {
+        "barbell": "Mixed grip or hook grip for heavy sets; straps are fine for back work.",
+        "trap_bar": "Handles at your sides, so you can sit lower and use more leg. High handles shorten the pull.",
+        "smith": "The fixed track removes the balance part — keep your shins close anyway.",
+        "axle": "The thick bar doesn't rotate and is hard to hold; double overhand or a hook grip, no straps in most comps.",
+        "dumbbells": "Bells at your sides or just in front of your thighs; same hinge, lighter load.",
+        "kettlebell": "One bell between your feet, gripped with both hands."
+      }
+    }
+  },
+  "press": {
+    "base": "bench",
+    "concentric": "back",
+    "arms": "target",
+    "elbow": "down",
+    "hand": [["root", 0.06, 0.575], ["chest", 0.8, 0.035]],
+    "labels": [
+      "Shoulder blades back, feet down, brace",
+      "Lower to your lower chest",
+      "Touch, stay tight",
+      "Press up and back over your shoulders"
+    ],
+    "eq": {
+      "_": {
+        "draw": "barbell"
+      },
+      "smith": {
+        "rail": true,
+        "hand": [["chest", 0.86, 0.47], ["chest", 0.86, 0.035]]
+      },
+      "dumbbells": {
+        "draw": "dumbbell"
+      },
+      "machine": {
+        "draw": "dumbbell"
+      },
+      "plate_loaded_machine": {
+        "draw": "dumbbell"
+      }
+    },
+    "text": {
+      "setup": "Eyes under the bar. Squeeze your shoulder blades back and down, feet planted, slight arch. Grip so your forearms are vertical at the bottom.",
+      "cues": [
+        "Unrack with straight arms and bring the bar over your shoulders.",
+        "Lower it under control to your lower chest, elbows about 45° from your body.",
+        "Press up and slightly back so it finishes over your shoulders again."
+      ],
+      "mistakes": [
+        "Shoulder blades coming apart off the bench.",
+        "Elbows flaring straight out to the sides.",
+        "Bouncing the bar off your chest."
+      ],
+      "variants": {
+        "barbell": "Use a spotter or set the safety arms just below chest height.",
+        "smith": "The track is fixed, so the bar can't follow its natural curve — set the bench so it touches just below your nipples.",
+        "dumbbells": "Each arm works on its own and you can go a little deeper. Bring the bells down to the sides of your chest.",
+        "machine": "Set the seat so the handles line up with the middle of your chest.",
+        "plate_loaded_machine": "Set the seat so the handles line up with the middle of your chest."
+      }
+    }
+  },
+  "overhead": {
+    "base": "stand",
+    "concentric": "go",
+    "path": "midfoot",
+    "shin": 0,
+    "thigh": -2,
+    "torso": [-5, 1],
+    "arms": "target",
+    "elbow": "down",
+    "hand": [["root", 0.12, 0], ["mid", 0, 0.575]],
+    "labels": [
+      "Bar on your front delts, brace",
+      "Press — head back out of the way",
+      "Lock out, head through",
+      "Lower to your collarbones"
+    ],
+    "eq": {
+      "_": {
+        "draw": "barbell"
+      },
+      "axle": {
+        "draw": "barbell"
+      },
+      "smith": {
+        "rail": true
+      },
+      "dumbbells": {
+        "draw": "dumbbell"
+      },
+      "kettlebell": {
+        "draw": "kettlebell"
+      },
+      "machine": {
+        "draw": "dumbbell"
+      },
+      "log": {
+        "draw": "log"
+      }
+    },
+    "text": {
+      "setup": "Bar resting on your front delts, hands just outside your shoulders, forearms vertical. Feet hip-width, glutes and abs tight.",
+      "cues": [
+        "Press straight up and pull your chin back so the bar clears your face.",
+        "Once it passes your forehead, push your head through between your arms.",
+        "Lock out with the bar over the middle of your foot."
+      ],
+      "mistakes": [
+        "Leaning back to turn it into a standing incline press.",
+        "Pressing the bar around your face instead of moving your head.",
+        "Losing tension in the glutes and abs."
+      ],
+      "variants": {
+        "barbell": "Start from a rack set at about collarbone height.",
+        "smith": "The track sets the bar path, so step slightly forward of it to clear your face.",
+        "dumbbells": "Start with the bells at shoulder height, palms forward or facing in. Each side has to stay stable on its own.",
+        "kettlebell": "The bell sits in the rack against your forearm; press with your wrist straight.",
+        "machine": "Set the seat so the handles start level with your shoulders.",
+        "axle": "Clean it to your chest first — the thick bar rolls, so keep your wrists stacked."
+      }
+    }
+  },
+  "row": {
+    "base": "stand",
+    "concentric": "go",
+    "shin": 14,
+    "thigh": 42,
+    "torso": 64,
+    "arms": "target",
+    "elbow": "up",
+    "hand": [["root", 0.01, -0.585], ["chest", 0.42, 0.05]],
+    "labels": [
+      "Hinge over, flat back, arms long",
+      "Pull to your lower ribs",
+      "Squeeze your shoulder blades",
+      "Lower under control"
+    ],
+    "eq": {
+      "_": {
+        "draw": "barbell",
+        "plateR": 0.2
+      },
+      "dumbbells": {
+        "draw": "dumbbell"
+      },
+      "kettlebell": {
+        "draw": "kettlebell"
+      },
+      "cable": {
+        "draw": "cable",
+        "anchor": [0.9, 0.25]
+      },
+      "smith": {
+        "rail": true
+      },
+      "trap_bar": {
+        "draw": "trap"
+      }
+    },
+    "text": {
+      "setup": "Hinge forward to roughly 45° or lower with soft knees and a flat back. Let your arms hang straight.",
+      "cues": [
+        "Pull your elbows back past your torso, not up towards your ears.",
+        "Bring the bar to your lower ribs and squeeze your shoulder blades together.",
+        "Lower all the way to straight arms without letting your back round."
+      ],
+      "mistakes": [
+        "Standing up more each rep to cheat the weight up.",
+        "Rounding the lower back.",
+        "Shrugging instead of pulling with the back."
+      ],
+      "variants": {
+        "barbell": "Overhand grip works more upper back, underhand a little more lats.",
+        "dumbbells": "One hand and knee on a bench for support, or both bells with your chest down.",
+        "cable": "A low cable keeps tension at the bottom where a free weight goes slack.",
+        "smith": "The fixed track means you have to set your body to the bar, not the other way round."
+      }
+    }
+  },
+  "vpull": {
+    "base": "seat",
+    "concentric": "go",
+    "torso": [-6, -16],
+    "kneePad": true,
+    "arms": "target",
+    "elbow": "fwd",
+    "hand": [["root", 0.06, 0.585], ["chest", 0.95, 0.06]],
+    "labels": [
+      "Arms long, chest up",
+      "Pull your elbows down to your sides",
+      "Bar to your upper chest",
+      "Arms long again, slowly"
+    ],
+    "eq": {
+      "_": {
+        "draw": "cable",
+        "anchor": "above"
+      }
+    },
+    "text": {
+      "setup": "Sit with your knees snug under the pads and grip a little wider than shoulder-width. Lean back slightly, chest up.",
+      "cues": [
+        "Start the pull by bringing your shoulder blades down.",
+        "Drive your elbows down to your sides.",
+        "Touch the bar to your upper chest, then let your arms go long again."
+      ],
+      "mistakes": [
+        "Leaning way back and turning it into a row.",
+        "Pulling the bar behind your neck.",
+        "Letting the stack slam between reps."
+      ],
+      "variants": {
+        "cable": "A wide bar works the lats through more range; a close neutral handle lets you pull further.",
+        "machine": "Set the seat so you can just reach the handles with straight arms.",
+        "plate_loaded_machine": "Set the seat so you can just reach the handles with straight arms."
+      }
+    }
+  },
+  "raise": {
+    "base": "front",
+    "concentric": "go",
+    "abduct": [10, 86],
+    "elbowBend": 14,
+    "labels": ["Slight bend in the elbows", "Raise out to the sides", "Shoulder height", "Lower slowly"],
+    "eq": {
+      "_": {
+        "draw": "dumbbell"
+      },
+      "cable": {
+        "draw": "cable",
+        "anchor": "across"
+      },
+      "resistance_band": {
+        "draw": "none"
+      },
+      "machine": {
+        "draw": "none"
+      },
+      "plate": {
+        "draw": "none"
+      }
+    },
+    "text": {
+      "setup": "Stand tall with a bell in each hand at your sides, a small bend in the elbows, a slight lean forward.",
+      "cues": [
+        "Raise your arms out to the sides, leading with your elbows.",
+        "Stop at about shoulder height — hands level with or just below your elbows.",
+        "Lower slowly; don't let the bells fall."
+      ],
+      "mistakes": [
+        "Swinging the body to get the weight up.",
+        "Shrugging the shoulders up to your ears.",
+        "Going too heavy and turning it into an upright row."
+      ],
+      "variants": {
+        "dumbbells": "Light is right: the lever is long, so small weights feel heavy.",
+        "cable": "One arm at a time from a low pulley on the opposite side; tension stays on at the bottom.",
+        "machine": "Pads sit against the outside of your arms — push with the elbows, not the hands.",
+        "resistance_band": "Stand on the band; it gets harder the higher you go, so pick a light one."
+      }
+    }
+  },
+  "curl": {
+    "base": "stand",
+    "concentric": "go",
+    "shin": 0,
+    "thigh": -2,
+    "torso": 0,
+    "arms": "angles",
+    "upperArm": [2, 9],
+    "foreArm": [5, 148],
+    "labels": ["Stand tall, elbows by your sides", "Curl up", "Squeeze", "Lower all the way"],
+    "eq": {
+      "_": {
+        "draw": "barbell",
+        "plateR": 0.16
+      },
+      "dumbbells": {
+        "draw": "dumbbell"
+      },
+      "kettlebell": {
+        "draw": "kettlebell"
+      },
+      "cable": {
+        "draw": "cable",
+        "anchor": [0.4, 0.12]
+      },
+      "resistance_band": {
+        "draw": "band",
+        "anchor": [0.08, 0.02]
+      },
+      "machine": {
+        "draw": "dumbbell"
+      }
+    },
+    "text": {
+      "setup": "Stand tall, feet hip-width, elbows by your sides. Grip about shoulder-width.",
+      "cues": [
+        "Curl the weight up by bending only at the elbows.",
+        "Keep your elbows from drifting forward as you near the top.",
+        "Lower all the way to straight arms, slower than you lifted."
+      ],
+      "mistakes": [
+        "Swinging with the hips and back.",
+        "Elbows riding forward to cheat the top.",
+        "Stopping short of straight arms at the bottom."
+      ],
+      "variants": {
+        "barbell": "An EZ bar is kinder to the wrists than a straight bar.",
+        "dumbbells": "Turn your palms up as you curl to get the most from the biceps.",
+        "cable": "Tension stays on all the way down, unlike a free weight.",
+        "machine": "Line your elbows up with the machine's pivot.",
+        "kettlebell": "The bell hangs below the handle, so it's hardest near the top.",
+        "resistance_band": "Stand on the band; it gets harder the higher you curl."
+      }
+    }
+  },
+  "triceps": {
+    "base": "stand",
+    "concentric": "go",
+    "shin": 4,
+    "thigh": 8,
+    "torso": 12,
+    "arms": "angles",
+    "upperArm": 6,
+    "foreArm": [100, 2],
+    "labels": [
+      "Elbows pinned to your sides",
+      "Push down to straight arms",
+      "Lock out, squeeze",
+      "Let it come back up to chest height"
+    ],
+    "eq": {
+      "_": {
+        "draw": "cable",
+        "anchor": [0.42, 2.1]
+      },
+      "machine": {
+        "draw": "cable",
+        "anchor": [0.42, 2.1]
+      },
+      "resistance_band": {
+        "draw": "band",
+        "anchor": [0.42, 2.1]
+      }
+    },
+    "text": {
+      "setup": "Face the cable stack, hinge forward a little, elbows pinned to your sides.",
+      "cues": [
+        "Push down until your arms are straight.",
+        "Only your forearms move; your upper arms stay put.",
+        "Let it come back up to about chest height under control."
+      ],
+      "mistakes": [
+        "Elbows flaring out or swinging forward.",
+        "Leaning over the handle and pushing with body weight.",
+        "Cutting the range short at the top."
+      ],
+      "variants": {
+        "cable": "A rope lets you spread your hands at the bottom; a straight bar lets you go heavier.",
+        "machine": "Set the seat so your elbows sit on the pad and line up with the pivot.",
+        "resistance_band": "Anchor the band high; it's hardest at lockout."
+      }
+    }
+  },
+  "lunge": {
+    "base": "split",
+    "concentric": "back",
+    "hipKF": [["world", -0.08, 0.875], ["world", -0.07, 0.5]],
+    "torso": 4,
+    "arms": "angles",
+    "upperArm": 2,
+    "foreArm": 2,
+    "labels": [
+      "Long stance, brace",
+      "Drop your back knee straight down",
+      "Knee just off the floor",
+      "Drive up through your front foot"
+    ],
+    "eq": {
+      "_": {
+        "draw": "dumbbell"
+      },
+      "kettlebell": {
+        "draw": "kettlebell"
+      },
+      "bodyweight": {
+        "draw": "none"
+      },
+      "barbell": {
+        "draw": "barbell",
+        "hold": "back",
+        "arms": "hold"
+      },
+      "smith": {
+        "draw": "barbell",
+        "hold": "back",
+        "arms": "hold",
+        "rail": true
+      },
+      "safety_squat_bar": {
+        "draw": "barbell",
+        "hold": "back",
+        "arms": "hold",
+        "ssb": true
+      },
+      "belt_squat": {
+        "draw": "belt"
+      }
+    },
+    "text": {
+      "setup": "Take a long stance — front foot flat, back foot on its toes, hips square. Stand tall.",
+      "cues": [
+        "Drop your back knee straight down towards the floor.",
+        "Front shin stays fairly upright; front heel stays down.",
+        "Drive up through your whole front foot."
+      ],
+      "mistakes": [
+        "A stance so short the front knee shoots forward and the heel lifts.",
+        "Feet on one line, like a tightrope, so you wobble.",
+        "Leaning the torso forward and pushing off the back leg."
+      ],
+      "variants": {
+        "dumbbells": "Bells at your sides make balance easier than a bar.",
+        "barbell": "Set up in a rack with safety arms; balance is harder with the load high on your back.",
+        "smith": "The track handles the balance, so you can focus on the legs.",
+        "kettlebell": "Hold bells at your sides, or one at your chest.",
+        "safety_squat_bar": "The handles let you hold the rack for balance if you need it.",
+        "bodyweight": "Hands on hips; the first step is getting the balance right."
+      }
+    }
+  }
+}

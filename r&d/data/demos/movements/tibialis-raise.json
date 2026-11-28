@@ -1,0 +1,50 @@
+{
+  "pattern": "squat",
+  "o": {
+    "concentric": "go",
+    "solve": null,
+    "path": null,
+    "hold": null,
+    "arms": "angles",
+    "heel": [0, -32],
+    "shin": -8,
+    "thigh": 8,
+    "torso": -8,
+    "upperArm": 4,
+    "foreArm": 6,
+    "backPad": true,
+    "labels": ["Back on the wall, heels out", "Pull your toes up", "Toes high, hold", "Lower slowly"],
+    "eq": {
+      "_": {
+        "draw": "none"
+      },
+      "plate": {
+        "draw": "none"
+      },
+      "machine": {
+        "draw": "none",
+        "backPad": false
+      }
+    }
+  },
+  "text": {
+    "setup": "Lean your back against a wall with your heels about a foot out in front of you, legs straight.",
+    "cues": [
+      "Pull your toes up towards your shins as far as they go, heels staying down.",
+      "Pause at the top and squeeze the front of your shins.",
+      "Lower slowly until the toes just touch, then go again."
+    ],
+    "mistakes": [
+      "Bouncing the toes off the floor.",
+      "Bending the knees to cheat the range.",
+      "Cutting the top short."
+    ],
+    "variants": {
+      "plate": "A tib bar or a plate strapped over your toes; sit on a bench with your heels at the edge.",
+      "dumbbells": "Sit on a bench and hold a light dumbbell between your feet.",
+      "kettlebell": "Sit on a bench and hook a light kettlebell over your toes.",
+      "machine": "Sit with the pad over the top of your feet and lift the toes against it.",
+      "resistance_band": "Sit with legs out, the band round the top of your feet and anchored in front."
+    }
+  }
+}

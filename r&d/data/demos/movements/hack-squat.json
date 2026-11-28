@@ -1,0 +1,41 @@
+{
+  "pattern": "squat",
+  "o": {
+    "solve": null,
+    "path": null,
+    "hold": null,
+    "arms": "angles",
+    "backPad": true,
+    "shin": [4, 40],
+    "thigh": [0, 112],
+    "torso": [-22, -14],
+    "upperArm": 140,
+    "foreArm": 282,
+    "labels": ["Back flat on the pad, brace", "Sit down into the sled", "Depth", "Drive the platform away"],
+    "eq": {
+      "_": {
+        "draw": "none"
+      },
+      "barbell": {
+        "skip": true
+      }
+    }
+  },
+  "text": {
+    "setup": "Back and shoulders flat against the pads, feet shoulder-width in the middle of the platform. Release the safeties.",
+    "cues": [
+      "Bend your knees and sit straight down the line of the sled.",
+      "Go as deep as you can with your back still flat on the pad.",
+      "Drive through your whole foot back to the top, without locking the knees hard."
+    ],
+    "mistakes": [
+      "Hips peeling off the pad at the bottom.",
+      "Heels lifting.",
+      "Cutting depth short as the weight goes up."
+    ],
+    "variants": {
+      "machine": "Feet higher on the platform shift work to the glutes; lower and closer, to the quads.",
+      "plate_loaded_machine": "Feet higher on the platform shift work to the glutes; lower and closer, to the quads."
+    }
+  }
+}

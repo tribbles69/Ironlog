@@ -1,0 +1,11 @@
+{
+  "pattern": "curl",
+  "text": {
+    "setup": "Stand tall, palms facing each other, elbows by your sides.",
+    "cues": [
+      "Curl up with your thumbs leading.",
+      "Keep the palms facing in the whole way.",
+      "Lower to straight arms."
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "pattern": "hinge",
+  "o": {
+    "concentric": "back",
+    "shin": [0, 4],
+    "thigh": [-2, 30],
+    "labels": [
+      "Stand tall, knees almost straight",
+      "Hinge — hips back",
+      "Stretch in the hamstrings",
+      "Drive your hips forward"
+    ]
+  },
+  "text": {
+    "setup": "Stand with the bar, knees almost straight.",
+    "cues": [
+      "Hinge at the hips, chest down, flat back.",
+      "Lower as far as your hamstrings let you without rounding.",
+      "Stand up by pushing your hips forward."
+    ],
+    "mistakes": ["Locked, hyperextended knees.", "Rounding the back for extra range."]
+  }
+}

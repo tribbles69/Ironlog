@@ -1,0 +1,14 @@
+{
+  "pattern": "overhead",
+  "o": {
+    "hand": [["root", 0.1, 0.02], ["mid", 0, 0.575]]
+  },
+  "text": {
+    "setup": "Bells in front of your shoulders, palms facing you.",
+    "cues": [
+      "Rotate your palms out as you press.",
+      "Finish palms forward, arms straight overhead.",
+      "Rotate back on the way down."
+    ]
+  }
+}

@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<!-- Content-Security-Policy: the browser refuses to load scripts or send data anywhere but
+     these. A missed esc() then can't leak the log or the AI key. The sha256 is the skin
+     script below — check-version.cjs fails if they drift. r&d/notes/security-audit-2026-11.md -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'wasm-unsafe-eval' 'sha256-sblqGi+jvKLMGzAN5MNXbPBtHiw58XA2WkPE0RBiaZw=' https://accounts.google.com/gsi/client; connect-src 'self' https://api.anthropic.com https://www.googleapis.com https://oauth2.googleapis.com https://accounts.google.com/gsi/; frame-src https://accounts.google.com/gsi/; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/style; img-src 'self' data: blob:; media-src 'self' data: blob:; worker-src 'self' blob:; font-src 'self' data:; object-src 'none'; base-uri 'self'; form-action 'none'">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<meta name="theme-color" content="#0d0f14">
+<meta name="color-scheme" content="dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Ironlog">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230d0f14'/><g fill='%23ff5c35'><rect x='5' y='27' width='6' height='10' rx='2'/><rect x='13' y='21' width='7' height='22' rx='2.5'/><rect x='20' y='29' width='24' height='6'/><rect x='44' y='21' width='7' height='22' rx='2.5'/><rect x='53' y='27' width='6' height='10' rx='2'/></g></svg>">
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='14' fill='%230d0f14'/><g fill='%23ff5c35'><rect x='5' y='27' width='6' height='10' rx='2'/><rect x='13' y='21' width='7' height='22' rx='2.5'/><rect x='20' y='29' width='24' height='6'/><rect x='44' y='21' width='7' height='22' rx='2.5'/><rect x='53' y='27' width='6' height='10' rx='2'/></g></svg>">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" sizes="192x192" href="icon-192.png">
+<title>Ironlog — Powerlifting</title>
+<!-- The app is js/main.js and the modules it imports (r&d/notes/module-split.md).
+     These hints let the browser fetch them side by side instead of finding
+     each one only after parsing the last. r&d/tools/check-version.cjs checks
+     the list is every module, and that sw.js precaches them all. -->
+<link rel="modulepreload" href="js/coach.js">
+<link rel="modulepreload" href="js/core.js">
+<link rel="modulepreload" href="js/state.js">
+<link rel="modulepreload" href="js/kit.js">
+<link rel="modulepreload" href="js/loading.js">
+<link rel="modulepreload" href="js/training.js">
+<link rel="modulepreload" href="js/picker.js">
+<link rel="modulepreload" href="js/ai.js">
+<link rel="modulepreload" href="js/report.js">
+<link rel="modulepreload" href="js/migrate.js">
+<link rel="modulepreload" href="js/rest.js">
+<link rel="modulepreload" href="js/movement.js">
+<link rel="modulepreload" href="js/io.js">
+<link rel="modulepreload" href="js/sync.js">
+<link rel="modulepreload" href="js/data.js">
+<link rel="modulepreload" href="js/database.js">
+<link rel="modulepreload" href="js/events.js">
+<link rel="modulepreload" href="js/exercises.js">
+<link rel="modulepreload" href="js/health.js">
+<link rel="modulepreload" href="js/main.js">
+<link rel="modulepreload" href="js/stats.js">
+<link rel="modulepreload" href="js/tools.js">
+<link rel="modulepreload" href="js/ui.js">
+<link rel="modulepreload" href="js/vbt.js">
+<link rel="modulepreload" href="js/workout.js">
+<link rel="modulepreload" href="slew-reps.js">
+<script>
+/* The skin has to be on the html element before the first paint, or the app
+   flashes its dark chrome and then repaints grey. The real setting lives in
+   S.settings.skin, but that read is async IndexedDB — far too late. This
+   localStorage mirror exists only to answer the question synchronously here;
+   boot() reconciles it against the stored state a moment later. */
+try {
+  var _skin = localStorage.getItem('ironlog.skin');
+  if (_skin === 'win98') document.documentElement.dataset.skin = 'win98';
+} catch (e) {}
+</script>
+<link rel="stylesheet" href="css/app.css">
+<!-- The one rule that has to stay in the page: it points at a gradient inside
+     the chart's own <svg>, and from an external sheet some browsers look for
+     that in the stylesheet's file instead. It sits between the two sheets,
+     where it was, so the Windows 98 skin still overrides it. -->
+<style>.chart .area{fill:url(#gfade)}</style>
+<!-- The Windows 98 skin: every rule scoped to html[data-skin="win98"], and loaded after the base sheet so it wins. -->
+<link rel="stylesheet" href="css/skin98.css" id="skin98">
+</head>
+<body>
+<header id="topbar">
+  <div class="tb-left"><span class="brand">IRON<span class="accent">LOG</span></span></div>
+  <div class="tb-right">
+    <button class="icon-btn" id="toolsBtn" title="Tools" aria-label="Tools"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.1L4 16.7 7.3 20l5.3-5.3a4 4 0 0 0 5.1-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/></svg></button>
+    <button class="icon-btn" id="profileBtn" title="Profile" aria-label="Profile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" style="width:18px;height:18px"><circle cx="12" cy="8" r="3.4"/><path d="M4.5 20a7.5 7.5 0 0 1 15 0"/></svg></button>
+    <button class="icon-btn" id="settingsBtn" title="Settings" aria-label="Settings">⚙</button>
+  </div>
+</header>
+
+<main id="view"></main>
+
+<nav id="nav" aria-label="Main">
+  <button data-page="home"><span class="ico" aria-hidden="true">◧</span><span>Home</span></button>
+  <button data-page="calendar"><span class="ico" aria-hidden="true">▦</span><span>Calendar</span></button>
+  <button data-page="workout"><span class="ico" aria-hidden="true">⬤</span><span>Train</span></button>
+  <button id="navCoach" class="navcoach" aria-label="Coach"><span class="ico" aria-hidden="true">◉</span><span>Coach</span></button>
+  <button data-page="analytics"><span class="ico" aria-hidden="true">◫</span><span>Stats</span></button>
+  <button data-page="health"><span class="ico" aria-hidden="true">✚</span><span>Health</span></button>
+</nav>
+
+<div id="modalRoot"></div>
+<div id="toastRoot" role="status" aria-live="polite"></div>
+<!-- Slew's velocity engine, bundled from its own source by r&d/tools/build-slew.cjs.
+     28 kB, sensor mode only, precached by the service worker so a set can be
+     measured in a basement with no signal. Kept as its own file rather than
+     inlined because it is generated: a build artefact in the middle of
+     index.html makes every diff of this file unreadable. -->
+<script src="slew-core.js"></script>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

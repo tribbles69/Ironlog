@@ -1,0 +1,42 @@
+{
+  "pattern": "row",
+  "o": {
+    "shin": 2,
+    "thigh": 4,
+    "torso": -4,
+    "elbow": "up",
+    "hand": [["root", 0.56, 0.08], ["root", 0.04, 0.2]],
+    "labels": [
+      "Arms long, rope at face height",
+      "Pull to your face, elbows high",
+      "Hands beside your ears, squeeze",
+      "Arms long again, slowly"
+    ],
+    "eq": {
+      "_": {
+        "draw": "cable",
+        "anchor": [1, 1.55]
+      },
+      "resistance_band": {
+        "draw": "band",
+        "anchor": [1, 1.55]
+      }
+    }
+  },
+  "text": {
+    "setup": "Set the cable at about face height with a rope. Step back so the stack is lifted, arms straight, palms facing in.",
+    "cues": [
+      "Pull the rope towards your face, splitting the ends apart.",
+      "Keep your elbows high — level with or above your hands.",
+      "Finish with your hands beside your ears and your shoulder blades squeezed, then let your arms go long."
+    ],
+    "mistakes": [
+      "Pulling to your chest with the elbows low, which turns it into a row.",
+      "Leaning back to move more weight.",
+      "Going so heavy you can't hold the squeeze."
+    ],
+    "variants": {
+      "resistance_band": "Anchor the band at face height; it gets harder as you pull in."
+    }
+  }
+}

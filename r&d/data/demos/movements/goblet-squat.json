@@ -1,0 +1,24 @@
+{
+  "pattern": "squat",
+  "o": {
+    "hold": "goblet",
+    "draw": "kettlebell",
+    "eq": {
+      "dumbbells": {
+        "draw": "dumbbell"
+      },
+      "plate": {
+        "draw": "plate"
+      }
+    }
+  },
+  "text": {
+    "setup": "Hold the weight against your chest. Feet a little wider than shoulder-width, toes out.",
+    "cues": [
+      "Sit down between your heels with your chest tall.",
+      "Elbows track down inside your knees.",
+      "Drive up through your whole foot."
+    ],
+    "mistakes": ["Letting the weight pull you forward.", "Heels lifting.", "Knees caving in."]
+  }
+}

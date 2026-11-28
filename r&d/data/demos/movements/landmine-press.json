@@ -1,0 +1,29 @@
+{
+  "pattern": "overhead",
+  "o": {
+    "path": null,
+    "torso": [6, 8],
+    "elbow": "down",
+    "hand": [[0, "root", 0.1, 0.0], [1, "root", 0.4, 0.4]],
+    "labels": ["Bar end at your shoulder, brace", "Press up and forward", "Arm long, reach through", "Back to your shoulder"],
+    "eq": {
+      "_": {
+        "draw": "barbell",
+        "plateR": 0.04
+      }
+    }
+  },
+  "text": {
+    "setup": "One end of the bar in a landmine or a corner, the other end in one hand at the front of your shoulder. Stand square-on, feet hip-width, a slight lean into the bar.",
+    "cues": [
+      "Press the bar up and forward along its arc, not straight up.",
+      "Let your shoulder blade move round your ribs as the arm reaches.",
+      "Lower under control back to the front of your shoulder."
+    ],
+    "mistakes": [
+      "Leaning back to turn it into a standing incline press.",
+      "Twisting the hips to push the bar instead of the arm.",
+      "Shrugging the shoulder up to your ear at the top."
+    ]
+  }
+}

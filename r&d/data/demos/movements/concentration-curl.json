@@ -1,0 +1,36 @@
+{
+  "pattern": "curl",
+  "o": {
+    "base": "seat",
+    "torso": 32,
+    "upperArm": -2,
+    "foreArm": [0, 140],
+    "labels": ["Elbow against your inner thigh, arm long", "Curl up", "Squeeze", "Lower all the way"],
+    "eq": {
+      "_": {
+        "draw": "dumbbell"
+      },
+      "cable": {
+        "draw": "cable",
+        "anchor": [0.35, 0.05]
+      }
+    }
+  },
+  "text": {
+    "setup": "Sit on the end of a bench, lean forward and brace the back of your upper arm against your inner thigh, the bell hanging straight down.",
+    "cues": [
+      "Curl the bell up towards your shoulder without moving the upper arm.",
+      "Squeeze at the top.",
+      "Lower slowly to a straight arm."
+    ],
+    "mistakes": [
+      "Using the leg to push the elbow and help the weight up.",
+      "Leaning back as you curl.",
+      "Stopping short of a straight arm."
+    ],
+    "variants": {
+      "cable": "A single handle on a low pulley keeps tension at the bottom.",
+      "kettlebell": "The bell hangs below the handle, so the top is hardest."
+    }
+  }
+}

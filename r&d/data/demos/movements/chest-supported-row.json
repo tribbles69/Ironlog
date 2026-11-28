@@ -1,0 +1,23 @@
+{
+  "pattern": "row",
+  "o": {
+    "shin": 4,
+    "thigh": 6,
+    "torso": 48,
+    "chestPad": true,
+    "eq": {
+      "_": {
+        "draw": "dumbbell"
+      }
+    }
+  },
+  "text": {
+    "setup": "Chest on the pad, feet planted, arms hanging straight.",
+    "cues": [
+      "Keep your chest on the pad the whole set.",
+      "Pull your elbows back past your torso.",
+      "Lower to a full stretch."
+    ],
+    "mistakes": ["Lifting your chest off the pad.", "Short, choppy reps."]
+  }
+}

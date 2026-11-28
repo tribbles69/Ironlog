@@ -1,0 +1,27 @@
+{
+  "pattern": "hinge",
+  "o": {
+    "concentric": "back",
+    "shin": [0, 11],
+    "thigh": [-2, 44],
+    "labels": [
+      "Stand tall, soft knees",
+      "Push your hips back",
+      "Stretch in the hamstrings",
+      "Drive your hips forward"
+    ]
+  },
+  "text": {
+    "setup": "Stand tall holding the bar, soft knees, feet hip-width.",
+    "cues": [
+      "Push your hips back and let the bar slide down your thighs.",
+      "Keep your back flat — go only as low as your hamstrings allow, usually mid-shin.",
+      "Drive your hips forward to stand."
+    ],
+    "mistakes": [
+      "Bending the knees until it becomes a deadlift.",
+      "Rounding the back to get lower.",
+      "The bar drifting away from your legs."
+    ]
+  }
+}

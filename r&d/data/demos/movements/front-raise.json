@@ -1,0 +1,27 @@
+{
+  "pattern": "curl",
+  "o": {
+    "upperArm": [4, 90],
+    "foreArm": [8, 96],
+    "labels": ["Arms by your sides", "Raise to the front", "Shoulder height", "Lower slowly"]
+  },
+  "text": {
+    "setup": "Stand tall, a dumbbell in each hand resting on the front of your thighs, a small bend in the elbows.",
+    "cues": [
+      "Raise your arms forward with the elbows soft and fixed.",
+      "Stop at shoulder height — hands about level with your eyes at most.",
+      "Lower slowly back to your thighs."
+    ],
+    "mistakes": [
+      "Leaning back to swing the weight up.",
+      "Shrugging as the arms rise.",
+      "Bending the elbows more to make it easier."
+    ],
+    "variants": {
+      "barbell": "Hands shoulder-width on the bar; both arms have to move together.",
+      "cable": "Face away from a low pulley, the cable between your legs; tension stays on at the bottom.",
+      "plate": "Hold the plate at the sides like a steering wheel.",
+      "resistance_band": "Stand on the band; it gets harder the higher you go."
+    }
+  }
+}

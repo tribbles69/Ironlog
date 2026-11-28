@@ -1,0 +1,47 @@
+{
+  "pattern": "triceps",
+  "o": {
+    "shin": 6,
+    "thigh": 14,
+    "torso": 24,
+    "upperArm": [150, 12],
+    "foreArm": [154, 16],
+    "labels": [
+      "Arms long, hinge forward a little",
+      "Sweep the bar down to your thighs",
+      "Squeeze your lats",
+      "Let it rise to head height, arms straight"
+    ],
+    "eq": {
+      "_": {
+        "draw": "cable",
+        "anchor": [0.75, 2.1]
+      },
+      "machine": {
+        "draw": "cable",
+        "anchor": [0.75, 2.1]
+      },
+      "resistance_band": {
+        "draw": "band",
+        "anchor": [0.75, 2.1]
+      }
+    }
+  },
+  "text": {
+    "setup": "Face a high pulley with a straight bar or rope. Step back, hinge forward slightly and hold the bar at head height with straight arms.",
+    "cues": [
+      "Keep your arms straight and sweep the bar down in an arc.",
+      "Finish with the bar at your thighs and your lats squeezed.",
+      "Let it rise back to head height without bending the elbows."
+    ],
+    "mistakes": [
+      "Bending the elbows so it turns into a pushdown.",
+      "Rocking the body to move the weight.",
+      "Shrugging as the bar comes up."
+    ],
+    "variants": {
+      "cable": "A rope lets your hands finish beside your hips.",
+      "resistance_band": "Anchor the band high in front of you."
+    }
+  }
+}

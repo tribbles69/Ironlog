@@ -1,0 +1,7 @@
+# Keep LF everywhere so tools that match code by pattern work on a Windows
+# checkout too (B-004).
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff2 binary

@@ -1,0 +1,40 @@
+{
+  "pattern": "triceps",
+  "o": {
+    "torso": 6,
+    "shin": 2,
+    "thigh": 0,
+    "upperArm": 168,
+    "foreArm": [328, 172],
+    "labels": ["Elbows up by your ears", "Extend overhead", "Lock out", "Lower behind your head"],
+    "eq": {
+      "_": {
+        "draw": "cable",
+        "anchor": [-0.5, 0.3]
+      },
+      "dumbbells": {
+        "draw": "dumbbell"
+      },
+      "barbell": {
+        "draw": "barbell",
+        "plateR": 0.16
+      },
+      "resistance_band": {
+        "draw": "band",
+        "anchor": [-0.3, 0.02]
+      }
+    }
+  },
+  "text": {
+    "setup": "Face away from the stack in a split stance, rope behind your head, elbows by your ears.",
+    "cues": [
+      "Extend your arms forward and up until straight.",
+      "Keep your elbows where they are.",
+      "Lower back behind your head for a big stretch."
+    ],
+    "mistakes": ["Elbows flaring wide.", "Arching your lower back."],
+    "variants": {
+      "dumbbells": "Hold one bell with both hands behind your head."
+    }
+  }
+}

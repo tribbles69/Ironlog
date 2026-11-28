@@ -1,0 +1,15 @@
+{
+  "pattern": "press",
+  "o": {
+    "hand": [["root", 0.06, 0.575], ["chest", 0.74, 0.035]]
+  },
+  "text": {
+    "setup": "Set up as for a bench press with hands about shoulder-width.",
+    "cues": [
+      "Lower the bar with your elbows tucked close.",
+      "Touch a little lower on your chest than a normal bench.",
+      "Press up with your triceps."
+    ],
+    "mistakes": ["Hands so close the wrists bend.", "Elbows flaring."]
+  }
+}

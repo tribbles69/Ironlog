@@ -1,0 +1,21 @@
+{
+  "pattern": "squat",
+  "o": {
+    "thigh": [-2, 92],
+    "box": 0.46,
+    "labels": ["Brace", "Sit back to the box", "Sit — stay tight", "Drive up"]
+  },
+  "text": {
+    "setup": "Set a box so you sit at or just below parallel. Bar on your back, a bit wider stance than your normal squat.",
+    "cues": [
+      "Sit back and down to the box, shins close to vertical.",
+      "Sit on it briefly while staying braced — don't relax onto it.",
+      "Drive up hard from the box."
+    ],
+    "mistakes": [
+      "Crashing down onto the box.",
+      "Rocking back and forward to get up.",
+      "Losing tension while sitting."
+    ]
+  }
+}

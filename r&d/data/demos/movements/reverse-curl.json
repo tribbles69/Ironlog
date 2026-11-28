@@ -1,0 +1,8 @@
+{
+  "pattern": "curl",
+  "text": {
+    "setup": "Overhand grip, shoulder-width, elbows by your sides.",
+    "cues": ["Curl up keeping your wrists straight.", "Squeeze at the top.", "Lower slowly."],
+    "mistakes": ["Wrists bending back under the load.", "Swinging the weight up with the hips."]
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "note": "DRAFT for Aaron to read (coach-spec §2-§3). Each day lists slots in training order; session length keeps the first N (main never cut). b = the B-week pattern for 2+ years (A/B fortnight); without b the slot is the same both weeks.",
+  "id": "full-body",
+  "name": "Full body",
+  "days": 1,
+  "eventDay": 0,
+  "dayList": [
+    { "name": "Full body", "slots": [
+      { "p": "squat", "role": "main", "b": "squat-machine" },
+      { "p": "bench", "role": "secondary", "b": "bench-b" },
+      { "p": "row", "role": "secondary", "b": "pulldown" },
+      { "p": "hinge-2", "role": "secondary" },
+      { "p": "ohp", "role": "accessory" },
+      { "p": "pulldown", "role": "accessory", "b": "row" },
+      { "p": "abs", "role": "finisher" },
+      { "p": "calves", "role": "finisher" }
+    ] }
+  ]
+}

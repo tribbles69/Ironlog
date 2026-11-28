@@ -1,0 +1,17 @@
+{
+  "pattern": "hinge",
+  "o": {
+    "shin": [[0, 3], [1, 0]],
+    "thigh": [[0, 20], [1, -2]],
+    "pins": 0.5
+  },
+  "text": {
+    "setup": "Set the pins or blocks so the bar starts just below or above your knees. Same grip and stance as your deadlift.",
+    "cues": [
+      "Pull the slack out and brace.",
+      "Drive your hips forward to the bar.",
+      "Stand tall and lower it back to the pins under control."
+    ],
+    "mistakes": ["Leaning back hard at lockout.", "Bouncing the bar off the pins."]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "pattern": "curl",
+  "o": {
+    "torso": 12,
+    "upperArm": 42,
+    "foreArm": [48, 160],
+    "preacher": true
+  },
+  "text": {
+    "setup": "Armpits snug against the top of the pad, the backs of your arms flat on it.",
+    "cues": [
+      "Curl up without lifting your elbows.",
+      "Stop just before the forearms are vertical.",
+      "Lower almost to straight — slowly, as the stretch is the hard part."
+    ],
+    "mistakes": ["Dropping fast into a locked elbow.", "Shoulders rolling forward over the pad."]
+  }
+}

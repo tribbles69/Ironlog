@@ -1,0 +1,19 @@
+{
+  "pattern": "overhead",
+  "o": {
+    "hand": [["root", 0.17, -0.02], ["mid", 0, 0.575]],
+    "labels": ["Log on your chest, brace", "Dip, drive, press", "Lock out", "Lower to your chest"]
+  },
+  "text": {
+    "setup": "Lap the log, then roll it up your body to rest on your chest, elbows high.",
+    "cues": [
+      "Lean back a touch, dip, and drive the log past your face.",
+      "Push your head through at the top.",
+      "Lower it back to your chest, then down under control."
+    ],
+    "mistakes": [
+      "Pressing with the elbows low and the log in front.",
+      "Over-leaning so it turns into a standing incline."
+    ]
+  }
+}

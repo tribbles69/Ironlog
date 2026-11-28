@@ -1,0 +1,29 @@
+{
+  "pattern": "curl",
+  "o": {
+    "shin": 4,
+    "thigh": 8,
+    "torso": 46,
+    "chestPad": true,
+    "upperArm": 0,
+    "foreArm": [2, 138],
+    "labels": ["Chest on the pad, arms hanging straight", "Curl up", "Squeeze hard", "Lower all the way"]
+  },
+  "text": {
+    "setup": "Lie chest-down on an incline bench, arms hanging straight down in front of the pad.",
+    "cues": [
+      "Curl up keeping your upper arms pointing at the floor.",
+      "Squeeze hard at the top — this is where the move is hardest.",
+      "Lower all the way to straight arms."
+    ],
+    "mistakes": [
+      "Swinging the elbows forward.",
+      "Lifting your chest off the pad.",
+      "Short reps that never straighten the arm."
+    ],
+    "variants": {
+      "barbell": "An EZ bar is kinder to the wrists.",
+      "cable": "Set a low pulley in front of the bench."
+    }
+  }
+}
