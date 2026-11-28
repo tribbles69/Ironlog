@@ -201,6 +201,13 @@ backfill and adherence. Base feature: it joins three things that already exist. 
 step: put Monday and Thursday morning bike/row sessions and a Cossack
 squat leg-day warm-up into the bundled program (since removed).
 
+### [ ] 000-F2. Health leaves Ironlog for its own app; Ironlog reads body data from the Drive Hub (2026-11-28) — spec `r&d/specs/health-split-spec.md` (agreed: before 1.0, Drive Hub folder, bodyweight from the Hub with a local fallback; **§9 still open — answer before F2b**)
+Body data (bodyweight, calipers, measurements, photos and daily clip, blood
+pressure, glucose) moves to a separate Health app. Mobility, tests, the
+fitting test and cardio stay. Apps share through `Hub/<app>.json` files in the
+user's own Drive (format: Hub repo `hub-format.md`). Steps F2a–F2f in the spec,
+one version each; data is exported first and never dropped, as with A1.
+
 ### Ideas parked for after 1.0
 (added during the beta; P1–P8 were all added on 2026-11-13, in this
 order. Each needs a short spec before building.)
